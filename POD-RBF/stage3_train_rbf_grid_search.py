@@ -279,7 +279,12 @@ def main(
         "matern": matern32_rbf,
     }
 
-    kernel_candidates = tuple(kernel_candidates)
+    if isinstance(kernel_candidates, str):
+        kernel_candidates = (kernel_candidates,)
+    else:
+        kernel_candidates = tuple(kernel_candidates)
+    if len(kernel_candidates) == 0:
+        raise ValueError("kernel_candidates must contain at least one kernel name.")
     for name in kernel_candidates:
         if name not in kernel_map:
             raise ValueError(
