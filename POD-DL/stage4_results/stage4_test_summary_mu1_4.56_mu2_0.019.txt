@@ -1,0 +1,40 @@
+[run]
+timestamp: 2026-03-19T15:55:16
+script: stage4_test_autoencoder.py
+target_mu1: 4.56000000e+00
+target_mu2: 1.90000000e-02
+
+[configuration]
+basis_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/basis.npy
+model_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/pod_dl_model/pod_dl_autoencoder.pt
+stage2_metadata_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/stage2_projection_metadata.npz
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+q_dim: 153
+latent_dim: 10
+hidden_dims: (192, 96, 48)
+uref_mode: auto
+use_u_ref: True
+u_ref_source: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/u_ref.npy
+u_ref_l2_norm: 3.27342686e+02
+checkpoint_use_u_ref: True
+compare_pod: True
+device: cuda
+
+[metrics]
+pod_dl_global_rel_error: 5.60044555e-03
+pod_dl_global_rel_error_percent: 5.60044555e-01
+pod_global_rel_error: 3.71444653e-04
+pod_global_rel_error_percent: 3.71444653e-02
+q_rel_error_percent: 1.32500939e+00
+
+[timings_seconds]
+hdm_load_or_solve: 1.64895058e-02
+pod_dl_reconstruct: 1.89990759e-01
+
+[outputs]
+pod_dl_reconstruction_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/stage4_results/pod_dl_reconstruction_mu1_4.56_mu2_0.019.npy
+pod_reconstruction_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/stage4_results/pod_reconstruction_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/stage4_results/pod_dl_projection_mu1_4.56_mu2_0.019.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/stage4_results/stage4_test_summary_mu1_4.56_mu2_0.019.txt

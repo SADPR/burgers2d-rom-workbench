@@ -1,0 +1,36 @@
+[run]
+timestamp: 2026-03-19T11:51:49
+script: stage2_project_training_data.py
+
+[configuration]
+basis_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/basis.npy
+uref_mode: auto
+use_u_ref: True
+u_ref_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/u_ref.npy
+u_ref_l2_norm: 3.27342686e+02
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+total_modes: 153
+
+[train_projection]
+num_train_params: 9
+train_params: [[4.25, 0.015], [4.25, 0.0225], [4.25, 0.03], [4.875, 0.015], [4.875, 0.0225], [4.875, 0.03], [5.5, 0.015], [5.5, 0.0225], [5.5, 0.03]]
+snaps_train_shape: (20000, 4509)
+q_train_shape: (153, 4509)
+train_load_time_seconds: 2.78092623e-01
+train_project_time_seconds: 2.30870962e-01
+
+[test_projection]
+num_test_params: 3
+test_params: [[4.75, 0.02], [4.56, 0.019], [5.19, 0.026]]
+snaps_test_shape: (20000, 1503)
+q_test_shape: (153, 1503)
+test_load_time_seconds: 8.45787525e-02
+test_project_time_seconds: 7.71183968e-02
+
+[outputs]
+q_train_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/q.npy
+q_test_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/q_test.npy
+metadata_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/stage2_projection_metadata.npz
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/stage2_projection_summary.txt

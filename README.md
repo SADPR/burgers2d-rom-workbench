@@ -213,6 +213,24 @@ python3 run_prom_ann.py
 python3 run_hprom_ann.py
 ```
 
+## POD-DL workflow
+1. POD basis:
+```bash
+python3 POD-DL/stage1_build_pod_basis.py
+```
+2. Project snapshots to a single POD coefficient space `q`:
+```bash
+python3 POD-DL/stage2_project_training_data.py
+```
+3. Train POD-level autoencoder (`q -> z -> q`, with scaling embedded in model):
+```bash
+python3 POD-DL/stage3_train_autoencoder.py
+```
+4. Test reconstruction on a target parameter:
+```bash
+python3 POD-DL/stage4_test_autoencoder.py
+```
+
 ## What to expect in outputs
 Online `run_*.py` scripts generally save:
 - snapshots (`*.npy`)

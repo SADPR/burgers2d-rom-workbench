@@ -1112,3 +1112,76 @@ def gauss_newton_poddl(
 
     print(f"{it} iterations: {resnorm / init_norm:.2e} relative norm")
     return z, resnorms, (jac_time, res_time, ls_time)
+
+
+def gauss_newton_poddl_ecsw(
+    func,
+    jac,
+    z0: torch.Tensor,
+    decode,
+    jac_u_z,
+    sample_inds,
+    augmented_sample,
+    weight,
+    max_its: int = 20,
+    relnorm_cutoff: float = 1e-5,
+    min_delta: float = 1e-2,
+    u_ref=None,
+) -> Tuple[torch.Tensor, Sequence[float], Tuple[float, float, float]]:
+    del sample_inds, augmented_sample, u_ref
+
+    jac_time = 0.0
+    res_time = 0.0
+    ls_time = 0.0
+
+    z = z0.detach().clone()
+    weights = np.concatenate(
+        (np.asarray(weight, dtype=np.float64), np.asarray(weight, dtype=np.float64))
+    )
+
+    with torch.no_grad():
+        u = _call_decode(decode, z, with_grad=False)
+
+    u_np = _to_numpy(u).squeeze()
+
+    t0 = time.time()
+    r0 = func(u_np)
+    res_time += time.time() - t0
+
+    init_norm = _safe_init_norm(np.linalg.norm(weights * r0))
+    resnorms = []
+
+    for it in range(max_its):
+        u_np = _to_numpy(u).squeeze()
+
+        t0 = time.time()
+        r = func(u_np)
+        res_time += time.time() - t0
+
+        rw = weights * r
+        resnorm = np.linalg.norm(rw)
+        resnorms.append(resnorm)
+
+        if resnorm / init_norm < relnorm_cutoff:
+            break
+
+        if len(resnorms) > 1 and _relative_drop(resnorms[-2], resnorms[-1]) < min_delta:
+            break
+
+        t0 = time.time()
+        J = jac(u_np)
+        Uz = _to_numpy(jac_u_z(z).detach())
+        jac_time += time.time() - t0
+
+        t0 = time.time()
+        JV = J @ Uz
+        JVw = weights[:, None] * JV
+        dz, *_ = np.linalg.lstsq(JVw, -rw, rcond=None)
+        ls_time += time.time() - t0
+
+        with torch.no_grad():
+            z += torch.tensor(dz, dtype=z.dtype, device=z.device)
+            u = _call_decode(decode, z, with_grad=False)
+
+    print(f"{it} iterations: {resnorm / init_norm:.2e} weighted relative norm")
+    return z, resnorms, (jac_time, res_time, ls_time)

@@ -1,0 +1,74 @@
+[run]
+timestamp: 2026-03-19T16:08:24
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+model_dir: POD-DL/pod_dl_model
+basis_file: N/A
+compute_ecsw: True
+weights_file: POD-DL/pod_dl_model/ecsw_weights_dl.npy
+weights_source: computed
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+snap_sample_factor: 10
+snap_time_offset: 3
+mu_samples: [[4.25, 0.0225]]
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+solver_threads: 1
+uref_mode: auto
+use_u_ref: True
+u_ref_source: POD-DL/u_ref.npy
+u_ref_l2_norm: 3.27342686e+02
+provided_uref_file: N/A
+checkpoint_use_u_ref: True
+stage2_use_u_ref: True
+stage2_projection_metadata: POD-DL/stage2_projection_metadata.npz
+
+[discretization]
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[pod_dl_model]
+model_pt: POD-DL/pod_dl_model/pod_dl_autoencoder.pt
+basis_path: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/basis.npy
+basis_q_shape: (20000, 153)
+q_dim: 153
+latent_dim: 10
+hidden_dims: (192, 96, 48)
+activation: tanh
+scaling: minmax_-1_1
+checkpoint_seed: 42
+
+[ecsw]
+num_nonzero_weights: 501
+weights_sum: 1.00000000e+04
+ecsw_time_seconds: 1.24991696e+01
+ecsw_residual: 7.44592978e-15
+training_matrix_shape: (500, 10000)
+
+[hprom_timing]
+total_hprom_time_seconds: 5.99005985e+00
+avg_hprom_time_per_step_seconds: 1.19801197e-02
+gn_iterations_total: 2000
+avg_gn_iterations_per_step: 4.00000000e+00
+jacobian_time_seconds: 4.58834314e+00
+residual_time_seconds: 5.18593311e-01
+linear_solve_time_seconds: 2.83054590e-01
+hdm_load_or_solve_time_seconds: 2.14110374e-01
+
+[error_metrics]
+relative_l2_error: 2.97578744e-03
+relative_error_percent: 2.97578744e-01
+
+[outputs]
+hprom_snapshots_npy: Results/hprom_dl_snaps_mu1_4.56_mu2_0.019.npy
+latent_trajectory_npy: Results/hprom_dl_latent_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/hprom_dl_mu1_4.56_mu2_0.019.png
+ecsw_weights_npy: POD-DL/pod_dl_model/ecsw_weights_dl.npy
+reduced_mesh_plot_png: Results/hprom_dl_reduced_mesh.png
+summary_txt: Results/hprom_dl_summary_mu1_4.56_mu2_0.019.txt

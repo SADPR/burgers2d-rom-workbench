@@ -1,0 +1,59 @@
+[run]
+timestamp: 2026-03-19T15:51:19
+script: stage3_train_autoencoder.py
+
+[configuration]
+basis_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/basis.npy
+q_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/q.npy
+q_test_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/q_test.npy
+uref_mode: auto
+use_u_ref: True
+u_ref_source: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/stage2_projection_metadata.npz:u_ref_used
+u_ref_l2_norm: 3.27342686e+02
+stage2_use_u_ref: True
+learning_rate: 1.00000000e-03
+weight_decay: 1.00000000e-05
+batch_size: 64
+epochs: 5000
+patience: 120
+min_improve: 1.00000000e-12
+clip_grad: 1.00000000e+00
+validation_fraction: 1.00000000e-01
+hidden_dims: (192, 96, 48)
+activation: tanh
+scaling: minmax_-1_1
+latent_dim_requested: 10
+use_latent_sweep: False
+latent_sweep: (10,)
+selected_latent_dim: 10
+use_reduce_lr_on_plateau: True
+scheduler_factor: 5.00000000e-01
+scheduler_patience: 20
+scheduler_threshold: 1.00000000e-04
+scheduler_min_lr: 1.00000000e-06
+scheduler_cooldown: 5
+random_seed: 42
+device: cuda
+
+[dataset]
+q_dim: 153
+n_samples_total: 4509
+n_train: 4059
+n_val: 450
+q_test_shape: (153, 1503)
+
+[metrics]
+best_val_mse: 4.87809116e-03
+train_rel_q_pct: 5.11843281e-01
+val_rel_q_pct: 5.48367944e-01
+test_rel_q_pct: 1.73388963e+00
+selected_final_lr: 1.00000000e-06
+candidate_results: z=10: val_mse=4.878091e-03, val_rel_q_pct=0.5484, final_lr=1.000e-06
+
+[timings_seconds]
+training: 5.12359706e+02
+
+[outputs]
+model_pt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/pod_dl_model/pod_dl_autoencoder.pt
+validation_mse_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/stage3_validation_mse.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-DL/stage3_train_autoencoder_summary.txt
