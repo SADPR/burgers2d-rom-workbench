@@ -1,0 +1,24 @@
+[run]
+timestamp: 2026-03-18T19:51:12
+script: stage3_local_project_to_q.py
+
+[configuration]
+pod_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/local_rbf_pod_per_cluster.npz
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+
+[clusters]
+K: 10
+cluster_snapshot_counts: [567, 590, 610, 560, 553, 496, 574, 528, 556, 296]
+r_list: [17, 23, 24, 20, 18, 24, 21, 16, 17, 21]
+nonempty_clusters: 10
+
+[timings_seconds]
+build_u0_and_q_total: 1.01061726e+00
+total: 2.17014766e+00
+
+[outputs]
+q_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/local_rbf_q_per_cluster.npz
+cluster_count_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/stage3_cluster_snapshot_counts.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/stage3_projection_summary.txt

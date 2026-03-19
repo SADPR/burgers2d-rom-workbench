@@ -1,0 +1,35 @@
+[run]
+timestamp: 2026-03-18T19:57:21
+script: stage4_local_pod_rbf_training_grid_search.py
+
+[configuration]
+q_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/local_rbf_q_per_cluster.npz
+n_primary: 5
+delta_duplicates: 1.00000000e-03
+n_splits_max: 5
+epsilon_grid_size: 15
+lambda_grid_size: 2
+kernels: ['gaussian']
+dt: 5.00000000e-02
+num_steps: 500
+
+[clusters]
+K: 10
+r_list: [17, 23, 24, 20, 18, 24, 21, 16, 17, 21]
+has_rbf: [True, True, True, True, True, True, True, True, True, True]
+best_kernel: ['gaussian', 'gaussian', 'gaussian', 'gaussian', 'gaussian', 'gaussian', 'gaussian', 'gaussian', 'gaussian', 'gaussian']
+best_epsilon: [0.5347244000266965, 0.9350611267692982, 1.2365025114423323, 0.7071067811865475, 0.5347244000266965, 0.7071067811865475, 0.9350611267692982, 1.2365025114423323, 0.5347244000266965, 0.9350611267692982]
+best_lambda: [1e-10, 1e-10, 1e-12, 1e-10, 1e-10, 1e-10, 1e-12, 1e-10, 1e-10, 1e-12]
+cv_rpe_percent: [0.014264745854070466, 0.0093357442832093, 0.0039137960408402875, 0.010656009508183245, 0.019618684058049125, 0.0023081351996836518, 0.024001127832896676, 0.016286028465114323, 0.00670793672383434, 0.000850749767443363]
+train_rpe_percent: [0.002478874213844655, 0.0006267464119441527, 0.0002968659749340905, 0.0012309795744864236, 0.002827290254576438, 0.0003644240323802251, 0.0005966913117439256, 0.0016523298105496056, 0.0022879563041289614, 0.00010593335064263078]
+
+[timings_seconds]
+training: 9.40023296e+01
+total: 9.43766043e+01
+
+[outputs]
+models_pkl: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/local_pod_rbf_models.pkl
+switching_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/local_pod_rbf_switching.npz
+all_in_one_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/local_pod_rbf_all_offline.npz
+train_error_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/stage4_cluster_qs_train_error.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/stage4_training_summary.txt

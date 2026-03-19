@@ -1,0 +1,71 @@
+[run]
+timestamp: 2026-03-18T16:59:15
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+compute_ecsw: True
+qm_dir: Quadratic
+weights_file: Results/hqprom_ecsw_weights.npy
+snap_sample_factor: 10
+snap_time_offset: 3
+mu_samples: [[4.25, 0.0225]]
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_q0: 20
+tol_q0: 1.00000000e-06
+snap_folder: Results/param_snaps
+
+[discretization]
+dt: 5.00000000e-02
+num_steps: 500
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[manifold]
+V_shape: (20000, 17)
+H_shape: (20000, 153)
+u_ref_shape: (20000,)
+sigma_shape: (17,)
+n: 17
+m: 153
+u_ref_l2_norm: 3.27342686e+02
+metadata_n_trad: 153
+metadata_n_final: 17
+metadata_pod_tol: 1.00000000e-06
+metadata_zeta_qua: 1.00000000e-01
+
+[ecsw]
+num_nonzero_weights: 827
+weights_sum: 1.00000000e+04
+ecsw_time_seconds: 4.16356766e+01
+ecsw_residual: 1.05551436e-08
+training_matrix_shape: (850, 10000)
+
+[hqprom_timing]
+total_hqprom_time_seconds: 2.68990426e+01
+avg_hqprom_time_per_step_seconds: 5.37980852e-02
+gn_iterations_total: 2008
+avg_gn_iterations_per_step: 4.01600000e+00
+jacobian_time_seconds: 4.03380203e+00
+residual_time_seconds: 1.47765946e+00
+linear_solve_time_seconds: 1.03097520e+01
+hdm_load_or_solve_time_seconds: 1.93753242e-02
+
+[error_metrics]
+relative_l2_error: 8.41366634e-03
+relative_error_percent: 8.41366634e-01
+
+[outputs]
+hqprom_snapshots_npy: Results/hqprom_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/hqprom_mu1_4.56_mu2_0.019.png
+summary_txt: Results/hqprom_summary_mu1_4.56_mu2_0.019.txt
+ecsw_weights_npy: Results/hqprom_ecsw_weights.npy
+ecsw_reduced_mesh_png: Results/hqprom_reduced_mesh.png
+qm_V_npy: Quadratic/qm_V.npy
+qm_H_npy: Quadratic/qm_H.npy
+qm_uref_npy: Quadratic/qm_uref.npy
+qm_sigma_npy: Quadratic/qm_sigma.npy
+qm_metadata_npz: Quadratic/qm_metadata.npz

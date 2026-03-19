@@ -1,0 +1,26 @@
+[run]
+timestamp: 2026-03-18T16:24:18
+script: stage_check_qm_tangent.py
+
+[configuration]
+n_eps: 8
+eps_min: 1.00000000e-06
+eps_max: 1.00000000e+00
+seed: 1
+
+[manifold]
+V_shape: (20000, 17)
+H_shape: (20000, 153)
+u_ref_shape: (20000,)
+q0_l2_norm: 4.84097847e-01
+d_l2_norm: 1.00000000e+00
+
+[results]
+fitted_loglog_slope: 2.00000059e+00
+expected_slope: 2.00000000e+00
+first_error: 1.90522359e-11
+last_error: 1.90524955e+01
+
+[outputs]
+taylor_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/qm_taylor_test.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/stage_check_qm_tangent_summary.txt

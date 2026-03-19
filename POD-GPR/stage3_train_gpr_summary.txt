@@ -1,0 +1,58 @@
+[run]
+timestamp: 2026-03-18T21:31:02
+script: stage3_train_gpr.py
+
+[configuration]
+basis_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/basis.npy
+q_p_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/q_p.npy
+q_s_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/q_s.npy
+stage2_metadata_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage2_projection_metadata.npz
+uref_mode: auto
+use_u_ref: True
+u_ref_source: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage2_projection_metadata.npz:u_ref_used
+u_ref_l2_norm: 3.27342686e+02
+kernel_name_requested: matern15
+alpha: 1.00000000e-08
+length_scale_initial: 1.00000000e+00
+constant_value_initial: 1.00000000e+00
+length_scale_bounds: [0.01, 5.0]
+constant_value_bounds: [0.001, 1000.0]
+optimize_hyperparameters: True
+n_restarts_optimizer: 1
+normalize_y: False
+duplicate_tol: 1.00000000e-03
+max_train_samples: N/A
+validation_fraction: 1.00000000e-01
+random_seed: 42
+analytic_jacobian_compatible: True
+
+[data_shapes]
+basis_shape: (20000, 153)
+q_p_shape: (5, 4509)
+q_s_shape: (148, 4509)
+x_filtered_shape: (4501, 5)
+x_used_shape: (4501, 5)
+x_train_shape: (4051, 5)
+x_validation_shape: (450, 5)
+gpr_alpha_shape: (4051, 148)
+
+[training_quality]
+train_relative_error_percent: 6.56384885e-05
+validation_relative_error_percent: 1.46190511e-01
+validation_relative_error_percent_mean_per_sample: 4.01520358e-02
+validation_relative_error_percent_max_per_sample: 1.54637924e+00
+learned_kernel: 31.6**2 * Matern(length_scale=1.93, nu=1.5)
+training_time_seconds: 3.32897904e+03
+
+[outputs]
+model_dir: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model
+gpr_model_pkl: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model/gpr_model.pkl
+scaler_pkl: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model/scaler.pkl
+U_p_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model/U_p.npy
+U_s_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model/U_s.npy
+u_ref_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model/u_ref.npy
+q_p_normalized_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model/q_p_normalized.npy
+q_s_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model/q_s.npy
+training_metadata_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model/stage3_training_metadata.npz
+validation_error_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage3_validation_relative_error.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage3_train_gpr_summary.txt

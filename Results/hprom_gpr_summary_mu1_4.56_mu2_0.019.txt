@@ -1,0 +1,78 @@
+[run]
+timestamp: 2026-03-18T22:52:57
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+model_dir: POD-GPR/pod_gpr_model
+compute_ecsw: True
+weights_file: POD-GPR/pod_gpr_model/ecsw_weights_gpr.npy
+weights_source: computed
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+snap_sample_factor: 10
+snap_time_offset: 3
+mu_samples: [[4.25, 0.0225]]
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_ic: 20
+tol_ic: 1.00000000e-12
+uref_mode: auto
+use_u_ref: True
+u_ref_source: POD-GPR/pod_gpr_model/u_ref.npy
+u_ref_l2_norm: 3.27342686e+02
+provided_uref_file: N/A
+stage2_use_u_ref: True
+stage2_projection_metadata: POD-GPR/stage2_projection_metadata.npz
+use_custom_predict: True
+jacobian_mode: analytic
+fd_eps: 1.00000000e-06
+
+[discretization]
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[gpr_model]
+U_p_shape: (20000, 5)
+U_s_shape: (20000, 148)
+q_p_normalized_shape: (5, 4501)
+q_s_shape: (148, 4501)
+learned_kernel: 31.6**2 * Matern(length_scale=1.93, nu=1.5)
+analytic_jacobian_compatible: True
+
+[ecsw]
+num_nonzero_weights: 251
+weights_sum: 1.00000000e+04
+ecsw_time_seconds: 1.34888539e+01
+ecsw_residual: 6.95195748e-14
+training_matrix_shape: (250, 10000)
+
+[hprom_timing]
+total_hprom_time_seconds: 1.13211985e+01
+avg_hprom_time_per_step_seconds: 2.26423969e-02
+gn_iterations_total: 1565
+avg_gn_iterations_per_step: 3.13000000e+00
+jacobian_time_seconds: 5.07147098e+00
+residual_time_seconds: 6.07614756e-01
+linear_solve_time_seconds: 1.78525448e-01
+hdm_load_or_solve_time_seconds: 1.80001259e-02
+
+[error_metrics]
+relative_l2_error: 3.39832583e-02
+relative_error_percent: 3.39832583e+00
+
+[outputs]
+hprom_snapshots_npy: Results/hprom_gpr_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/hprom_gpr_mu1_4.56_mu2_0.019.png
+ecsw_weights_npy: POD-GPR/pod_gpr_model/ecsw_weights_gpr.npy
+ecsw_reduced_mesh_png: Results/hprom_gpr_reduced_mesh.png
+summary_txt: Results/hprom_gpr_summary_mu1_4.56_mu2_0.019.txt
+gpr_model_pkl: POD-GPR/pod_gpr_model/gpr_model.pkl
+scaler_pkl: POD-GPR/pod_gpr_model/scaler.pkl
+U_p_npy: POD-GPR/pod_gpr_model/U_p.npy
+U_s_npy: POD-GPR/pod_gpr_model/U_s.npy
+q_p_normalized_npy: POD-GPR/pod_gpr_model/q_p_normalized.npy
+q_s_npy: POD-GPR/pod_gpr_model/q_s.npy

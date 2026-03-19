@@ -1,0 +1,34 @@
+[run]
+timestamp: 2026-03-18T16:27:17
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+dt: 5.00000000e-02
+num_steps: 500
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+
+[manifold]
+V_shape: (20000, 17)
+H_shape: (20000, 153)
+u_ref_shape: (20000,)
+sigma_shape: (17,)
+n: 17
+m: 153
+metadata_n_trad: 153
+metadata_pod_tol: 1.00000000e-06
+metadata_zeta_qua: 1.00000000e-01
+
+[timings_seconds]
+hdm_load_or_solve_time: 1.76739693e-02
+qm_projection_time: 1.01836205e-01
+avg_qm_projection_time_per_step: 2.03672409e-04
+
+[error_metrics]
+relative_l2_error: 7.94437967e-03
+relative_error_percent: 7.94437967e-01
+
+[outputs]
+qm_snapshots_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/qm_projection_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/qm_projection_mu1_4.56_mu2_0.019.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/qm_projection_summary_mu1_4.56_mu2_0.019.txt

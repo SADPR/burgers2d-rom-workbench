@@ -1,0 +1,76 @@
+[run]
+timestamp: 2026-03-18T18:53:06
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+model_dir: POD-RBF/pod_rbf_model
+compute_ecsw: True
+weights_file: POD-RBF/pod_rbf_model/ecsw_weights_rbf.npy
+weights_source: computed
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+snap_sample_factor: 10
+snap_time_offset: 3
+mu_samples: [[4.25, 0.0225]]
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_ic: 20
+tol_ic: 1.00000000e-12
+uref_mode: auto
+use_u_ref: True
+u_ref_source: POD-RBF/pod_rbf_model/u_ref.npy
+u_ref_l2_norm: 3.27342686e+02
+provided_uref_file: N/A
+
+[discretization]
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[rbf_model]
+U_p_shape: (20000, 10)
+U_s_shape: (20000, 143)
+q_p_train_shape: (4501, 10)
+q_s_train_shape: (4501, 143)
+W_shape: (4501, 143)
+kernel: gaussian
+epsilon: 2.64097595e+00
+lambda: 1.00000000e-10
+search_method: grid_search
+duplicate_tol: 1.00000000e-03
+weights_model_use_u_ref: True
+
+[ecsw]
+num_nonzero_weights: 499
+weights_sum: 1.00000000e+04
+ecsw_time_seconds: 2.18128316e+01
+ecsw_residual: 2.25591512e-09
+training_matrix_shape: (500, 10000)
+
+[hprom_timing]
+total_hprom_time_seconds: 1.42306283e+01
+avg_hprom_time_per_step_seconds: 2.84612565e-02
+gn_iterations_total: 1987
+avg_gn_iterations_per_step: 3.97400000e+00
+jacobian_time_seconds: 6.46019912e+00
+residual_time_seconds: 9.91243362e-01
+linear_solve_time_seconds: 2.85610437e-01
+hdm_load_or_solve_time_seconds: 1.97889805e-02
+
+[error_metrics]
+relative_l2_error: 1.19956645e-02
+relative_error_percent: 1.19956645e+00
+
+[outputs]
+hprom_snapshots_npy: Results/hprom_rbf_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/hprom_rbf_mu1_4.56_mu2_0.019.png
+ecsw_weights_npy: POD-RBF/pod_rbf_model/ecsw_weights_rbf.npy
+ecsw_reduced_mesh_png: Results/hprom_rbf_reduced_mesh.png
+summary_txt: Results/hprom_rbf_summary_mu1_4.56_mu2_0.019.txt
+weights_pkl: POD-RBF/pod_rbf_model/rbf_weights.pkl
+scaler_pkl: POD-RBF/pod_rbf_model/scaler.pkl
+U_p_npy: POD-RBF/pod_rbf_model/U_p.npy
+U_s_npy: POD-RBF/pod_rbf_model/U_s.npy

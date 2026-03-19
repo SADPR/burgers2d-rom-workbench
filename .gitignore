@@ -1,0 +1,62 @@
+# -----------------------------
+# Python cache / build artifacts
+# -----------------------------
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# -----------------------------
+# Virtual environments
+# -----------------------------
+.venv/
+venv/
+env/
+
+# -----------------------------
+# IDE / editor
+# -----------------------------
+.vscode/
+.idea/
+
+# -----------------------------
+# Generated outputs
+# -----------------------------
+# Ignore all Results contents by default, then allow selected report assets
+Results/**
+!Results/
+!Results/**/
+!Results/.gitkeep
+!Results/**/*.txt
+!Results/**/*.png
+!Results/**/*.md
+
+# -----------------------------
+# Numerical data / model artifacts
+# -----------------------------
+*.npy
+*.npz
+*.pt
+*.pth
+*.ckpt
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.hdf5
+*.onnx
+*.bin
+
+# -----------------------------
+# Logs / temp
+# -----------------------------
+*.log
+*.tmp
+
+# -----------------------------
+# Local backup folder (optional, usually not for git)
+# -----------------------------
+HYPERNET_BACK_UP/

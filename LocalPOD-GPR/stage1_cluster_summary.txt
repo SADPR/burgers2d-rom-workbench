@@ -1,0 +1,34 @@
+[run]
+timestamp: 2026-03-18T22:54:38
+script: stage1_cluster_snapshots_u.py
+
+[configuration]
+n_clusters: 10
+clustering_method: kmeans
+phi: 1.00000000e-01
+time_subsample: 1
+dt: 5.00000000e-02
+num_steps: 500
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+
+[snapshot_matrix]
+S_w_shape: (20000, 4509)
+num_parameters: 9
+num_snapshots: 4509
+time_indices_count: 501
+
+[clusters]
+primary_sizes: [473, 491, 520, 467, 461, 419, 479, 481, 463, 255]
+overlap_sizes: [567, 590, 610, 560, 553, 496, 574, 528, 556, 296]
+min_overlap_size: 296
+max_overlap_size: 610
+
+[timings_seconds]
+build_snapshot_matrix: 9.17743444e-01
+clustering: 4.01380448e+01
+total: 4.43693707e+01
+
+[outputs]
+clusters_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_gpr_clusters_full.npz
+cluster_sizes_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/stage1_cluster_sizes.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/stage1_cluster_summary.txt

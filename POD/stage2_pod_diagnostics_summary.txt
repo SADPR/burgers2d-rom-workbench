@@ -1,0 +1,44 @@
+[run]
+timestamp: 2026-03-18T19:17:47
+script: stage2_pod_diagnostics.py
+
+[configuration]
+basis_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/basis.npy
+sigma_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/sigma.npy
+u_ref_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/u_ref.npy
+u_ref_l2_norm: 3.27342686e+02
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+num_diagnostic_parameters: 9
+
+[pod]
+basis_shape: (20000, 153)
+sigma_shape: (4509,)
+basis_size: 153
+stage1_n_keep: 153
+stage1_energy_captured: 9.99999009e-01
+stage1_energy_lost: 9.91166165e-07
+
+[diagnostics]
+global_rel_error_percent_mean: 4.33810169e-02
+global_rel_error_percent_max: 5.18095396e-02
+global_rel_error_percent_min: 3.79720959e-02
+mean_time_rel_error_percent_mean: 4.46396052e-02
+max_time_rel_error_percent_mean: 9.40750553e-02
+worst_param: [4.875, 0.015]
+worst_param_global_rel_error_percent: 5.18095396e-02
+best_param: [4.25, 0.0225]
+best_param_global_rel_error_percent: 3.79720959e-02
+
+[timings_seconds]
+load_snapshots_total: 1.79554939e-01
+projection_total: 9.83261824e-01
+load_snapshots_mean_per_param: 1.99505488e-02
+projection_mean_per_param: 1.09251314e-01
+total: 1.16281676e+00
+
+[outputs]
+diagnostics_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/stage2_pod_diagnostics.npz
+diagnostics_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/stage2_pod_diagnostics.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/stage2_pod_diagnostics_summary.txt

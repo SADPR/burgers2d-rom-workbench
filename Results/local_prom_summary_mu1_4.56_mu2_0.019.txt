@@ -1,0 +1,51 @@
+[run]
+timestamp: 2026-03-18T15:42:13
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+local_model_file: LocalPOD/local_pod_data.npz
+cluster_selector: select_cluster_reduced
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+snap_folder: Results/param_snaps
+
+[discretization]
+dt: 5.00000000e-02
+num_steps: 500
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[local_model]
+offline_snapshot_matrix_shape: (np.int64(20000), np.int64(4509))
+num_clusters: 10
+cluster_sizes_after_overlap: [567, 590, 610, 560, 553, 496, 574, 528, 556, 296]
+retained_modes_per_cluster: [23, 39, 44, 33, 30, 44, 37, 21, 26, 35]
+d_const_shape: (10, 10)
+
+[local_prom_timing]
+total_local_prom_time_seconds: 6.21769269e+01
+avg_local_prom_time_per_step_seconds: 1.24353854e-01
+gn_iterations_total: 1870
+avg_gn_iterations_per_step: 3.74000000e+00
+jacobian_time_seconds: 1.12694657e+01
+residual_time_seconds: 1.55682540e+00
+linear_solve_time_seconds: 3.25371468e+01
+hdm_load_or_solve_time_seconds: 2.18391418e-02
+
+[cluster_metrics]
+initial_cluster: 7
+final_cluster: 5
+cluster_switches: 8
+cluster_visit_counts: [55, 59, 65, 55, 54, 43, 56, 60, 54, 0]
+
+[error_metrics]
+relative_l2_error: 2.40767903e-04
+relative_error_percent: 2.40767903e-02
+
+[outputs]
+local_prom_snapshots_npy: Results/local_prom_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/local_prom_mu1_4.56_mu2_0.019.png
+summary_txt: Results/local_prom_summary_mu1_4.56_mu2_0.019.txt

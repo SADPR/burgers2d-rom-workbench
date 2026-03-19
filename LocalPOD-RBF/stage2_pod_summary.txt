@@ -1,0 +1,31 @@
+[run]
+timestamp: 2026-03-18T19:49:15
+script: stage2_local_pod_per_cluster.py
+
+[configuration]
+clusters_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/local_rbf_clusters_full.npz
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+eps2_pod: 1.00000000e-06
+dt: 5.00000000e-02
+num_steps: 500
+time_subsample: 1
+
+[clusters]
+K: 10
+S_w_shape: (np.int64(20000), np.int64(4509))
+total_snapshots_used: 5330
+retained_ranks: [17, 23, 24, 20, 18, 24, 21, 16, 17, 21]
+min_rank: 16
+max_rank: 24
+
+[timings_seconds]
+build_local_matrices: 9.16156769e-01
+svd_total: 6.79200363e+00
+total: 2.21644597e+01
+
+[outputs]
+pod_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/local_rbf_pod_per_cluster.npz
+rank_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/stage2_cluster_ranks.png
+sv_loss_plot_count: 10
+sv_loss_plot_dir: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/stage2_pod_plots
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-RBF/stage2_pod_summary.txt

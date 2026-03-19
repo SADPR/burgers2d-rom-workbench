@@ -1,0 +1,22 @@
+[run]
+timestamp: 2026-03-18T19:09:34
+script: run_fom_training.py
+
+[configuration]
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+num_training_parameters: 9
+
+[results]
+num_loaded_from_cache: 8
+num_computed_new: 1
+total_time_seconds: 9.22122962e+01
+mean_time_per_parameter_seconds: 1.02457258e+01
+max_time_per_parameter_seconds: 9.20616875e+01
+min_time_per_parameter_seconds: 1.69541836e-02
+snapshot_shape_example: [20000, 501]
+
+[outputs]
+metadata_npz: Results/fom_training_metadata.npz
+summary_txt: Results/fom_training_summary.txt

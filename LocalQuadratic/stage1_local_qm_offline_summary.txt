@@ -1,0 +1,45 @@
+[run]
+timestamp: 2026-03-18T17:07:24
+script: stage1_local_qm_offline.py
+
+[configuration]
+dt: 5.00000000e-02
+num_steps: 500
+n_clusters: 10
+clustering_method: kmeans
+phi_overlap: 1.00000000e-01
+pod_tol: 1.00000000e-06
+pod_method: svd
+zeta_qua: 1.00000000e-01
+alpha_ridge: 1.00000000e-04
+num_training_parameters: 9
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+
+[snapshot_matrix]
+S_shape: (20000, 4509)
+state_size: 20000
+total_snapshots: 4509
+
+[clusters]
+cluster_sizes_disjoint: [473, 491, 520, 467, 461, 419, 479, 481, 463, 255]
+cluster_sizes_after_overlap: [567, 590, 610, 560, 553, 496, 574, 528, 556, 296]
+n_trad_per_cluster: [23, 39, 44, 33, 30, 44, 37, 21, 26, 35]
+n_qm_per_cluster: [5, 8, 8, 7, 7, 8, 7, 5, 6, 7]
+pod_energy_captured_per_cluster: [0.9999991411179731, 0.9999990016002092, 0.9999990437007124, 0.9999991037302395, 0.9999991690399392, 0.9999990522795091, 0.9999991733466516, 0.9999993957119633, 0.999999037556124, 0.9999991846370958]
+pod_energy_lost_per_cluster: [8.588820269439523e-07, 9.983997908413755e-07, 9.562992876466225e-07, 8.962697605197079e-07, 8.309600607603329e-07, 9.47720490862558e-07, 8.266533484402316e-07, 6.042880367207459e-07, 9.624438760402754e-07, 8.153629041940391e-07]
+min_n_qm: 5
+max_n_qm: 8
+avg_n_qm: 6.80000000e+00
+
+[timings_seconds]
+build_snapshots: 3.03455114e-01
+clustering: 3.65217760e+01
+overlap_build: 2.59269428e+00
+local_qm_build: 1.18763323e+01
+precompute_switching: 3.93984318e-02
+save_model: 8.19354057e-02
+total: 5.14156621e+01
+
+[outputs]
+local_qm_model_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalQuadratic/local_qm_data.npz
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalQuadratic/stage1_local_qm_offline_summary.txt

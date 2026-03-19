@@ -1,0 +1,51 @@
+[run]
+timestamp: 2026-03-18T16:23:57
+script: stage1_quadratic_offline.py
+
+[configuration]
+dt: 5.00000000e-02
+num_steps: 500
+pod_tol: 1.00000000e-06
+zeta_qua: 1.00000000e-01
+ridge_alpha: 1.00000000e-04
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+
+[training_data]
+num_training_params: 9
+snapshot_shape: (20000, 4509)
+state_size: 20000
+snapshots_per_param: 501
+total_snapshots: 4509
+
+[heuristic_dimensioning]
+n_trad_from_tol: 153
+n_qua_raw: 1.60570499e+01
+n_qua_corr: 17
+n_max_ls: 94
+n_final: 17
+pod_energy_captured_at_n_trad: 9.99999009e-01
+pod_energy_lost_at_n_trad: 9.91166165e-07
+
+[manifold_shapes]
+V_shape: (20000, 17)
+H_shape: (20000, 153)
+u_ref_shape: (20000,)
+Q_shape: (153, 4509)
+u_ref_l2_norm: 3.27342686e+02
+linear_residual_l2_norm: 8.76809137e+02
+
+[timings_seconds]
+build_snapshots: 3.11338902e-01
+pod_and_heuristic: 6.12192614e+01
+build_q_and_linear_residual: 1.09973121e+00
+compute_H_ridge: 1.62392616e-01
+total: 6.46685932e+01
+
+[outputs]
+qm_V_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/qm_V.npy
+qm_H_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/qm_H.npy
+qm_uref_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/qm_uref.npy
+qm_sigma_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/qm_sigma.npy
+qm_metadata_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/qm_metadata.npz
+singular_value_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/qm_singular_value_decay.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Quadratic/stage1_quadratic_offline_summary.txt

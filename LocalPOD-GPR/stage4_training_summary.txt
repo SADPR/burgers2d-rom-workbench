@@ -1,0 +1,42 @@
+[run]
+timestamp: 2026-03-18T23:00:01
+script: stage4_local_pod_gpr_training.py
+
+[configuration]
+q_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_gpr_q_per_cluster.npz
+n_primary: 5
+delta_duplicates: 1.00000000e-03
+n_splits_max: 5
+kernel_candidates: ['matern15']
+alpha_values: [1e-10]
+constant_value: 1.00000000e+00
+length_scale: 1.00000000e+00
+constant_value_bounds: [0.001, 1000.0]
+length_scale_bounds: [0.01, 5.0]
+optimize_hyperparameters: True
+n_restarts_optimizer: 1
+normalize_y: False
+random_seed: 42
+dt: 5.00000000e-02
+num_steps: 500
+
+[clusters]
+K: 10
+r_list: [17, 23, 24, 20, 18, 24, 21, 16, 17, 21]
+has_gpr: [True, True, True, True, True, True, True, True, True, True]
+best_kernel: ['matern15', 'matern15', 'matern15', 'matern15', 'matern15', 'matern15', 'matern15', 'matern15', 'matern15', 'matern15']
+best_alpha: [1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10]
+cv_rpe_percent: [1.8875351461161376, 0.813527239587841, 0.5363780534252957, 1.330272770168921, 1.5418715491950028, 0.769360780418156, 1.3048373776883584, 1.6778158243176466, 1.0000358413223056, 0.6220339555051039]
+train_rpe_percent: [1.2629312160567146e-07, 1.8390376373865896e-07, 2.268564393766661e-07, 1.4311135235081378e-07, 1.2000169254293958e-07, 1.2862929157467324e-07, 1.5323450325003397e-07, 4.77413689400188e-07, 1.1361104253140228e-07, 1.8628975119696984e-07]
+analytic_jacobian_compatible: [True, True, True, True, True, True, True, True, True, True]
+
+[timings_seconds]
+training: 4.20477586e+01
+total: 4.28777027e+01
+
+[outputs]
+models_pkl: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_pod_gpr_models.pkl
+switching_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_pod_gpr_switching.npz
+all_in_one_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_pod_gpr_all_offline.npz
+training_error_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/stage4_cluster_qs_train_error.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/stage4_training_summary.txt

@@ -1,0 +1,41 @@
+[run]
+timestamp: 2026-03-18T23:36:14
+script: stage4_test_ann.py
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+basis_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-ANN/basis.npy
+model_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-ANN/pod_ann_model/case1_model.pt
+uref_mode: auto
+use_u_ref: True
+u_ref_source: checkpoint
+u_ref_l2_norm: 3.27342687e+02
+compare_pod: True
+dt: 5.00000000e-02
+num_steps: 500
+device: cuda
+
+[ann_model]
+n_p: 10
+n_s: 143
+hidden_dims: (32, 64, 128, 256, 256)
+checkpoint_use_u_ref: True
+
+[errors]
+pod_ann_relative_l2: 2.33048565e-03
+pod_ann_relative_percent: 2.33048565e-01
+pod_relative_l2: 3.71444646e-04
+pod_relative_percent: 3.71444646e-02
+
+[timings_seconds]
+load_or_compute_hdm: 1.74610615e-02
+ann_reconstruction: 1.83062792e-01
+pod_reconstruction: 6.41217232e-02
+total: 2.64645576e-01
+
+[outputs]
+pod_ann_reconstruction_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-ANN/stage4_results/pod_ann_reconstruction_mu1_4.56_mu2_0.019.npy
+pod_reconstruction_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-ANN/stage4_results/pod_reconstruction_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-ANN/stage4_results/pod_ann_projection_mu1_4.56_mu2_0.019.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-ANN/stage4_results/stage4_test_summary_mu1_4.56_mu2_0.019.txt

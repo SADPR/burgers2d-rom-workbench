@@ -1,0 +1,29 @@
+[configuration]
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+dt: 5.00000000e-02
+num_steps: 500
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+offline_model_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_pod_gpr_all_offline.npz
+n_clusters: 10
+n_primary: 5
+use_custom_predict: True
+
+[errors]
+rel_err_local_pod_gpr: 1.92835967e-03
+rel_err_local_pod_full_basis: 7.12344615e-04
+
+[timings_seconds]
+total_reconstruction: 2.17343831e+00
+avg_per_step: 4.33820022e-03
+
+[cluster_usage]
+unique_clusters: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+counts: [54, 58, 64, 55, 54, 45, 57, 60, 54]
+
+[outputs]
+gpr_reconstruction_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_pod_gpr_projection_mu1_4.56_mu2_0.019.npy
+pod_reference_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_pod_reference_mu1_4.56_mu2_0.019.npy
+cluster_history_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_pod_gpr_cluster_history_mu1_4.56_mu2_0.019.npy
+projection_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_pod_gpr_projection_mu1_4.56_mu2_0.019.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/stage5_local_pod_gpr_projection_summary_mu1_4.56_mu2_0.019.txt

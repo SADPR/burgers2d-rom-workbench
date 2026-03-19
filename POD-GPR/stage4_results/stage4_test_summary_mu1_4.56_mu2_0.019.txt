@@ -1,0 +1,42 @@
+[run]
+timestamp: 2026-03-18T22:38:06
+script: stage4_test_gpr.py
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+model_dir: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model
+uref_mode: auto
+use_u_ref: True
+u_ref_source: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/pod_gpr_model/u_ref.npy
+u_ref_l2_norm: 3.27342686e+02
+stage2_use_u_ref: True
+stage2_projection_metadata: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage2_projection_metadata.npz
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+compare_pod: True
+use_custom_predict: True
+learned_kernel: 31.6**2 * Matern(length_scale=1.93, nu=1.5)
+
+[model_shapes]
+U_p_shape: (20000, 5)
+U_s_shape: (20000, 148)
+hdm_shape: (20000, 501)
+
+[timings_seconds]
+hdm_load_or_solve: 1.91764832e-02
+pod_gpr_reconstruction: 1.18157411e+00
+pod_reconstruction: 1.40661240e-01
+
+[errors]
+pod_gpr_relative_l2_error: 2.74889748e-02
+pod_gpr_relative_error_percent: 2.74889748e+00
+pod_relative_l2_error: 3.71444653e-04
+pod_relative_error_percent: 3.71444653e-02
+
+[outputs]
+pod_gpr_reconstruction_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage4_results/pod_gpr_reconstruction_mu1_4.56_mu2_0.019.npy
+pod_reconstruction_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage4_results/pod_reconstruction_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage4_results/pod_gpr_projection_mu1_4.56_mu2_0.019.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage4_results/stage4_test_summary_mu1_4.56_mu2_0.019.txt

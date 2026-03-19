@@ -1,0 +1,37 @@
+[run]
+timestamp: 2026-03-18T20:33:00
+script: stage1_build_pod_basis.py
+
+[configuration]
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+pod_method: svd
+pod_tol: 1.00000000e-06
+num_modes_requested: N/A
+center: True
+num_training_parameters: 9
+
+[snapshot_matrix]
+shape: (20000, 4509)
+state_size: 20000
+num_snapshots: 4509
+
+[pod_truncation]
+n_keep: 153
+energy_captured: 9.99999009e-01
+energy_lost: 9.91166165e-07
+centered: True
+reference_source: mean
+
+[timings_seconds]
+build_snapshot_matrix: 2.85605669e-01
+compute_pod: 5.46806431e+01
+total: 5.49662488e+01
+
+[outputs]
+basis_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/basis.npy
+sigma_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/sigma.npy
+u_ref_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/u_ref.npy
+singular_value_decay_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage1_pod_singular_value_decay.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-GPR/stage1_pod_basis_summary.txt

@@ -1,0 +1,35 @@
+[run]
+timestamp: 2026-03-18T17:07:36
+script: stage2_local_qm_projection.py
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+dt: 5.00000000e-02
+num_steps: 500
+local_model_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalQuadratic/local_qm_data.npz
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+
+[offline_model_info]
+S_shape_offline: (np.int64(20000), np.int64(4509))
+num_clusters: 10
+cluster_sizes_after_overlap: [567, 590, 610, 560, 553, 496, 574, 528, 556, 296]
+n_qm_per_cluster: [5, 8, 8, 7, 7, 8, 7, 5, 6, 7]
+
+[reconstruction_metrics]
+hdm_snapshot_shape: (20000, 501)
+relative_reconstruction_error: 2.88160089e-03
+error_percent: 2.88160089e-01
+initial_cluster: 7
+final_cluster: 5
+cluster_switches: 8
+cluster_visit_counts: [56, 58, 65, 54, 54, 45, 57, 58, 54, 0]
+
+[timings_seconds]
+total_reconstruction_time: 5.52855492e-01
+avg_time_per_step: 1.10350398e-03
+
+[outputs]
+projection_snapshots_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalQuadratic/local_qm_projection_snaps_mu1_4.56_mu2_0.019.npy
+projection_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalQuadratic/local_qm_projection_mu1_4.56_mu2_0.019.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalQuadratic/stage2_local_qm_projection_summary_mu1_4.56_mu2_0.019.txt

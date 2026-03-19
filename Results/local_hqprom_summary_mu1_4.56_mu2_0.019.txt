@@ -1,0 +1,74 @@
+[run]
+timestamp: 2026-03-18T17:19:59
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+compute_ecsw: True
+local_model_file: LocalQuadratic/local_qm_data.npz
+weights_file: Results/local_hqprom_ecsw_weights.npy
+snap_sample_factor: 10
+snap_time_offset: 3
+mu_samples: [[4.25, 0.0225]]
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_q0: 20
+tol_q0: 1.00000000e-06
+init_cluster: N/A
+snap_folder: Results/param_snaps
+
+[discretization]
+dt: 5.00000000e-02
+num_steps: 500
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[local_model]
+offline_snapshot_matrix_shape: (np.int64(20000), np.int64(4509))
+num_clusters: 10
+cluster_sizes_after_overlap: [567, 590, 610, 560, 553, 496, 574, 528, 556, 296]
+n_qm_per_cluster: [5, 8, 8, 7, 7, 8, 7, 5, 6, 7]
+retained_modes_per_cluster: [5, 8, 8, 7, 7, 8, 7, 5, 6, 7]
+n_trad_per_cluster: [23, 39, 44, 33, 30, 44, 37, 21, 26, 35]
+d_const_shape: (10, 10)
+
+[ecsw]
+num_nonzero_weights: 336
+weights_sum: 1.00000000e+04
+ecsw_time_seconds: 1.73188210e+01
+ecsw_residual: 4.77148747e-15
+training_matrix_shape: (400, 10000)
+
+[local_hqprom_timing]
+total_local_hqprom_time_seconds: 8.74368834e+00
+avg_local_hqprom_time_per_step_seconds: 1.74873767e-02
+gn_iterations_total: 1834
+avg_gn_iterations_per_step: 3.66800000e+00
+jacobian_time_seconds: 3.26869726e+00
+residual_time_seconds: 1.16125083e+00
+linear_solve_time_seconds: 5.65893888e-01
+hdm_load_or_solve_time_seconds: 2.72054672e-02
+
+[cluster_metrics]
+initial_cluster: 7
+final_cluster: 5
+cluster_switches: 8
+cluster_visit_counts: [56, 59, 65, 55, 54, 44, 56, 58, 54, 0]
+
+[reduced_coordinates]
+red_coords_shape: (8, 501)
+max_active_n_qm: 8
+
+[error_metrics]
+relative_l2_error: 6.14310324e-03
+relative_error_percent: 6.14310324e-01
+
+[outputs]
+local_hqprom_snapshots_npy: Results/local_hqprom_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/local_hqprom_mu1_4.56_mu2_0.019.png
+ecsw_weights_npy: Results/local_hqprom_ecsw_weights.npy
+ecsw_reduced_mesh_png: Results/local_hqprom_reduced_mesh.png
+local_qm_model_npz: LocalQuadratic/local_qm_data.npz
+summary_txt: Results/local_hqprom_summary_mu1_4.56_mu2_0.019.txt

@@ -1,0 +1,57 @@
+[run]
+timestamp: 2026-03-18T16:53:34
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+qm_dir: Quadratic
+dt: 5.00000000e-02
+num_steps: 500
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_q0: 20
+tol_q0: 1.00000000e-06
+snap_folder: Results/param_snaps
+
+[discretization]
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[manifold]
+V_shape: (20000, 17)
+H_shape: (20000, 153)
+u_ref_shape: (20000,)
+sigma_shape: (17,)
+n: 17
+m: 153
+u_ref_l2_norm: 3.27342686e+02
+metadata_n_trad: 153
+metadata_n_final: 17
+metadata_pod_tol: 1.00000000e-06
+metadata_zeta_qua: 1.00000000e-01
+
+[qprom_timing]
+total_qprom_time_seconds: 5.67980115e+01
+avg_qprom_time_per_step_seconds: 1.13596023e-01
+gn_iterations_total: 2020
+avg_gn_iterations_per_step: 4.04000000e+00
+jacobian_time_seconds: 1.24538295e+01
+residual_time_seconds: 2.13582516e+00
+linear_solve_time_seconds: 2.64837263e+01
+hdm_load_or_solve_time_seconds: 1.95655823e-02
+
+[error_metrics]
+relative_l2_error: 7.41278089e-03
+relative_error_percent: 7.41278089e-01
+
+[outputs]
+qprom_snapshots_npy: Results/qprom_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/qprom_mu1_4.56_mu2_0.019.png
+summary_txt: Results/qprom_summary_mu1_4.56_mu2_0.019.txt
+qm_V_npy: Quadratic/qm_V.npy
+qm_H_npy: Quadratic/qm_H.npy
+qm_uref_npy: Quadratic/qm_uref.npy
+qm_sigma_npy: Quadratic/qm_sigma.npy
+qm_metadata_npz: Quadratic/qm_metadata.npz

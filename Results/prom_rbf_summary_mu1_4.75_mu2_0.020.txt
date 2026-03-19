@@ -1,0 +1,61 @@
+[run]
+timestamp: 2026-03-18T18:44:56
+mu1: 4.75000000e+00
+mu2: 2.00000000e-02
+
+[configuration]
+model_dir: POD-RBF/pod_rbf_model
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_ic: 20
+tol_ic: 1.00000000e-12
+uref_mode: auto
+use_u_ref: True
+u_ref_source: POD-RBF/pod_rbf_model/u_ref.npy
+u_ref_l2_norm: 3.27342686e+02
+provided_uref_file: N/A
+
+[discretization]
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[rbf_model]
+U_p_shape: (20000, 10)
+U_s_shape: (20000, 143)
+q_p_train_shape: (4501, 10)
+q_s_train_shape: (4501, 143)
+W_shape: (4501, 143)
+kernel: gaussian
+epsilon: 2.64097595e+00
+lambda: 1.00000000e-10
+search_method: grid_search
+duplicate_tol: 1.00000000e-03
+weights_model_use_u_ref: True
+
+[prom_timing]
+total_prom_time_seconds: 5.26152771e+01
+avg_prom_time_per_step_seconds: 1.05230554e-01
+gn_iterations_total: 1972
+avg_gn_iterations_per_step: 3.94400000e+00
+jacobian_time_seconds: 2.36698940e+01
+residual_time_seconds: 2.22032976e+00
+linear_solve_time_seconds: 7.22630548e+00
+hdm_load_or_solve_time_seconds: 1.93021297e-02
+
+[error_metrics]
+relative_l2_error: 5.92700814e-03
+relative_error_percent: 5.92700814e-01
+
+[outputs]
+rom_snapshots_npy: Results/prom_rbf_snaps_mu1_4.75_mu2_0.020.npy
+comparison_plot_png: Results/prom_rbf_mu1_4.75_mu2_0.020.png
+summary_txt: Results/prom_rbf_summary_mu1_4.75_mu2_0.020.txt
+weights_pkl: POD-RBF/pod_rbf_model/rbf_weights.pkl
+scaler_pkl: POD-RBF/pod_rbf_model/scaler.pkl
+U_p_npy: POD-RBF/pod_rbf_model/U_p.npy
+U_s_npy: POD-RBF/pod_rbf_model/U_s.npy

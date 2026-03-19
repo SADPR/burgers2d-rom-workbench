@@ -1,0 +1,49 @@
+[run]
+timestamp: 2026-03-18T18:37:17
+script: stage3_train_rbf_grid_search.py
+
+[configuration]
+basis_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/basis.npy
+q_p_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/q_p.npy
+q_s_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/q_s.npy
+stage2_metadata_file: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/stage2_projection_metadata.npz
+uref_mode: auto
+use_u_ref: True
+u_ref_source: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/stage2_projection_metadata.npz:u_ref_used
+u_ref_l2_norm: 3.27342686e+02
+kernel_candidates: ['imq', 'gaussian', 'matern']
+epsilon_grid: [0.5, 0.6974753969812105, 0.9729438587881943, 1.3572088082974534, 1.8932395047073238, 2.6409759502525025, 3.6840314986403864, 5.139042664010977, 7.168711644368866, 10.0]
+lambda_grid: [1e-10, 1e-08]
+duplicate_tol: 1.00000000e-03
+cv_folds: 5
+random_seed: 42
+
+[data_shapes]
+basis_shape: (20000, 153)
+q_p_shape: (10, 4509)
+q_s_shape: (143, 4509)
+x_train_filtered_shape: (4501, 10)
+y_train_filtered_shape: (4501, 143)
+W_shape: (4501, 143)
+
+[grid_search]
+total_combinations: 60
+valid_combinations: 60
+failed_combinations: 0
+best_kernel: gaussian
+best_epsilon: 2.64097595e+00
+best_lambda: 1.00000000e-10
+best_cv_relative_error_percent: 1.43704153e-03
+top5: [{'rank': 1, 'kernel': 'gaussian', 'epsilon': 2.6409759502525025, 'lambda': 1e-10, 'cv_rel_err_pct': 0.0014370415292399477}, {'rank': 2, 'kernel': 'gaussian', 'epsilon': 1.8932395047073238, 'lambda': 1e-10, 'cv_rel_err_pct': 0.002527140120947647}, {'rank': 3, 'kernel': 'imq', 'epsilon': 1.3572088082974534, 'lambda': 1e-10, 'cv_rel_err_pct': 0.003384568113913256}, {'rank': 4, 'kernel': 'imq', 'epsilon': 1.8932395047073238, 'lambda': 1e-10, 'cv_rel_err_pct': 0.003965110552654425}, {'rank': 5, 'kernel': 'gaussian', 'epsilon': 3.6840314986403864, 'lambda': 1e-10, 'cv_rel_err_pct': 0.0046007275310348955}]
+search_time_seconds: 4.10383345e+02
+
+[outputs]
+model_dir: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/pod_rbf_model
+scaler_pkl: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/pod_rbf_model/scaler.pkl
+U_p_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/pod_rbf_model/U_p.npy
+U_s_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/pod_rbf_model/U_s.npy
+u_ref_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/pod_rbf_model/u_ref.npy
+q_p_normalized_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/pod_rbf_model/q_p_normalized.npy
+q_s_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/pod_rbf_model/q_s.npy
+weights_pkl: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/pod_rbf_model/rbf_weights.pkl
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/stage3_train_rbf_summary.txt

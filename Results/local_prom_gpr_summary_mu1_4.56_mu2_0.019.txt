@@ -1,0 +1,63 @@
+[run]
+timestamp: 2026-03-18T23:09:41
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+local_model_file: LocalPOD-GPR/local_pod_gpr_all_offline.npz
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_ic: 20
+tol_ic: 1.00000000e-10
+init_cluster: N/A
+use_custom_predict: True
+jacobian_mode: auto
+fd_eps: 1.00000000e-06
+verbose: True
+
+[discretization]
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[local_gpr_model]
+num_clusters: 10
+cluster_sizes_after_overlap: [567, 590, 610, 560, 553, 496, 574, 528, 556, 296]
+retained_modes_per_cluster: [17, 23, 24, 20, 18, 24, 21, 16, 17, 21]
+n_primary: 5
+clusters_with_gpr: 10
+clusters_analytic_compatible: 10
+cluster_jacobian_modes: ['analytic', 'analytic', 'analytic', 'analytic', 'analytic', 'analytic', 'analytic', 'analytic', 'analytic', 'analytic']
+d_const_shape: (10, 10)
+
+[local_prom_gpr_timing]
+total_local_prom_gpr_time_seconds: 2.85922585e+01
+avg_local_prom_gpr_time_per_step_seconds: 5.71845169e-02
+gn_iterations_total: 1872
+avg_gn_iterations_per_step: 3.74400000e+00
+jacobian_time_seconds: 1.39475169e+01
+residual_time_seconds: 1.91225266e+00
+linear_solve_time_seconds: 2.43260050e+00
+hdm_load_or_solve_time_seconds: 1.99556351e-02
+
+[cluster_metrics]
+initial_cluster: 7
+final_cluster: 5
+cluster_switches: 8
+cluster_visit_counts: [54, 59, 64, 55, 54, 43, 57, 61, 54, 0]
+cluster_history_length: 501
+
+[error_metrics]
+relative_l2_error: 4.09008672e-03
+relative_error_percent: 4.09008672e-01
+
+[outputs]
+local_prom_gpr_snapshots_npy: Results/local_prom_gpr_snaps_mu1_4.56_mu2_0.019.npy
+cluster_history_npy: Results/local_prom_gpr_cluster_history_mu1_4.56_mu2_0.019.npy
+red_coords_npy: Results/local_prom_gpr_red_coords_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/local_prom_gpr_mu1_4.56_mu2_0.019.png
+summary_txt: Results/local_prom_gpr_summary_mu1_4.56_mu2_0.019.txt

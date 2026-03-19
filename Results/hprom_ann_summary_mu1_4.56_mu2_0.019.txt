@@ -1,0 +1,72 @@
+[run]
+timestamp: 2026-03-19T00:14:30
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+model_dir: POD-ANN/pod_ann_model
+basis_file: N/A
+compute_ecsw: True
+weights_file: POD-ANN/pod_ann_model/ecsw_weights_ann.npy
+weights_source: computed
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+snap_sample_factor: 10
+snap_time_offset: 3
+mu_samples: [[4.25, 0.0225]]
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+solver_threads: 1
+uref_mode: auto
+use_u_ref: True
+u_ref_source: POD-ANN/u_ref.npy
+u_ref_l2_norm: 3.27342686e+02
+provided_uref_file: N/A
+checkpoint_use_u_ref: True
+stage2_use_u_ref: True
+stage2_projection_metadata: POD-ANN/stage2_projection_metadata.npz
+
+[discretization]
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[ann_model]
+model_pt: POD-ANN/pod_ann_model/case1_model.pt
+basis_path: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-ANN/basis.npy
+U_p_shape: (20000, 10)
+U_s_shape: (20000, 143)
+n_p: 10
+n_s: 143
+hidden_dims: (32, 64, 128, 256, 256)
+checkpoint_seed: 42
+
+[ecsw]
+num_nonzero_weights: 501
+weights_sum: 1.00000000e+04
+ecsw_time_seconds: 1.22532439e+01
+ecsw_residual: 9.59393148e-15
+training_matrix_shape: (500, 10000)
+
+[hprom_timing]
+total_hprom_time_seconds: 6.78260636e+00
+avg_hprom_time_per_step_seconds: 1.35652127e-02
+gn_iterations_total: 1911
+avg_gn_iterations_per_step: 3.82200000e+00
+jacobian_time_seconds: 5.40962839e+00
+residual_time_seconds: 3.06021452e-01
+linear_solve_time_seconds: 2.56366730e-01
+hdm_load_or_solve_time_seconds: 2.00111866e-02
+
+[error_metrics]
+relative_l2_error: 2.74196265e-03
+relative_error_percent: 2.74196265e-01
+
+[outputs]
+hprom_snapshots_npy: Results/hprom_ann_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/hprom_ann_mu1_4.56_mu2_0.019.png
+ecsw_weights_npy: POD-ANN/pod_ann_model/ecsw_weights_ann.npy
+reduced_mesh_plot_png: Results/hprom_ann_reduced_mesh.png
+summary_txt: Results/hprom_ann_summary_mu1_4.56_mu2_0.019.txt

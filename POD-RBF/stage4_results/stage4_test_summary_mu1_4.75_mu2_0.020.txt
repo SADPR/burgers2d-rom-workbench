@@ -1,0 +1,41 @@
+[run]
+timestamp: 2026-03-18T18:37:39
+script: stage4_test_rbf.py
+mu1: 4.75000000e+00
+mu2: 2.00000000e-02
+
+[configuration]
+model_dir: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/pod_rbf_model
+uref_mode: auto
+use_u_ref: True
+u_ref_source: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/pod_rbf_model/u_ref.npy
+u_ref_l2_norm: 3.27342686e+02
+snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+kernel_name: gaussian
+epsilon: 2.64097595e+00
+compare_pod: False
+
+[model_shapes]
+U_p_shape: (20000, 10)
+U_s_shape: (20000, 143)
+W_shape: (4501, 143)
+q_p_train_shape: (4501, 10)
+
+[timings_seconds]
+hdm_load_or_solve: 1.99084282e-02
+pod_rbf_reconstruction: 1.16567445e+00
+pod_reconstruction: N/A
+
+[errors]
+pod_rbf_relative_l2_error: 5.18865119e-03
+pod_rbf_relative_error_percent: 5.18865119e-01
+pod_relative_l2_error: N/A
+pod_relative_error_percent: N/A
+
+[outputs]
+pod_rbf_reconstruction_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/stage4_results/pod_rbf_reconstruction_mu1_4.75_mu2_0.020.npy
+pod_reconstruction_npy: N/A
+comparison_plot_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/stage4_results/pod_rbf_projection_mu1_4.75_mu2_0.020.png
+summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD-RBF/stage4_results/stage4_test_summary_mu1_4.75_mu2_0.020.txt

@@ -1,0 +1,54 @@
+[run]
+timestamp: 2026-03-18T23:54:05
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+pod_dir_requested: POD
+pod_basis_file: POD/basis.npy
+pod_sigma_file: POD/sigma.npy
+pod_u_ref_file: POD/u_ref.npy
+pod_stage1_metadata: POD/stage1_pod_metadata.npz
+num_modes_requested: 10
+num_modes_used: 10
+dt: 5.00000000e-02
+num_steps: 20
+snap_folder: Results/param_snaps
+max_its: 20
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+
+[discretization]
+num_cells_x: 100
+num_cells_y: 100
+full_state_size: 20000
+
+[pod]
+basis_size: 10
+n_available_modes: 153
+energy_captured: 9.76897169e-01
+energy_lost: 2.31028311e-02
+centered_basis_used: True
+reference_source: loaded_file
+u_ref_l2_norm: 3.27342686e+02
+stage1_num_training_parameters: 9
+stage1_num_training_snapshots: 4509
+
+[prom_timing]
+total_prom_time_seconds: 5.86989880e-01
+avg_prom_time_per_step_seconds: 2.93494940e-02
+gn_iterations_total: 60
+avg_gn_iterations_per_step: 3.00000000e+00
+jacobian_time_seconds: 2.33953476e-01
+residual_time_seconds: 3.20258141e-02
+linear_solve_time_seconds: 1.22881889e-01
+hdm_load_or_solve_time_seconds: 1.42908096e-02
+
+[error_metrics]
+relative_l2_error: 1.45995277e-01
+relative_error_percent: 1.45995277e+01
+
+[outputs]
+rom_snapshots_npy: Results/prom_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/prom_mu1_4.56_mu2_0.019.png
+summary_txt: Results/prom_summary_mu1_4.56_mu2_0.019.txt
