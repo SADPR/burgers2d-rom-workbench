@@ -118,6 +118,8 @@ def main(
     max_its=20,
     max_its_ic=20,
     tol_ic=1e-10,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
     init_cluster=None,
     verbose=True,
 ):
@@ -189,6 +191,9 @@ def main(
         "[LOCAL-HPROM-RBF] Clusters with active RBF closure: "
         f"{sum(has_rbf_flags)}/{K}"
     )
+    print(f"[LOCAL-HPROM-RBF] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[LOCAL-HPROM-RBF] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     C_shape = None
     elapsed_ecsw = None
@@ -345,6 +350,8 @@ def main(
         max_its=max_its,
         max_its_ic=max_its_ic,
         tol_ic=tol_ic,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_hprom = time.time() - t0
 
@@ -482,6 +489,11 @@ def main(
                     ("max_its", max_its),
                     ("max_its_ic", max_its_ic),
                     ("tol_ic", tol_ic),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("init_cluster", init_cluster),
                     ("verbose", bool(verbose)),
                 ],

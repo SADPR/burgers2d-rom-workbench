@@ -61,6 +61,8 @@ def inviscid_burgers_implicit2D_LSPG_qm(
     min_delta=1e-2,
     max_its_q0=20,
     tol_q0=1e-6,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Global quadratic-manifold LSPG ROM for the 2D inviscid Burgers equation:
@@ -87,6 +89,8 @@ def inviscid_burgers_implicit2D_LSPG_qm(
         max_its=max_its_q0,
         tol_rel=tol_q0,
         verbose=False,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     w_init = u_qm(q0, V, H, u_ref)
 
@@ -125,6 +129,8 @@ def inviscid_burgers_implicit2D_LSPG_qm(
             max_its=max_its,
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times
@@ -160,6 +166,8 @@ def inviscid_burgers_implicit2D_LSPG_qm_ecsw(
     min_delta=1e-2,
     max_its_q0=20,
     tol_q0=1e-6,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Global quadratic-manifold ECSW-LSPG HROM for the 2D inviscid Burgers equation:
@@ -217,6 +225,8 @@ def inviscid_burgers_implicit2D_LSPG_qm_ecsw(
         max_its=max_its_q0,
         tol_rel=tol_q0,
         verbose=False,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     w0_ecsw = u_qm(q0, V_ecsw, H_ecsw, u_ref_ecsw)
 
@@ -275,6 +285,8 @@ def inviscid_burgers_implicit2D_LSPG_qm_ecsw(
             max_its=max_its,
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times
@@ -444,6 +456,8 @@ def inviscid_burgers_implicit2D_LSPG_local_qm(
     max_its=20,
     max_its_q0=20,
     tol_q0=1e-6,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Local quadratic-manifold LSPG ROM for the 2D inviscid Burgers equation:
@@ -517,6 +531,8 @@ def inviscid_burgers_implicit2D_LSPG_local_qm(
                 max_its=max_its_q0,
                 tol_rel=tol_q0,
                 verbose=False,
+                linear_solver=linear_solver,
+                normal_eq_reg=normal_eq_reg,
             )
         else:
             n_k = V_k.shape[1]
@@ -539,6 +555,8 @@ def inviscid_burgers_implicit2D_LSPG_local_qm(
             max_its=max_its,
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times
@@ -587,6 +605,8 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
     max_its=20,
     max_its_q0=20,
     tol_q0=1e-6,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Local quadratic-manifold ECSW-LSPG HROM for the 2D inviscid Burgers equation:
@@ -666,6 +686,8 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
         max_its=max_its_q0,
         tol_rel=tol_q0,
         verbose=False,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
 
     w0_full = u_qm(q0, V_k, H_k, u0_k)
@@ -712,6 +734,8 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
                 max_its=max_its_q0,
                 tol_rel=tol_q0,
                 verbose=False,
+                linear_solver=linear_solver,
+                normal_eq_reg=normal_eq_reg,
             )
         else:
             n_k = V_k.shape[1]
@@ -754,6 +778,8 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
             max_its=max_its,
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times

@@ -164,6 +164,8 @@ def inviscid_burgers_implicit2D_LSPG(
     max_its=20,
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Global affine LSPG ROM for the 2D inviscid Burgers equation:
@@ -217,6 +219,8 @@ def inviscid_burgers_implicit2D_LSPG(
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
             u_ref=u_ref,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times
@@ -249,6 +253,8 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
     max_its=20,
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Global affine ECSW-LSPG HROM for the 2D inviscid Burgers equation:
@@ -350,6 +356,8 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
             u_ref=u_ref_ecsw,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times
@@ -383,6 +391,8 @@ def inviscid_burgers_implicit2D_LSPG_local(
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
     max_its=20,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Local affine LSPG ROM for the 2D inviscid Burgers equation:
@@ -479,6 +489,8 @@ def inviscid_burgers_implicit2D_LSPG_local(
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
             u_ref=u0_k,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times
@@ -524,6 +536,8 @@ def inviscid_burgers_implicit2D_LSPG_local_ecsw(
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
     max_its=20,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Local affine ECSW-LSPG HROM for the 2D inviscid Burgers equation:
@@ -659,6 +673,8 @@ def inviscid_burgers_implicit2D_LSPG_local_ecsw(
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
             u_ref=u0_loc_k,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times

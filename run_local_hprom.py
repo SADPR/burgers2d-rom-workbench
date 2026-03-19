@@ -114,6 +114,8 @@ def main(
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
     max_its=20,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     if compute_ecm is not None:
         compute_ecsw = bool(compute_ecm)
@@ -171,6 +173,9 @@ def main(
         "[LOCAL-HPROM] Retained modes per cluster: "
         f"min={np.min(mode_counts)}, max={np.max(mode_counts)}, avg={np.mean(mode_counts):.2f}"
     )
+    print(f"[LOCAL-HPROM] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[LOCAL-HPROM] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     # ------------------------------------------------------------------
     # ECSW weights: build or load
@@ -312,6 +317,8 @@ def main(
         relnorm_cutoff=relnorm_cutoff,
         min_delta=min_delta,
         max_its=max_its,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_hprom = time.time() - t0
 
@@ -437,6 +444,11 @@ def main(
                     ("relnorm_cutoff", relnorm_cutoff),
                     ("min_delta", min_delta),
                     ("max_its", max_its),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("snap_folder", snap_folder),
                 ],
             ),

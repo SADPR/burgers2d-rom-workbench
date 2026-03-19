@@ -101,6 +101,8 @@ def main(
     max_its=20,
     max_its_ic=20,
     tol_ic=1e-10,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
     init_cluster=None,
     verbose=True,
 ):
@@ -152,6 +154,9 @@ def main(
         "[LOCAL-PROM-RBF] Clusters with active RBF closure: "
         f"{sum(has_rbf_flags)}/{K}"
     )
+    print(f"[LOCAL-PROM-RBF] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[LOCAL-PROM-RBF] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     t0 = time.time()
     rom_snaps, stats = inviscid_burgers_implicit2D_LSPG_local_pod_rbf(
@@ -174,6 +179,8 @@ def main(
         max_its=max_its,
         max_its_ic=max_its_ic,
         tol_ic=tol_ic,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_rom = time.time() - t0
 
@@ -308,6 +315,11 @@ def main(
                     ("max_its", max_its),
                     ("max_its_ic", max_its_ic),
                     ("tol_ic", tol_ic),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("init_cluster", init_cluster),
                     ("verbose", bool(verbose)),
                 ],

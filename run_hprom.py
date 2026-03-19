@@ -84,6 +84,8 @@ def main(
     snap_sample_factor=10,
     snap_time_offset=3,
     mu_samples=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Parameters
@@ -220,6 +222,9 @@ def main(
     print(f"Loaded POD basis from {basis_path}")
     print(f"Loaded singular values from {sigma_path}")
     print(f"Using basis size: {n_keep}")
+    print(f"Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"normal_eq_reg: {float(normal_eq_reg):.3e}")
     print(f"Centered basis: {centered_basis} (reference: {ref_source})")
     if energy_captured is not None:
         print(f"Estimated captured energy at {n_keep} modes: {energy_captured:.8f}")
@@ -359,6 +364,8 @@ def main(
         mu=mu_rom,
         basis=basis_trunc,
         u_ref=u_ref,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_hprom = time.time() - t0
     num_its, jac_time, res_time, ls_time = hprom_stats
@@ -474,6 +481,11 @@ def main(
                     ("snap_sample_factor", snap_sample_factor),
                     ("snap_time_offset", snap_time_offset),
                     ("mu_samples", mu_samples),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                 ],
             ),
             (

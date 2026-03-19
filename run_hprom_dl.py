@@ -462,6 +462,8 @@ def main(
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
     max_its=20,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
     solver_threads=1,
 ):
     if mu_samples is None:
@@ -532,6 +534,9 @@ def main(
     )
     if solver_threads is not None and int(solver_threads) > 0:
         print(f"[HPROM-DL] Limiting solver threads to {int(solver_threads)}.")
+    print(f"[HPROM-DL] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[HPROM-DL] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     c_shape = None
     elapsed_ecsw = None
@@ -678,6 +683,8 @@ def main(
             max_its=max_its,
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
         elapsed_hprom = time.time() - t0
 
@@ -800,6 +807,11 @@ def main(
                     ("relnorm_cutoff", relnorm_cutoff),
                     ("min_delta", min_delta),
                     ("max_its", max_its),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("solver_threads", solver_threads),
                     ("uref_mode", uref_mode),
                     ("use_u_ref", use_u_ref),

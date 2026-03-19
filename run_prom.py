@@ -150,6 +150,8 @@ def main(
     max_its=20,
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     results_dir = "Results"
     if snap_folder is None:
@@ -197,6 +199,9 @@ def main(
     print(f"[PROM] Loaded POD basis from: {pod_data['basis_path']}")
     print(f"[PROM] Loaded singular values from: {pod_data['sigma_path']}")
     print(f"[PROM] Basis size used: {n_keep}")
+    print(f"[PROM] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[PROM] normal_eq_reg: {float(normal_eq_reg):.3e}")
     print(
         f"[PROM] Centered basis: {pod_data['centered_basis']} "
         f"(reference: {pod_data['reference_source']})"
@@ -218,6 +223,8 @@ def main(
         max_its=max_its,
         relnorm_cutoff=relnorm_cutoff,
         min_delta=min_delta,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_rom = time.time() - t0
 
@@ -325,6 +332,8 @@ def main(
                     ("max_its", max_its),
                     ("relnorm_cutoff", relnorm_cutoff),
                     ("min_delta", min_delta),
+                    ("linear_solver", linear_solver),
+                    ("normal_eq_reg", normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None),
                 ],
             ),
             (

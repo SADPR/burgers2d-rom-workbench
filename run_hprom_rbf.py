@@ -237,6 +237,8 @@ def main(
     max_its=20,
     max_its_ic=20,
     tol_ic=1e-12,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     if mu_samples is None:
         mu_samples = [[4.25, 0.0225]]
@@ -297,6 +299,9 @@ def main(
         f"[HPROM-RBF] u_ref mode={uref_mode}, use_u_ref={use_u_ref}, "
         f"||u_ref||_2={np.linalg.norm(u_ref):.3e}"
     )
+    print(f"[HPROM-RBF] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[HPROM-RBF] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     C_shape = None
     elapsed_ecsw = None
@@ -451,6 +456,8 @@ def main(
         min_delta=min_delta,
         max_its_ic=max_its_ic,
         tol_ic=tol_ic,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_hprom = time.time() - t0
     num_its, jac_time, res_time, ls_time = hprom_stats
@@ -574,6 +581,11 @@ def main(
                     ("max_its", max_its),
                     ("max_its_ic", max_its_ic),
                     ("tol_ic", tol_ic),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("uref_mode", uref_mode),
                     ("use_u_ref", use_u_ref),
                     ("u_ref_source", u_ref_source),

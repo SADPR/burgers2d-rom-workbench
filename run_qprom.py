@@ -102,6 +102,8 @@ def main(
     max_its=20,
     max_its_q0=20,
     tol_q0=1e-6,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     results_dir = "Results"
     if snap_folder is None:
@@ -136,6 +138,9 @@ def main(
     m = H.shape[1]
     print(f"[QPROM] Loaded manifold from '{qm_dir}'")
     print(f"[QPROM] V shape={V.shape}, H shape={H.shape}, u_ref shape={u_ref.shape}")
+    print(f"[QPROM] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[QPROM] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     t0 = time.time()
     rom_snaps_qm, stats = inviscid_burgers_implicit2D_LSPG_qm(
@@ -153,6 +158,8 @@ def main(
         min_delta=min_delta,
         max_its_q0=max_its_q0,
         tol_q0=tol_q0,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_qprom = time.time() - t0
     num_its, jac_time, res_time, ls_time = stats
@@ -253,6 +260,11 @@ def main(
                     ("max_its", max_its),
                     ("max_its_q0", max_its_q0),
                     ("tol_q0", tol_q0),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("snap_folder", snap_folder),
                 ],
             ),

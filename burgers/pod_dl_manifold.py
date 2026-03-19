@@ -206,6 +206,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_dl_2D(
     max_its=20,
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     POD-DL manifold ROM:
@@ -294,6 +296,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_dl_2D(
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
             u_ref=u_ref_np,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times
@@ -328,6 +332,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_dl_2D_ecsw(
     max_its=20,
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     ECSW POD-DL manifold ROM in latent coordinates z.
@@ -453,6 +459,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_dl_2D_ecsw(
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
             u_ref=u_ref_loc,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times

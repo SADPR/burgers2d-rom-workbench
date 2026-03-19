@@ -220,6 +220,8 @@ def main(
     max_its=20,
     max_its_ic=20,
     tol_ic=1e-12,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     results_dir = "Results"
     if snap_folder is None:
@@ -266,6 +268,9 @@ def main(
         f"[PROM-RBF] u_ref mode={uref_mode}, use_u_ref={use_u_ref}, "
         f"||u_ref||_2={np.linalg.norm(u_ref):.3e}"
     )
+    print(f"[PROM-RBF] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[PROM-RBF] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     t0 = time.time()
     rom_snaps, rom_times = inviscid_burgers_implicit2D_LSPG_pod_rbf(
@@ -289,6 +294,8 @@ def main(
         min_delta=min_delta,
         max_its_ic=max_its_ic,
         tol_ic=tol_ic,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_rom = time.time() - t0
 
@@ -391,6 +398,11 @@ def main(
                     ("max_its", max_its),
                     ("max_its_ic", max_its_ic),
                     ("tol_ic", tol_ic),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("uref_mode", uref_mode),
                     ("use_u_ref", use_u_ref),
                     ("u_ref_source", u_ref_source),

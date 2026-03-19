@@ -789,6 +789,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_rbf(
     min_delta=1e-2,
     max_its_ic=20,
     tol_ic=1e-12,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Global POD-RBF manifold ROM for the 2D inviscid Burgers equation:
@@ -878,6 +880,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_rbf(
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
             u_ref=None,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times
@@ -917,6 +921,8 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_rbf(
     max_its=20,
     max_its_ic=20,
     tol_ic=1e-10,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Local POD-RBF manifold ROM for the 2D inviscid Burgers equation.
@@ -1044,6 +1050,8 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_rbf(
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
             u_ref=None,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times
@@ -1094,6 +1102,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_rbf_ecsw(
     min_delta=1e-2,
     max_its_ic=20,
     tol_ic=1e-12,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     ECSW global POD-RBF manifold ROM for the 2D inviscid Burgers equation.
@@ -1241,6 +1251,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_rbf_ecsw(
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
             u_ref=None,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times
@@ -1279,6 +1291,8 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_rbf_ecsw(
     max_its=20,
     max_its_ic=20,
     tol_ic=1e-10,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     ECSW local POD-RBF manifold ROM for the 2D inviscid Burgers equation.
@@ -1471,6 +1485,8 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_rbf_ecsw(
             relnorm_cutoff=relnorm_cutoff,
             min_delta=min_delta,
             u_ref=None,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
         )
 
         jac_t, res_t, ls_t = times

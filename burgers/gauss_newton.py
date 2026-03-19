@@ -47,6 +47,56 @@ def _call_decode(decode, y, with_grad=False):
             return decode(y)
 
 
+def _solve_reduced_update(JV, r, linear_solver="lstsq", normal_eq_reg=1e-12):
+    """
+    Solve the reduced Gauss-Newton update:
+
+        JV * dy ~= -r
+
+    Parameters
+    ----------
+    JV : ndarray, shape (n_res, n_red)
+    r : ndarray, shape (n_res,)
+    linear_solver : {"lstsq", "normal_eq"}
+        - "lstsq": robust SVD-based least-squares.
+        - "normal_eq": solve (JV^T JV) dy = -JV^T r with optional ridge regularization.
+    normal_eq_reg : float
+        Non-negative ridge term for normal equations.
+    """
+    mode = str(linear_solver).strip().lower()
+    if mode == "lstsq":
+        dy, *_ = np.linalg.lstsq(JV, -r, rcond=None)
+        return dy
+
+    if mode == "normal_eq":
+        reg = float(normal_eq_reg)
+        if reg < 0.0:
+            raise ValueError(f"normal_eq_reg must be non-negative, got {reg}.")
+
+        ata = JV.T @ JV
+        atb = -(JV.T @ r)
+
+        if reg > 0.0:
+            ata = ata + reg * np.eye(ata.shape[0], dtype=ata.dtype)
+
+        try:
+            chol = np.linalg.cholesky(ata)
+            y = np.linalg.solve(chol, atb)
+            dy = np.linalg.solve(chol.T, y)
+            return dy
+        except np.linalg.LinAlgError:
+            try:
+                return np.linalg.solve(ata, atb)
+            except np.linalg.LinAlgError:
+                dy, *_ = np.linalg.lstsq(JV, -r, rcond=None)
+                return dy
+
+    raise ValueError(
+        "linear_solver must be one of: 'lstsq', 'normal_eq'. "
+        f"Got: {linear_solver}"
+    )
+
+
 def newton_raphson(func, jac, x0, max_its=20, relnorm_cutoff=1e-12, u_ref=None):
     """
     Newton-Raphson solver for full-order nonlinear systems.
@@ -84,6 +134,8 @@ def gauss_newton_LSPG(
     relnorm_cutoff=1e-5,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     jac_time = 0.0
     res_time = 0.0
@@ -119,7 +171,12 @@ def gauss_newton_LSPG(
 
         t0 = time.time()
         JV = J @ basis
-        dy, *_ = np.linalg.lstsq(JV, -r, rcond=None)
+        dy = _solve_reduced_update(
+            JV,
+            r,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         y += dy
@@ -141,6 +198,8 @@ def gauss_newton_ECSW_2D(
     relnorm_cutoff=1e-5,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     jac_time = 0.0
     res_time = 0.0
@@ -188,7 +247,12 @@ def gauss_newton_ECSW_2D(
         JV = J @ basis
         JVw = sqrt_w[:, None] * JV
         rw = sqrt_w * r
-        dy, *_ = np.linalg.lstsq(JVw, -rw, rcond=None)
+        dy = _solve_reduced_update(
+            JVw,
+            rw,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         y += dy
@@ -208,6 +272,8 @@ def gauss_newton_LSPG_local(
     relnorm_cutoff=1e-5,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Local affine LSPG. If u_ref is given, it overrides u0loc.
@@ -250,7 +316,12 @@ def gauss_newton_LSPG_local(
 
         t0 = time.time()
         JV = J @ Vloc
-        dy, *_ = np.linalg.lstsq(JV, -r, rcond=None)
+        dy = _solve_reduced_update(
+            JV,
+            r,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         y += dy
@@ -271,6 +342,8 @@ def gauss_newton_LSPG_local_ecsw(
     relnorm_cutoff=1e-5,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     jac_time = 0.0
     res_time = 0.0
@@ -317,7 +390,12 @@ def gauss_newton_LSPG_local_ecsw(
         t0 = time.time()
         JV = J_loc @ V_loc
         JVw = weights[:, None] * JV
-        dq, *_ = np.linalg.lstsq(JVw, -rw, rcond=None)
+        dq = _solve_reduced_update(
+            JVw,
+            rw,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         q += dq
@@ -337,6 +415,8 @@ def gauss_newton_LSPG_qm(
     max_its=20,
     relnorm_cutoff=1e-5,
     min_delta=0.1,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     jac_time = 0.0
     res_time = 0.0
@@ -378,7 +458,12 @@ def gauss_newton_LSPG_qm(
         t0 = time.time()
         Jman = J_qm(q, V, H)
         J_eff = Jw @ Jman
-        dq, *_ = np.linalg.lstsq(J_eff, -r, rcond=None)
+        dq = _solve_reduced_update(
+            J_eff,
+            r,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         q += dq
@@ -397,6 +482,8 @@ def gauss_newton_quadratic_q(
     tol_rel=1e-6,
     min_delta=1e-8,
     verbose=False,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     V = np.asarray(V, dtype=np.float64)
     u_snap = np.asarray(u_snap, dtype=np.float64).reshape(-1)
@@ -435,7 +522,12 @@ def gauss_newton_quadratic_q(
         prev_norm = res_norm
 
         J_delta = J_qm(q, V, H)
-        dq, *_ = np.linalg.lstsq(J_delta, -delta, rcond=None)
+        dq = _solve_reduced_update(
+            J_delta,
+            delta,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
 
         q += dq
         u = u_qm(q, V, H, u_ref)
@@ -458,6 +550,8 @@ def gauss_newton_LSPG_qm_ecsw(
     max_its=20,
     relnorm_cutoff=1e-5,
     min_delta=0.1,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     jac_time = 0.0
     res_time = 0.0
@@ -502,7 +596,12 @@ def gauss_newton_LSPG_qm_ecsw(
         Du_loc = J_qm(q, V_loc, H_loc)
         JV = J_loc @ Du_loc
         JVw = sample_weights[:, None] * JV
-        dq, *_ = np.linalg.lstsq(JVw, -rw, rcond=None)
+        dq = _solve_reduced_update(
+            JVw,
+            rw,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         q += dq
@@ -523,6 +622,8 @@ def gauss_newton_pod_ann(
     lookback=10,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     del lookback, u_ref
 
@@ -563,7 +664,12 @@ def gauss_newton_pod_ann(
 
         t0 = time.time()
         JV = J @ V
-        dy, *_ = np.linalg.lstsq(JV, -r, rcond=None)
+        dy = _solve_reduced_update(
+            JV,
+            r,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         with torch.no_grad():
@@ -585,6 +691,8 @@ def gauss_newton_pod_ann_joshua(
     lookback=10,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     return gauss_newton_pod_ann(
         func=func,
@@ -597,6 +705,8 @@ def gauss_newton_pod_ann_joshua(
         lookback=lookback,
         min_delta=min_delta,
         u_ref=u_ref,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
 
 
@@ -613,6 +723,8 @@ def gauss_newton_pod_ann_ecsw(
     relnorm_cutoff=1e-5,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     del sample_inds, augmented_sample, u_ref
 
@@ -656,7 +768,12 @@ def gauss_newton_pod_ann_ecsw(
         t0 = time.time()
         JV = J @ V
         JVw = weights[:, None] * JV
-        dy, *_ = np.linalg.lstsq(JVw, -rw, rcond=None)
+        dy = _solve_reduced_update(
+            JVw,
+            rw,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         with torch.no_grad():
@@ -690,6 +807,8 @@ def gauss_newton_pod_gp(
     relnorm_cutoff=1e-5,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Backward-compatible GP/GPR Gauss-Newton wrapper.
@@ -705,6 +824,8 @@ def gauss_newton_pod_gp(
         relnorm_cutoff=relnorm_cutoff,
         min_delta=min_delta,
         u_ref=u_ref,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
 
 
@@ -718,6 +839,8 @@ def gauss_newton_pod_gpr(
     relnorm_cutoff=1e-5,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Preferred naming for GP/GPR manifold Gauss-Newton.
@@ -732,6 +855,8 @@ def gauss_newton_pod_gpr(
         relnorm_cutoff=relnorm_cutoff,
         min_delta=min_delta,
         u_ref=u_ref,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
 
 
@@ -748,6 +873,8 @@ def gauss_newton_pod_gpr_ecsw(
     relnorm_cutoff=1e-5,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     """
     Preferred naming for ECSW GP/GPR manifold Gauss-Newton.
@@ -765,6 +892,8 @@ def gauss_newton_pod_gpr_ecsw(
         relnorm_cutoff=relnorm_cutoff,
         min_delta=min_delta,
         u_ref=u_ref,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
 
 
@@ -778,6 +907,8 @@ def gauss_newton_pod_rbf(
     relnorm_cutoff=1e-5,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     del u_ref
 
@@ -818,7 +949,12 @@ def gauss_newton_pod_rbf(
 
         t0 = time.time()
         J_eff = Jw @ V
-        dy, *_ = np.linalg.lstsq(J_eff, -r, rcond=None)
+        dy = _solve_reduced_update(
+            J_eff,
+            r,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         y += dy
@@ -842,6 +978,8 @@ def gauss_newton_pod_rbf_ecsw(
     min_delta=0.1,
     freeze_hdm_jacobian=True,
     normal_eqn=True,
+    linear_solver=None,
+    normal_eq_reg=1e-12,
     verbose=False,
     u_ref=None,
 ):
@@ -898,17 +1036,16 @@ def gauss_newton_pod_rbf_ecsw(
         t0 = time.time()
         JV = J.dot(V) if hasattr(J, "dot") else (J @ V)
         JVw = weights_uv[:, None] * JV
-        rhs = -rw
+        solver_mode = linear_solver
+        if solver_mode is None:
+            solver_mode = "normal_eq" if bool(normal_eqn) else "lstsq"
 
-        if normal_eqn:
-            try:
-                AtA = JVw.T @ JVw
-                Atb = JVw.T @ rhs
-                dy = np.linalg.solve(AtA, Atb)
-            except np.linalg.LinAlgError:
-                dy, *_ = np.linalg.lstsq(JVw, rhs, rcond=None)
-        else:
-            dy, *_ = np.linalg.lstsq(JVw, rhs, rcond=None)
+        dy = _solve_reduced_update(
+            JVw,
+            rw,
+            linear_solver=solver_mode,
+            normal_eq_reg=normal_eq_reg,
+        )
 
         ls_time += time.time() - t0
 
@@ -998,6 +1135,8 @@ def gauss_newton_pod_gp_ecsw(
     relnorm_cutoff=1e-5,
     min_delta=0.1,
     u_ref=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     del sample_inds, augmented_sample, u_ref
 
@@ -1039,7 +1178,12 @@ def gauss_newton_pod_gp_ecsw(
         t0 = time.time()
         JV = J @ V
         JVw = weights_uv[:, None] * JV
-        dy, *_ = np.linalg.lstsq(JVw, -rw, rcond=None)
+        dy = _solve_reduced_update(
+            JVw,
+            rw,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         y += dy
@@ -1059,6 +1203,8 @@ def gauss_newton_poddl(
     relnorm_cutoff: float = 1e-5,
     min_delta: float = 1e-2,
     u_ref=None,
+    linear_solver: str = "lstsq",
+    normal_eq_reg: float = 1e-12,
 ) -> Tuple[torch.Tensor, Sequence[float], Tuple[float, float, float]]:
     del u_ref
 
@@ -1103,7 +1249,12 @@ def gauss_newton_poddl(
 
         t0 = time.time()
         JV = J @ Uz
-        dz, *_ = np.linalg.lstsq(JV, -r, rcond=None)
+        dz = _solve_reduced_update(
+            JV,
+            r,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         with torch.no_grad():
@@ -1127,6 +1278,8 @@ def gauss_newton_poddl_ecsw(
     relnorm_cutoff: float = 1e-5,
     min_delta: float = 1e-2,
     u_ref=None,
+    linear_solver: str = "lstsq",
+    normal_eq_reg: float = 1e-12,
 ) -> Tuple[torch.Tensor, Sequence[float], Tuple[float, float, float]]:
     del sample_inds, augmented_sample, u_ref
 
@@ -1176,7 +1329,12 @@ def gauss_newton_poddl_ecsw(
         t0 = time.time()
         JV = J @ Uz
         JVw = weights[:, None] * JV
-        dz, *_ = np.linalg.lstsq(JVw, -rw, rcond=None)
+        dz = _solve_reduced_update(
+            JVw,
+            rw,
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
         ls_time += time.time() - t0
 
         with torch.no_grad():

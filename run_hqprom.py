@@ -120,6 +120,8 @@ def main(
     max_its=20,
     max_its_q0=20,
     tol_q0=1e-6,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     if compute_ecm is not None:
         compute_ecsw = bool(compute_ecm)
@@ -169,6 +171,9 @@ def main(
     m = H.shape[1]
     print(f"[HQPROM] Loaded manifold from '{qm_dir}'")
     print(f"[HQPROM] V shape={V.shape}, H shape={H.shape}, u_ref shape={u_ref.shape}")
+    print(f"[HQPROM] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[HQPROM] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     # ------------------------------------------------------------------
     # ECSW weights: build or load
@@ -308,6 +313,8 @@ def main(
         min_delta=min_delta,
         max_its_q0=max_its_q0,
         tol_q0=tol_q0,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_hqprom = time.time() - t0
 
@@ -428,6 +435,11 @@ def main(
                     ("max_its", max_its),
                     ("max_its_q0", max_its_q0),
                     ("tol_q0", tol_q0),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("snap_folder", snap_folder),
                 ],
             ),

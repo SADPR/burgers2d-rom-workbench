@@ -118,6 +118,8 @@ def main(
     use_custom_predict=True,
     jacobian_mode="auto",
     fd_eps=1e-6,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
     verbose=True,
 ):
     results_dir = "Results"
@@ -191,6 +193,9 @@ def main(
         f"{sum(has_gpr_flags)}/{K}"
     )
     print(f"[LOCAL-PROM-GPR] Jacobian mode: {jacobian_mode}")
+    print(f"[LOCAL-PROM-GPR] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[LOCAL-PROM-GPR] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     t0 = time.time()
     rom_snaps, stats = inviscid_burgers_implicit2D_LSPG_local_pod_gpr(
@@ -216,6 +221,8 @@ def main(
         max_its=max_its,
         max_its_ic=max_its_ic,
         tol_ic=tol_ic,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_rom = time.time() - t0
 
@@ -350,6 +357,11 @@ def main(
                     ("max_its", max_its),
                     ("max_its_ic", max_its_ic),
                     ("tol_ic", tol_ic),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("init_cluster", init_cluster),
                     ("use_custom_predict", bool(use_custom_predict)),
                     ("jacobian_mode", jacobian_mode),

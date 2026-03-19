@@ -135,6 +135,8 @@ def main(
     use_custom_predict=True,
     jacobian_mode="auto",
     fd_eps=1e-6,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
     verbose=True,
 ):
     if compute_ecm is not None:
@@ -227,6 +229,9 @@ def main(
         f"{sum(has_gpr_flags)}/{K}"
     )
     print(f"[LOCAL-HPROM-GPR] Jacobian mode: {jacobian_mode}")
+    print(f"[LOCAL-HPROM-GPR] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[LOCAL-HPROM-GPR] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     C_shape = None
     elapsed_ecsw = None
@@ -389,6 +394,8 @@ def main(
         max_its=max_its,
         max_its_ic=max_its_ic,
         tol_ic=tol_ic,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_hprom = time.time() - t0
 
@@ -526,6 +533,11 @@ def main(
                     ("max_its", max_its),
                     ("max_its_ic", max_its_ic),
                     ("tol_ic", tol_ic),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("init_cluster", init_cluster),
                     ("use_custom_predict", bool(use_custom_predict)),
                     ("jacobian_mode", jacobian_mode),
@@ -615,4 +627,3 @@ def main(
 
 if __name__ == "__main__":
     main(mu1=4.56, mu2=0.019, compute_ecsw=True)
-

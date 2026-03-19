@@ -112,6 +112,8 @@ def main(
     max_its_q0=20,
     tol_q0=1e-6,
     init_cluster=None,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
 ):
     results_dir = "Results"
     snap_folder = os.path.join(results_dir, "param_snaps")
@@ -156,6 +158,9 @@ def main(
         "[LOCAL-QPROM] Retained modes per cluster: "
         f"min={np.min(mode_counts)}, max={np.max(mode_counts)}, avg={np.mean(mode_counts):.2f}"
     )
+    print(f"[LOCAL-QPROM] Reduced linear solver: {linear_solver}")
+    if str(linear_solver).strip().lower() == "normal_eq":
+        print(f"[LOCAL-QPROM] normal_eq_reg: {float(normal_eq_reg):.3e}")
 
     t0 = time.time()
     rom_snaps_qm, stats = inviscid_burgers_implicit2D_LSPG_local_qm(
@@ -177,6 +182,8 @@ def main(
         max_its=max_its,
         max_its_q0=max_its_q0,
         tol_q0=tol_q0,
+        linear_solver=linear_solver,
+        normal_eq_reg=normal_eq_reg,
     )
     elapsed_qprom = time.time() - t0
 
@@ -286,6 +293,11 @@ def main(
                     ("max_its_q0", max_its_q0),
                     ("tol_q0", tol_q0),
                     ("init_cluster", init_cluster),
+                    ("linear_solver", linear_solver),
+                    (
+                        "normal_eq_reg",
+                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                    ),
                     ("snap_folder", snap_folder),
                 ],
             ),
