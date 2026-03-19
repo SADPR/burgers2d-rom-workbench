@@ -13,10 +13,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from burgers.core import (
-    make_2D_grid,
     load_or_compute_snaps,
     plot_snaps,
 )
+from burgers.config import GRID_X, GRID_Y, W0, DT, NUM_STEPS
 
 
 def set_latex_plot_style():
@@ -105,25 +105,16 @@ def main(mu1=4.56, mu2=0.019, save_snaps=True, save_plot=True):
     set_latex_plot_style()
 
     # ------------------------------------------------------------------
-    # Time-stepping and grid
+    # Time-stepping, grid, and initial condition from config
     # ------------------------------------------------------------------
-    dt = 0.05
-    num_steps = 500
+    dt = DT
+    num_steps = NUM_STEPS
+    grid_x = GRID_X
+    grid_y = GRID_Y
+    w0 = np.asarray(W0, dtype=np.float64).copy()
 
-    num_cells_x = 100
-    num_cells_y = 100
-
-    xl, xu = 0.0, 100.0
-    yl, yu = 0.0, 100.0
-
-    grid_x, grid_y = make_2D_grid(xl, xu, yl, yu, num_cells_x, num_cells_y)
-
-    # ------------------------------------------------------------------
-    # Initial condition
-    # ------------------------------------------------------------------
-    u0 = np.ones((num_cells_y, num_cells_x), dtype=np.float64)
-    v0 = np.ones((num_cells_y, num_cells_x), dtype=np.float64)
-    w0 = np.concatenate((u0.ravel(), v0.ravel()))
+    num_cells_x = grid_x.size - 1
+    num_cells_y = grid_y.size - 1
 
     # ------------------------------------------------------------------
     # Parameters

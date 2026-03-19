@@ -15,7 +15,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from burgers.core import (
-    make_2D_grid,
     plot_snaps,
     load_or_compute_snaps,
     inviscid_burgers_res2D,
@@ -27,6 +26,7 @@ from burgers.empirical_cubature_method import EmpiricalCubatureMethod
 from burgers.randomized_singular_value_decomposition import (
     RandomizedSingularValueDecomposition,
 )
+from burgers.config import GRID_X, GRID_Y, W0, DT, NUM_STEPS
 
 
 def set_latex_plot_style():
@@ -135,19 +135,15 @@ def main(
     set_latex_plot_style()
 
     # ------------------------------------------------------------------
-    # Problem setup
+    # Problem setup from config
     # ------------------------------------------------------------------
-    dt = 0.05
-    num_steps = 500
-    num_cells_x = 100
-    num_cells_y = 100
-    xl, xu, yl, yu = 0.0, 100.0, 0.0, 100.0
-
-    grid_x, grid_y = make_2D_grid(xl, xu, yl, yu, num_cells_x, num_cells_y)
-
-    u0 = np.ones((num_cells_y, num_cells_x), dtype=np.float64)
-    v0 = np.ones((num_cells_y, num_cells_x), dtype=np.float64)
-    w0 = np.concatenate((u0.ravel(), v0.ravel()))
+    dt = DT
+    num_steps = NUM_STEPS
+    grid_x = GRID_X
+    grid_y = GRID_Y
+    w0 = np.asarray(W0, dtype=np.float64).copy()
+    num_cells_x = grid_x.size - 1
+    num_cells_y = grid_y.size - 1
 
     mu_rom = [mu1, mu2]
 
