@@ -28,7 +28,7 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 from burgers.core import load_or_compute_snaps, plot_snaps
-from burgers.config import GRID_X, GRID_Y
+from burgers.config import GRID_X, GRID_Y, DT, NUM_STEPS
 
 
 def _format_report_value(value):
@@ -182,7 +182,7 @@ def main():
 
     # ---------------- User settings ----------------
     mu1, mu2 = 4.56, 0.019
-    dt, num_steps = 0.05, 500
+    dt, num_steps = DT, NUM_STEPS
     snap_folder = os.path.join(parent_dir, "Results", "param_snaps")
     local_model_file = os.path.join(localpod_dir, "local_pod_data.npz")
 

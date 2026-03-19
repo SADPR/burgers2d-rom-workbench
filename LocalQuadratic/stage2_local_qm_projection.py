@@ -25,7 +25,7 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 from burgers.core import load_or_compute_snaps, plot_snaps
-from burgers.config import GRID_X, GRID_Y, W0
+from burgers.config import GRID_X, GRID_Y, W0, DT, NUM_STEPS
 
 
 def _format_report_value(value):
@@ -146,7 +146,7 @@ def local_qm_project(u, k, u0_list, uref_list, V_list, H_list):
 def main():
     # ---------------- user settings ----------------
     mu1, mu2 = 4.56, 0.019
-    dt, num_steps = 0.05, 500
+    dt, num_steps = DT, NUM_STEPS
     snap_folder = os.path.join(parent_dir, "Results", "param_snaps")
     local_model_file = os.path.join(localquadratic_dir, "local_qm_data.npz")
 

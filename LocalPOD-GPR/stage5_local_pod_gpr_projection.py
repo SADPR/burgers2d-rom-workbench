@@ -51,7 +51,7 @@ if parent_dir not in sys.path:
     sys.path.insert(0, parent_dir)
 
 from burgers.core import load_or_compute_snaps, plot_snaps
-from burgers.config import GRID_X, GRID_Y, W0
+from burgers.config import GRID_X, GRID_Y, W0, DT, NUM_STEPS
 from burgers.pod_gpr_manifold import decode_gp
 
 
@@ -265,8 +265,8 @@ def local_pod_gpr_project(u, k, u0_list, v_list, models, n_primary, use_custom_p
 def main(
     mu1=4.56,
     mu2=0.019,
-    dt=0.05,
-    num_steps=500,
+    dt=DT,
+    num_steps=NUM_STEPS,
     snap_folder=os.path.join(parent_dir, "Results", "param_snaps"),
     local_model_file=os.path.join(script_dir, "local_pod_gpr_all_offline.npz"),
     output_dir=script_dir,

@@ -43,7 +43,7 @@ if parent_dir not in sys.path:
 
 from burgers.core import load_or_compute_snaps
 from burgers.core import get_snapshot_params
-from burgers.config import GRID_X, GRID_Y
+from burgers.config import GRID_X, GRID_Y, DT, NUM_STEPS
 
 
 def _format_report_value(value):
@@ -418,8 +418,8 @@ def main():
     n_clusters = 10
     pod_tol = 1e-6
     pod_method = "rsvd"
-    dt = 0.05
-    num_steps = 500
+    dt = DT
+    num_steps = NUM_STEPS
     snap_folder = os.path.join(parent_dir, "Results", "param_snaps")
 
     # clustering options
