@@ -230,6 +230,15 @@ python3 POD-DL/stage3_train_autoencoder.py
 ```bash
 python3 POD-DL/stage4_test_autoencoder.py
 ```
+5. Online PROM / HPROM:
+```bash
+python3 run_prom_dl.py
+python3 run_hprom_dl.py
+```
+
+`run_hprom_dl.py` follows the same ECSW logic as other HPROM runners: run once with
+`compute_ecsw=True` to generate ECSW weights, then you can reuse them with
+`compute_ecsw=False`.
 
 ## What to expect in outputs
 Online `run_*.py` scripts generally save:
@@ -237,7 +246,44 @@ Online `run_*.py` scripts generally save:
 - HDM vs ROM comparison plots (`*.png`)
 - run summary metadata (`*.txt`)
 
+For manifold methods with extra reduced coordinates (for example POD-DL), runners may
+also save latent/reduced trajectories (`*_latent_*.npy`).
+
 By convention, these go to `Results/`.
+
+## Example HPROM solutions (from current `Results/`)
+These examples correspond to the test case:
+- `mu1 = 4.56`
+- `mu2 = 0.019`
+
+Global HPROM images:
+- ![HPROM (linear POD)](Results/hprom_mu1_4.56_mu2_0.019.png)
+- ![HPROM-RBF](Results/hprom_rbf_mu1_4.56_mu2_0.019.png)
+- ![HPROM-GPR](Results/hprom_gpr_mu1_4.56_mu2_0.019.png)
+- ![HPROM-ANN](Results/hprom_ann_mu1_4.56_mu2_0.019.png)
+- ![HPROM-DL](Results/hprom_dl_mu1_4.56_mu2_0.019.png)
+- ![HQPROM](Results/hqprom_mu1_4.56_mu2_0.019.png)
+
+Local HPROM images:
+- ![Local HPROM (linear POD)](Results/local_hprom_mu1_4.56_mu2_0.019.png)
+- ![Local HPROM-RBF](Results/local_hprom_rbf_mu1_4.56_mu2_0.019.png)
+- ![Local HPROM-GPR](Results/local_hprom_gpr_mu1_4.56_mu2_0.019.png)
+- ![Local HQPROM](Results/local_hqprom_mu1_4.56_mu2_0.019.png)
+
+Relative errors from the corresponding summary files (`relative_error_percent`):
+
+| Method | Relative error [%] | Source |
+|---|---:|---|
+| HPROM (linear POD) | 4.04531730e-02 | `Results/hprom_summary_mu1_4.56_mu2_0.019.txt` |
+| HPROM-RBF | 1.19956645e+00 | `Results/hprom_rbf_summary_mu1_4.56_mu2_0.019.txt` |
+| HPROM-GPR | 3.39832583e+00 | `Results/hprom_gpr_summary_mu1_4.56_mu2_0.019.txt` |
+| HPROM-ANN | 2.74196265e-01 | `Results/hprom_ann_summary_mu1_4.56_mu2_0.019.txt` |
+| HPROM-DL | 2.97578744e-01 | `Results/hprom_dl_summary_mu1_4.56_mu2_0.019.txt` |
+| HQPROM | 8.41366634e-01 | `Results/hqprom_summary_mu1_4.56_mu2_0.019.txt` |
+| Local HPROM (linear POD) | 2.65814200e-02 | `Results/local_hprom_summary_mu1_4.56_mu2_0.019.txt` |
+| Local HPROM-RBF | 8.63189208e-01 | `Results/local_hprom_rbf_summary_mu1_4.56_mu2_0.019.txt` |
+| Local HPROM-GPR | 5.27792721e-01 | `Results/local_hprom_gpr_summary_mu1_4.56_mu2_0.019.txt` |
+| Local HQPROM | 6.14310324e-01 | `Results/local_hqprom_summary_mu1_4.56_mu2_0.019.txt` |
 
 ## Practical usage notes
 - Run scripts from repository root so relative paths resolve correctly.
