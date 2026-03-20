@@ -225,13 +225,13 @@ def main(
     model_dir=os.path.join(script_dir, "pod_rbf_model"),
     report_file=os.path.join(script_dir, "stage3_train_rbf_summary.txt"),
     duplicate_tol=1e-3,
-    kernel_candidates=("imq", "gaussian", "matern"),
+    kernel_candidates=("imq","gaussian"),
     epsilon_values=None,
     lambda_values=None,
     epsilon_range=(0.5, 10.0),
     lambda_range=(1e-10, 1e-8),
-    n_epsilon=10,
-    n_lambda=2,
+    n_epsilon=20,
+    n_lambda=1,
     uref_mode="auto",
     cv_folds=5,
     random_seed=42,
@@ -279,12 +279,7 @@ def main(
         "matern": matern32_rbf,
     }
 
-    if isinstance(kernel_candidates, str):
-        kernel_candidates = (kernel_candidates,)
-    else:
-        kernel_candidates = tuple(kernel_candidates)
-    if len(kernel_candidates) == 0:
-        raise ValueError("kernel_candidates must contain at least one kernel name.")
+    kernel_candidates = tuple(kernel_candidates)
     for name in kernel_candidates:
         if name not in kernel_map:
             raise ValueError(

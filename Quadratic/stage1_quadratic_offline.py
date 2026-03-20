@@ -119,6 +119,7 @@ def main(
     ridge_alpha=1e-4,
     dt=DT,
     num_steps=NUM_STEPS,
+    center_mode="on",
     save_sv_plot=True,
 ):
     results_dir = os.path.join(parent_dir, "Results")
@@ -169,8 +170,19 @@ def main(
     # POD and heuristic for n
     # ------------------------------------------------------------------
     t0 = time.time()
-    u_ref = np.mean(S, axis=1)
-    S_centered = S - u_ref[:, None]
+    center_mode = str(center_mode).strip().lower()
+    if center_mode not in ("on", "off"):
+        raise ValueError("center_mode must be either 'on' or 'off'.")
+
+    use_u_ref = center_mode == "on"
+    if use_u_ref:
+        u_ref = np.mean(S, axis=1)
+        S_centered = S - u_ref[:, None]
+        u_ref_source = "mean(training_snapshots)"
+    else:
+        u_ref = np.zeros(N, dtype=np.float64)
+        S_centered = S
+        u_ref_source = "zeros(off)"
 
     U_full, s_all, _ = np.linalg.svd(S_centered, full_matrices=False)
     n_trad, energy_captured, energy_lost = pod_rank_from_tolerance(s_all, pod_tol)
@@ -217,6 +229,9 @@ def main(
         pod_tol=np.float64(pod_tol),
         zeta_qua=np.float64(zeta_qua),
         ridge_alpha=np.float64(ridge_alpha),
+        center_mode=np.str_(center_mode),
+        use_u_ref=np.bool_(use_u_ref),
+        u_ref_source=np.str_(u_ref_source),
         n_trad=np.int64(n_trad),
         n_qua_raw=np.float64(n_qua_raw),
         n_qua_corr=np.int64(n_qua_corr),
@@ -260,6 +275,9 @@ def main(
                 [
                     ("dt", dt),
                     ("num_steps", num_steps),
+                    ("center_mode", center_mode),
+                    ("use_u_ref", use_u_ref),
+                    ("u_ref_source", u_ref_source),
                     ("pod_tol", pod_tol),
                     ("zeta_qua", zeta_qua),
                     ("ridge_alpha", ridge_alpha),
