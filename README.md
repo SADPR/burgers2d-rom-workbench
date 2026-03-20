@@ -123,10 +123,18 @@ python3 POD-RBF/stage1_build_pod_basis.py
 ```bash
 python3 POD-RBF/stage2_project_training_data.py
 ```
-3. Train RBF map (grid search):
+3. Train RBF map (choose one Stage 3 option):
+- Grid search (deterministic):
 ```bash
 python3 POD-RBF/stage3_train_rbf_grid_search.py
 ```
+- Bayesian optimization (fewer evaluations, optional):
+```bash
+python3 POD-RBF/stage3_train_rbf_bayesian.py
+```
+Both Stage 3 options produce the same model artifacts in `POD-RBF/pod_rbf_model/`
+(`rbf_weights.pkl`, `scaler.pkl`, `U_p.npy`, `U_s.npy`, `u_ref.npy`, etc.), so Stage 4
+and `run_prom_rbf.py` / `run_hprom_rbf.py` work with either one.
 4. Test reconstruction:
 ```bash
 python3 POD-RBF/stage4_test_rbf.py

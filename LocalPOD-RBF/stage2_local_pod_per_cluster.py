@@ -12,6 +12,10 @@ Outputs (inside LocalPOD-RBF):
   - stage2_pod_plots/cluster_<k>_sv_loss.png
   - stage2_cluster_ranks.png
   - stage2_pod_summary.txt
+
+POD is computed on centered local snapshots:
+    S_k_centered = S_k - u0_k,
+where u0_k is the Stage 1 cluster centroid.
 """
 
 import os
@@ -260,6 +264,7 @@ def main(
     print(f"[STAGE2] Loaded K={k_count} clusters, S_w_shape={s_w_shape}")
 
     u_list = [None] * k_count
+    u0_svd_list = [None] * k_count
     sigma_list = [None] * k_count
     r_list = [0] * k_count
     sv_plot_files = []
@@ -298,8 +303,16 @@ def main(
 
         print(f"[STAGE2]   S_k_full shape={s_k_full.shape} (built in {elapsed_build:.2f}s)")
 
+        u0_k = np.asarray(centers_w[:, k], dtype=float).reshape(-1)
+        if u0_k.size != s_k_full.shape[0]:
+            raise ValueError(
+                f"Cluster centroid size mismatch for k={k}: "
+                f"got {u0_k.size}, expected {s_k_full.shape[0]}."
+            )
+        s_k_centered = s_k_full - u0_k[:, None]
+
         t0 = time.time()
-        u_k_full, s_k, _ = np.linalg.svd(s_k_full, full_matrices=False)
+        u_k_full, s_k, _ = np.linalg.svd(s_k_centered, full_matrices=False)
         elapsed_svd = time.time() - t0
         elapsed_svd_total += elapsed_svd
 
@@ -310,6 +323,7 @@ def main(
         print(f"[STAGE2]   full_rank={r_full}, retained={r_k}, svd_time={elapsed_svd:.2f}s")
 
         u_list[k] = np.asarray(u_k_full[:, :r_k], dtype=float)
+        u0_svd_list[k] = np.asarray(u0_k, dtype=float)
         sigma_list[k] = np.asarray(s_k, dtype=float)
         r_list[k] = int(r_k)
 
@@ -317,13 +331,18 @@ def main(
         if plot_file is not None:
             sv_plot_files.append(plot_file)
 
-        del s_k_full, u_k_full
+        del s_k_full, s_k_centered, u_k_full
 
     # Persist outputs
     u_obj = np.empty(k_count, dtype=object)
+    u0_obj = np.empty(k_count, dtype=object)
     sigma_obj = np.empty(k_count, dtype=object)
     for k in range(k_count):
         u_obj[k] = u_list[k]
+        if u0_svd_list[k] is None:
+            u0_obj[k] = np.asarray(centers_w[:, k], dtype=float)
+        else:
+            u0_obj[k] = u0_svd_list[k]
         sigma_obj[k] = sigma_list[k]
 
     r_array = np.asarray(r_list, dtype=int)
@@ -332,6 +351,7 @@ def main(
         output_file,
         K=k_count,
         U_list=u_obj,
+        u0_svd_list=u0_obj,
         sigma_list=sigma_obj,
         r_list=r_array,
         cluster_indices=cluster_indices_obj,
@@ -346,6 +366,8 @@ def main(
         dt=dt,
         num_steps=num_steps,
         eps2_pod=float(eps2_pod),
+        centered_svd=np.asarray(1, dtype=np.int64),
+        centering_source=np.asarray("stage1_centers_w"),
     )
     print(f"[STAGE2] Saved POD NPZ: {output_file}")
 
@@ -370,6 +392,8 @@ def main(
                     ("clusters_file", clusters_file),
                     ("snap_folder", snap_folder),
                     ("eps2_pod", float(eps2_pod)),
+                    ("center_local_snapshots_for_svd", True),
+                    ("centering_source", "stage1_centers_w"),
                     ("dt", dt),
                     ("num_steps", num_steps),
                     ("time_subsample", time_subsample),
