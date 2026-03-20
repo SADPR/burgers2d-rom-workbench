@@ -152,6 +152,8 @@ python3 LocalPOD-RBF/stage1_cluster_snapshots_u.py
 python3 LocalPOD-RBF/stage2_local_pod_per_cluster.py
 python3 LocalPOD-RBF/stage3_local_project_to_q.py
 python3 LocalPOD-RBF/stage4_local_pod_rbf_training_grid_search.py
+# Optional Bayesian alternative for Stage 4:
+# python3 LocalPOD-RBF/stage4_local_pod_rbf_training_bayesian.py
 python3 LocalPOD-RBF/stage5_local_pod_rbf_projection.py
 ```
 - Online:

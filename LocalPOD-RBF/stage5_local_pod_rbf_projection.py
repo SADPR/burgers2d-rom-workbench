@@ -98,9 +98,16 @@ def gaussian_rbf(r, epsilon):
 def inverse_multiquadric_rbf(r, epsilon):
     return 1.0 / np.sqrt(1.0 + (epsilon * r) ** 2)
 
+
+def matern32_rbf(r, epsilon):
+    sqrt3 = np.sqrt(3.0)
+    z = sqrt3 * epsilon * r
+    return (1.0 + z) * np.exp(-z)
+
 rbf_kernels = {
     "gaussian": gaussian_rbf,
     "imq": inverse_multiquadric_rbf,
+    "matern32": matern32_rbf,
 }
 
 
