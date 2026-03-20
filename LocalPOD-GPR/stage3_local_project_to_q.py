@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-STAGE 3: BUILD LOCAL AFFINE CENTERS AND CENTERED REDUCED COORDINATES
+STAGE 3: BUILD LOCAL AFFINE ORIGINS AND CENTERED REDUCED COORDINATES
 
 Inputs (from stage2):
   - local_gpr_pod_per_cluster.npz
@@ -72,11 +72,14 @@ def build_u0_and_centered_q(
     num_steps,
     snap_folder,
     snap_cache,
+    u0_k_fixed=None,
 ):
     """
     For one cluster:
-      u0_k = mean_j(w_j),
-      Q_k  = U_k^T (W_k - u0_k).
+      Q_k = U_k^T (W_k - u0_k),
+    where u0_k is either:
+      - u0_k_fixed (if provided, preferred),
+      - the local cluster mean otherwise.
     """
     cluster_idx_k = np.asarray(cluster_idx_k, dtype=int)
     m_k = int(cluster_idx_k.size)
@@ -124,9 +127,18 @@ def build_u0_and_centered_q(
                 )
             w_k[:, j_local] = snaps_mu[:, t_j]
 
-    u0_k = np.mean(w_k, axis=1)
+    if u0_k_fixed is None:
+        u0_k = np.mean(w_k, axis=1)
+        u0_source = "cluster_mean"
+    else:
+        u0_k = np.asarray(u0_k_fixed, dtype=float).reshape(-1)
+        if u0_k.size != n_full:
+            raise ValueError(
+                f"u0_k_fixed size mismatch: got {u0_k.size}, expected {n_full}."
+            )
+        u0_source = "stage2_u0_svd"
     q_k = u_k.T @ (w_k - u0_k[:, None])
-    return u0_k, q_k, m_k
+    return u0_k, q_k, m_k, u0_source
 
 
 def plot_cluster_snapshot_counts(cluster_sizes, out_png):
@@ -175,11 +187,13 @@ def main(
     t_per_snapshot = np.asarray(data["t_per_snapshot"], dtype=int)
     dt = float(data["dt"])
     num_steps = int(data["num_steps"])
+    u0_svd_list = data["u0_svd_list"] if "u0_svd_list" in data.files else None
 
     q_list = [None] * k_count
     u0_list = [None] * k_count
     v_list = [None] * k_count
     cluster_sizes = [0] * k_count
+    u0_source_list = [None] * k_count
 
     elapsed_build_total = 0.0
     snap_cache = {}
@@ -203,8 +217,14 @@ def main(
             print("[STAGE3]   empty cluster. Skipping.")
             continue
 
+        u0_k_fixed = None
+        if u0_svd_list is not None:
+            candidate = u0_svd_list[k]
+            if candidate is not None:
+                u0_k_fixed = np.asarray(candidate, dtype=float).reshape(-1)
+
         t0 = time.time()
-        u0_k, q_k, _ = build_u0_and_centered_q(
+        u0_k, q_k, _, u0_source = build_u0_and_centered_q(
             u_k=u_k,
             cluster_idx_k=cluster_idx_k,
             mu_per_snapshot=mu_per_snapshot,
@@ -213,15 +233,20 @@ def main(
             num_steps=num_steps,
             snap_folder=snap_folder,
             snap_cache=snap_cache,
+            u0_k_fixed=u0_k_fixed,
         )
         elapsed = time.time() - t0
         elapsed_build_total += elapsed
 
-        print(f"[STAGE3]   Built u0_k shape={u0_k.shape}, Q_k shape={q_k.shape} in {elapsed:.2f}s")
+        print(
+            f"[STAGE3]   Built u0_k shape={u0_k.shape}, "
+            f"Q_k shape={q_k.shape}, source={u0_source} in {elapsed:.2f}s"
+        )
 
         u0_list[k] = np.asarray(u0_k, dtype=float)
         q_list[k] = np.asarray(q_k, dtype=float)
         v_list[k] = np.asarray(u_k, dtype=float)
+        u0_source_list[k] = u0_source
 
     # Convert to object arrays safely
     q_obj = np.empty(k_count, dtype=object)
@@ -245,6 +270,7 @@ def main(
         dt=dt,
         num_steps=num_steps,
         r_list=r_list,
+        u0_source_per_cluster=np.asarray(u0_source_list, dtype=object),
     )
     print(f"[STAGE3] Saved Q NPZ: {output_file}")
 
@@ -268,6 +294,10 @@ def main(
                 [
                     ("pod_file", pod_file),
                     ("snap_folder", snap_folder),
+                    (
+                        "u0_source_policy",
+                        "stage2_u0_svd_if_available_else_cluster_mean",
+                    ),
                     ("dt", dt),
                     ("num_steps", num_steps),
                 ],
@@ -278,6 +308,7 @@ def main(
                     ("K", k_count),
                     ("cluster_snapshot_counts", cluster_sizes),
                     ("r_list", r_list.tolist()),
+                    ("u0_source_per_cluster", u0_source_list),
                     ("nonempty_clusters", int(np.sum(np.asarray(cluster_sizes) > 0))),
                 ],
             ),
