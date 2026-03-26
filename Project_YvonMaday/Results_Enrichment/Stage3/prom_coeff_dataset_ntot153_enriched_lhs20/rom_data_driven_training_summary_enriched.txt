@@ -1,0 +1,12 @@
+model_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage3/prom_coeff_dataset_ntot153_enriched_lhs20/models/rom_data_driven_model_enriched.pt
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage2/prom_coeff_dataset_ntot153_enriched_lhs20
+dataset_root: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage2/prom_coeff_dataset_ntot153_enriched_lhs20/per_mu
+dataset_ntot: 153
+dataset_backend: hprom
+samples_M: 14529
+in_dim: 3
+n_tot: 153
+epochs_ran: 761
+best_val_mse: 0.018692661076784134
+seed: 42
+device: cuda

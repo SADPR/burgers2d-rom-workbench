@@ -138,9 +138,12 @@ def compute_ECSW_training_matrix_2D_pod_ann(
         print("Initial residual: {:3.2e}".format(init_res / np.linalg.norm(snap)))
 
         while curr_res / init_res > 1e-2 and num_it < 10:
+            w_t = approx(y).squeeze()
+            snap_t = torch.tensor(snap, dtype=w_t.dtype, device=w_t.device)
+
             Jf = jacfwdfunc(y)
             JJ = Jf.T @ Jf
-            Jr = Jf.T @ (approx(y) - torch.tensor(snap, dtype=torch.float32))
+            Jr = Jf.T @ (w_t - snap_t)
 
             dy, *_ = np.linalg.lstsq(
                 JJ.squeeze().detach().cpu().numpy(),
@@ -148,7 +151,7 @@ def compute_ECSW_training_matrix_2D_pod_ann(
                 rcond=None,
             )
 
-            y -= torch.tensor(dy, dtype=y.dtype)
+            y -= torch.tensor(dy, dtype=y.dtype, device=y.device)
             w_rec = approx(y).squeeze().detach().cpu().numpy()
             curr_res = np.linalg.norm(w_rec - snap)
             num_it += 1
@@ -161,6 +164,207 @@ def compute_ECSW_training_matrix_2D_pod_ann(
 
         V = jacfwdfunc(y).detach().squeeze().cpu().numpy()
         Wi = Ji @ V
+
+        row0 = isnap * n_red
+        row1 = row0 + n_red
+
+        for inode in range(n_hdm):
+            C[row0:row1, inode] = (
+                ires[inode] * Wi[inode, :]
+                + ires[inode + n_hdm] * Wi[inode + n_hdm, :]
+            )
+
+    return C
+
+
+def compute_ECSW_training_matrix_2D_pod_ann_case2(
+    snaps,
+    prev_snaps,
+    t_samples,
+    basis,
+    basis2,
+    ann_model,
+    res,
+    jac,
+    grid_x,
+    grid_y,
+    dt,
+    mu,
+    u_ref=None,
+):
+    """
+    ECSW training matrix for POD-ANN Case 2 manifold
+
+        w(y, t; mu) = u_ref + basis @ y + basis2 @ ann_model([mu1, mu2, t]).
+
+    The decoder Jacobian wrt y is basis.
+    """
+    snaps = np.asarray(snaps, dtype=np.float64)
+    prev_snaps = np.asarray(prev_snaps, dtype=np.float64)
+    t_samples = np.asarray(t_samples, dtype=np.float64).reshape(-1)
+    basis = np.asarray(basis, dtype=np.float64)
+    basis2 = np.asarray(basis2, dtype=np.float64)
+
+    n_tot, n_snaps = snaps.shape
+    if prev_snaps.shape != snaps.shape:
+        raise ValueError(f"prev_snaps shape {prev_snaps.shape} must match snaps shape {snaps.shape}.")
+    if t_samples.size != n_snaps:
+        raise ValueError(
+            f"t_samples length {t_samples.size} must match number of snapshots {n_snaps}."
+        )
+    if basis.shape[0] != n_tot or basis2.shape[0] != n_tot:
+        raise ValueError(
+            f"Basis row mismatch: snaps have {n_tot} rows, basis={basis.shape}, basis2={basis2.shape}."
+        )
+
+    n_hdm = n_tot // 2
+    n_red = basis.shape[1]
+
+    u_ref_vec = _prepare_reference(u_ref, n_tot)
+
+    C = np.zeros((n_red * n_snaps, n_hdm), dtype=np.float64)
+    Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
+
+    try:
+        device = next(ann_model.parameters()).device
+    except StopIteration:
+        device = torch.device("cpu")
+
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
+    for isnap in range(n_snaps):
+        snap = snaps[:, isnap]
+        snap_prev = prev_snaps[:, isnap]
+        t_now = float(t_samples[isnap])
+
+        x = torch.tensor([mu1, mu2, t_now], dtype=torch.float32, device=device)
+        with torch.no_grad():
+            qbar = ann_model(x).reshape(-1).detach().cpu().numpy()
+
+        offset = u_ref_vec + basis2 @ qbar
+        q = np.linalg.lstsq(basis, snap - offset, rcond=None)[0]
+        w_tilde = offset + basis @ q
+
+        ires = res(w_tilde, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+        Ji = jac(w_tilde, dt, JDxec, JDyec, Eye)
+        Wi = Ji @ basis
+
+        row0 = isnap * n_red
+        row1 = row0 + n_red
+
+        for inode in range(n_hdm):
+            C[row0:row1, inode] = (
+                ires[inode] * Wi[inode, :]
+                + ires[inode + n_hdm] * Wi[inode + n_hdm, :]
+            )
+
+    return C
+
+
+def compute_ECSW_training_matrix_2D_pod_ann_case3(
+    snaps,
+    prev_snaps,
+    t_samples,
+    basis,
+    basis2,
+    ann_model,
+    res,
+    jac,
+    grid_x,
+    grid_y,
+    dt,
+    mu,
+    u_ref=None,
+    projection_max_its=10,
+    projection_relnorm_cutoff=1e-2,
+):
+    """
+    ECSW training matrix for POD-ANN Case 3 manifold
+
+        w(y, t; mu) = u_ref + basis @ y + basis2 @ ann_model([y, mu1, mu2, t]).
+    """
+    snaps = np.asarray(snaps, dtype=np.float64)
+    prev_snaps = np.asarray(prev_snaps, dtype=np.float64)
+    t_samples = np.asarray(t_samples, dtype=np.float64).reshape(-1)
+    basis = np.asarray(basis, dtype=np.float64)
+    basis2 = np.asarray(basis2, dtype=np.float64)
+
+    n_tot, n_snaps = snaps.shape
+    if prev_snaps.shape != snaps.shape:
+        raise ValueError(f"prev_snaps shape {prev_snaps.shape} must match snaps shape {snaps.shape}.")
+    if t_samples.size != n_snaps:
+        raise ValueError(
+            f"t_samples length {t_samples.size} must match number of snapshots {n_snaps}."
+        )
+    if basis.shape[0] != n_tot or basis2.shape[0] != n_tot:
+        raise ValueError(
+            f"Basis row mismatch: snaps have {n_tot} rows, basis={basis.shape}, basis2={basis2.shape}."
+        )
+
+    n_hdm = n_tot // 2
+    n_red = basis.shape[1]
+
+    u_ref_vec = _prepare_reference(u_ref, n_tot)
+
+    C = np.zeros((n_red * n_snaps, n_hdm), dtype=np.float64)
+    Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
+
+    try:
+        device = next(ann_model.parameters()).device
+    except StopIteration:
+        device = torch.device("cpu")
+
+    basis_t = torch.tensor(basis, dtype=torch.float32, device=device)
+    basis2_t = torch.tensor(basis2, dtype=torch.float32, device=device)
+    u_ref_t = torch.tensor(u_ref_vec, dtype=torch.float32, device=device)
+    mu_vec = np.asarray(mu, dtype=np.float64).reshape(-1)
+    if mu_vec.size != 2:
+        raise ValueError(f"mu must have length 2, got {mu_vec.shape}")
+    tmu = torch.tensor(mu_vec, dtype=torch.float32, device=device)
+
+    for isnap in range(n_snaps):
+        snap = snaps[:, isnap]
+        snap_prev = prev_snaps[:, isnap]
+        t_now = torch.tensor(float(t_samples[isnap]), dtype=torch.float32, device=device)
+        snap_t = torch.tensor(snap, dtype=torch.float32, device=device)
+
+        y = torch.tensor(basis.T @ (snap - u_ref_vec), dtype=torch.float32, device=device)
+
+        def decode(y_vec):
+            x = torch.cat([y_vec.reshape(-1), tmu, t_now.reshape(1)], dim=0)
+            qbar = ann_model(x).reshape(-1)
+            return u_ref_t + basis_t @ y_vec + basis2_t @ qbar
+
+        jac_decode = torch_jacfwd(decode)
+
+        with torch.no_grad():
+            w_rec_t = decode(y)
+        init_res = np.linalg.norm((w_rec_t - snap_t).detach().cpu().numpy()) + 1e-30
+        curr_res = init_res
+        proj_it = 0
+
+        while (curr_res / init_res > projection_relnorm_cutoff) and (proj_it < projection_max_its):
+            Jf_np = jac_decode(y).detach().cpu().numpy()
+            w_rec_np = w_rec_t.detach().cpu().numpy()
+
+            rhs = Jf_np.T @ (w_rec_np - snap)
+            lhs = Jf_np.T @ Jf_np
+            dy = np.linalg.lstsq(lhs, rhs, rcond=None)[0]
+
+            with torch.no_grad():
+                y = y - torch.tensor(dy, dtype=y.dtype, device=y.device)
+                w_rec_t = decode(y)
+
+            curr_res = np.linalg.norm((w_rec_t - snap_t).detach().cpu().numpy())
+            proj_it += 1
+
+        Jf_np = jac_decode(y).detach().cpu().numpy()
+        w_tilde = w_rec_t.detach().cpu().numpy()
+
+        ires = res(w_tilde, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+        Ji = jac(w_tilde, dt, JDxec, JDyec, Eye)
+        Wi = Ji @ Jf_np
 
         row0 = isnap * n_red
         row1 = row0 + n_red
@@ -750,3 +954,345 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3(
         yp = y.detach().clone()
 
     return snaps, (num_its, jac_time, res_time, ls_time)
+
+
+def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_ecsw(
+    grid_x,
+    grid_y,
+    weights,
+    w0,
+    dt,
+    num_steps,
+    mu,
+    ann_model,
+    ref,
+    basis,
+    basis2,
+    u_ref=None,
+    max_its=20,
+    relnorm_cutoff=1e-5,
+    min_delta=0.1,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
+):
+    """
+    ECSW POD-ANN Case 2 ROM with decoder
+
+        w(y, t; mu) = u_ref + V y + Vbar N([mu1, mu2, t])
+
+    The nonlinear correction is independent of y, so dw/dy = V on the sampled mesh.
+
+    Returns
+    -------
+    red_coords : ndarray
+        Reduced coordinates of shape (n_p, num_steps + 1).
+    stats : tuple
+        (num_its, jac_time, res_time, ls_time)
+    """
+
+    del ref
+
+    w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
+    weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+    u_ref_np = _prepare_reference(u_ref, w0.size)
+
+    _, _, JDxec, JDyec, _ = get_ops(grid_x, grid_y)
+    JDxec = JDxec.tolil()
+    JDyec = JDyec.tolil()
+
+    n_full = w0.size
+    n_cells = n_full // 2
+
+    sample_inds = np.where(weights != 0)[0]
+    augmented_sample = generate_augmented_mesh(grid_x, grid_y, sample_inds)
+
+    Eye_u = sp.identity(n_cells).tocsr()
+    Eye_u = Eye_u[sample_inds, :][:, augmented_sample]
+    Eye_ecsw = sp.bmat([[Eye_u, None], [None, Eye_u]]).tocsr()
+
+    JDxec_ecsw = JDxec[sample_inds, :][:, augmented_sample].tocsr()
+    JDyec_ecsw = JDyec[sample_inds, :][:, augmented_sample].tocsr()
+
+    sample_weights_cells = weights[sample_inds]
+    idx = np.concatenate((augmented_sample, n_cells + augmented_sample))
+
+    basis = _to_torch_matrix(basis, dtype=torch.float32)
+    basis2 = _to_torch_matrix(basis2, dtype=torch.float32)
+
+    device = basis.device
+    dtype_t = basis.dtype
+
+    u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
+    u_ref_loc_t = u_ref_t[idx]
+
+    V = basis[idx, :]
+    Vbar = basis2[idx, :]
+
+    y0 = basis.T @ _to_torch_vector(w0 - u_ref_np, dtype=dtype_t, device=device)
+    nred = int(y0.numel())
+
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
+    def _offset_loc(t_value):
+        x = torch.tensor([mu1, mu2, float(t_value)], dtype=dtype_t, device=device)
+        with torch.no_grad():
+            qbar = ann_model(x).reshape(-1)
+        return u_ref_loc_t + Vbar @ qbar
+
+    wp = (V @ y0 + _offset_loc(0.0)).detach().clone()
+    yp = y0.detach().clone()
+
+    red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
+    red_coords[:, 0] = y0.detach().cpu().numpy().reshape(-1)
+
+    num_its = 0
+    jac_time = 0.0
+    res_time = 0.0
+    ls_time = 0.0
+
+    print(f"Running POD-ANN Case 2 ECSW ROM of size {nred} for mu1={mu1}, mu2={mu2}")
+
+    for istep in range(num_steps):
+        print(f" ... Working on timestep {istep}")
+
+        off_loc_t = _offset_loc((istep + 1) * float(dt))
+
+        def decode(y, with_grad=True):
+            if with_grad:
+                return off_loc_t + V @ y
+            with torch.no_grad():
+                return off_loc_t + V @ y
+
+        def jacfwdfunc(y):
+            del y
+            return V
+
+        def res(w_loc):
+            return inviscid_burgers_res2D_ecsw(
+                w_loc,
+                grid_x,
+                grid_y,
+                dt,
+                wp,
+                mu,
+                JDxec_ecsw,
+                JDyec_ecsw,
+                sample_inds,
+                augmented_sample,
+            )
+
+        def jac(w_loc):
+            return inviscid_burgers_exact_jac2D_ecsw(
+                w_loc,
+                dt,
+                JDxec_ecsw,
+                JDyec_ecsw,
+                Eye_ecsw,
+                sample_inds,
+                augmented_sample,
+            )
+
+        y, resnorms, times = gauss_newton_pod_ann_ecsw(
+            func=res,
+            jac=jac,
+            y0=yp,
+            decode=decode,
+            jacfwdfunc=jacfwdfunc,
+            sample_inds=sample_inds,
+            augmented_sample=augmented_sample,
+            weight=sample_weights_cells,
+            max_its=max_its,
+            relnorm_cutoff=relnorm_cutoff,
+            min_delta=min_delta,
+            u_ref=u_ref_loc_t.detach().cpu().numpy(),
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
+
+        jac_t, res_t, ls_t = times
+        num_its += len(resnorms)
+        jac_time += jac_t
+        res_time += res_t
+        ls_time += ls_t
+
+        with torch.no_grad():
+            w_loc = decode(y, with_grad=False)
+
+        red_coords[:, istep + 1] = y.detach().cpu().numpy().reshape(-1)
+        wp = w_loc.detach().clone()
+        yp = y.detach().clone()
+
+    return red_coords, (num_its, jac_time, res_time, ls_time)
+
+
+def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3_ecsw(
+    grid_x,
+    grid_y,
+    weights,
+    w0,
+    dt,
+    num_steps,
+    mu,
+    ann_model,
+    ref,
+    basis,
+    basis2,
+    u_ref=None,
+    max_its=20,
+    relnorm_cutoff=1e-5,
+    min_delta=0.1,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
+):
+    """
+    ECSW POD-ANN Case 3 ROM with decoder
+
+        w(y, t; mu) = u_ref + V y + Vbar N([y, mu1, mu2, t])
+
+    Returns
+    -------
+    red_coords : ndarray
+        Reduced coordinates of shape (n_p, num_steps + 1).
+    stats : tuple
+        (num_its, jac_time, res_time, ls_time)
+    """
+
+    del ref
+
+    w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
+    weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+    u_ref_np = _prepare_reference(u_ref, w0.size)
+
+    _, _, JDxec, JDyec, _ = get_ops(grid_x, grid_y)
+    JDxec = JDxec.tolil()
+    JDyec = JDyec.tolil()
+
+    n_full = w0.size
+    n_cells = n_full // 2
+
+    sample_inds = np.where(weights != 0)[0]
+    augmented_sample = generate_augmented_mesh(grid_x, grid_y, sample_inds)
+
+    Eye_u = sp.identity(n_cells).tocsr()
+    Eye_u = Eye_u[sample_inds, :][:, augmented_sample]
+    Eye_ecsw = sp.bmat([[Eye_u, None], [None, Eye_u]]).tocsr()
+
+    JDxec_ecsw = JDxec[sample_inds, :][:, augmented_sample].tocsr()
+    JDyec_ecsw = JDyec[sample_inds, :][:, augmented_sample].tocsr()
+
+    sample_weights_cells = weights[sample_inds]
+    idx = np.concatenate((augmented_sample, n_cells + augmented_sample))
+
+    basis = _to_torch_matrix(basis, dtype=torch.float32)
+    basis2 = _to_torch_matrix(basis2, dtype=torch.float32)
+
+    device = basis.device
+    dtype_t = basis.dtype
+
+    u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
+    u_ref_loc_t = u_ref_t[idx]
+
+    V = basis[idx, :]
+    Vbar = basis2[idx, :]
+
+    y0 = basis.T @ _to_torch_vector(w0 - u_ref_np, dtype=dtype_t, device=device)
+    nred = int(y0.numel())
+
+    mu_np = np.asarray(mu, dtype=np.float64).reshape(-1)
+    if mu_np.size != 2:
+        raise ValueError(f"mu must have length 2, got {mu_np.shape}")
+
+    tmu = _to_torch_vector(mu_np, dtype=dtype_t, device=device)
+
+    t0_now = torch.tensor(0.0, dtype=dtype_t, device=device)
+
+    def _ann_eval(y_vec, t_scalar):
+        x = torch.cat([y_vec.reshape(-1), tmu, t_scalar.reshape(1)], dim=0)
+        out = ann_model(x)
+        return out.reshape(-1)
+
+    with torch.no_grad():
+        wp = (u_ref_loc_t + V @ y0 + Vbar @ _ann_eval(y0, t0_now)).detach().clone()
+
+    yp = y0.detach().clone()
+
+    red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
+    red_coords[:, 0] = y0.detach().cpu().numpy().reshape(-1)
+
+    num_its = 0
+    jac_time = 0.0
+    res_time = 0.0
+    ls_time = 0.0
+
+    print(f"Running POD-ANN Case 3 ECSW ROM of size {nred} for mu1={mu_np[0]}, mu2={mu_np[1]}")
+
+    for istep in range(num_steps):
+        print(f" ... Working on timestep {istep}")
+
+        t_now = torch.tensor((istep + 1) * float(dt), dtype=dtype_t, device=device)
+
+        def decode(y, with_grad=True):
+            if with_grad:
+                return u_ref_loc_t + V @ y + Vbar @ _ann_eval(y, t_now)
+            with torch.no_grad():
+                return u_ref_loc_t + V @ y + Vbar @ _ann_eval(y, t_now)
+
+        jacfwdfunc = torch_jacfwd(lambda yy: decode(yy, with_grad=True))
+
+        def res(w_loc):
+            return inviscid_burgers_res2D_ecsw(
+                w_loc,
+                grid_x,
+                grid_y,
+                dt,
+                wp,
+                mu,
+                JDxec_ecsw,
+                JDyec_ecsw,
+                sample_inds,
+                augmented_sample,
+            )
+
+        def jac(w_loc):
+            return inviscid_burgers_exact_jac2D_ecsw(
+                w_loc,
+                dt,
+                JDxec_ecsw,
+                JDyec_ecsw,
+                Eye_ecsw,
+                sample_inds,
+                augmented_sample,
+            )
+
+        y, resnorms, times = gauss_newton_pod_ann_ecsw(
+            func=res,
+            jac=jac,
+            y0=yp,
+            decode=decode,
+            jacfwdfunc=jacfwdfunc,
+            sample_inds=sample_inds,
+            augmented_sample=augmented_sample,
+            weight=sample_weights_cells,
+            max_its=max_its,
+            relnorm_cutoff=relnorm_cutoff,
+            min_delta=min_delta,
+            u_ref=u_ref_loc_t.detach().cpu().numpy(),
+            linear_solver=linear_solver,
+            normal_eq_reg=normal_eq_reg,
+        )
+
+        jac_t, res_t, ls_t = times
+        num_its += len(resnorms)
+        jac_time += jac_t
+        res_time += res_t
+        ls_time += ls_t
+
+        with torch.no_grad():
+            w_loc = decode(y, with_grad=False)
+
+        red_coords[:, istep + 1] = y.detach().cpu().numpy().reshape(-1)
+        wp = w_loc.detach().clone()
+        yp = y.detach().clone()
+
+    return red_coords, (num_its, jac_time, res_time, ls_time)

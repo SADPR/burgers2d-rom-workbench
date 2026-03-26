@@ -1,0 +1,7 @@
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage2/prom_coeff_dataset_ntot153_enriched_lhs20
+dataset_root: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage2/prom_coeff_dataset_ntot153_enriched_lhs20/per_mu
+stage3_out_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage3/prom_coeff_dataset_ntot153_enriched_lhs20
+dataset_backend: hprom
+dataset_total_modes: 153
+dataset_num_traj: 29
+scripts: stage3_perform_training_case_1_ann_enriched.py, stage3_perform_training_case_2_ann_enriched.py, stage3_perform_training_case_3_ann_enriched.py, stage3_perform_training_rom_data_driven_enriched.py

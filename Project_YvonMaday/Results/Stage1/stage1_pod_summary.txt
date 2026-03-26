@@ -1,0 +1,42 @@
+[run]
+timestamp: 2026-03-26T13:53:23
+script: Project_YvonMaday/stage1_pod.py
+
+[configuration]
+pod_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1
+snap_folder: /home/kratos/burgers2d-rom-workbench/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+pod_method: svd
+pod_tol: 1.00000000e-06
+num_modes_requested: N/A
+center: True
+random_state: 0
+rebuild_basis: True
+num_training_parameters: 9
+test_mu: [4.56, 0.019]
+
+[pod]
+basis_shape: (20000, 153)
+sigma_size: 4509
+n_keep: 153
+n_available: 4509
+energy_captured: 9.99999009e-01
+energy_lost: 9.91166165e-07
+u_ref_l2_norm: 3.27342686e+02
+
+[diagnostics]
+pod_reconstruction_relative_error: 3.71444653e-04
+
+[timings_seconds]
+build_snapshot_matrix: 3.00765276e-01
+compute_pod: 8.78814852e+01
+total_stage1_work: 8.81822505e+01
+
+[outputs]
+basis_npy: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+sigma_npy: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/sigma.npy
+u_ref_npy: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+singular_value_decay_png: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/stage1_pod_singular_value_decay.png
+metadata_npz: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/stage1_pod_metadata.npz
+summary_txt: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/stage1_pod_summary.txt

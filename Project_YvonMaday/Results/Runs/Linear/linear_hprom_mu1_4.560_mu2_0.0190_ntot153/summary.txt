@@ -1,0 +1,26 @@
+mu_test: [4.56, 0.019]
+solve_backend_requested: hprom
+solve_backend_effective: hprom
+use_ecsw: True
+use_stage2_ecsw_weights: True
+basis_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+u_ref_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+total_modes: 153
+primary_modes: none
+secondary_modes: none
+save_split_qn: False
+ecsw_num_training_mu: 1
+ecsw_snap_sample_factor: 10
+ecsw_snap_time_offset: 3
+ecsw_weights_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/ecsw_weights_lspg_ntot153.npy
+ecsw_weights_source: loaded_stage2
+ecsw_residual: nan
+n_ecsw_elements: 2086
+elapsed_s: 45.01095533370972
+num_iterations: 1560
+jac_time_s: 2.732771873474121
+res_time_s: 1.4659183025360107
+ls_time_s: 37.28941798210144
+relative_error_percent: 0.04046237752272261
+output_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/Linear/linear_hprom_mu1_4.560_mu2_0.0190_ntot153
+snap_folder: /home/kratos/burgers2d-rom-workbench/Results/param_snaps

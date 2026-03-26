@@ -1,0 +1,15 @@
+solve_backend: hprom
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot153
+per_mu_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot153/per_mu
+basis_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+u_ref_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+total_modes: 153
+primary_modes: 10
+num_traj: 9
+ecsw_num_training_mu: 1
+ecsw_snap_sample_factor: 10
+ecsw_snap_time_offset: 3
+ecsw_weights_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/ecsw_weights_lspg_ntot153.npy
+ecsw_weights_source: computed
+ecsw_residual: 2.9935429952092264e-09
+n_ecsw_elements: 2086
