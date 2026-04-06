@@ -1,0 +1,61 @@
+[run]
+timestamp: 2026-04-04T08:53:26
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+model_dir: POD-DL/pod_dl_model
+basis_file: N/A
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+linear_solver: lstsq
+normal_eq_reg: N/A
+solver_threads: 1
+uref_mode: auto
+use_u_ref: True
+u_ref_source: POD-DL/u_ref.npy
+u_ref_l2_norm: 8.17426148e+02
+provided_uref_file: N/A
+checkpoint_use_u_ref: True
+stage2_use_u_ref: True
+stage2_projection_metadata: POD-DL/stage2_projection_metadata.npz
+
+[discretization]
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[pod_dl_model]
+model_pt: POD-DL/pod_dl_model/pod_dl_autoencoder.pt
+basis_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-DL/basis.npy
+basis_q_shape: (125000, 151)
+q_dim: 151
+latent_dim: 5
+hidden_dims: (192, 96, 48)
+activation: tanh
+scaling: minmax_-1_1
+checkpoint_seed: 42
+
+[prom_timing]
+total_prom_time_seconds: 1.26933787e+02
+avg_prom_time_per_step_seconds: 2.53867574e-01
+gn_iterations_total: 1894
+avg_gn_iterations_per_step: 3.78800000e+00
+jacobian_time_seconds: 7.60990379e+01
+residual_time_seconds: 8.30495048e+00
+linear_solve_time_seconds: 1.67191367e+01
+hdm_load_or_solve_time_seconds: 5.31721592e-01
+
+[error_metrics]
+relative_l2_error: 1.24153200e-02
+relative_error_percent: 1.24153200e+00
+
+[outputs]
+rom_snapshots_npy: Results/prom_dl_snaps_mu1_4.56_mu2_0.019.npy
+latent_trajectory_npy: Results/prom_dl_latent_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/prom_dl_mu1_4.56_mu2_0.019.png
+summary_txt: Results/prom_dl_summary_mu1_4.56_mu2_0.019.txt

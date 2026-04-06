@@ -1,0 +1,25 @@
+mu_test: [4.875, 0.0225]
+device: cpu
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage3/prom_coeff_dataset_ntot151_enriched_lhs20/models/case1_model_enriched.pt
+basis_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+solve_backend_requested: prom
+solve_backend_effective: prom
+use_ecsw: True
+rebuild_ecsw_weights: False
+ecsw_num_training_mu: 1
+ecsw_snap_sample_factor: 10
+ecsw_snap_time_offset: 3
+ecsw_weights_path: N/A
+ecsw_residual: nan
+n_ecsw_elements: None
+ecsw_setup_elapsed_s: 0.0
+online_solve_elapsed_s: 156.0338099002838
+elapsed_s: 156.0338099002838
+num_iterations: 1931
+jac_time_s: 78.79648470878601
+res_time_s: 6.401145935058594
+ls_time_s: 42.464887619018555
+relative_error_percent: 0.6809886798550671
+snaps_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Runs/Case1/case1_prom_ann_enriched_mu1_4.875_mu2_0.0225_n10_ntot151_snaps.npy
+plot_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Runs/Case1/case1_prom_ann_enriched_mu1_4.875_mu2_0.0225_n10_ntot151_hdm_vs_rom.png

@@ -1,0 +1,14 @@
+solver_variant: case2_petrov_galerkin_enriched_residual_testing
+mu_test: [5.19, 0.026]
+device: cpu
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage3/prom_coeff_dataset_ntot151_enriched_lhs20/models/case2_model_enriched.pt
+basis_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+online_solve_elapsed_s: 415.5884144306183
+num_iterations: 1500
+jac_time_s: 56.576573848724365
+res_time_s: 6.08673882484436
+ls_time_s: 334.25455713272095
+relative_error_percent: 0.7141132729484801
+snaps_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Runs/Case2/case2_petrov_galerkin_prom_ann_enriched_mu1_5.190_mu2_0.0260_n10_ntot151_snaps.npy
+plot_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Runs/Case2/case2_petrov_galerkin_prom_ann_enriched_mu1_5.190_mu2_0.0260_n10_ntot151_hdm_vs_rom.png

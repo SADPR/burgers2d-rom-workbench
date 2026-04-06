@@ -117,9 +117,11 @@ def _is_analytic_jacobian_compatible(kernel_obj):
         return False
     if not isinstance(kernel_obj.k1, ConstantKernel):
         return False
-    if not isinstance(kernel_obj.k2, Matern):
-        return False
-    return float(kernel_obj.k2.nu) == 1.5
+    if isinstance(kernel_obj.k2, Matern):
+        return float(kernel_obj.k2.nu) == 1.5
+    if isinstance(kernel_obj.k2, RBF):
+        return True
+    return False
 
 
 def _safe_relative_percent(y_true, y_pred):
@@ -509,8 +511,8 @@ def main(
     n_primary=5,
     delta_duplicates=1e-3,
     n_splits_max=5,
-    kernel_candidates=("matern15",),
-    alpha_values=(1e-10,),
+    kernel_candidates=("matern15", "rbf"),
+    alpha_values=(1e-10, 1e-8, 1e-6),
     constant_value=1.0,
     length_scale=1.0,
     constant_value_bounds=(1e-3, 1e3),

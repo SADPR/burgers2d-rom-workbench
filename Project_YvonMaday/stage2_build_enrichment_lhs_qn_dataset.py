@@ -2,19 +2,22 @@
 # -*- coding: utf-8 -*-
 
 """
-Stage 2 enrichment: build an HPROM qN dataset using extra LHS parameter samples.
+Stage 2 enrichment: build a PROM/HPROM qN dataset using extra LHS samples.
 
 Key design choices:
 - Keeps existing Results/* artifacts untouched.
 - Writes everything under Results_Enrichment/*.
-- Builds a NEW ECSW weights file for the enrichment dataset.
-- Stores only reduced outputs for new LHS points (qN, qN_p, qN_s, stats).
+- Supports both backends:
+  - PROM: full LSPG solves for enrichment samples.
+  - HPROM: reuses baseline ECSW weights.
+- Stores only reduced outputs for new LHS points (qN, stats).
 - Does not save reconstructed full snapshots for enrichment solves.
 """
 
 import os
 import shutil
 import sys
+import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,6 +29,7 @@ if PROJECT_ROOT not in sys.path:
 
 from burgers.config import DT, NUM_STEPS, GRID_X, GRID_Y, W0, MU1_RANGE, MU2_RANGE
 from burgers.linear_manifold import (
+    inviscid_burgers_implicit2D_LSPG,
     inviscid_burgers_implicit2D_LSPG_ecsw,
 )
 
@@ -174,8 +178,22 @@ def _plot_sampling_points(base_first9_mu_list, lhs_mu_list, mu1_range, mu2_range
     ax.set_xlabel(r"$\mu_1$")
     ax.set_ylabel(r"$\mu_2$")
     ax.set_title("Baseline vs Enrichment Sampling Points")
-    ax.set_xlim(float(mu1_range[0]), float(mu1_range[1]))
-    ax.set_ylim(float(mu2_range[0]), float(mu2_range[1]))
+    mu1_lo, mu1_hi = float(mu1_range[0]), float(mu1_range[1])
+    mu2_lo, mu2_hi = float(mu2_range[0]), float(mu2_range[1])
+    pad_x = 0.06 * (mu1_hi - mu1_lo)
+    pad_y = 0.08 * (mu2_hi - mu2_lo)
+    ax.set_xlim(mu1_lo - pad_x, mu1_hi + pad_x)
+    ax.set_ylim(mu2_lo - pad_y, mu2_hi + pad_y)
+    # Draw the actual parameter-domain boundary to avoid visual ambiguity near corners.
+    ax.plot(
+        [mu1_lo, mu1_hi, mu1_hi, mu1_lo, mu1_lo],
+        [mu2_lo, mu2_lo, mu2_hi, mu2_hi, mu2_lo],
+        color="0.25",
+        linewidth=1.4,
+        linestyle="-",
+        alpha=0.85,
+        zorder=1,
+    )
     ax.grid(True, alpha=0.3)
     ax.legend(loc="best")
     fig.tight_layout()
@@ -244,8 +262,6 @@ def _copy_base_dataset(base_per_mu_root, out_per_mu_dir):
         "mu.npy",
         "t.npy",
         "qN.npy",
-        "qN_p.npy",
-        "qN_s.npy",
         "rom_stats.npy",
         "prom_stats.npy",
         "hprom_stats.npy",
@@ -270,38 +286,72 @@ def _copy_base_dataset(base_per_mu_root, out_per_mu_dir):
             src = os.path.join(src_mu_dir, fname)
             if os.path.exists(src):
                 shutil.copy2(src, os.path.join(dst_mu_dir, fname))
+
+        # Backward compatibility: if legacy split files exist but qN.npy does not,
+        # rebuild canonical qN.npy so downstream Stage 3 can consume one format.
+        dst_qn = os.path.join(dst_mu_dir, "qN.npy")
+        if not os.path.exists(dst_qn):
+            src_qnp = os.path.join(src_mu_dir, "qN_p.npy")
+            src_qns = os.path.join(src_mu_dir, "qN_s.npy")
+            if os.path.exists(src_qnp) and os.path.exists(src_qns):
+                qnp = np.asarray(np.load(src_qnp, allow_pickle=False), dtype=np.float64)
+                qns = np.asarray(np.load(src_qns, allow_pickle=False), dtype=np.float64)
+                if qnp.ndim == 2 and qns.ndim == 2 and qnp.shape[1] == qns.shape[1]:
+                    np.save(dst_qn, np.vstack([qnp, qns]))
         copied += 1
 
     return keys, copied
 
 
-def main():
+def main(argv=None):
     # -----------------------------
     # User settings
     # -----------------------------
     lhs_samples = 20
     lhs_seed = 42
-
-    # Use the same POD basis dimension as existing workflow by default.
     total_modes = None
-    primary_modes = None  # if None, use base dataset primary_modes
-
-    # Base dataset expected backend
-    dataset_backend = "hprom"
-
-    # Keep previous 9 trajectories in the enriched dataset (recommended)
+    solve_backend = "hprom"
     copy_base_dataset = True
-
-    # ECSW policy for enrichment:
-    # Always reuse baseline Stage2 ECSW weights (no HDM snapshots here).
     reuse_base_ecsw_weights = True
-
-    # HPROM solve settings
     max_its = 20
     relnorm_cutoff = 1e-5
     min_delta = 1e-2
     linear_solver = "lstsq"
     normal_eq_reg = 1e-12
+
+    parser = argparse.ArgumentParser(
+        description="Build enrichment Stage-2 qN dataset with PROM/HPROM backend."
+    )
+    parser.add_argument("--backend", choices=("prom", "hprom"), default=solve_backend)
+    parser.add_argument("--lhs-samples", type=int, default=lhs_samples)
+    parser.add_argument("--lhs-seed", type=int, default=lhs_seed)
+    parser.add_argument("--total-modes", type=int, default=total_modes)
+    parser.add_argument("--max-its", type=int, default=max_its)
+    parser.add_argument("--relnorm-cutoff", type=float, default=relnorm_cutoff)
+    parser.add_argument("--min-delta", type=float, default=min_delta)
+    parser.add_argument("--linear-solver", choices=("lstsq", "normal_eq"), default=linear_solver)
+    parser.add_argument("--normal-eq-reg", type=float, default=normal_eq_reg)
+    copy_group = parser.add_mutually_exclusive_group()
+    copy_group.add_argument("--copy-base-dataset", dest="copy_base_dataset", action="store_true")
+    copy_group.add_argument("--no-copy-base-dataset", dest="copy_base_dataset", action="store_false")
+    parser.set_defaults(copy_base_dataset=copy_base_dataset)
+    ecsw_group = parser.add_mutually_exclusive_group()
+    ecsw_group.add_argument("--reuse-base-ecsw-weights", dest="reuse_base_ecsw_weights", action="store_true")
+    ecsw_group.add_argument("--no-reuse-base-ecsw-weights", dest="reuse_base_ecsw_weights", action="store_false")
+    parser.set_defaults(reuse_base_ecsw_weights=reuse_base_ecsw_weights)
+    args = parser.parse_args(argv)
+
+    solve_backend = str(args.backend).strip().lower()
+    lhs_samples = int(args.lhs_samples)
+    lhs_seed = int(args.lhs_seed)
+    total_modes = args.total_modes
+    copy_base_dataset = bool(args.copy_base_dataset)
+    reuse_base_ecsw_weights = bool(args.reuse_base_ecsw_weights)
+    max_its = int(args.max_its)
+    relnorm_cutoff = float(args.relnorm_cutoff)
+    min_delta = float(args.min_delta)
+    linear_solver = str(args.linear_solver).strip().lower()
+    normal_eq_reg = float(args.normal_eq_reg)
 
     # -----------------------------
     # Setup
@@ -312,7 +362,7 @@ def main():
     base_per_mu_root, base_ntot, base_dataset_dir, base_meta, _ = resolve_stage3_dataset(
         this_dir=THIS_DIR,
         requested_ntot=total_modes,
-        expected_backend=dataset_backend,
+        expected_backend=solve_backend,
     )
     if total_modes is None:
         total_modes = int(base_ntot)
@@ -322,16 +372,6 @@ def main():
             raise ValueError(
                 f"Requested total_modes={total_modes}, but base dataset has ntot={base_ntot}."
             )
-
-    if primary_modes is None:
-        primary_modes = int(base_meta.get("primary_modes", 10))
-    else:
-        primary_modes = int(primary_modes)
-
-    if not (0 < primary_modes < total_modes):
-        raise ValueError(
-            f"primary_modes={primary_modes} must satisfy 0 < primary_modes < total_modes={total_modes}."
-        )
 
     vtot, u_ref, basis_path, uref_path, total_modes, n_available = _load_stage1_basis(total_modes)
     w0 = np.asarray(W0, dtype=np.float64).reshape(-1)
@@ -364,6 +404,7 @@ def main():
     )
 
     print(f"[Stage2-Enrich] base dataset: {base_dataset_dir}")
+    print(f"[Stage2-Enrich] solve_backend: {solve_backend}")
     print(f"[Stage2-Enrich] base trajectories copied: {copied_base}")
     print(f"[Stage2-Enrich] LHS samples requested: {lhs_samples}")
     print(f"[Stage2-Enrich] LHS samples generated: {len(lhs_mu_list)}")
@@ -384,40 +425,54 @@ def main():
     print(f"[Stage2-Enrich] sampling plot: {sampling_plot_path}")
 
     # -----------------------------
-    # ECSW for enrichment: always reuse baseline Stage2 ECSW
+    # Optional ECSW setup (HPROM only)
     # -----------------------------
-    expected_num_cells = (GRID_X.size - 1) * (GRID_Y.size - 1)
-    ecsw_weights_path = os.path.join(out_dir, f"ecsw_weights_lspg_ntot{total_modes}_lhs{lhs_samples}.npy")
+    ecsw_weights = None
+    ecsw_weights_path = None
+    ecsw_source = None
     ecsw_residual = np.nan
+    n_ecsw_elements = None
 
-    base_ecsw_weights_path = _resolve_base_ecsw_weights_path(
-        base_dataset_dir=base_dataset_dir,
-        base_meta=base_meta,
-        total_modes=total_modes,
-    )
-    if base_ecsw_weights_path is None:
-        raise FileNotFoundError(
-            "Could not resolve baseline Stage2 ECSW weights path. "
-            "Generate baseline HPROM Stage2 dataset first."
+    if solve_backend == "hprom":
+        if not reuse_base_ecsw_weights:
+            raise ValueError(
+                "Enrichment HPROM currently supports only --reuse-base-ecsw-weights. "
+                "Set --backend prom for enrichment without ECSW."
+            )
+
+        expected_num_cells = (GRID_X.size - 1) * (GRID_Y.size - 1)
+        ecsw_weights_path = os.path.join(out_dir, f"ecsw_weights_lspg_ntot{total_modes}_lhs{lhs_samples}.npy")
+
+        base_ecsw_weights_path = _resolve_base_ecsw_weights_path(
+            base_dataset_dir=base_dataset_dir,
+            base_meta=base_meta,
+            total_modes=total_modes,
         )
+        if base_ecsw_weights_path is None:
+            raise FileNotFoundError(
+                "Could not resolve baseline Stage2 ECSW weights path. "
+                "Generate baseline HPROM Stage2 dataset first."
+            )
 
-    ecsw_weights = np.asarray(np.load(base_ecsw_weights_path, allow_pickle=False), dtype=np.float64).reshape(-1)
-    if ecsw_weights.size != expected_num_cells:
-        raise ValueError(
-            f"Baseline ECSW weights size mismatch: got {ecsw_weights.size}, expected {expected_num_cells}."
-        )
-    np.save(ecsw_weights_path, ecsw_weights)
-    ecsw_source = f"copied_from_base:{base_ecsw_weights_path}"
+        ecsw_weights = np.asarray(np.load(base_ecsw_weights_path, allow_pickle=False), dtype=np.float64).reshape(-1)
+        if ecsw_weights.size != expected_num_cells:
+            raise ValueError(
+                f"Baseline ECSW weights size mismatch: got {ecsw_weights.size}, expected {expected_num_cells}."
+            )
+        np.save(ecsw_weights_path, ecsw_weights)
+        ecsw_source = f"copied_from_base:{base_ecsw_weights_path}"
+        n_ecsw_elements = int(np.sum(ecsw_weights > 0.0))
 
-    n_ecsw_elements = int(np.sum(ecsw_weights > 0.0))
-    print(f"[Stage2-Enrich] ECSW path: {ecsw_weights_path}")
-    print(f"[Stage2-Enrich] ECSW source: {ecsw_source}")
-    print(f"[Stage2-Enrich] ECSW N_e: {n_ecsw_elements}")
-    print(f"[Stage2-Enrich] ECSW residual: {ecsw_residual}")
-    print("[Stage2-Enrich] ECSW mode: reused baseline weights (no HDM run in this stage).")
+        print(f"[Stage2-Enrich] ECSW path: {ecsw_weights_path}")
+        print(f"[Stage2-Enrich] ECSW source: {ecsw_source}")
+        print(f"[Stage2-Enrich] ECSW N_e: {n_ecsw_elements}")
+        print(f"[Stage2-Enrich] ECSW residual: {ecsw_residual}")
+        print("[Stage2-Enrich] ECSW mode: reused baseline weights (no HDM run in this stage).")
+    else:
+        print("[Stage2-Enrich] backend=PROM -> no ECSW weights are used.")
 
     # -----------------------------
-    # HPROM solves for enrichment points (store qN only)
+    # ROM solves for enrichment points (store qN only)
     # -----------------------------
     t_vec = DT * np.arange(NUM_STEPS + 1, dtype=np.float64)
     for i, mu in enumerate(lhs_mu_list, start=1):
@@ -425,40 +480,58 @@ def main():
         mu_dir = os.path.join(per_mu_dir, mu_tag)
         os.makedirs(mu_dir, exist_ok=True)
 
-        print(f"[Stage2-Enrich] [{i}/{len(lhs_mu_list)}] HPROM solve for {mu_tag}")
-        qN, rom_times = inviscid_burgers_implicit2D_LSPG_ecsw(
-            grid_x=GRID_X,
-            grid_y=GRID_Y,
-            weights=ecsw_weights,
-            w0=w0,
-            dt=DT,
-            num_steps=NUM_STEPS,
-            mu=mu,
-            basis=vtot,
-            u_ref=u_ref,
-            max_its=max_its,
-            relnorm_cutoff=relnorm_cutoff,
-            min_delta=min_delta,
-            linear_solver=linear_solver,
-            normal_eq_reg=normal_eq_reg,
-        )
+        print(f"[Stage2-Enrich] [{i}/{len(lhs_mu_list)}] {solve_backend.upper()} solve for {mu_tag}")
+        if solve_backend == "prom":
+            rom_snaps, rom_times = inviscid_burgers_implicit2D_LSPG(
+                grid_x=GRID_X,
+                grid_y=GRID_Y,
+                w0=w0,
+                dt=DT,
+                num_steps=NUM_STEPS,
+                mu=mu,
+                basis=vtot,
+                u_ref=u_ref,
+                max_its=max_its,
+                relnorm_cutoff=relnorm_cutoff,
+                min_delta=min_delta,
+                linear_solver=linear_solver,
+                normal_eq_reg=normal_eq_reg,
+            )
+            qN = vtot.T @ (rom_snaps - u_ref[:, None])
+        else:
+            qN, rom_times = inviscid_burgers_implicit2D_LSPG_ecsw(
+                grid_x=GRID_X,
+                grid_y=GRID_Y,
+                weights=ecsw_weights,
+                w0=w0,
+                dt=DT,
+                num_steps=NUM_STEPS,
+                mu=mu,
+                basis=vtot,
+                u_ref=u_ref,
+                max_its=max_its,
+                relnorm_cutoff=relnorm_cutoff,
+                min_delta=min_delta,
+                linear_solver=linear_solver,
+                normal_eq_reg=normal_eq_reg,
+            )
 
         np.save(os.path.join(mu_dir, "mu.npy"), np.asarray(mu, dtype=np.float64))
         np.save(os.path.join(mu_dir, "t.npy"), t_vec)
         np.save(os.path.join(mu_dir, "qN.npy"), qN)
-        np.save(os.path.join(mu_dir, "qN_p.npy"), qN[:primary_modes, :])
-        np.save(os.path.join(mu_dir, "qN_s.npy"), qN[primary_modes:total_modes, :])
         np.save(os.path.join(mu_dir, "rom_stats.npy"), np.asarray(rom_times, dtype=np.float64))
-        np.save(os.path.join(mu_dir, "hprom_stats.npy"), np.asarray(rom_times, dtype=np.float64))
+        if solve_backend == "prom":
+            np.save(os.path.join(mu_dir, "prom_stats.npy"), np.asarray(rom_times, dtype=np.float64))
+        else:
+            np.save(os.path.join(mu_dir, "hprom_stats.npy"), np.asarray(rom_times, dtype=np.float64))
 
     total_traj = int(copied_base + len(lhs_mu_list))
     meta = {
-        "solve_backend": "hprom",
+        "solve_backend": solve_backend,
         "is_enrichment_dataset": True,
         "total_modes": int(total_modes),
         "n_available_modes": int(n_available),
-        "primary_modes": int(primary_modes),
-        "secondary_modes": int(total_modes - primary_modes),
+        "coefficient_storage": "qN_only",
         "dt": float(DT),
         "num_steps": int(NUM_STEPS),
         "basis_path": basis_path,
@@ -485,7 +558,7 @@ def main():
         "ecsw_weights_path": ecsw_weights_path,
         "ecsw_weights_source": ecsw_source,
         "ecsw_residual": float(ecsw_residual) if np.isfinite(ecsw_residual) else np.nan,
-        "n_ecsw_elements": int(n_ecsw_elements),
+        "n_ecsw_elements": None if n_ecsw_elements is None else int(n_ecsw_elements),
         "reuse_base_ecsw_weights": bool(reuse_base_ecsw_weights),
         "sampling_plot_path": sampling_plot_path,
     }
@@ -497,9 +570,9 @@ def main():
         [
             ("dataset_dir", out_dir),
             ("per_mu_dir", per_mu_dir),
-            ("solve_backend", "hprom"),
+            ("solve_backend", solve_backend),
             ("total_modes", total_modes),
-            ("primary_modes", primary_modes),
+            ("coefficient_storage", "qN_only"),
             ("num_base_traj_copied", copied_base),
             ("num_lhs_traj", len(lhs_mu_list)),
             ("num_traj_total", total_traj),

@@ -11,8 +11,7 @@ Full trajectory surrogate (ANN):
 - Loads PROM-solved coefficients from:
     prom_coeff_dataset_ntot*/per_mu/*/mu.npy     (2,)
     prom_coeff_dataset_ntot*/per_mu/*/t.npy      (T,)
-    prom_coeff_dataset_ntot*/per_mu/*/qN_p.npy   (n, T)
-    prom_coeff_dataset_ntot*/per_mu/*/qN_s.npy   (n_s, T)
+    prom_coeff_dataset_ntot*/per_mu/*/qN.npy     (n_tot, T)
 
 - Builds dataset:
     X_raw = [mu1, mu2, t]  -> shape (M, 3)
@@ -25,6 +24,7 @@ Full trajectory surrogate (ANN):
 
 import os
 import time
+import argparse
 import numpy as np
 
 from sklearn.model_selection import train_test_split
@@ -37,6 +37,10 @@ try:
     from stage3_dataset_utils import resolve_stage3_dataset
 except ModuleNotFoundError:
     from .stage3_dataset_utils import resolve_stage3_dataset
+try:
+    from stage3_qn_utils import load_qn_from_mu_dir
+except ModuleNotFoundError:
+    from .stage3_qn_utils import load_qn_from_mu_dir
 try:
     from project_layout import STAGE3_DIR, ensure_layout_dirs, stage3_model_path, write_kv_txt
 except ModuleNotFoundError:
@@ -60,8 +64,7 @@ def load_prom_dataset_rom_data_driven(dataset_root: str):
     Each per_mu dir must contain:
       - mu.npy     (2,)
       - t.npy      (T,)
-      - qN_p.npy   (n, T)
-      - qN_s.npy   (n_s, T)
+      - qN.npy     (n_tot, T)
     """
     if not os.path.exists(dataset_root):
         raise FileNotFoundError(f"Missing dataset directory: {dataset_root}")
@@ -74,7 +77,7 @@ def load_prom_dataset_rom_data_driven(dataset_root: str):
         raise RuntimeError(f"No per_mu subdirectories found in: {dataset_root}")
 
     X_list, Y_list = [], []
-    n_ref, n_s_ref = None, None
+    n_tot_ref = None
 
     for sd in subdirs:
         mu_dir = os.path.join(dataset_root, sd)
@@ -85,44 +88,25 @@ def load_prom_dataset_rom_data_driven(dataset_root: str):
 
         t = np.load(os.path.join(mu_dir, "t.npy")).astype(np.float64).reshape(-1)    # (T,)
 
-        qNp_path = os.path.join(mu_dir, "qN_p.npy")
-        qNs_path = os.path.join(mu_dir, "qN_s.npy")
-        if (not os.path.exists(qNp_path)) or (not os.path.exists(qNs_path)):
-            raise FileNotFoundError(f"{sd}: missing qN_p.npy and/or qN_s.npy")
+        qN = load_qn_from_mu_dir(mu_dir).astype(np.float64)   # (n_tot, T)
+        if qN.ndim != 2:
+            raise ValueError(f"{sd}: qN must be 2D (n_tot,T), got {qN.shape}")
 
-        qNp = np.load(qNp_path).astype(np.float64)  # (n, T)
-        qNs = np.load(qNs_path).astype(np.float64)  # (n_s, T)
-
-        if qNp.ndim != 2:
-            raise ValueError(f"{sd}: qN_p.npy must be 2D (n,T), got {qNp.shape}")
-        if qNs.ndim != 2:
-            raise ValueError(f"{sd}: qN_s.npy must be 2D (n_s,T), got {qNs.shape}")
-
-        n, T = qNp.shape
-        n_s, T2 = qNs.shape
-
-        if T2 != T:
-            raise ValueError(f"{sd}: qN_p has T={T} but qN_s has T={T2}")
+        n_tot, T = qN.shape
         if t.shape[0] != T:
-            raise ValueError(f"{sd}: t has length {t.shape[0]} but qN_* has T={T}")
+            raise ValueError(f"{sd}: t has length {t.shape[0]} but qN has T={T}")
 
-        if n_ref is None:
-            n_ref, n_s_ref = n, n_s
-        else:
-            if n != n_ref:
-                raise ValueError(f"{sd}: n mismatch, got {n}, expected {n_ref}")
-            if n_s != n_s_ref:
-                raise ValueError(f"{sd}: n_s mismatch, got {n_s}, expected {n_s_ref}")
-
-        n_tot = n + n_s
+        if n_tot_ref is None:
+            n_tot_ref = n_tot
+        elif n_tot != n_tot_ref:
+            raise ValueError(f"{sd}: n_tot mismatch, got {n_tot}, expected {n_tot_ref}")
 
         # Build X for this trajectory: repeat mu across time
         mu1 = np.full((T,), mu[0], dtype=np.float64)
         mu2 = np.full((T,), mu[1], dtype=np.float64)
         Xi = np.column_stack([mu1, mu2, t])          # (T,3)
 
-        # Build Y: qN = [qN_p; qN_s]
-        qN = np.vstack([qNp, qNs])                   # (n_tot, T)
+        # Build Y directly from qN
         Yi = qN.T                                    # (T, n_tot)
 
         X_list.append(Xi)
@@ -205,20 +189,33 @@ class ROMDataDrivenModel(nn.Module):
         return y_raw
 
 
-def main():
+def main(argv=None):
     # -----------------------------
     # User settings
     # -----------------------------
     ensure_layout_dirs()
 
-    dataset_ntot = None  # set int to force a specific ntot dataset
-    dataset_backend = "hprom"
+    parser = argparse.ArgumentParser(
+        description="Train data-driven ROM surrogate from Stage-2 dataset."
+    )
+    parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="hprom")
+    parser.add_argument("--dataset-ntot", type=int, default=None)
+    parser.add_argument("--model-name", type=str, default=None)
+    args = parser.parse_args(argv)
+
+    dataset_ntot = args.dataset_ntot
+    dataset_backend = str(args.dataset_backend).strip().lower()
     dataset_root, dataset_ntot, dataset_dir, dataset_meta, _ = resolve_stage3_dataset(
         this_dir=THIS_DIR,
         requested_ntot=dataset_ntot,
         expected_backend=dataset_backend,
     )
-    model_path = stage3_model_path("rom_data_driven_model.pt")
+    model_name = str(args.model_name).strip() if args.model_name is not None else "rom_data_driven_model.pt"
+    if len(model_name) == 0:
+        raise ValueError("--model-name cannot be empty.")
+    if not model_name.endswith(".pt"):
+        model_name = f"{model_name}.pt"
+    model_path = stage3_model_path(model_name)
     summary_path = os.path.join(STAGE3_DIR, "rom_data_driven_training_summary.txt")
 
     VAL_FRAC = 0.1
@@ -348,6 +345,7 @@ def main():
     write_kv_txt(
         summary_path,
         [
+            ("model_name", model_name),
             ("model_path", model_path),
             ("dataset_dir", dataset_dir),
             ("dataset_root", dataset_root),

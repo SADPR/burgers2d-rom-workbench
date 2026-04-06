@@ -10,8 +10,7 @@ Case 3 (ANN):
 - Loads PROM-solved coefficients from:
     prom_coeff_dataset_ntot*/per_mu/*/mu.npy     (2,)
     prom_coeff_dataset_ntot*/per_mu/*/t.npy      (T,)
-    prom_coeff_dataset_ntot*/per_mu/*/qN_p.npy   (n_p, T)
-    prom_coeff_dataset_ntot*/per_mu/*/qN_s.npy   (n_s, T)
+    prom_coeff_dataset_ntot*/per_mu/*/qN.npy     (n_tot, T)
 
 - Builds dataset:
     X_raw = [qN_p(t)^T, mu1, mu2, t]  -> shape (M, n_p + 3)
@@ -24,6 +23,7 @@ Case 3 (ANN):
 
 import os
 import time
+import argparse
 import numpy as np
 
 from sklearn.model_selection import train_test_split
@@ -36,6 +36,10 @@ try:
     from stage3_dataset_utils import resolve_stage3_dataset
 except ModuleNotFoundError:
     from .stage3_dataset_utils import resolve_stage3_dataset
+try:
+    from stage3_qn_utils import load_qn_from_mu_dir, resolve_primary_modes, split_qn
+except ModuleNotFoundError:
+    from .stage3_qn_utils import load_qn_from_mu_dir, resolve_primary_modes, split_qn
 try:
     from project_layout import STAGE3_DIR, ensure_layout_dirs, stage3_model_path, write_kv_txt
 except ModuleNotFoundError:
@@ -52,15 +56,14 @@ torch.manual_seed(SEED)
 np.random.seed(SEED)
 
 
-def load_prom_dataset_case3(dataset_root: str):
+def load_prom_dataset_case3(dataset_root: str, primary_modes: int):
     """
     Return X_raw (M, n_p+3), Y_raw (M, n_s) in float32 from per_mu dirs.
 
     Each per_mu dir must contain:
       - mu.npy   (2,)
       - t.npy    (T,)
-      - qN_p.npy (n_p, T)
-      - qN_s.npy (n_s, T)
+      - qN.npy   (n_tot, T)
     """
     if not os.path.exists(dataset_root):
         raise FileNotFoundError(f"Missing dataset directory: {dataset_root}")
@@ -85,11 +88,8 @@ def load_prom_dataset_case3(dataset_root: str):
 
         t = np.load(os.path.join(mu_dir, "t.npy")).astype(np.float64).reshape(-1)  # (T,)
 
-        qNp = np.load(os.path.join(mu_dir, "qN_p.npy")).astype(np.float64)  # (n_p, T)
-        qNs = np.load(os.path.join(mu_dir, "qN_s.npy")).astype(np.float64)  # (n_s, T)
-
-        if qNp.ndim != 2 or qNs.ndim != 2:
-            raise ValueError(f"{sd}: qN_p/qN_s must be 2D, got {qNp.shape} and {qNs.shape}")
+        qN = load_qn_from_mu_dir(mu_dir).astype(np.float64)                 # (n_tot, T)
+        qNp, qNs = split_qn(qN, primary_modes)                              # (n_p, T), (n_s, T)
 
         n_p, T1 = qNp.shape
         n_s, T2 = qNs.shape
@@ -196,20 +196,35 @@ class Case3Model(nn.Module):
         return y_raw
 
 
-def main():
+def main(argv=None):
     # -----------------------------
     # User settings
     # -----------------------------
     ensure_layout_dirs()
 
-    dataset_ntot = None  # set int to force a specific ntot dataset
-    dataset_backend = "hprom"
+    parser = argparse.ArgumentParser(
+        description="Train Case-3 ANN map from Stage-2 dataset."
+    )
+    parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="hprom")
+    parser.add_argument("--dataset-ntot", type=int, default=None)
+    parser.add_argument("--model-name", type=str, default=None)
+    parser.add_argument("--primary-modes", type=int, default=None)
+    args = parser.parse_args(argv)
+
+    dataset_ntot = args.dataset_ntot
+    dataset_backend = str(args.dataset_backend).strip().lower()
     dataset_root, dataset_ntot, dataset_dir, dataset_meta, _ = resolve_stage3_dataset(
         this_dir=THIS_DIR,
         requested_ntot=dataset_ntot,
         expected_backend=dataset_backend,
     )
-    model_path = stage3_model_path("case3_model.pt")
+    primary_modes = resolve_primary_modes(args.primary_modes, dataset_meta, dataset_ntot)
+    model_name = str(args.model_name).strip() if args.model_name is not None else "case3_model.pt"
+    if len(model_name) == 0:
+        raise ValueError("--model-name cannot be empty.")
+    if not model_name.endswith(".pt"):
+        model_name = f"{model_name}.pt"
+    model_path = stage3_model_path(model_name)
     summary_path = os.path.join(STAGE3_DIR, "case3_training_summary.txt")
 
     VAL_FRAC = 0.1
@@ -226,11 +241,12 @@ def main():
     print(f"[Case3] dataset_dir = {dataset_dir}")
     print(f"[Case3] dataset_root = {dataset_root} (ntot={dataset_ntot})")
     print(f"[Case3] solve_backend = {dataset_meta.get('solve_backend')}")
+    print(f"[Case3] primary_modes (training split) = {primary_modes}")
 
     # -----------------------------
     # Load data
     # -----------------------------
-    X_raw, Y_raw = load_prom_dataset_case3(dataset_root)
+    X_raw, Y_raw = load_prom_dataset_case3(dataset_root, primary_modes=primary_modes)
     M, in_dim = X_raw.shape
     _, n_s = Y_raw.shape
 
@@ -335,6 +351,8 @@ def main():
         "dataset_dir": dataset_dir,
         "dataset_ntot": int(dataset_ntot),
         "dataset_backend": dataset_meta.get("solve_backend"),
+        "primary_modes": int(primary_modes),
+        "secondary_modes": int(dataset_ntot - primary_modes),
         "mapping": "qN_s = N(qN_p, mu1, mu2, t)",
         "x_layout": "X_raw = [qN_p..., mu1, mu2, t]",
     }
@@ -343,11 +361,14 @@ def main():
     write_kv_txt(
         summary_path,
         [
+            ("model_name", model_name),
             ("model_path", model_path),
             ("dataset_dir", dataset_dir),
             ("dataset_root", dataset_root),
             ("dataset_ntot", dataset_ntot),
             ("dataset_backend", dataset_meta.get("solve_backend")),
+            ("primary_modes", primary_modes),
+            ("secondary_modes", int(dataset_ntot - primary_modes)),
             ("samples_M", M),
             ("n_p", n_p),
             ("in_dim", in_dim),

@@ -202,6 +202,8 @@ def main(
     device="auto",
     make_plots=True,
     save_hdm_reference=False,
+    model_name="rom_data_driven_model.pt",
+    model_path_override=None,
 ):
     mu_test = [float(mu_test[0]), float(mu_test[1])]
 
@@ -210,7 +212,16 @@ def main(
     set_latex_plot_style()
 
     runtime_device = _resolve_device(device)
-    model_path = resolve_stage3_model("rom_data_driven_model.pt")
+    if model_path_override is None:
+        model_name = str(model_name).strip()
+        if len(model_name) == 0:
+            raise ValueError("--model-name cannot be empty.")
+        if not model_name.endswith(".pt"):
+            model_name = f"{model_name}.pt"
+        model_path = resolve_stage3_model(model_name)
+    else:
+        model_path = os.path.abspath(model_path_override)
+        model_name = os.path.basename(model_path)
     model, model_ntot, ckpt = _load_rom_data_driven_model(model_path, device=runtime_device)
 
     basis_all, u_ref, basis_path, uref_path = _load_basis_and_reference()
@@ -335,6 +346,7 @@ def main(
             ("mu_test", mu_test),
             ("method", "nonintrusive_data_driven"),
             ("device", runtime_device),
+            ("model_name", model_name),
             ("model_path", model_path),
             ("basis_path", basis_path),
             ("u_ref_path", uref_path if os.path.exists(uref_path) else "zeros"),
@@ -376,6 +388,18 @@ def _build_parser():
     )
     parser.add_argument("--no-plot", action="store_true", help="Skip HDM-vs-ROM plotting")
     parser.add_argument("--save-hdm-reference", action="store_true", help="Also save hdm_snaps.npy")
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default="rom_data_driven_model.pt",
+        help="Checkpoint filename under Results/Stage3/models (used if --model-path is not set).",
+    )
+    parser.add_argument(
+        "--model-path",
+        type=str,
+        default=None,
+        help="Optional explicit checkpoint path.",
+    )
     return parser
 
 
@@ -388,6 +412,8 @@ def cli(argv=None):
         device=args.device,
         make_plots=not args.no_plot,
         save_hdm_reference=args.save_hdm_reference,
+        model_name=args.model_name,
+        model_path_override=args.model_path,
     )
 
 

@@ -1,0 +1,117 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Problem setting and reduced representation}{1}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}ROM-consistent training data (critical clarification)}{2}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Nonlinear manifold formulation and closure variants}{2}{section.7}\protected@file@percent }
+\newlabel{eq:nonlinear_manifold}{{6}{2}{Nonlinear manifold formulation and closure variants}{equation.9}{}}
+\newlabel{eq:manifold_jacobian}{{7}{3}{Nonlinear manifold formulation and closure variants}{equation.10}{}}
+\@writefile{toc}{\contentsline {paragraph}{Time-discrete LSPG problem solved online}{3}{section*.11}\protected@file@percent }
+\newlabel{eq:lspg_min_problem}{{9}{3}{Time-discrete LSPG problem solved online}{equation.13}{}}
+\newlabel{eq:lspg_gn_update}{{10}{3}{Time-discrete LSPG problem solved online}{equation.14}{}}
+\@writefile{toc}{\contentsline {paragraph}{Hyperreduced formulation used in practice}{3}{section*.15}\protected@file@percent }
+\newlabel{eq:case2_enriched_manifold_short}{{19}{5}{Hyperreduced formulation used in practice}{equation.24}{}}
+\newlabel{eq:case2_enriched_projected_residual_short}{{20}{5}{Hyperreduced formulation used in practice}{equation.25}{}}
+\newlabel{eq:case2_enriched_min_problem_short}{{21}{5}{Hyperreduced formulation used in practice}{equation.26}{}}
+\@writefile{toc}{\contentsline {paragraph}{Gauss--Newton iterations.}{5}{section*.27}\protected@file@percent }
+\newlabel{eq:case2_enriched_jacobian_short}{{22}{5}{Gauss--Newton iterations}{equation.28}{}}
+\newlabel{eq:case2_enriched_Z_short}{{23}{5}{Gauss--Newton iterations}{equation.29}{}}
+\newlabel{eq:case2_enriched_gn_short}{{24}{5}{Gauss--Newton iterations}{equation.30}{}}
+\citation{barnett2023neural}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Model problem: 2D parametric inviscid Burgers benchmark}{6}{section.33}\protected@file@percent }
+\newlabel{eq:IBVP}{{27}{6}{Model problem: 2D parametric inviscid Burgers benchmark}{equation.34}{}}
+\@writefile{toc}{\contentsline {paragraph}{Spatial and temporal discretization.}{7}{section*.39}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Baseline $3\times 3$ structured sampling points in $\mathcal  D$ (black circles) and evaluation points $\bm  {\mu }^{(v)}$, $\bm  {\mu }^{(1)}$, $\bm  {\mu }^{(2)}$ (colored stars).}}{7}{figure.42}\protected@file@percent }
+\newlabel{fig:param_sampling}{{1}{7}{Baseline $3\times 3$ structured sampling points in $\mathcal D$ (black circles) and evaluation points $\bm \mu ^{(v)}$, $\bm \mu ^{(1)}$, $\bm \mu ^{(2)}$ (colored stars)}{figure.42}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}PROM workflow and evaluation on the $250\times 250$ mesh}{7}{section.43}\protected@file@percent }
+\newlabel{sec:prom_250_workflow}{{5}{7}{PROM workflow and evaluation on the $250\times 250$ mesh}{section.43}{}}
+\@writefile{toc}{\contentsline {paragraph}{Scope.}{7}{section*.44}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{End-to-end pipeline.}{8}{section*.45}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Data-driven baseline (very brief).}{8}{section*.52}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{ANN architecture and optimization setup.}{8}{section*.53}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Dataset sizes.}{8}{section*.54}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{POD spectrum.}{9}{section*.55}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Singular value decay of the centered HDM snapshot matrix on the $250\times 250$ mesh (Stage 1 POD).}}{9}{figure.57}\protected@file@percent }
+\newlabel{fig:stage1_svd_decay_250}{{2}{9}{Singular value decay of the centered HDM snapshot matrix on the $250\times 250$ mesh (Stage 1 POD)}{figure.57}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Zoom of the Stage 1 POD singular-value decay for the first 50 modes on the $250\times 250$ mesh.}}{9}{figure.59}\protected@file@percent }
+\newlabel{fig:stage1_svd_decay_250_first50}{{3}{9}{Zoom of the Stage 1 POD singular-value decay for the first 50 modes on the $250\times 250$ mesh}{figure.59}{}}
+\@writefile{toc}{\contentsline {paragraph}{Sampling used for enrichment.}{9}{section*.60}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Baseline training points (9 equidistant points), enrichment points (20 LHS samples), and evaluation points $\bm  {\mu }^{(v)}$, $\bm  {\mu }^{(1)}$, $\bm  {\mu }^{(2)}$ over $\mathcal  D$.}}{10}{figure.62}\protected@file@percent }
+\newlabel{fig:stage2_sampling_lhs20}{{4}{10}{Baseline training points (9 equidistant points), enrichment points (20 LHS samples), and evaluation points $\bm \mu ^{(v)}$, $\bm \mu ^{(1)}$, $\bm \mu ^{(2)}$ over $\mathcal D$}{figure.62}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Baseline models (9-point training dataset)}{10}{subsection.63}\protected@file@percent }
+\newlabel{sec:baseline_prom_250}{{5.1}{10}{Baseline models (9-point training dataset)}{subsection.63}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Baseline PROM results on $250\times 250$ ($n_{\mathrm  {tot}}=151$), including Case~2 variants for $n=10$ and $n=20$.}}{10}{table.65}\protected@file@percent }
+\newlabel{tab:baseline_prom_250}{{1}{10}{Baseline PROM results on $250\times 250$ ($n_{\mathrm {tot}}=151$), including Case~2 variants for $n=10$ and $n=20$}{table.65}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Enriched models (9+20 training dataset)}{10}{subsection.66}\protected@file@percent }
+\newlabel{sec:enriched_prom_250}{{5.2}{10}{Enriched models (9+20 training dataset)}{subsection.66}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Enriched PROM results on $250\times 250$ (trained with $9+20$ trajectories, $n_{\mathrm  {tot}}=151$), including Case~2 variants for $n=10$ and $n=20$.}}{11}{table.68}\protected@file@percent }
+\newlabel{tab:enriched_prom_250}{{2}{11}{Enriched PROM results on $250\times 250$ (trained with $9+20$ trajectories, $n_{\mathrm {tot}}=151$), including Case~2 variants for $n=10$ and $n=20$}{table.68}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Runtime and speed-up reporting}{11}{subsection.69}\protected@file@percent }
+\newlabel{sec:speedup_prom_250}{{5.3}{11}{Runtime and speed-up reporting}{subsection.69}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces PROM speed-up factors relative to HDM at the three reported points.}}{11}{table.74}\protected@file@percent }
+\newlabel{tab:speedup_prom_250}{{3}{11}{PROM speed-up factors relative to HDM at the three reported points}{table.74}{}}
+\@writefile{toc}{\contentsline {paragraph}{Note.}{11}{section*.75}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Effect of enrichment}{11}{subsection.76}\protected@file@percent }
+\newlabel{sec:enrichment_effect_250}{{5.4}{11}{Effect of enrichment}{subsection.76}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Baseline vs enriched trajectory errors and relative reduction (\%) on $250\times 250$. Positive $\Delta e$ indicates improvement.}}{11}{table.78}\protected@file@percent }
+\newlabel{tab:enrichment_gain_250}{{4}{11}{Baseline vs enriched trajectory errors and relative reduction (\%) on $250\times 250$. Positive $\Delta e$ indicates improvement}{table.78}{}}
+\@writefile{toc}{\contentsline {paragraph}{Remark and practical takeaway.}{12}{section*.79}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Interpretation of the Case 2 $n=20$ behavior}{12}{subsection.80}\protected@file@percent }
+\newlabel{sec:case2_n20_interp}{{5.5}{12}{Interpretation of the Case 2 $n=20$ behavior}{subsection.80}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}Coefficient-space error analysis and source decomposition}{12}{subsection.81}\protected@file@percent }
+\newlabel{sec:coeff_errors_250}{{5.6}{12}{Coefficient-space error analysis and source decomposition}{subsection.81}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Mean relative coefficient errors (\%) over $\bm  {\mu }^{(v)},\bm  {\mu }^{(1)},\bm  {\mu }^{(2)}$, using linear $n_{\mathrm  {tot}}$-PROM coefficients as reference.}}{13}{table.83}\protected@file@percent }
+\newlabel{tab:coeff_primary_secondary_summary}{{5}{13}{Mean relative coefficient errors (\%) over $\bm \mu ^{(v)},\bm \mu ^{(1)},\bm \mu ^{(2)}$, using linear $n_{\mathrm {tot}}$-PROM coefficients as reference}{table.83}{}}
+\@writefile{toc}{\contentsline {paragraph}{Error-source decomposition for closure models.}{13}{section*.84}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Mean relative decomposition terms on truncated coefficients (\%) over $\bm  {\mu }^{(v)},\bm  {\mu }^{(1)},\bm  {\mu }^{(2)}$.}}{13}{table.86}\protected@file@percent }
+\newlabel{tab:decomposition_summary_250}{{6}{13}{Mean relative decomposition terms on truncated coefficients (\%) over $\bm \mu ^{(v)},\bm \mu ^{(1)},\bm \mu ^{(2)}$}{table.86}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Baseline stage: per-index absolute and relative coefficient errors vs linear $n_{\mathrm  {tot}}$-PROM reference at $\bm  {\mu }^{(v)}=(4.875,0.0225)$.}}{14}{figure.88}\protected@file@percent }
+\newlabel{fig:coeff_abs_rel_baseline_verif}{{5}{14}{Baseline stage: per-index absolute and relative coefficient errors vs linear $n_{\mathrm {tot}}$-PROM reference at $\bm \mu ^{(v)}=(4.875,0.0225)$}{figure.88}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Enriched stage: per-index absolute and relative coefficient errors vs linear $n_{\mathrm  {tot}}$-PROM reference at $\bm  {\mu }^{(v)}=(4.875,0.0225)$.}}{15}{figure.90}\protected@file@percent }
+\newlabel{fig:coeff_abs_rel_enriched_verif}{{6}{15}{Enriched stage: per-index absolute and relative coefficient errors vs linear $n_{\mathrm {tot}}$-PROM reference at $\bm \mu ^{(v)}=(4.875,0.0225)$}{figure.90}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}Qualitative comparison: HDM vs all models}{15}{subsection.91}\protected@file@percent }
+\newlabel{sec:qual_prom_250}{{5.7}{15}{Qualitative comparison: HDM vs all models}{subsection.91}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Baseline models, PROM online solve: HDM vs Case~1/2/3 and data-driven at $\bm  {\mu }^{(v)}$, $\bm  {\mu }^{(1)}$, and $\bm  {\mu }^{(2)}$.}}{16}{figure.93}\protected@file@percent }
+\newlabel{fig:all_models_baseline_prom}{{7}{16}{Baseline models, PROM online solve: HDM vs Case~1/2/3 and data-driven at $\bm \mu ^{(v)}$, $\bm \mu ^{(1)}$, and $\bm \mu ^{(2)}$}{figure.93}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Enriched models, PROM online solve: HDM vs Case~1/2/3 and data-driven at $\bm  {\mu }^{(v)}$, $\bm  {\mu }^{(1)}$, and $\bm  {\mu }^{(2)}$.}}{17}{figure.95}\protected@file@percent }
+\newlabel{fig:all_models_enriched_prom}{{8}{17}{Enriched models, PROM online solve: HDM vs Case~1/2/3 and data-driven at $\bm \mu ^{(v)}$, $\bm \mu ^{(1)}$, and $\bm \mu ^{(2)}$}{figure.95}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Additional Per-Index Coefficient Error Curves}{18}{appendix.96}\protected@file@percent }
+\newlabel{app:coeff_curves_extra}{{A}{18}{Additional Per-Index Coefficient Error Curves}{appendix.96}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Baseline stage: per-index absolute and relative coefficient errors at $\bm  {\mu }^{(1)}=(4.56,0.019)$.}}{18}{figure.98}\protected@file@percent }
+\newlabel{fig:coeff_abs_rel_baseline_mu1}{{9}{18}{Baseline stage: per-index absolute and relative coefficient errors at $\bm \mu ^{(1)}=(4.56,0.019)$}{figure.98}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Baseline stage: per-index absolute and relative coefficient errors at $\bm  {\mu }^{(2)}=(5.19,0.026)$.}}{19}{figure.100}\protected@file@percent }
+\newlabel{fig:coeff_abs_rel_baseline_mu2}{{10}{19}{Baseline stage: per-index absolute and relative coefficient errors at $\bm \mu ^{(2)}=(5.19,0.026)$}{figure.100}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Enriched stage: per-index absolute and relative coefficient errors at $\bm  {\mu }^{(1)}=(4.56,0.019)$.}}{20}{figure.102}\protected@file@percent }
+\newlabel{fig:coeff_abs_rel_enriched_mu1}{{11}{20}{Enriched stage: per-index absolute and relative coefficient errors at $\bm \mu ^{(1)}=(4.56,0.019)$}{figure.102}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Enriched stage: per-index absolute and relative coefficient errors at $\bm  {\mu }^{(2)}=(5.19,0.026)$.}}{21}{figure.104}\protected@file@percent }
+\newlabel{fig:coeff_abs_rel_enriched_mu2}{{12}{21}{Enriched stage: per-index absolute and relative coefficient errors at $\bm \mu ^{(2)}=(5.19,0.026)$}{figure.104}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Time-Resolved Coefficient Error Heatmaps}{21}{appendix.105}\protected@file@percent }
+\newlabel{app:coeff_heatmaps}{{B}{21}{Time-Resolved Coefficient Error Heatmaps}{appendix.105}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Baseline stage: absolute coefficient error heatmaps $\left |q_i^{\mathrm  {ref}}(t)-q_i^{(m)}(t)\right |$ for Case~1, Case~2, Case~3, and data-driven models.}}{22}{figure.107}\protected@file@percent }
+\newlabel{fig:hm_baseline_abs_verif}{{13}{22}{Baseline stage: absolute coefficient error heatmaps $\left |q_i^{\mathrm {ref}}(t)-q_i^{(m)}(t)\right |$ for Case~1, Case~2, Case~3, and data-driven models}{figure.107}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Baseline stage: relative coefficient error heatmaps using normalization by $\|q_i^{\mathrm  {ref}}\|_2$.}}{23}{figure.109}\protected@file@percent }
+\newlabel{fig:hm_baseline_rel_verif}{{14}{23}{Baseline stage: relative coefficient error heatmaps using normalization by $\|q_i^{\mathrm {ref}}\|_2$}{figure.109}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Enriched stage: absolute coefficient error heatmaps at $\bm  {\mu }^{(v)}$.}}{23}{figure.111}\protected@file@percent }
+\newlabel{fig:hm_enriched_abs_verif}{{15}{23}{Enriched stage: absolute coefficient error heatmaps at $\bm \mu ^{(v)}$}{figure.111}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Enriched stage: relative coefficient error heatmaps at $\bm  {\mu }^{(v)}$.}}{24}{figure.113}\protected@file@percent }
+\newlabel{fig:hm_enriched_rel_verif}{{16}{24}{Enriched stage: relative coefficient error heatmaps at $\bm \mu ^{(v)}$}{figure.113}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Baseline stage: absolute coefficient error heatmaps at $\bm  {\mu }^{(1)}=(4.56,0.019)$.}}{24}{figure.115}\protected@file@percent }
+\newlabel{fig:hm_baseline_abs_mu1}{{17}{24}{Baseline stage: absolute coefficient error heatmaps at $\bm \mu ^{(1)}=(4.56,0.019)$}{figure.115}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Baseline stage: relative coefficient error heatmaps at $\bm  {\mu }^{(1)}=(4.56,0.019)$.}}{25}{figure.117}\protected@file@percent }
+\newlabel{fig:hm_baseline_rel_mu1}{{18}{25}{Baseline stage: relative coefficient error heatmaps at $\bm \mu ^{(1)}=(4.56,0.019)$}{figure.117}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Baseline stage: absolute coefficient error heatmaps at $\bm  {\mu }^{(2)}=(5.19,0.026)$.}}{25}{figure.119}\protected@file@percent }
+\newlabel{fig:hm_baseline_abs_mu2}{{19}{25}{Baseline stage: absolute coefficient error heatmaps at $\bm \mu ^{(2)}=(5.19,0.026)$}{figure.119}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Baseline stage: relative coefficient error heatmaps at $\bm  {\mu }^{(2)}=(5.19,0.026)$.}}{26}{figure.121}\protected@file@percent }
+\newlabel{fig:hm_baseline_rel_mu2}{{20}{26}{Baseline stage: relative coefficient error heatmaps at $\bm \mu ^{(2)}=(5.19,0.026)$}{figure.121}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces Enriched stage: absolute coefficient error heatmaps at $\bm  {\mu }^{(1)}=(4.56,0.019)$.}}{26}{figure.123}\protected@file@percent }
+\newlabel{fig:hm_enriched_abs_mu1}{{21}{26}{Enriched stage: absolute coefficient error heatmaps at $\bm \mu ^{(1)}=(4.56,0.019)$}{figure.123}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {22}{\ignorespaces Enriched stage: relative coefficient error heatmaps at $\bm  {\mu }^{(1)}=(4.56,0.019)$.}}{27}{figure.125}\protected@file@percent }
+\newlabel{fig:hm_enriched_rel_mu1}{{22}{27}{Enriched stage: relative coefficient error heatmaps at $\bm \mu ^{(1)}=(4.56,0.019)$}{figure.125}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {23}{\ignorespaces Enriched stage: absolute coefficient error heatmaps at $\bm  {\mu }^{(2)}=(5.19,0.026)$.}}{27}{figure.127}\protected@file@percent }
+\newlabel{fig:hm_enriched_abs_mu2}{{23}{27}{Enriched stage: absolute coefficient error heatmaps at $\bm \mu ^{(2)}=(5.19,0.026)$}{figure.127}{}}
+\bibstyle{unsrt}
+\bibdata{bibliography}
+\@writefile{lof}{\contentsline {figure}{\numberline {24}{\ignorespaces Enriched stage: relative coefficient error heatmaps at $\bm  {\mu }^{(2)}=(5.19,0.026)$.}}{28}{figure.129}\protected@file@percent }
+\newlabel{fig:hm_enriched_rel_mu2}{{24}{28}{Enriched stage: relative coefficient error heatmaps at $\bm \mu ^{(2)}=(5.19,0.026)$}{figure.129}{}}
+\gdef \@abspage@last{28}

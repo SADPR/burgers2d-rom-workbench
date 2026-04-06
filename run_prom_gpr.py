@@ -13,7 +13,7 @@ from datetime import datetime
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.gaussian_process.kernels import ConstantKernel, Matern, Product
+from sklearn.gaussian_process.kernels import ConstantKernel, Matern, Product, RBF
 
 from burgers.core import load_or_compute_snaps, plot_snaps
 from burgers.pod_gpr_manifold import inviscid_burgers_implicit2D_LSPG_pod_gpr
@@ -142,9 +142,11 @@ def _is_analytic_jacobian_compatible(kernel):
         return False
     if not isinstance(kernel.k1, ConstantKernel):
         return False
-    if not isinstance(kernel.k2, Matern):
-        return False
-    return float(kernel.k2.nu) == 1.5
+    if isinstance(kernel.k2, Matern):
+        return float(kernel.k2.nu) == 1.5
+    if isinstance(kernel.k2, RBF):
+        return True
+    return False
 
 
 def _load_model_artifacts(model_dir):
@@ -257,9 +259,11 @@ def main(
 
     if jacobian_mode == "analytic" and not model["analytic_jacobian_compatible"]:
         raise ValueError(
-            "jacobian_mode='analytic' requires learned kernel ConstantKernel*Matern(nu=1.5). "
+            "jacobian_mode='analytic' requires learned kernel "
+            "ConstantKernel*(Matern(nu=1.5) or RBF). "
             f"Found kernel: {model['learned_kernel_str']}. "
-            "Use jacobian_mode='forward_fd' or 'central_fd', or retrain stage3 with kernel_name='matern15'."
+            "Use jacobian_mode='forward_fd' or 'central_fd', or retrain stage3 "
+            "with kernel_name in {'matern15','rbf'}."
         )
 
     print(f"[PROM-GPR] Loaded model from: {model_dir}")

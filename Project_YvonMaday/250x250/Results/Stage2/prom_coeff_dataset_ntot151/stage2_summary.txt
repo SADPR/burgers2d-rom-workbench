@@ -1,0 +1,15 @@
+solve_backend: prom
+dataset_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot151
+per_mu_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot151/per_mu
+basis_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+total_modes: 151
+primary_modes: 10
+num_traj: 9
+ecsw_num_training_mu: 1
+ecsw_snap_sample_factor: 10
+ecsw_snap_time_offset: 3
+ecsw_weights_path: None
+ecsw_weights_source: None
+ecsw_residual: nan
+n_ecsw_elements: None

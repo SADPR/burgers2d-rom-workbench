@@ -12,6 +12,7 @@ Backends:
 - solve_backend='hprom' and use_ecsw=True: ECSW hyper-reduced solve
 """
 
+import argparse
 import os
 import sys
 import time
@@ -379,30 +380,61 @@ def _load_basis_and_reference(total_modes, n_primary):
     return vtot, v, vbar, u_ref, basis_path, uref_path
 
 
-def main():
+def main(argv=None):
     # -----------------------------
     # User settings
     # -----------------------------
-    mu_test = [4.56, 0.019]
+    parser = argparse.ArgumentParser(
+        description="Run enriched Case 3 ANN closure with PROM/HPROM backend."
+    )
+    parser.add_argument("--backend", choices=("prom", "hprom"), default="hprom")
+    parser.add_argument("--mu1", type=float, default=4.56)
+    parser.add_argument("--mu2", type=float, default=0.019)
+    parser.add_argument(
+        "--device",
+        choices=("cpu", "cuda"),
+        default=("cuda" if torch.cuda.is_available() else "cpu"),
+    )
+    parser.add_argument("--no-ecsw", action="store_true", help="Disable ECSW (HPROM falls back to PROM).")
+    parser.add_argument("--rebuild-ecsw", action="store_true", help="Recompute ECSW weights.")
+    parser.add_argument("--ecsw-num-training-mu", type=int, default=1)
+    parser.add_argument("--ecsw-snap-sample-factor", type=int, default=10)
+    parser.add_argument("--ecsw-snap-time-offset", type=int, default=3)
+    parser.add_argument("--max-its", type=int, default=20)
+    parser.add_argument("--relnorm-cutoff", type=float, default=1e-5)
+    parser.add_argument("--min-delta", type=float, default=1e-2)
+    parser.add_argument("--linear-solver", choices=("lstsq", "normal_eq"), default="lstsq")
+    parser.add_argument("--normal-eq-reg", type=float, default=1e-12)
+    parser.add_argument(
+        "--model-name",
+        type=str,
+        default="case3_model_enriched.pt",
+        help="Enriched checkpoint filename (used if --model-path is not set).",
+    )
+    parser.add_argument("--model-path", type=str, default=None, help="Optional override for enriched checkpoint path.")
+    parser.add_argument("--ecsw-tag", type=str, default="enriched")
+    args = parser.parse_args(argv)
 
-    solve_backend = "hprom"  # {'prom', 'hprom'}
-    use_ecsw = True
+    mu_test = [float(args.mu1), float(args.mu2)]
+    solve_backend = str(args.backend).strip().lower()
+    use_ecsw = not bool(args.no_ecsw)
+    rebuild_ecsw_weights = bool(args.rebuild_ecsw)
+    ecsw_snap_sample_factor = int(args.ecsw_snap_sample_factor)
+    ecsw_snap_time_offset = int(args.ecsw_snap_time_offset)
+    ecsw_num_training_mu = int(args.ecsw_num_training_mu)
+    max_its = int(args.max_its)
+    relnorm_cutoff = float(args.relnorm_cutoff)
+    min_delta = float(args.min_delta)
+    linear_solver = str(args.linear_solver).strip().lower()
+    normal_eq_reg = float(args.normal_eq_reg)
+    model_name = str(args.model_name).strip()
+    model_path_override = args.model_path
+    ecsw_tag = str(args.ecsw_tag)
 
-    rebuild_ecsw_weights = False
-    ecsw_snap_sample_factor = 10
-    ecsw_snap_time_offset = 3
-    ecsw_num_training_mu = 1
-
-    max_its = 20
-    relnorm_cutoff = 1e-5
-    min_delta = 1e-2
-    linear_solver = "lstsq"
-    normal_eq_reg = 1e-12
-
-    model_path_override = None
-    ecsw_tag = "enriched"
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = str(args.device).strip().lower()
+    if device == "cuda" and not torch.cuda.is_available():
+        print("[Case3] CUDA requested but not available. Falling back to CPU.")
+        device = "cpu"
     set_latex_plot_style()
     ensure_layout_dirs()
     ensure_enrichment_dirs()
@@ -422,7 +454,15 @@ def main():
     if solve_backend == "prom" and use_ecsw:
         print("[Case3] use_ecsw=True ignored because solve_backend='prom'.")
 
-    model_path = os.path.abspath(model_path_override) if model_path_override else _resolve_latest_enriched_model("case3_model_enriched.pt")
+    if model_path_override is None:
+        if len(model_name) == 0:
+            raise ValueError("--model-name cannot be empty.")
+        if not model_name.endswith(".pt"):
+            model_name = f"{model_name}.pt"
+        model_path = _resolve_latest_enriched_model(model_name)
+    else:
+        model_path = os.path.abspath(model_path_override)
+        model_name = os.path.basename(model_path)
     base_model, in_dim, n_p, n_s, ckpt = _load_case3_model(model_path, device=device)
     ann_model = ANNVectorWrapper(base_model).to(device)
     ann_model.eval()
@@ -463,9 +503,10 @@ def main():
         snap_folder=snap_folder,
     )
 
-    t0 = time.time()
     ecsw_residual = np.nan
     n_ecsw_elements = None
+    ecsw_setup_elapsed = 0.0
+    online_solve_elapsed = np.nan
 
     if effective_backend == "hprom":
         mu_train_candidates = get_snapshot_params(
@@ -476,6 +517,7 @@ def main():
         ecsw_num_training_mu = max(1, min(int(ecsw_num_training_mu), len(mu_train_candidates)))
         mu_train_list = mu_train_candidates[:ecsw_num_training_mu]
 
+        t_ecsw0 = time.time()
         weights, weights_path, weights_source, ecsw_residual, n_ecsw_elements = _load_or_build_case3_ecsw_weights(
             total_modes=total_modes,
             n_primary=n_p,
@@ -496,11 +538,13 @@ def main():
             snap_sample_factor=ecsw_snap_sample_factor,
             snap_time_offset=ecsw_snap_time_offset,
         )
+        ecsw_setup_elapsed = time.time() - t_ecsw0
         if not os.path.abspath(weights_path).startswith(os.path.abspath(ecsw_dir) + os.sep):
             raise RuntimeError(
                 f"ECSW weights must be under '{ecsw_dir}', got: {weights_path}"
             )
 
+        t_solve0 = time.time()
         red_coords, rom_times = inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3_ecsw(
             grid_x=GRID_X,
             grid_y=GRID_Y,
@@ -520,6 +564,7 @@ def main():
             linear_solver=linear_solver,
             normal_eq_reg=normal_eq_reg,
         )
+        online_solve_elapsed = time.time() - t_solve0
 
         rom_snaps = _reconstruct_case3_full_snaps(
             red_coords=red_coords,
@@ -538,6 +583,7 @@ def main():
         print(f"[Case3] ECSW residual = {ecsw_residual}")
 
     else:
+        t_solve0 = time.time()
         rom_snaps, rom_times = inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3(
             grid_x=GRID_X,
             grid_y=GRID_Y,
@@ -556,8 +602,10 @@ def main():
             linear_solver=linear_solver,
             normal_eq_reg=normal_eq_reg,
         )
+        online_solve_elapsed = time.time() - t_solve0
 
-    elapsed = time.time() - t0
+    elapsed = online_solve_elapsed
+
     num_its, jac_time, res_time, ls_time = rom_times
 
     rel_err = 100.0 * np.linalg.norm(hdm_snaps - rom_snaps) / np.linalg.norm(hdm_snaps)
@@ -614,6 +662,7 @@ def main():
         [
             ("mu_test", mu_test),
             ("device", device),
+            ("model_name", model_name),
             ("model_path", model_path),
             ("basis_path", basis_path),
             ("u_ref_path", uref_path if os.path.exists(uref_path) else "zeros"),
@@ -627,6 +676,8 @@ def main():
             ("ecsw_weights_path", weights_path if effective_backend == "hprom" else "N/A"),
             ("ecsw_residual", ecsw_residual),
             ("n_ecsw_elements", n_ecsw_elements),
+            ("ecsw_setup_elapsed_s", ecsw_setup_elapsed),
+            ("online_solve_elapsed_s", online_solve_elapsed),
             ("elapsed_s", elapsed),
             ("num_iterations", num_its),
             ("jac_time_s", jac_time),
@@ -638,6 +689,8 @@ def main():
         ],
     )
 
+    print(f"[Case3] ecsw_setup_elapsed = {ecsw_setup_elapsed:.3e} s")
+    print(f"[Case3] online_solve_elapsed = {online_solve_elapsed:.3e} s")
     print(f"[Case3] elapsed = {elapsed:.3e} s")
     print(f"[Case3] its={num_its} | jac={jac_time:.3e} | res={res_time:.3e} | ls={ls_time:.3e}")
     print(f"[Case3] relative error vs HDM: {rel_err:.2f}%")

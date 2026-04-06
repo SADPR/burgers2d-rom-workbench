@@ -8,8 +8,7 @@ For each training parameter mu, this script runs an n_tot-dimensional ROM
 (default: HPROM/ECSW-LSPG) and stores:
 - mu.npy
 - t.npy
-- qN_p.npy   (primary block, first n modes)
-- qN_s.npy   (secondary block, remaining n_tot-n modes)
+- qN.npy     (full reduced coordinates, shape n_tot x (num_steps+1))
 - rom_stats.npy
 - prom_stats.npy or hprom_stats.npy (backend-specific alias)
 - rom_snaps.npy  (optional reconstructed full snapshots)
@@ -19,6 +18,7 @@ For each training parameter mu, this script runs an n_tot-dimensional ROM
 import os
 import sys
 import time
+import argparse
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -262,16 +262,12 @@ def _load_or_build_ecsw_weights(
     return weights, preferred, "computed", rel_res, n_ecsw
 
 
-def main():
+def main(argv=None):
     # -----------------------------
     # User settings
     # -----------------------------
     total_modes = None
-    primary_modes = 10
-
-    # backend in {"prom", "hprom"}
     solve_backend = "prom"
-
     save_rom_snaps = True
     make_plots = True
     max_its = 20
@@ -279,12 +275,45 @@ def main():
     min_delta = 1e-2
     linear_solver = "lstsq"
     normal_eq_reg = 1e-12
-
-    # HPROM/ECSW settings
     rebuild_ecsw_weights = True
     ecsw_snap_sample_factor = 10
     ecsw_snap_time_offset = 3
     ecsw_num_training_mu = 1
+
+    parser = argparse.ArgumentParser(
+        description="Build Stage-2 qN dataset with selectable PROM/HPROM backend."
+    )
+    parser.add_argument("--backend", choices=("prom", "hprom"), default=solve_backend)
+    parser.add_argument("--total-modes", type=int, default=total_modes)
+    parser.add_argument("--no-save-rom-snaps", action="store_true")
+    parser.add_argument("--no-plots", action="store_true")
+    parser.add_argument("--max-its", type=int, default=max_its)
+    parser.add_argument("--relnorm-cutoff", type=float, default=relnorm_cutoff)
+    parser.add_argument("--min-delta", type=float, default=min_delta)
+    parser.add_argument("--linear-solver", choices=("lstsq", "normal_eq"), default=linear_solver)
+    parser.add_argument("--normal-eq-reg", type=float, default=normal_eq_reg)
+    parser.add_argument("--ecsw-snap-sample-factor", type=int, default=ecsw_snap_sample_factor)
+    parser.add_argument("--ecsw-snap-time-offset", type=int, default=ecsw_snap_time_offset)
+    parser.add_argument("--ecsw-num-training-mu", type=int, default=ecsw_num_training_mu)
+    rebuild_group = parser.add_mutually_exclusive_group()
+    rebuild_group.add_argument("--rebuild-ecsw", dest="rebuild_ecsw", action="store_true")
+    rebuild_group.add_argument("--no-rebuild-ecsw", dest="rebuild_ecsw", action="store_false")
+    parser.set_defaults(rebuild_ecsw=rebuild_ecsw_weights)
+    args = parser.parse_args(argv)
+
+    solve_backend = str(args.backend).strip().lower()
+    total_modes = args.total_modes
+    save_rom_snaps = not bool(args.no_save_rom_snaps)
+    make_plots = not bool(args.no_plots)
+    max_its = int(args.max_its)
+    relnorm_cutoff = float(args.relnorm_cutoff)
+    min_delta = float(args.min_delta)
+    linear_solver = str(args.linear_solver).strip().lower()
+    normal_eq_reg = float(args.normal_eq_reg)
+    rebuild_ecsw_weights = bool(args.rebuild_ecsw)
+    ecsw_snap_sample_factor = int(args.ecsw_snap_sample_factor)
+    ecsw_snap_time_offset = int(args.ecsw_snap_time_offset)
+    ecsw_num_training_mu = int(args.ecsw_num_training_mu)
 
     set_latex_plot_style()
     ensure_layout_dirs()
@@ -297,12 +326,6 @@ def main():
 
     Vtot, u_ref, basis_path, uref_path, pod_dir, total_modes, n_available = _load_pod_artifacts(total_modes)
     w0 = np.asarray(W0, dtype=np.float64).copy()
-
-    if not (total_modes > primary_modes):
-        raise ValueError(
-            f"primary_modes={primary_modes} must be smaller than total_modes={total_modes}. "
-            "Either lower primary_modes or increase retained POD modes in stage1_pod.py."
-        )
 
     out_dir = stage2_dataset_dir(total_modes)
     per_mu_dir = os.path.join(out_dir, "per_mu")
@@ -417,13 +440,9 @@ def main():
         n_dofs, n_time = rom_snaps.shape
         t_vec = t_ref if len(t_ref) == n_time else DT * np.arange(n_time, dtype=np.float64)
 
-        qN_p = qN[:primary_modes, :]
-        qN_s = qN[primary_modes:total_modes, :]
-
         np.save(os.path.join(mu_dir, "mu.npy"), np.asarray(mu, dtype=np.float64))
         np.save(os.path.join(mu_dir, "t.npy"), t_vec)
-        np.save(os.path.join(mu_dir, "qN_p.npy"), qN_p)
-        np.save(os.path.join(mu_dir, "qN_s.npy"), qN_s)
+        np.save(os.path.join(mu_dir, "qN.npy"), qN)
         np.save(os.path.join(mu_dir, "rom_stats.npy"), np.asarray(rom_stats, dtype=np.float64))
 
         if solve_backend == "prom":
@@ -483,8 +502,7 @@ def main():
         "solve_backend": solve_backend,
         "total_modes": int(total_modes),
         "n_available_modes": int(n_available),
-        "primary_modes": int(primary_modes),
-        "secondary_modes": int(total_modes - primary_modes),
+        "coefficient_storage": "qN_only",
         "num_traj": int(len(mu_list)),
         "dt": float(DT),
         "num_steps": int(NUM_STEPS),
@@ -522,7 +540,7 @@ def main():
             ("basis_path", basis_path),
             ("u_ref_path", uref_path),
             ("total_modes", total_modes),
-            ("primary_modes", primary_modes),
+            ("coefficient_storage", "qN_only"),
             ("num_traj", len(mu_list)),
             ("ecsw_num_training_mu", ecsw_num_training_mu),
             ("ecsw_snap_sample_factor", ecsw_snap_sample_factor),

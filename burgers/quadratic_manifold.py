@@ -407,6 +407,13 @@ def compute_ECSW_training_matrix_2D_qm_local(
         V_k = V_list[k]
         H_k = H_list[k]
         r_k = V_k.shape[1]
+        u_norm = np.linalg.norm(u_i)
+        denom = u_norm if u_norm > 0.0 else 1.0
+
+        q0 = V_k.T @ (u_i - u0_k)
+        u_init = u_qm(q0, V_k, H_k, u0_k)
+        init_res = np.linalg.norm(u_init - u_i)
+        print("Initial residual: {:3.2e}".format(init_res / denom))
 
         q_i = gauss_newton_quadratic_q(
             u_snap=u_i,
@@ -419,6 +426,8 @@ def compute_ECSW_training_matrix_2D_qm_local(
         )
 
         u_tilde = u_qm(q_i, V_k, H_k, u0_k)
+        final_res = np.linalg.norm(u_tilde - u_i)
+        print("Final residual: {:3.2e}".format(final_res / denom))
 
         ires = res(u_tilde, grid_x, grid_y, dt, u_prev, mu, Dxec, Dyec)
         Ji = jac(u_tilde, dt, JDxec, JDyec, Eye)

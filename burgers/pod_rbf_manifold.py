@@ -727,6 +727,9 @@ def compute_ECSW_training_matrix_2D_rbf_local(
         init_norm = np.linalg.norm(r_rec)
         curr_norm = init_norm
         num_it = 0
+        u_norm = np.linalg.norm(u_i)
+        denom = u_norm if u_norm > 0.0 else 1.0
+        print("Initial residual: {:3.2e}".format(init_norm / denom))
 
         if init_norm > 0.0:
             while curr_norm / init_norm > tol_rel and num_it < max_gn_its:
@@ -742,6 +745,8 @@ def compute_ECSW_training_matrix_2D_rbf_local(
                 r_rec = w_rec - u_i
                 curr_norm = np.linalg.norm(r_rec)
                 num_it += 1
+
+        print("Final residual: {:3.2e}".format(curr_norm / denom))
 
         u_tilde = w_rec
 

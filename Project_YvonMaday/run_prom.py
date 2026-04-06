@@ -307,7 +307,6 @@ def main(
     solve_backend="hprom",
     use_ecsw=True,
     total_modes=None,
-    primary_modes=None,
     rebuild_ecsw_weights=False,
     ecsw_snap_sample_factor=10,
     ecsw_snap_time_offset=3,
@@ -348,15 +347,6 @@ def main(
 
     Vtot, u_ref, basis_path, uref_path, total_modes, n_available = _load_basis_and_reference(total_modes)
 
-    primary_modes_int = None
-    split_qn = primary_modes is not None
-    if split_qn:
-        primary_modes_int = int(primary_modes)
-        if not (0 < primary_modes_int < total_modes):
-            raise ValueError(
-                f"primary_modes={primary_modes_int} must satisfy 0 < primary_modes < total_modes={total_modes}."
-            )
-
     w0 = np.asarray(W0, dtype=np.float64).reshape(-1)
     if w0.size != Vtot.shape[0]:
         raise ValueError(
@@ -379,6 +369,8 @@ def main(
     weights_source = None
     ecsw_residual = np.nan
     n_ecsw_elements = None
+    ecsw_setup_elapsed = 0.0
+    online_solve_elapsed = np.nan
 
     if effective_backend == "hprom":
         stage2_weights_path = _resolve_stage2_ecsw_weights_path(total_modes) if use_stage2_ecsw_weights else None
@@ -391,6 +383,7 @@ def main(
         ecsw_num_training_mu = max(1, min(int(ecsw_num_training_mu), len(mu_train_candidates)))
         mu_train_list = mu_train_candidates[:ecsw_num_training_mu]
 
+        t_ecsw0 = time.time()
         weights, weights_path, weights_source, ecsw_residual, n_ecsw_elements = _load_or_build_ecsw_weights(
             total_modes=total_modes,
             basis=Vtot,
@@ -406,6 +399,7 @@ def main(
             snap_sample_factor=ecsw_snap_sample_factor,
             snap_time_offset=ecsw_snap_time_offset,
         )
+        ecsw_setup_elapsed = time.time() - t_ecsw0
 
         print(f"[Linear] Stage2 ECSW candidate: {stage2_weights_path}")
         print(f"[Linear] ECSW weights: {weights_path} ({weights_source})")
@@ -431,6 +425,7 @@ def main(
             normal_eq_reg=normal_eq_reg,
         )
         qN = Vtot.T @ (rom_snaps - u_ref[:, None])
+        online_solve_elapsed = time.time() - t0
     else:
         qN, rom_times = inviscid_burgers_implicit2D_LSPG_ecsw(
             grid_x=GRID_X,
@@ -448,9 +443,10 @@ def main(
             linear_solver=linear_solver,
             normal_eq_reg=normal_eq_reg,
         )
+        online_solve_elapsed = time.time() - t0
         rom_snaps = u_ref[:, None] + Vtot @ qN
 
-    elapsed = time.time() - t0
+    elapsed = online_solve_elapsed
     num_its, jac_time, res_time, ls_time = rom_times
 
     if qN.ndim != 2:
@@ -460,21 +456,13 @@ def main(
 
     backend_tag = "hprom" if effective_backend == "hprom" else "prom"
     tag = _safe_mu_tag(mu_test)
-    if split_qn:
-        run_tag = f"linear_{backend_tag}_{tag}_n{primary_modes_int}_ntot{total_modes}"
-    else:
-        run_tag = f"linear_{backend_tag}_{tag}_ntot{total_modes}"
+    run_tag = f"linear_{backend_tag}_{tag}_ntot{total_modes}"
     out_dir = os.path.join(output_root_dir, run_tag)
     os.makedirs(out_dir, exist_ok=True)
 
     np.save(os.path.join(out_dir, "mu.npy"), np.asarray(mu_test, dtype=np.float64))
     np.save(os.path.join(out_dir, "t.npy"), t_vec)
     np.save(os.path.join(out_dir, "qN.npy"), qN)
-    if split_qn:
-        qN_p = qN[:primary_modes_int, :]
-        qN_s = qN[primary_modes_int:total_modes, :]
-        np.save(os.path.join(out_dir, "qN_p.npy"), qN_p)
-        np.save(os.path.join(out_dir, "qN_s.npy"), qN_s)
     np.save(os.path.join(out_dir, "rom_stats.npy"), np.asarray(rom_times, dtype=np.float64))
     if save_rom_snaps:
         np.save(os.path.join(out_dir, "rom_snaps.npy"), rom_snaps)
@@ -541,9 +529,6 @@ def main(
             ("basis_path", basis_path),
             ("u_ref_path", uref_path if os.path.exists(uref_path) else "zeros"),
             ("total_modes", total_modes),
-            ("primary_modes", primary_modes_int if split_qn else "none"),
-            ("secondary_modes", (total_modes - primary_modes_int) if split_qn else "none"),
-            ("save_split_qn", split_qn),
             ("save_rom_snaps", bool(save_rom_snaps)),
             ("make_plots", bool(make_plots)),
             ("compute_hdm_error", bool(compute_hdm_error)),
@@ -554,6 +539,8 @@ def main(
             ("ecsw_weights_source", weights_source),
             ("ecsw_residual", ecsw_residual),
             ("n_ecsw_elements", n_ecsw_elements),
+            ("ecsw_setup_elapsed_s", ecsw_setup_elapsed),
+            ("online_solve_elapsed_s", online_solve_elapsed),
             ("elapsed_s", elapsed),
             ("num_iterations", num_its),
             ("jac_time_s", jac_time),
@@ -566,6 +553,8 @@ def main(
         ],
     )
 
+    print(f"[Linear] ecsw_setup_elapsed = {ecsw_setup_elapsed:.3e} s")
+    print(f"[Linear] online_solve_elapsed = {online_solve_elapsed:.3e} s")
     print(f"[Linear] elapsed = {elapsed:.3e} s")
     print(f"[Linear] its={num_its} | jac={jac_time:.3e} | res={res_time:.3e} | ls={ls_time:.3e}")
     if np.isfinite(rel_err):
@@ -582,12 +571,6 @@ if __name__ == "__main__":
     parser.add_argument("--mu1", type=float, default=4.56, help="First parameter value")
     parser.add_argument("--mu2", type=float, default=0.019, help="Second parameter value")
     parser.add_argument("--total-modes", type=int, default=None, help="Total reduced modes (n_tot)")
-    parser.add_argument(
-        "--primary-modes",
-        type=int,
-        default=None,
-        help="Optional split index n to also save qN_p/qN_s. If omitted, only qN.npy is saved.",
-    )
     parser.add_argument("--rebuild-ecsw", action="store_true", help="Force ECSW recomputation")
     parser.add_argument("--ecsw-num-training-mu", type=int, default=1, help="Number of mu trajectories for ECSW training")
     parser.add_argument("--ecsw-snap-sample-factor", type=int, default=10, help="Snapshot stride for ECSW training")
@@ -610,7 +593,6 @@ if __name__ == "__main__":
         solve_backend=args.backend,
         use_ecsw=not args.no_ecsw,
         total_modes=args.total_modes,
-        primary_modes=args.primary_modes,
         rebuild_ecsw_weights=args.rebuild_ecsw,
         ecsw_snap_sample_factor=args.ecsw_snap_sample_factor,
         ecsw_snap_time_offset=args.ecsw_snap_time_offset,

@@ -1,0 +1,15 @@
+mu_test: [5.19, 0.026]
+method: nonintrusive_data_driven
+device: cpu
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage3/models/rom_data_driven_model.pt
+basis_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+dataset_backend: prom
+dataset_ntot: 151
+model_ntot: 151
+total_modes_used: 151
+inference_time_s: 0.0051805973052978516
+relative_error_percent: 1.5798899756862166
+output_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/DataDriven/rom_data_driven_mu1_5.190_mu2_0.0260_ntot151
+snap_folder: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Results/param_snaps
+plot_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/DataDriven/rom_data_driven_mu1_5.190_mu2_0.0260_ntot151/hdm_vs_rom.png

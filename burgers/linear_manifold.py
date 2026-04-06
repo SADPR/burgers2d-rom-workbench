@@ -129,12 +129,21 @@ def compute_ECSW_training_matrix_2D_local(
         u0_k = u0_list[k]
         V_k = V_list[k]
         r_k = V_k.shape[1]
+        u_norm = np.linalg.norm(u_i)
+        denom = u_norm if u_norm > 0.0 else 1.0
+
+        u_init = u0_k
+        init_res = np.linalg.norm(u_init - u_i)
+        print("Initial residual: {:3.2e}".format(init_res / denom))
 
         if use_projection:
             q_i = V_k.T @ (u_i - u0_k)
             u_tilde = u0_k + V_k @ q_i
         else:
             u_tilde = u_i
+
+        final_res = np.linalg.norm(u_tilde - u_i)
+        print("Final residual: {:3.2e}".format(final_res / denom))
 
         ires = res(u_tilde, grid_x, grid_y, dt, u_prev, mu, Dxec, Dyec)
         Ji = jac(u_tilde, dt, JDxec, JDyec, Eye)

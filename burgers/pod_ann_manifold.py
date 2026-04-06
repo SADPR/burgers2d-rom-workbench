@@ -20,6 +20,7 @@ from .ecsw_utils import generate_augmented_mesh
 from .gauss_newton import (
     gauss_newton_pod_ann,
     gauss_newton_pod_ann_ecsw,
+    _solve_reduced_update,
 )
 
 try:
@@ -87,6 +88,22 @@ def _build_ann_decoder_jacobian(basis, basis2, ann_eval):
         return basis + basis2 @ ann_jac(y)
 
     return jacfwdfunc
+
+
+def _align_module_device(module, target_device):
+    """
+    Ensure `module` lives on `target_device`.
+
+    This avoids expensive implicit host<->device transfers during Jacobian
+    evaluations inside the implicit ROM loops.
+    """
+    try:
+        cur_device = next(module.parameters()).device
+    except StopIteration:
+        cur_device = target_device
+    if cur_device != target_device:
+        module = module.to(target_device)
+    return module
 
 
 def compute_ECSW_training_matrix_2D_pod_ann(
@@ -243,8 +260,17 @@ def compute_ECSW_training_matrix_2D_pod_ann_case2(
             qbar = ann_model(x).reshape(-1).detach().cpu().numpy()
 
         offset = u_ref_vec + basis2 @ qbar
+        q0 = basis.T @ (snap - u_ref_vec)
+        w_init = offset + basis @ q0
+        snap_norm = np.linalg.norm(snap)
+        denom = snap_norm if snap_norm > 0.0 else 1.0
+        init_res = np.linalg.norm(w_init - snap)
+        print("Initial residual: {:3.2e}".format(init_res / denom))
+
         q = np.linalg.lstsq(basis, snap - offset, rcond=None)[0]
         w_tilde = offset + basis @ q
+        final_res = np.linalg.norm(w_tilde - snap)
+        print("Final residual: {:3.2e}".format(final_res / denom))
 
         ires = res(w_tilde, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
         Ji = jac(w_tilde, dt, JDxec, JDyec, Eye)
@@ -252,6 +278,105 @@ def compute_ECSW_training_matrix_2D_pod_ann_case2(
 
         row0 = isnap * n_red
         row1 = row0 + n_red
+
+        for inode in range(n_hdm):
+            C[row0:row1, inode] = (
+                ires[inode] * Wi[inode, :]
+                + ires[inode + n_hdm] * Wi[inode + n_hdm, :]
+            )
+
+    return C
+
+
+def compute_ECSW_training_matrix_2D_pod_ann_case2_petrov_galerkin(
+    snaps,
+    prev_snaps,
+    t_samples,
+    basis,
+    basis2,
+    ann_model,
+    res,
+    jac,
+    grid_x,
+    grid_y,
+    dt,
+    mu,
+    u_ref=None,
+):
+    """
+    ECSW training matrix for POD-ANN Case 2 with enriched residual testing.
+
+    Uses the Case-2 manifold
+
+        w(y, t; mu) = u_ref + basis @ y + basis2 @ ann_model([mu1, mu2, t]),
+
+    but builds cell contributions for projected residual testing through V_tot:
+
+        V_tot = [basis, basis2],  s = (J V_tot)^T r.
+    """
+    snaps = np.asarray(snaps, dtype=np.float64)
+    prev_snaps = np.asarray(prev_snaps, dtype=np.float64)
+    t_samples = np.asarray(t_samples, dtype=np.float64).reshape(-1)
+    basis = np.asarray(basis, dtype=np.float64)
+    basis2 = np.asarray(basis2, dtype=np.float64)
+
+    n_tot, n_snaps = snaps.shape
+    if prev_snaps.shape != snaps.shape:
+        raise ValueError(f"prev_snaps shape {prev_snaps.shape} must match snaps shape {snaps.shape}.")
+    if t_samples.size != n_snaps:
+        raise ValueError(
+            f"t_samples length {t_samples.size} must match number of snapshots {n_snaps}."
+        )
+    if basis.shape[0] != n_tot or basis2.shape[0] != n_tot:
+        raise ValueError(
+            f"Basis row mismatch: snaps have {n_tot} rows, basis={basis.shape}, basis2={basis2.shape}."
+        )
+
+    n_hdm = n_tot // 2
+    n_test = basis.shape[1] + basis2.shape[1]
+    Vtot = np.concatenate((basis, basis2), axis=1)
+
+    u_ref_vec = _prepare_reference(u_ref, n_tot)
+
+    C = np.zeros((n_test * n_snaps, n_hdm), dtype=np.float64)
+    Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
+
+    try:
+        device = next(ann_model.parameters()).device
+    except StopIteration:
+        device = torch.device("cpu")
+
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
+    for isnap in range(n_snaps):
+        snap = snaps[:, isnap]
+        snap_prev = prev_snaps[:, isnap]
+        t_now = float(t_samples[isnap])
+
+        x = torch.tensor([mu1, mu2, t_now], dtype=torch.float32, device=device)
+        with torch.no_grad():
+            qbar = ann_model(x).reshape(-1).detach().cpu().numpy()
+
+        offset = u_ref_vec + basis2 @ qbar
+        q0 = basis.T @ (snap - u_ref_vec)
+        w_init = offset + basis @ q0
+        snap_norm = np.linalg.norm(snap)
+        denom = snap_norm if snap_norm > 0.0 else 1.0
+        init_res = np.linalg.norm(w_init - snap)
+        print("Initial residual: {:3.2e}".format(init_res / denom))
+
+        q = np.linalg.lstsq(basis, snap - offset, rcond=None)[0]
+        w_tilde = offset + basis @ q
+        final_res = np.linalg.norm(w_tilde - snap)
+        print("Final residual: {:3.2e}".format(final_res / denom))
+
+        ires = res(w_tilde, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+        Ji = jac(w_tilde, dt, JDxec, JDyec, Eye)
+        Wi = Ji @ Vtot
+
+        row0 = isnap * n_test
+        row1 = row0 + n_test
 
         for inode in range(n_hdm):
             C[row0:row1, inode] = (
@@ -331,18 +456,27 @@ def compute_ECSW_training_matrix_2D_pod_ann_case3(
 
         y = torch.tensor(basis.T @ (snap - u_ref_vec), dtype=torch.float32, device=device)
 
-        def decode(y_vec):
+        def _ann_eval(y_vec):
             x = torch.cat([y_vec.reshape(-1), tmu, t_now.reshape(1)], dim=0)
-            qbar = ann_model(x).reshape(-1)
-            return u_ref_t + basis_t @ y_vec + basis2_t @ qbar
+            return ann_model(x).reshape(-1)
 
-        jac_decode = torch_jacfwd(decode)
+        def decode(y_vec):
+            return u_ref_t + basis_t @ y_vec + basis2_t @ _ann_eval(y_vec)
+
+        jac_decode = _build_ann_decoder_jacobian(
+            basis=basis_t,
+            basis2=basis2_t,
+            ann_eval=_ann_eval,
+        )
 
         with torch.no_grad():
             w_rec_t = decode(y)
         init_res = np.linalg.norm((w_rec_t - snap_t).detach().cpu().numpy()) + 1e-30
         curr_res = init_res
         proj_it = 0
+        snap_norm = np.linalg.norm(snap)
+        denom = snap_norm if snap_norm > 0.0 else 1.0
+        print("Initial residual: {:3.2e}".format(init_res / denom))
 
         while (curr_res / init_res > projection_relnorm_cutoff) and (proj_it < projection_max_its):
             Jf_np = jac_decode(y).detach().cpu().numpy()
@@ -361,6 +495,8 @@ def compute_ECSW_training_matrix_2D_pod_ann_case3(
 
         Jf_np = jac_decode(y).detach().cpu().numpy()
         w_tilde = w_rec_t.detach().cpu().numpy()
+        final_res = np.linalg.norm(w_tilde - snap)
+        print("Final residual: {:3.2e}".format(final_res / denom))
 
         ires = res(w_tilde, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
         Ji = jac(w_tilde, dt, JDxec, JDyec, Eye)
@@ -421,6 +557,15 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D(
 
     device = basis.device
     dtype_t = basis.dtype
+    try:
+        ann_device_before = next(ann_model.parameters()).device
+    except StopIteration:
+        ann_device_before = device
+    ann_model = _align_module_device(ann_model, device)
+    try:
+        ann_device_after = next(ann_model.parameters()).device
+    except StopIteration:
+        ann_device_after = device
 
     u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
     y0 = basis.T @ _to_torch_vector(w0_np - u_ref_np, dtype=dtype_t, device=device)
@@ -566,6 +711,15 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_ecsw(
 
     device = basis.device
     dtype_t = basis.dtype
+    try:
+        ann_device_before = next(ann_model.parameters()).device
+    except StopIteration:
+        ann_device_before = device
+    ann_model = _align_module_device(ann_model, device)
+    try:
+        ann_device_after = next(ann_model.parameters()).device
+    except StopIteration:
+        ann_device_after = device
 
     u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
     u_ref_loc_t = u_ref_t[idx]
@@ -720,6 +874,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
 
     V = np.asarray(basis.detach().cpu().numpy() if hasattr(basis, "detach") else basis, dtype=np.float64)
     Vbar = np.asarray(basis2.detach().cpu().numpy() if hasattr(basis2, "detach") else basis2, dtype=np.float64)
+    ann_model = _align_module_device(ann_model, torch.device("cpu"))
 
     nred = V.shape[1]
     y = V.T @ (w0 - u_ref_np)
@@ -817,6 +972,160 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
     return snaps, (num_its, jac_time, res_time, ls_time)
 
 
+def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
+    grid_x,
+    grid_y,
+    w0,
+    dt,
+    num_steps,
+    mu,
+    ann_model,
+    ref,
+    basis,
+    basis2,
+    u_ref=None,
+    max_its=20,
+    relnorm_cutoff=1e-5,
+    min_delta=0.1,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
+):
+    """
+    POD-ANN Case 2 with enriched residual testing (PROM only).
+
+    Trial manifold:
+
+        w(y, t; mu) = u_ref + V y + Vbar N([mu1, mu2, t])
+
+    Unknowns are still only y in R^n_p, but Gauss-Newton minimizes
+
+        0.5 * || s(y) ||_2^2,
+        s(y) = (J(w(y)) V_tot)^T r(w(y)),
+
+    where V_tot = [V, Vbar].
+    """
+
+    del ref
+
+    w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
+    n_full = w0.size
+    u_ref_np = _prepare_reference(u_ref, n_full)
+
+    Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
+
+    V = np.asarray(
+        basis.detach().cpu().numpy() if hasattr(basis, "detach") else basis,
+        dtype=np.float64,
+    )
+    Vbar = np.asarray(
+        basis2.detach().cpu().numpy() if hasattr(basis2, "detach") else basis2,
+        dtype=np.float64,
+    )
+    Vtot = np.concatenate((V, Vbar), axis=1)
+
+    ann_model = _align_module_device(ann_model, torch.device("cpu"))
+    try:
+        device = next(ann_model.parameters()).device
+    except StopIteration:
+        device = torch.device("cpu")
+
+    nred = V.shape[1]
+    y = (V.T @ (w0 - u_ref_np)).astype(np.float64, copy=False)
+
+    snaps = np.zeros((n_full, num_steps + 1), dtype=np.float64)
+    red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
+
+    tgrid = dt * np.arange(num_steps + 1, dtype=np.float64)
+
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
+    def offset_np(tval):
+        inp = torch.tensor([mu1, mu2, float(tval)], dtype=torch.float32, device=device).unsqueeze(0)
+        with torch.no_grad():
+            qbar = ann_model(inp).squeeze(0)
+        qbar_np = qbar.detach().cpu().numpy()
+        return u_ref_np + Vbar @ qbar_np
+
+    w = offset_np(tgrid[0]) + V @ y
+    wp = w.copy()
+
+    snaps[:, 0] = w
+    red_coords[:, 0] = y
+
+    num_its = 0
+    jac_time = 0.0
+    res_time = 0.0
+    ls_time = 0.0
+
+    print(
+        "Running POD-ANN Case 2 (enriched residual testing) ROM "
+        f"of size {nred} for mu1={mu1}, mu2={mu2}"
+    )
+
+    for k in range(num_steps):
+        tk1 = tgrid[k + 1]
+        off = offset_np(tk1)
+
+        yk = y.copy()
+        wk = off + V @ yk
+        resnorms = []
+        init_norm = None
+
+        for _ in range(max_its):
+            t0 = time.time()
+            r = inviscid_burgers_res2D(wk, grid_x, grid_y, dt, wp, mu, Dxec, Dyec)
+            res_time += time.time() - t0
+
+            t0 = time.time()
+            J = inviscid_burgers_exact_jac2D(wk, dt, JDxec, JDyec, Eye)
+            jac_time += time.time() - t0
+
+            t0 = time.time()
+            JV = J @ V
+            JVTOT = J @ Vtot
+            s = JVTOT.T @ r
+            snorm = np.linalg.norm(s)
+            if init_norm is None:
+                init_norm = snorm + 1e-30
+            resnorms.append(snorm)
+
+            if snorm / init_norm < relnorm_cutoff:
+                ls_time += time.time() - t0
+                break
+
+            if len(resnorms) > 1:
+                rel_drop = abs((resnorms[-2] - resnorms[-1]) / (resnorms[-2] + 1e-30))
+                if rel_drop < min_delta:
+                    ls_time += time.time() - t0
+                    break
+
+            Z = JVTOT.T @ JV
+            dy = _solve_reduced_update(
+                Z,
+                s,
+                linear_solver=linear_solver,
+                normal_eq_reg=normal_eq_reg,
+            )
+            ls_time += time.time() - t0
+
+            yk += dy
+            wk = off + V @ yk
+
+        num_its += len(resnorms)
+        y = yk
+        w = wk
+        wp = w.copy()
+
+        snaps[:, k + 1] = w
+        red_coords[:, k + 1] = y
+
+        rel = (resnorms[-1] / (init_norm if init_norm is not None else 1.0)) if resnorms else np.nan
+        print(f"  step {k:4d}: GN iters={len(resnorms):2d} rel={rel:.2e}")
+
+    return snaps, (num_its, jac_time, res_time, ls_time)
+
+
 def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3(
     grid_x,
     grid_y,
@@ -843,11 +1152,6 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3(
 
     del ref
 
-    try:
-        jacfwd = functorch.jacfwd
-    except Exception:
-        jacfwd = torch.func.jacfwd
-
     Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
 
     basis = _to_torch_matrix(basis, dtype=torch.float32)
@@ -855,6 +1159,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3(
 
     device = basis.device
     dtype_t = basis.dtype
+    ann_model = _align_module_device(ann_model, device)
 
     w0_np = np.asarray(w0, dtype=np.float64).reshape(-1)
     N = w0_np.size
@@ -907,7 +1212,14 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3(
             with torch.no_grad():
                 return u_ref_t + basis @ y + basis2 @ _ann_eval(y, t_now)
 
-        jacfwdfunc = jacfwd(lambda yy: decode(yy, with_grad=True))
+        def _ann_eval_t(y_vec):
+            return _ann_eval(y_vec, t_now)
+
+        jacfwdfunc = _build_ann_decoder_jacobian(
+            basis=basis,
+            basis2=basis2,
+            ann_eval=_ann_eval_t,
+        )
 
         def res(w_np):
             return inviscid_burgers_res2D(
@@ -1021,6 +1333,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_ecsw(
 
     device = basis.device
     dtype_t = basis.dtype
+    ann_model = _align_module_device(ann_model, device)
 
     u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
     u_ref_loc_t = u_ref_t[idx]
@@ -1126,6 +1439,195 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_ecsw(
     return red_coords, (num_its, jac_time, res_time, ls_time)
 
 
+def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin_ecsw(
+    grid_x,
+    grid_y,
+    weights,
+    w0,
+    dt,
+    num_steps,
+    mu,
+    ann_model,
+    ref,
+    basis,
+    basis2,
+    u_ref=None,
+    max_its=20,
+    relnorm_cutoff=1e-5,
+    min_delta=0.1,
+    linear_solver="lstsq",
+    normal_eq_reg=1e-12,
+):
+    """
+    ECSW POD-ANN Case 2 with enriched residual testing.
+
+    Trial manifold:
+
+        w(y, t; mu) = u_ref + V y + Vbar N([mu1, mu2, t])
+
+    Unknowns remain y in the primary space, but Gauss-Newton uses
+    weighted projected residual testing through V_tot = [V, Vbar]:
+
+        s = (W J V_tot)^T (W r),
+        Z = (W J V_tot)^T (W J V).
+    """
+
+    del ref
+
+    w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
+    weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+    u_ref_np = _prepare_reference(u_ref, w0.size)
+
+    _, _, JDxec, JDyec, _ = get_ops(grid_x, grid_y)
+    JDxec = JDxec.tolil()
+    JDyec = JDyec.tolil()
+
+    n_full = w0.size
+    n_cells = n_full // 2
+
+    sample_inds = np.where(weights != 0)[0]
+    augmented_sample = generate_augmented_mesh(grid_x, grid_y, sample_inds)
+
+    Eye_u = sp.identity(n_cells).tocsr()
+    Eye_u = Eye_u[sample_inds, :][:, augmented_sample]
+    Eye_ecsw = sp.bmat([[Eye_u, None], [None, Eye_u]]).tocsr()
+
+    JDxec_ecsw = JDxec[sample_inds, :][:, augmented_sample].tocsr()
+    JDyec_ecsw = JDyec[sample_inds, :][:, augmented_sample].tocsr()
+
+    sample_weights_cells = weights[sample_inds]
+    weights_full = np.concatenate((sample_weights_cells, sample_weights_cells)).astype(np.float64)
+    idx = np.concatenate((augmented_sample, n_cells + augmented_sample))
+
+    V_global = np.asarray(basis.detach().cpu().numpy() if hasattr(basis, "detach") else basis, dtype=np.float64)
+    Vbar_global = np.asarray(
+        basis2.detach().cpu().numpy() if hasattr(basis2, "detach") else basis2,
+        dtype=np.float64,
+    )
+
+    ann_model = _align_module_device(ann_model, torch.device("cpu"))
+    try:
+        device = next(ann_model.parameters()).device
+    except StopIteration:
+        device = torch.device("cpu")
+
+    u_ref_loc = u_ref_np[idx]
+    V_loc = V_global[idx, :]
+    Vbar_loc = Vbar_global[idx, :]
+    Vtot_loc = np.concatenate((V_loc, Vbar_loc), axis=1)
+
+    y0 = V_global.T @ (w0 - u_ref_np)
+    nred = int(y0.size)
+
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
+    def _offset_loc(t_value):
+        x = torch.tensor([mu1, mu2, float(t_value)], dtype=torch.float32, device=device)
+        with torch.no_grad():
+            qbar = ann_model(x).reshape(-1).detach().cpu().numpy()
+        return u_ref_loc + Vbar_loc @ qbar
+
+    wp = V_loc @ y0 + _offset_loc(0.0)
+    yp = y0.copy()
+
+    red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
+    red_coords[:, 0] = y0.reshape(-1)
+
+    num_its = 0
+    jac_time = 0.0
+    res_time = 0.0
+    ls_time = 0.0
+
+    print(
+        "Running POD-ANN Case 2 ECSW ROM (enriched residual testing) "
+        f"of size {nred} for mu1={mu1}, mu2={mu2}"
+    )
+
+    for istep in range(num_steps):
+        print(f" ... Working on timestep {istep}")
+
+        off_loc_t = _offset_loc((istep + 1) * float(dt))
+        y = yp.copy()
+        w_loc = off_loc_t + V_loc @ y
+
+        resnorms = []
+        init_norm = None
+
+        for _ in range(max_its):
+            t0 = time.time()
+            r = inviscid_burgers_res2D_ecsw(
+                w_loc,
+                grid_x,
+                grid_y,
+                dt,
+                wp,
+                mu,
+                JDxec_ecsw,
+                JDyec_ecsw,
+                sample_inds,
+                augmented_sample,
+            )
+            res_time += time.time() - t0
+
+            t0 = time.time()
+            J = inviscid_burgers_exact_jac2D_ecsw(
+                w_loc,
+                dt,
+                JDxec_ecsw,
+                JDyec_ecsw,
+                Eye_ecsw,
+                sample_inds,
+                augmented_sample,
+            )
+            jac_time += time.time() - t0
+
+            t0 = time.time()
+            rw = weights_full * r
+            JV = J @ V_loc
+            JVTOT = J @ Vtot_loc
+            JVw = weights_full[:, None] * JV
+            JVTOTw = weights_full[:, None] * JVTOT
+
+            s = JVTOTw.T @ rw
+            snorm = np.linalg.norm(s)
+            if init_norm is None:
+                init_norm = snorm + 1e-30
+            resnorms.append(snorm)
+
+            if snorm / init_norm < relnorm_cutoff:
+                ls_time += time.time() - t0
+                break
+
+            if len(resnorms) > 1:
+                rel_drop = abs((resnorms[-2] - resnorms[-1]) / (resnorms[-2] + 1e-30))
+                if rel_drop < min_delta:
+                    ls_time += time.time() - t0
+                    break
+
+            Z = JVTOTw.T @ JVw
+            dy = _solve_reduced_update(
+                Z,
+                s,
+                linear_solver=linear_solver,
+                normal_eq_reg=normal_eq_reg,
+            )
+            ls_time += time.time() - t0
+
+            y += dy
+            w_loc = off_loc_t + V_loc @ y
+
+        num_its += len(resnorms)
+        red_coords[:, istep + 1] = y.reshape(-1)
+        wp = w_loc.copy()
+        yp = y.copy()
+
+        rel = (resnorms[-1] / (init_norm if init_norm is not None else 1.0)) if resnorms else np.nan
+        print(f"  step {istep:4d}: GN iters={len(resnorms):2d} rel={rel:.2e}")
+
+    return red_coords, (num_its, jac_time, res_time, ls_time)
+
+
 def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3_ecsw(
     grid_x,
     grid_y,
@@ -1189,6 +1691,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3_ecsw(
 
     device = basis.device
     dtype_t = basis.dtype
+    ann_model = _align_module_device(ann_model, device)
 
     u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
     u_ref_loc_t = u_ref_t[idx]
@@ -1238,7 +1741,14 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3_ecsw(
             with torch.no_grad():
                 return u_ref_loc_t + V @ y + Vbar @ _ann_eval(y, t_now)
 
-        jacfwdfunc = torch_jacfwd(lambda yy: decode(yy, with_grad=True))
+        def _ann_eval_t(y_vec):
+            return _ann_eval(y_vec, t_now)
+
+        jacfwdfunc = _build_ann_decoder_jacobian(
+            basis=V,
+            basis2=Vbar,
+            ann_eval=_ann_eval_t,
+        )
 
         def res(w_loc):
             return inviscid_burgers_res2D_ecsw(

@@ -8,8 +8,7 @@ Case 1 (ANN):
     qN_s = N(qN_p)
 
 - Loads PROM-solved coefficients from:
-    prom_coeff_dataset_ntot*/per_mu/*/qN_p.npy
-    prom_coeff_dataset_ntot*/per_mu/*/qN_s.npy
+    prom_coeff_dataset_ntot*/per_mu/*/qN.npy
 
 - Embeds scaling inside the model (so inference is just model(qp_raw)).
 - Saves ONLY:
@@ -18,6 +17,7 @@ Case 1 (ANN):
 
 import os
 import time
+import argparse
 import numpy as np
 
 from sklearn.model_selection import train_test_split
@@ -30,6 +30,10 @@ try:
     from stage3_dataset_utils import resolve_stage3_dataset
 except ModuleNotFoundError:
     from .stage3_dataset_utils import resolve_stage3_dataset
+try:
+    from stage3_qn_utils import load_qn_from_mu_dir, resolve_primary_modes, split_qn
+except ModuleNotFoundError:
+    from .stage3_qn_utils import load_qn_from_mu_dir, resolve_primary_modes, split_qn
 try:
     from project_layout import STAGE3_DIR, ensure_layout_dirs, stage3_model_path, write_kv_txt
 except ModuleNotFoundError:
@@ -46,7 +50,7 @@ torch.manual_seed(SEED)
 np.random.seed(SEED)
 
 
-def load_prom_dataset_case1(dataset_root: str):
+def load_prom_dataset_case1(dataset_root: str, primary_modes: int):
     """Return X_raw (M,n_p), Y_raw (M,n_s) in float32."""
     if not os.path.exists(dataset_root):
         raise FileNotFoundError(f"Missing dataset directory: {dataset_root}")
@@ -61,8 +65,8 @@ def load_prom_dataset_case1(dataset_root: str):
     qp_list, qs_list = [], []
     for sd in subdirs:
         mu_dir = os.path.join(dataset_root, sd)
-        qp_i = np.load(os.path.join(mu_dir, "qN_p.npy"))  # (n_p, T)
-        qs_i = np.load(os.path.join(mu_dir, "qN_s.npy"))  # (n_s, T)
+        qn_i = load_qn_from_mu_dir(mu_dir)                # (n_tot, T)
+        qp_i, qs_i = split_qn(qn_i, primary_modes)        # (n_p, T), (n_s, T)
         qp_list.append(qp_i)
         qs_list.append(qs_i)
 
@@ -141,20 +145,35 @@ class Case1Model(nn.Module):
         return y_raw
 
 
-def main():
+def main(argv=None):
     # -----------------------------
     # User settings
     # -----------------------------
     ensure_layout_dirs()
 
-    dataset_ntot = None  # set int to force a specific ntot dataset
-    dataset_backend = "hprom"
+    parser = argparse.ArgumentParser(
+        description="Train Case-1 ANN map from Stage-2 dataset."
+    )
+    parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="hprom")
+    parser.add_argument("--dataset-ntot", type=int, default=None)
+    parser.add_argument("--model-name", type=str, default=None)
+    parser.add_argument("--primary-modes", type=int, default=None)
+    args = parser.parse_args(argv)
+
+    dataset_ntot = args.dataset_ntot
+    dataset_backend = str(args.dataset_backend).strip().lower()
     dataset_root, dataset_ntot, dataset_dir, dataset_meta, _ = resolve_stage3_dataset(
         this_dir=THIS_DIR,
         requested_ntot=dataset_ntot,
         expected_backend=dataset_backend,
     )
-    model_path = stage3_model_path("case1_model.pt")
+    primary_modes = resolve_primary_modes(args.primary_modes, dataset_meta, dataset_ntot)
+    model_name = str(args.model_name).strip() if args.model_name is not None else "case1_model.pt"
+    if len(model_name) == 0:
+        raise ValueError("--model-name cannot be empty.")
+    if not model_name.endswith(".pt"):
+        model_name = f"{model_name}.pt"
+    model_path = stage3_model_path(model_name)
     summary_path = os.path.join(STAGE3_DIR, "case1_training_summary.txt")
 
     VAL_FRAC = 0.1
@@ -171,11 +190,12 @@ def main():
     print(f"[Case1] dataset_dir = {dataset_dir}")
     print(f"[Case1] dataset_root = {dataset_root} (ntot={dataset_ntot})")
     print(f"[Case1] solve_backend = {dataset_meta.get('solve_backend')}")
+    print(f"[Case1] primary_modes (training split) = {primary_modes}")
 
     # -----------------------------
     # Load data
     # -----------------------------
-    X_raw, Y_raw = load_prom_dataset_case1(dataset_root)
+    X_raw, Y_raw = load_prom_dataset_case1(dataset_root, primary_modes=primary_modes)
     M, n_p = X_raw.shape
     _, n_s = Y_raw.shape
     print(f"[Case1] Loaded: M={M}, n_p={n_p}, n_s={n_s}")
@@ -275,17 +295,22 @@ def main():
         "dataset_dir": dataset_dir,
         "dataset_ntot": int(dataset_ntot),
         "dataset_backend": dataset_meta.get("solve_backend"),
+        "primary_modes": int(primary_modes),
+        "secondary_modes": int(dataset_ntot - primary_modes),
     }
     torch.save(ckpt, model_path)
     print(f"[Case1] Saved model checkpoint: {model_path}")
     write_kv_txt(
         summary_path,
         [
+            ("model_name", model_name),
             ("model_path", model_path),
             ("dataset_dir", dataset_dir),
             ("dataset_root", dataset_root),
             ("dataset_ntot", dataset_ntot),
             ("dataset_backend", dataset_meta.get("solve_backend")),
+            ("primary_modes", primary_modes),
+            ("secondary_modes", int(dataset_ntot - primary_modes)),
             ("samples_M", M),
             ("n_p", n_p),
             ("n_s", n_s),

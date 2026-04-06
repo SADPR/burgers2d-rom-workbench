@@ -1,0 +1,15 @@
+model_name: case2_model_enriched_n20.pt
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage3/prom_coeff_dataset_ntot151_enriched_lhs20/models/case2_model_enriched_n20.pt
+dataset_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage2/prom_coeff_dataset_ntot151_enriched_lhs20
+dataset_root: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage2/prom_coeff_dataset_ntot151_enriched_lhs20/per_mu
+dataset_ntot: 151
+dataset_backend: prom
+primary_modes: 20
+secondary_modes: 131
+samples_M: 14529
+in_dim: 3
+n_s: 131
+epochs_ran: 898
+best_val_mse: 0.06399093568325043
+seed: 42
+device: cpu

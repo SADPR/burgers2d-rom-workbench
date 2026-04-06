@@ -373,8 +373,17 @@ def main(
     with open(gpr_path, "wb") as file:
         pickle.dump(gpr_model, file)
 
-    analytic_jacobian_compatible = kernel_name == "matern15"
-    learned_kernel = str(gpr_model.kernel_)
+    learned_kernel_obj = getattr(gpr_model, "kernel_", getattr(gpr_model, "kernel", None))
+    learned_kernel = str(learned_kernel_obj)
+    analytic_jacobian_compatible = (
+        hasattr(learned_kernel_obj, "k1")
+        and hasattr(learned_kernel_obj, "k2")
+        and isinstance(learned_kernel_obj.k1, ConstantKernel)
+        and (
+            (isinstance(learned_kernel_obj.k2, Matern) and float(learned_kernel_obj.k2.nu) == 1.5)
+            or isinstance(learned_kernel_obj.k2, RBF)
+        )
+    )
 
     write_txt_report(
         report_file,

@@ -1,0 +1,12 @@
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage3/models/case1_model.pt
+dataset_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot151
+dataset_root: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot151/per_mu
+dataset_ntot: 151
+dataset_backend: prom
+samples_M: 4509
+n_p: 10
+n_s: 141
+epochs_ran: 641
+best_val_mse: 0.12696349620819092
+seed: 42
+device: cpu

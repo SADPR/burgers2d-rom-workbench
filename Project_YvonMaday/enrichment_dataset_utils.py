@@ -73,4 +73,3 @@ def resolve_enrichment_dataset(requested_ntot=None, expected_backend="hprom"):
         )
 
     return per_mu_root, detected_ntot, dataset_dir, meta, meta_path
-

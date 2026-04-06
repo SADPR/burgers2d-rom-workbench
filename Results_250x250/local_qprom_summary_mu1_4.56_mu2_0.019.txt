@@ -1,0 +1,63 @@
+[run]
+timestamp: 2026-04-04T07:01:27
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+local_model_file: LocalQuadratic/local_qm_data.npz
+cluster_selector: select_cluster_reduced (internal in local_qm solver)
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_q0: 20
+tol_q0: 1.00000000e-06
+init_cluster: N/A
+linear_solver: lstsq
+normal_eq_reg: N/A
+snap_folder: Results/param_snaps
+
+[discretization]
+dt: 5.00000000e-02
+num_steps: 500
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[local_model]
+offline_snapshot_matrix_shape: (125000, 4509)
+num_clusters: 10
+cluster_sizes_after_overlap: [586, 518, 586, 357, 535, 585, 554, 511, 554, 533]
+n_qm_per_cluster: [6, 7, 8, 9, 6, 6, 8, 6, 9, 7]
+retained_modes_per_cluster: [6, 7, 8, 9, 6, 6, 8, 6, 9, 7]
+n_trad_per_cluster: [24, 30, 42, 47, 25, 25, 38, 27, 46, 34]
+d_const_shape: (10, 10)
+
+[local_qprom_timing]
+total_local_qprom_time_seconds: 1.08365006e+02
+avg_local_qprom_time_per_step_seconds: 2.16730012e-01
+gn_iterations_total: 1949
+avg_gn_iterations_per_step: 3.89800000e+00
+jacobian_time_seconds: 5.66610236e+01
+residual_time_seconds: 1.04472845e+01
+linear_solve_time_seconds: 3.41805518e+01
+hdm_load_or_solve_time_seconds: 3.34208488e-01
+
+[cluster_metrics]
+initial_cluster: 0
+final_cluster: 8
+cluster_switches: 12
+cluster_visit_counts: [65, 51, 59, 0, 51, 56, 55, 49, 63, 52]
+
+[reduced_coordinates]
+red_coords_shape: (9, 501)
+max_active_n_qm: 9
+
+[error_metrics]
+relative_l2_error: 2.60539450e-02
+relative_error_percent: 2.60539450e+00
+
+[outputs]
+local_qprom_snapshots_npy: Results/local_qprom_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/local_qprom_mu1_4.56_mu2_0.019.png
+local_qm_model_npz: LocalQuadratic/local_qm_data.npz
+summary_txt: Results/local_qprom_summary_mu1_4.56_mu2_0.019.txt

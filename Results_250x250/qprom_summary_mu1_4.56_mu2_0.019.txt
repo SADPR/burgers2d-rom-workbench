@@ -1,0 +1,59 @@
+[run]
+timestamp: 2026-04-04T07:07:21
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+qm_dir: Quadratic
+dt: 5.00000000e-02
+num_steps: 500
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_q0: 20
+tol_q0: 1.00000000e-06
+linear_solver: lstsq
+normal_eq_reg: N/A
+snap_folder: Results/param_snaps
+
+[discretization]
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[manifold]
+V_shape: (125000, 16)
+H_shape: (125000, 136)
+u_ref_shape: (125000,)
+sigma_shape: (16,)
+n: 16
+m: 136
+u_ref_l2_norm: 8.17426148e+02
+metadata_n_trad: 151
+metadata_n_final: 16
+metadata_pod_tol: 1.00000000e-04
+metadata_zeta_qua: 5.00000000e-02
+
+[qprom_timing]
+total_qprom_time_seconds: 2.23516123e+02
+avg_qprom_time_per_step_seconds: 4.47032246e-01
+gn_iterations_total: 1983
+avg_gn_iterations_per_step: 3.96600000e+00
+jacobian_time_seconds: 6.57642097e+01
+residual_time_seconds: 1.17702518e+01
+linear_solve_time_seconds: 1.32920806e+02
+hdm_load_or_solve_time_seconds: 3.26144218e-01
+
+[error_metrics]
+relative_l2_error: 6.56341239e-02
+relative_error_percent: 6.56341239e+00
+
+[outputs]
+qprom_snapshots_npy: Results/qprom_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/qprom_mu1_4.56_mu2_0.019.png
+summary_txt: Results/qprom_summary_mu1_4.56_mu2_0.019.txt
+qm_V_npy: Quadratic/qm_V.npy
+qm_H_npy: Quadratic/qm_H.npy
+qm_uref_npy: Quadratic/qm_uref.npy
+qm_sigma_npy: Quadratic/qm_sigma.npy
+qm_metadata_npz: Quadratic/qm_metadata.npz

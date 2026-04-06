@@ -1,0 +1,12 @@
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage3/prom_coeff_dataset_ntot151_enriched_lhs20/models/rom_data_driven_model_enriched.pt
+dataset_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage2/prom_coeff_dataset_ntot151_enriched_lhs20
+dataset_root: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage2/prom_coeff_dataset_ntot151_enriched_lhs20/per_mu
+dataset_ntot: 151
+dataset_backend: prom
+samples_M: 14529
+in_dim: 3
+n_tot: 151
+epochs_ran: 694
+best_val_mse: 0.4050445854663849
+seed: 42
+device: cpu

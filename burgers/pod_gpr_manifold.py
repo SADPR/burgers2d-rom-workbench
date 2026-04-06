@@ -38,6 +38,108 @@ def _prepare_reference(u_ref, size):
     return u_ref
 
 
+def _gp_analytic_kernel_info(gp_model):
+    """
+    Return (kind, cval, length_scale) for analytic kernels supported by jac_gp.
+    kind in {"matern15", "rbf"} or None if unsupported.
+    """
+    kernel_obj = getattr(gp_model, "kernel_", getattr(gp_model, "kernel", None))
+    if kernel_obj is None:
+        return None, None, None
+
+    k1 = getattr(kernel_obj, "k1", None)
+    k2 = getattr(kernel_obj, "k2", None)
+    if k1 is None or k2 is None:
+        return None, None, None
+
+    if k1.__class__.__name__ != "ConstantKernel":
+        return None, None, None
+
+    cval = float(getattr(k1, "constant_value", 1.0))
+    length_scale = np.asarray(getattr(k2, "length_scale", 1.0), dtype=np.float64)
+
+    if k2.__class__.__name__ == "RBF":
+        return "rbf", cval, length_scale
+
+    if k2.__class__.__name__ == "Matern":
+        try:
+            if float(getattr(k2, "nu", np.nan)) == 1.5:
+                return "matern15", cval, length_scale
+        except Exception:
+            pass
+
+    return None, None, None
+
+
+def _gp_is_analytic_compatible(gp_model):
+    kind, _, _ = _gp_analytic_kernel_info(gp_model)
+    return kind is not None
+
+
+def _resolve_global_jacobian_mode(jacobian_mode, gp_model):
+    """
+    Resolve Jacobian mode for global POD-GPR.
+    """
+    mode = str(jacobian_mode).strip().lower()
+    if mode not in ("auto", "analytic", "forward_fd", "central_fd"):
+        raise ValueError(
+            "jacobian_mode must be one of: 'auto', 'analytic', 'forward_fd', 'central_fd'."
+        )
+
+    analytic_ok = _gp_is_analytic_compatible(gp_model)
+    if mode == "auto":
+        return "analytic" if analytic_ok else "forward_fd"
+
+    if mode == "analytic" and not analytic_ok:
+        raise ValueError(
+            "Requested jacobian_mode='analytic' but the learned GP kernel is not "
+            "ConstantKernel*(Matern(nu=1.5) or RBF). Use 'auto', 'forward_fd', or 'central_fd'."
+        )
+
+    return mode
+
+
+def _gp_target_stats(gp_model, n_targets):
+    """
+    Return target (mean, std) used by sklearn GPR normalization.
+    """
+    if bool(getattr(gp_model, "normalize_y", False)):
+        y_mean = np.asarray(getattr(gp_model, "_y_train_mean", 0.0), dtype=np.float64).reshape(-1)
+        y_std = np.asarray(getattr(gp_model, "_y_train_std", 1.0), dtype=np.float64).reshape(-1)
+    else:
+        y_mean = np.zeros(1, dtype=np.float64)
+        y_std = np.ones(1, dtype=np.float64)
+
+    if y_mean.size == 1 and n_targets > 1:
+        y_mean = np.full(n_targets, float(y_mean[0]), dtype=np.float64)
+    if y_std.size == 1 and n_targets > 1:
+        y_std = np.full(n_targets, float(y_std[0]), dtype=np.float64)
+
+    if y_mean.size != n_targets:
+        y_mean = np.resize(y_mean, n_targets).astype(np.float64, copy=False)
+    if y_std.size != n_targets:
+        y_std = np.resize(y_std, n_targets).astype(np.float64, copy=False)
+
+    return y_mean, y_std
+
+
+def _predict_gp_custom(gp_model, x_scaled):
+    """
+    Custom GP prediction from (kernel vector @ alpha), with optional
+    de-normalization when normalize_y=True.
+    """
+    X_train_ = gp_model.X_train_
+    alpha_ = np.asarray(gp_model.alpha_, dtype=np.float64)
+    kernel_ = gp_model.kernel_
+
+    k_vec = kernel_(X_train_, x_scaled).ravel()
+    y_pred = np.asarray(k_vec @ alpha_, dtype=np.float64).reshape(-1)
+
+    y_mean, y_std = _gp_target_stats(gp_model, y_pred.size)
+    y_pred = y_mean + y_std * y_pred
+    return y_pred
+
+
 def _cluster_total_dim(model_k, r_k):
     """
     Total number of retained reduced coordinates for a local cluster.
@@ -184,19 +286,25 @@ def decode_gp(
     t0 = time.time()
 
     if not use_custom_predict:
-        q_s_pred = gp_model.predict(x_scaled).ravel()
+        q_s_pred = np.asarray(gp_model.predict(x_scaled), dtype=np.float64).ravel()
     else:
-        X_train_ = gp_model.X_train_
-        alpha_ = gp_model.alpha_
-        kernel_ = gp_model.kernel_
-
-        k_vec = kernel_(X_train_, x_scaled).ravel()
-        q_s_pred = k_vec @ alpha_
+        q_s_pred = _predict_gp_custom(gp_model, x_scaled)
 
     if echo_level > 0:
         print(f"[decode_gp] Time to predict q_s: {time.time() - t0:.6f} s")
 
     return u_ref + basis @ q_p + basis2 @ q_s_pred
+
+
+def _normalize_length_scale(length_scale, ndim):
+    ls = np.asarray(length_scale, dtype=np.float64).reshape(-1)
+    if ls.size == 1:
+        ls = np.full(ndim, float(ls[0]), dtype=np.float64)
+    if ls.size != ndim:
+        raise ValueError(
+            f"length_scale has size {ls.size}, expected 1 or ndim={ndim}."
+        )
+    return ls
 
 
 def matern15_grad(x_scaled, X_train, length_scale, cval):
@@ -205,15 +313,24 @@ def matern15_grad(x_scaled, X_train, length_scale, cval):
     """
     sqrt3 = np.sqrt(3.0)
     diff = x_scaled[None, :] - X_train
-    dists = np.linalg.norm(diff, axis=1)
-    ratio = dists / length_scale
+    ls = _normalize_length_scale(length_scale, diff.shape[1])
+    inv_l2 = 1.0 / (ls * ls)
+    ratio = np.sqrt(np.sum((diff * diff) * inv_l2[None, :], axis=1))
     exp_term = np.exp(-sqrt3 * ratio)
+    grad_k = -3.0 * float(cval) * exp_term[:, None] * diff * inv_l2[None, :]
+    return grad_k
 
-    grad_k = np.zeros_like(diff)
-    mask = dists > 1e-14
-    factor = -3.0 * cval / (length_scale ** 2)
-    grad_k[mask] = factor * exp_term[mask, None] * diff[mask]
 
+def rbf_grad(x_scaled, X_train, length_scale, cval):
+    """
+    Vectorized gradient of the RBF kernel with respect to x_scaled.
+    """
+    diff = x_scaled[None, :] - X_train
+    ls = _normalize_length_scale(length_scale, diff.shape[1])
+    inv_l2 = 1.0 / (ls * ls)
+    scaled_sq = np.sum((diff * diff) * inv_l2[None, :], axis=1)
+    k_vec = float(cval) * np.exp(-0.5 * scaled_sq)
+    grad_k = -k_vec[:, None] * diff * inv_l2[None, :]
     return grad_k
 
 
@@ -226,16 +343,13 @@ def jac_gp(
     echo_level=0,
 ):
     """
-    Analytical tangent matrix for POD-GPR with Matérn(ν=1.5):
+    Analytical tangent matrix for POD-GPR with supported kernels:
+    ConstantKernel*Matern(ν=1.5) or ConstantKernel*RBF.
 
         dw/dq_p = U_p + U_s (dq_s/dq_p)
 
     Notes
     -----
-    This assumes the trained GP kernel has structure:
-
-        ConstantKernel * Matern(nu=1.5)
-
     If your trained GP uses a different kernel, this analytical Jacobian is not valid.
     """
     t0 = time.time()
@@ -248,14 +362,25 @@ def jac_gp(
     scale_factors = scaler.scale_
 
     X_train = gp_model.X_train_
-    alpha = gp_model.alpha_
-    kernel = gp_model.kernel_
+    alpha = np.asarray(gp_model.alpha_, dtype=np.float64)
+    if alpha.ndim == 1:
+        alpha = alpha[:, None]
+    kind, cval, length_scale = _gp_analytic_kernel_info(gp_model)
+    if kind is None:
+        kernel_obj = getattr(gp_model, "kernel_", getattr(gp_model, "kernel", None))
+        raise ValueError(
+            "jac_gp supports only ConstantKernel*(Matern(nu=1.5) or RBF). "
+            f"Found kernel: {kernel_obj}"
+        )
 
-    cval = kernel.k1.constant_value
-    length_scale = kernel.k2.length_scale
+    if kind == "matern15":
+        grad_k = matern15_grad(x_scaled, X_train, length_scale, cval)
+    else:
+        grad_k = rbf_grad(x_scaled, X_train, length_scale, cval)
+    y_mean, y_std = _gp_target_stats(gp_model, alpha.shape[1])
+    del y_mean
 
-    grad_k = matern15_grad(x_scaled, X_train, length_scale, cval)
-    dq_s_dx_scaled = alpha.T @ grad_k
+    dq_s_dx_scaled = (alpha.T @ grad_k) * y_std[:, None]
     dq_s_dx_real = dq_s_dx_scaled * scale_factors
 
     full_jac = basis + basis2 @ dq_s_dx_real
@@ -294,13 +419,9 @@ def jac_gp_forward_difference(
 
     step2_start = time.time()
     if not use_custom_predict:
-        q_s_base = gp_model.predict(x_scaled).ravel()
+        q_s_base = np.asarray(gp_model.predict(x_scaled), dtype=np.float64).ravel()
     else:
-        X_train_ = gp_model.X_train_
-        alpha_ = gp_model.alpha_
-        kernel_ = gp_model.kernel_
-        k_vec = kernel_(X_train_, x_scaled).ravel()
-        q_s_base = k_vec @ alpha_
+        q_s_base = _predict_gp_custom(gp_model, x_scaled)
     step2_time = time.time() - step2_start
 
     step3_start = time.time()
@@ -312,7 +433,7 @@ def jac_gp_forward_difference(
 
     if use_custom_predict:
         X_train_ = gp_model.X_train_
-        alpha_ = gp_model.alpha_
+        alpha_ = np.asarray(gp_model.alpha_, dtype=np.float64)
         kernel_ = gp_model.kernel_
 
     for j in range(r_p):
@@ -321,10 +442,12 @@ def jac_gp_forward_difference(
         x_plus[0, j] += fd_eps
 
         if not use_custom_predict:
-            q_s_plus = gp_model.predict(x_plus).ravel()
+            q_s_plus = np.asarray(gp_model.predict(x_plus), dtype=np.float64).ravel()
         else:
             k_vec_plus = kernel_(X_train_, x_plus).ravel()
-            q_s_plus = k_vec_plus @ alpha_
+            q_s_plus = np.asarray(k_vec_plus @ alpha_, dtype=np.float64).reshape(-1)
+            y_mean, y_std = _gp_target_stats(gp_model, q_s_plus.size)
+            q_s_plus = y_mean + y_std * q_s_plus
 
         iter_time = time.time() - iter_start
         iteration_times.append(iter_time)
@@ -378,15 +501,14 @@ def jac_gp_central_difference(
 
     if use_custom_predict:
         X_train_ = gp_model.X_train_
-        alpha_ = gp_model.alpha_
+        alpha_ = np.asarray(gp_model.alpha_, dtype=np.float64)
         kernel_ = gp_model.kernel_
 
     baseline_start = time.time()
     if not use_custom_predict:
-        q_s_base = gp_model.predict(x_scaled).ravel()
+        q_s_base = np.asarray(gp_model.predict(x_scaled), dtype=np.float64).ravel()
     else:
-        k_vec = kernel_(X_train_, x_scaled).ravel()
-        q_s_base = k_vec @ alpha_
+        q_s_base = _predict_gp_custom(gp_model, x_scaled)
     baseline_time = time.time() - baseline_start
 
     r_p = x_scaled.shape[1]
@@ -402,13 +524,16 @@ def jac_gp_central_difference(
         x_minus[0, j] -= half_eps
 
         if not use_custom_predict:
-            q_s_plus = gp_model.predict(x_plus).ravel()
-            q_s_minus = gp_model.predict(x_minus).ravel()
+            q_s_plus = np.asarray(gp_model.predict(x_plus), dtype=np.float64).ravel()
+            q_s_minus = np.asarray(gp_model.predict(x_minus), dtype=np.float64).ravel()
         else:
             k_vec_plus = kernel_(X_train_, x_plus).ravel()
-            q_s_plus = k_vec_plus @ alpha_
+            q_s_plus = np.asarray(k_vec_plus @ alpha_, dtype=np.float64).reshape(-1)
             k_vec_minus = kernel_(X_train_, x_minus).ravel()
-            q_s_minus = k_vec_minus @ alpha_
+            q_s_minus = np.asarray(k_vec_minus @ alpha_, dtype=np.float64).reshape(-1)
+            y_mean, y_std = _gp_target_stats(gp_model, q_s_plus.size)
+            q_s_plus = y_mean + y_std * q_s_plus
+            q_s_minus = y_mean + y_std * q_s_minus
 
         dq_s_dxp_scaled = (q_s_plus - q_s_minus) / (2.0 * half_eps)
         dq_s_dxp[:, j] = dq_s_dxp_scaled * scale_factors[j]
@@ -644,6 +769,9 @@ def compute_ECSW_training_matrix_2D_gpr_local(
         init_norm = np.linalg.norm(r_rec)
         curr_norm = init_norm
         num_it = 0
+        u_norm = np.linalg.norm(u_i)
+        denom = u_norm if u_norm > 0.0 else 1.0
+        print("Initial residual: {:3.2e}".format(init_norm / denom))
 
         if init_norm > 0.0:
             while curr_norm / init_norm > tol_rel and num_it < max_gn_its:
@@ -676,6 +804,8 @@ def compute_ECSW_training_matrix_2D_gpr_local(
                 r_rec = w_rec - u_i
                 curr_norm = np.linalg.norm(r_rec)
                 num_it += 1
+
+        print("Final residual: {:3.2e}".format(curr_norm / denom))
 
         u_tilde = w_rec
 
@@ -730,7 +860,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
     scaler,
     u_ref=None,
     use_custom_predict=True,
-    jacobian_mode="analytic",
+    jacobian_mode="auto",
     fd_eps=1e-6,
     max_its=20,
     relnorm_cutoff=1e-5,
@@ -747,7 +877,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
 
     Parameters
     ----------
-    jacobian_mode : {"analytic", "forward_fd", "central_fd"}
+    jacobian_mode : {"auto", "analytic", "forward_fd", "central_fd"}
         Choice of tangent approximation for dq_s/dq_p.
         "analytic" assumes ConstantKernel * Matern(nu=1.5).
     """
@@ -757,6 +887,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
     u_ref = _prepare_reference(u_ref, w0.size)
 
     Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
+
+    mode = _resolve_global_jacobian_mode(jacobian_mode, gp_model)
 
     def decode_func(q):
         return decode_gp(
@@ -771,7 +903,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
         )
 
     def jac_gp_func(q):
-        if jacobian_mode == "analytic":
+        if mode == "analytic":
             return jac_gp(
                 q_p=q,
                 gp_model=gp_model,
@@ -780,7 +912,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
                 scaler=scaler,
                 echo_level=0,
             )
-        if jacobian_mode == "forward_fd":
+        if mode == "forward_fd":
             return jac_gp_forward_difference(
                 q_p=q,
                 gp_model=gp_model,
@@ -791,7 +923,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
                 echo_level=0,
                 use_custom_predict=use_custom_predict,
             )
-        if jacobian_mode == "central_fd":
+        if mode == "central_fd":
             return jac_gp_central_difference(
                 q_p=q,
                 gp_model=gp_model,
@@ -803,7 +935,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
                 use_custom_predict=use_custom_predict,
             )
 
-        raise ValueError(f"Unsupported jacobian_mode: {jacobian_mode}")
+        raise ValueError(f"Unsupported jacobian_mode: {mode}")
 
     q0_guess = basis.T @ (w0 - u_ref)
     q0 = _gauss_newton_decoder_inverse(
