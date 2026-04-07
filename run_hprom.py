@@ -88,7 +88,7 @@ def main(
     pod_dir="POD",
     snap_time_offset=3,
     mu_samples=None,
-    ecsw_snapshot_percent=10.0,
+    ecsw_snapshot_percent=2.0,
     ecsw_random_seed=42,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,

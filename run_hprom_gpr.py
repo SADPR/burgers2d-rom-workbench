@@ -234,7 +234,7 @@ def main(
     fd_eps=1e-6,
     snap_time_offset=3,
     mu_samples=None,
-    ecsw_snapshot_percent=10.0,
+    ecsw_snapshot_percent=2.0,
     ecsw_random_seed=42,
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
