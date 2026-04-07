@@ -17,10 +17,16 @@ from burgers.core import (
     plot_snaps,
     inviscid_burgers_res2D,
     inviscid_burgers_exact_jac2D,
+    get_snapshot_params,
 )
 from burgers.pod_rbf_manifold import (
     compute_ECSW_training_matrix_2D_rbf_local,
     inviscid_burgers_implicit2D_LSPG_local_pod_rbf_ecsw,
+)
+from burgers.ecsw_utils import (
+    build_ecsw_snapshot_plan,
+    select_local_cluster_count_snapshot_cols,
+    save_ecsw_sampling_3d_plot,
 )
 from burgers.empirical_cubature_method import EmpiricalCubatureMethod
 from burgers.randomized_singular_value_decomposition import (
@@ -110,9 +116,10 @@ def main(
     snap_folder=None,
     dt=DT,
     num_steps=NUM_STEPS,
-    snap_sample_factor=10,
     snap_time_offset=3,
     mu_samples=None,
+    ecsw_snapshot_percent=10.0,
+    ecsw_random_seed=42,
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
     max_its=20,
@@ -122,18 +129,25 @@ def main(
     normal_eq_reg=1e-12,
     init_cluster=None,
     verbose=True,
+    selector_mode="nonlinear",
 ):
     if compute_ecm is not None:
         compute_ecsw = bool(compute_ecm)
 
     if mu_samples is None:
-        mu_samples = [[4.25, 0.0225]]
+        mu_samples = get_snapshot_params()
     mu_samples = [list(mu) for mu in mu_samples]
 
-    if snap_sample_factor < 1:
-        raise ValueError("snap_sample_factor must be >= 1.")
     if snap_time_offset < 1:
         raise ValueError("snap_time_offset must be >= 1.")
+    ecsw_snapshot_percent = float(ecsw_snapshot_percent)
+    if not np.isfinite(ecsw_snapshot_percent) or ecsw_snapshot_percent <= 0.0:
+        raise ValueError("ecsw_snapshot_percent must be a finite value > 0.")
+    ecsw_snapshot_mode = "local_cluster_param_time_stratified"
+    ecsw_total_snapshots = None
+    ecsw_total_snapshots_percent = ecsw_snapshot_percent
+    ecsw_ensure_mu_coverage = True
+    ecsw_cluster_min_per_cluster = 1
 
     results_dir = "Results"
     if snap_folder is None:
@@ -155,6 +169,9 @@ def main(
     grid_y = GRID_Y
     w0 = np.asarray(W0, dtype=np.float64).reshape(-1).copy()
     mu_rom = [float(mu1), float(mu2)]
+    selector_mode = str(selector_mode).strip().lower()
+    if selector_mode not in ("linear", "nonlinear"):
+        raise ValueError("selector_mode must be one of: 'linear', 'nonlinear'.")
 
     num_cells_x = grid_x.size - 1
     num_cells_y = grid_y.size - 1
@@ -191,6 +208,7 @@ def main(
         "[LOCAL-HPROM-RBF] Clusters with active RBF closure: "
         f"{sum(has_rbf_flags)}/{K}"
     )
+    print(f"[LOCAL-HPROM-RBF] Cluster selector mode: {selector_mode}")
     print(f"[LOCAL-HPROM-RBF] Reduced linear solver: {linear_solver}")
     if str(linear_solver).strip().lower() == "normal_eq":
         print(f"[LOCAL-HPROM-RBF] normal_eq_reg: {float(normal_eq_reg):.3e}")
@@ -199,14 +217,54 @@ def main(
     elapsed_ecsw = None
     ecsw_residual = None
     reduced_mesh_plot_path = None
+    ecsw_sampling_3d_plot_path = None
     weights_source = None
+    ecsw_plan = None
 
     if compute_ecsw:
         print("[LOCAL-HPROM-RBF] Computing ECSW weights...")
         t0 = time.time()
         Clist = []
+        candidate_now_cols = np.arange(snap_time_offset, num_steps, dtype=int)
+        n_candidates_per_mu = int(candidate_now_cols.size)
+        if n_candidates_per_mu == 0:
+            raise ValueError(
+                "No valid ECSW snapshot pairs with current (num_steps, snap_time_offset)."
+            )
+        ecsw_plan = {
+            "mode": ecsw_snapshot_mode,
+            "candidate_now_cols": candidate_now_cols,
+            "selected_now_cols_by_mu": [],
+            "num_candidates_per_mu": n_candidates_per_mu,
+            "num_candidates_total": int(n_candidates_per_mu * len(mu_samples)),
+            "num_selected_per_mu": [],
+            "num_selected_total": 0,
+            "cluster_candidates_per_mu": [],
+            "cluster_selected_per_mu": [],
+            "cluster_min_per_cluster": int(ecsw_cluster_min_per_cluster),
+            "cluster_reference": "u0_list",
+        }
+        mu_plan = build_ecsw_snapshot_plan(
+            num_steps=num_steps,
+            snap_time_offset=snap_time_offset,
+            num_mu=len(mu_samples),
+            mode="global_param_time_stratified",
+            total_snapshots=ecsw_total_snapshots,
+            total_snapshots_percent=ecsw_total_snapshots_percent,
+            random_seed=ecsw_random_seed,
+            ensure_mu_coverage=ecsw_ensure_mu_coverage,
+            mu_points=mu_samples,
+        )
+        ecsw_plan["mu_target_selected_per_mu"] = [
+            int(v) for v in mu_plan["num_selected_per_mu"]
+        ]
+        print(
+            "[LOCAL-HPROM-RBF] ECSW snapshot selection mode="
+            "local_cluster_param_time_stratified "
+            f"(target per mu: {ecsw_plan['mu_target_selected_per_mu']})."
+        )
 
-        for mu_train in mu_samples:
+        for imu, mu_train in enumerate(mu_samples):
             mu_snaps = load_or_compute_snaps(
                 mu_train,
                 grid_x,
@@ -217,21 +275,33 @@ def main(
                 snap_folder=snap_folder,
             )
 
-            stop_col = num_steps
-            snaps_now = mu_snaps[:, snap_time_offset:stop_col:snap_sample_factor]
-            snaps_prev = mu_snaps[:, 0:stop_col - snap_time_offset:snap_sample_factor]
+            target_count = int(ecsw_plan["mu_target_selected_per_mu"][imu])
+            sel = select_local_cluster_count_snapshot_cols(
+                mu_snaps=mu_snaps,
+                candidate_now_cols=ecsw_plan["candidate_now_cols"],
+                cluster_centers=u0_list,
+                target_count=target_count,
+                random_seed=int(ecsw_random_seed) + 10007 * int(imu),
+                min_per_cluster=ecsw_cluster_min_per_cluster,
+            )
+            now_cols = np.asarray(sel["selected_now_cols"], dtype=int)
+            cand_counts = np.asarray(sel["candidate_counts_by_cluster"], dtype=int)
+            sel_counts = np.asarray(sel["selected_counts_by_cluster"], dtype=int)
 
-            if snaps_now.shape[1] != snaps_prev.shape[1]:
-                raise RuntimeError(
-                    "ECSW snapshot alignment failed: "
-                    f"snaps_now has {snaps_now.shape[1]} columns, "
-                    f"snaps_prev has {snaps_prev.shape[1]} columns."
-                )
+            ecsw_plan["selected_now_cols_by_mu"].append(now_cols)
+            ecsw_plan["num_selected_per_mu"].append(int(now_cols.size))
+            ecsw_plan["cluster_candidates_per_mu"].append(cand_counts.tolist())
+            ecsw_plan["cluster_selected_per_mu"].append(sel_counts.tolist())
+            print(
+                f"[LOCAL-HPROM-RBF] mu={mu_train}: selected {int(now_cols.size)} "
+                f"snapshot pairs (cluster counts: {sel_counts.tolist()})."
+            )
+            prev_cols = now_cols - snap_time_offset
+            snaps_now = mu_snaps[:, now_cols]
+            snaps_prev = mu_snaps[:, prev_cols]
+
             if snaps_now.shape[1] == 0:
-                raise RuntimeError(
-                    "ECSW training produced zero columns. "
-                    "Adjust snap_time_offset or snap_sample_factor."
-                )
+                continue
 
             print(f"[LOCAL-HPROM-RBF] Building ECSW training block for mu={mu_train}")
             Ci = compute_ECSW_training_matrix_2D_rbf_local(
@@ -252,8 +322,38 @@ def main(
                 max_gn_its=max_its_ic,
                 tol_rel=min_delta,
                 init_cluster=init_cluster,
+                selector_mode=selector_mode,
             )
             Clist.append(Ci)
+
+        ecsw_plan["num_selected_total"] = int(np.sum(ecsw_plan["num_selected_per_mu"]))
+        print(
+            "[LOCAL-HPROM-RBF] ECSW snapshot selection mode="
+            f"{ecsw_plan['mode']}, selected {ecsw_plan['num_selected_total']} / "
+            f"{ecsw_plan['num_candidates_total']} candidate pairs."
+        )
+        print(
+            f"[LOCAL-HPROM-RBF] Selected snapshots per mu: {ecsw_plan['num_selected_per_mu']}"
+        )
+        ecsw_sampling_3d_plot_path = os.path.join(
+            results_dir, "local_hprom_rbf_ecsw_sampling_3d.png"
+        )
+        save_ecsw_sampling_3d_plot(
+            mu_points=mu_samples,
+            dt=dt,
+            ecsw_plan=ecsw_plan,
+            out_path=ecsw_sampling_3d_plot_path,
+            title="Local HPROM-RBF ECSW Snapshot Selection in $(\\mu_1,\\mu_2,t)$",
+        )
+        print(
+            f"[LOCAL-HPROM-RBF] 3D sampling plot saved to: {ecsw_sampling_3d_plot_path}"
+        )
+
+        if not Clist:
+            raise RuntimeError(
+                "ECSW training produced zero columns for all mu samples. "
+                "Increase snapshot selection percentage/count or adjust snap_time_offset."
+            )
 
         C = np.vstack(Clist)
         C_shape = C.shape
@@ -352,6 +452,7 @@ def main(
         tol_ic=tol_ic,
         linear_solver=linear_solver,
         normal_eq_reg=normal_eq_reg,
+        selector_mode=selector_mode,
     )
     elapsed_hprom = time.time() - t0
 
@@ -481,8 +582,11 @@ def main(
                     ("snap_folder", snap_folder),
                     ("dt", dt),
                     ("num_steps", num_steps),
-                    ("snap_sample_factor", snap_sample_factor),
                     ("snap_time_offset", snap_time_offset),
+                    ("ecsw_sampling_policy", ecsw_snapshot_mode),
+                    ("ecsw_snapshot_percent", ecsw_snapshot_percent),
+                    ("ecsw_random_seed", ecsw_random_seed),
+                    ("ecsw_cluster_min_per_cluster", ecsw_cluster_min_per_cluster),
                     ("mu_samples", mu_samples),
                     ("relnorm_cutoff", relnorm_cutoff),
                     ("min_delta", min_delta),
@@ -495,6 +599,7 @@ def main(
                         normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
                     ),
                     ("init_cluster", init_cluster),
+                    ("selector_mode", selector_mode),
                     ("verbose", bool(verbose)),
                 ],
             ),
@@ -525,6 +630,26 @@ def main(
                     ("ecsw_time_seconds", elapsed_ecsw),
                     ("ecsw_residual", ecsw_residual),
                     ("training_matrix_shape", C_shape),
+                    (
+                        "snapshot_candidates_total",
+                        ecsw_plan["num_candidates_total"] if ecsw_plan is not None else None,
+                    ),
+                    (
+                        "snapshot_selected_total",
+                        ecsw_plan["num_selected_total"] if ecsw_plan is not None else None,
+                    ),
+                    (
+                        "snapshot_selected_per_mu",
+                        ecsw_plan["num_selected_per_mu"] if ecsw_plan is not None else None,
+                    ),
+                    (
+                        "snapshot_cluster_candidates_per_mu",
+                        ecsw_plan.get("cluster_candidates_per_mu") if ecsw_plan is not None else None,
+                    ),
+                    (
+                        "snapshot_cluster_selected_per_mu",
+                        ecsw_plan.get("cluster_selected_per_mu") if ecsw_plan is not None else None,
+                    ),
                 ],
             ),
             (
@@ -566,6 +691,7 @@ def main(
                     ("comparison_plot_png", fig_path),
                     ("ecsw_weights_npy", weights_file),
                     ("ecsw_reduced_mesh_png", reduced_mesh_plot_path),
+                    ("ecsw_sampling_3d_png", ecsw_sampling_3d_plot_path),
                     ("summary_txt", report_path),
                 ],
             ),

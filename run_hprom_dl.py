@@ -29,11 +29,13 @@ from burgers.core import (
     plot_snaps,
     inviscid_burgers_res2D,
     inviscid_burgers_exact_jac2D,
+    get_snapshot_params,
 )
 from burgers.pod_dl_manifold import (
     compute_ECSW_training_matrix_2D_pod_dl,
     inviscid_burgers_implicit2D_LSPG_pod_dl_2D_ecsw,
 )
+from burgers.ecsw_utils import build_ecsw_snapshot_plan
 from burgers.empirical_cubature_method import EmpiricalCubatureMethod
 from burgers.randomized_singular_value_decomposition import (
     RandomizedSingularValueDecomposition,
@@ -456,9 +458,10 @@ def main(
     num_steps=NUM_STEPS,
     uref_mode="auto",
     uref_file=None,
-    snap_sample_factor=10,
     snap_time_offset=3,
     mu_samples=None,
+    ecsw_snapshot_percent=10.0,
+    ecsw_random_seed=42,
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
     max_its=20,
@@ -467,13 +470,18 @@ def main(
     solver_threads=1,
 ):
     if mu_samples is None:
-        mu_samples = [[4.25, 0.0225]]
+        mu_samples = get_snapshot_params()
     mu_samples = [list(mu) for mu in mu_samples]
 
-    if snap_sample_factor < 1:
-        raise ValueError("snap_sample_factor must be >= 1.")
     if snap_time_offset < 1:
         raise ValueError("snap_time_offset must be >= 1.")
+    ecsw_snapshot_percent = float(ecsw_snapshot_percent)
+    if not np.isfinite(ecsw_snapshot_percent) or ecsw_snapshot_percent <= 0.0:
+        raise ValueError("ecsw_snapshot_percent must be a finite value > 0.")
+    ecsw_snapshot_mode = "global_param_time_stratified"
+    ecsw_total_snapshots = None
+    ecsw_total_snapshots_percent = ecsw_snapshot_percent
+    ecsw_ensure_mu_coverage = True
 
     results_dir = "Results"
     if snap_folder is None:
@@ -543,13 +551,31 @@ def main(
     ecsw_residual = None
     reduced_mesh_plot_path = None
     weights_source = None
+    ecsw_plan = None
 
     with _solver_thread_limit(solver_threads):
         if compute_ecsw:
             clist = []
             t0 = time.time()
+            ecsw_plan = build_ecsw_snapshot_plan(
+                num_steps=num_steps,
+                snap_time_offset=snap_time_offset,
+                num_mu=len(mu_samples),
+                    mode=ecsw_snapshot_mode,
+                total_snapshots=ecsw_total_snapshots,
+                total_snapshots_percent=ecsw_total_snapshots_percent,
+                random_seed=ecsw_random_seed,
+                ensure_mu_coverage=ecsw_ensure_mu_coverage,
+                mu_points=mu_samples,
+            )
+            print(
+                "[HPROM-DL] ECSW snapshot selection mode="
+                f"{ecsw_plan['mode']}, selected {ecsw_plan['num_selected_total']} / "
+                f"{ecsw_plan['num_candidates_total']} candidate pairs."
+            )
+            print(f"[HPROM-DL] Selected snapshots per mu: {ecsw_plan['num_selected_per_mu']}")
 
-            for mu_train in mu_samples:
+            for imu, mu_train in enumerate(mu_samples):
                 mu_snaps = load_or_compute_snaps(
                     mu_train,
                     grid_x,
@@ -560,21 +586,13 @@ def main(
                     snap_folder=snap_folder,
                 )
 
-                stop_col = num_steps
-                snaps_now = mu_snaps[:, snap_time_offset:stop_col:snap_sample_factor]
-                snaps_prev = mu_snaps[:, 0:stop_col - snap_time_offset:snap_sample_factor]
+                now_cols = np.asarray(ecsw_plan["selected_now_cols_by_mu"][imu], dtype=int)
+                prev_cols = now_cols - snap_time_offset
+                snaps_now = mu_snaps[:, now_cols]
+                snaps_prev = mu_snaps[:, prev_cols]
 
-                if snaps_now.shape[1] != snaps_prev.shape[1]:
-                    raise RuntimeError(
-                        "ECSW snapshot alignment failed: "
-                        f"snaps_now has {snaps_now.shape[1]} columns, "
-                        f"snaps_prev has {snaps_prev.shape[1]} columns."
-                    )
                 if snaps_now.shape[1] == 0:
-                    raise RuntimeError(
-                        "ECSW training produced zero columns. "
-                        "Adjust snap_time_offset or snap_sample_factor."
-                    )
+                    continue
 
                 print(f"[HPROM-DL] Generating ECSW training block for mu={mu_train}")
                 ci = compute_ECSW_training_matrix_2D_pod_dl(
@@ -591,6 +609,12 @@ def main(
                     u_ref=u_ref,
                 )
                 clist.append(ci)
+
+            if not clist:
+                raise RuntimeError(
+                    "ECSW training produced zero columns for all mu samples. "
+                    "Increase ecsw_snapshot_percent or adjust snap_time_offset."
+                )
 
             c = np.vstack(clist)
             c_shape = c.shape
@@ -801,8 +825,10 @@ def main(
                     ("snap_folder", snap_folder),
                     ("dt", dt),
                     ("num_steps", num_steps),
-                    ("snap_sample_factor", snap_sample_factor),
                     ("snap_time_offset", snap_time_offset),
+                    ("ecsw_sampling_policy", ecsw_snapshot_mode),
+                    ("ecsw_snapshot_percent", ecsw_snapshot_percent),
+                    ("ecsw_random_seed", ecsw_random_seed),
                     ("mu_samples", mu_samples),
                     ("relnorm_cutoff", relnorm_cutoff),
                     ("min_delta", min_delta),
@@ -856,6 +882,18 @@ def main(
                     ("ecsw_time_seconds", elapsed_ecsw),
                     ("ecsw_residual", ecsw_residual),
                     ("training_matrix_shape", c_shape),
+                    (
+                        "snapshot_candidates_total",
+                        ecsw_plan["num_candidates_total"] if ecsw_plan is not None else None,
+                    ),
+                    (
+                        "snapshot_selected_total",
+                        ecsw_plan["num_selected_total"] if ecsw_plan is not None else None,
+                    ),
+                    (
+                        "snapshot_selected_per_mu",
+                        ecsw_plan["num_selected_per_mu"] if ecsw_plan is not None else None,
+                    ),
                 ],
             ),
             (

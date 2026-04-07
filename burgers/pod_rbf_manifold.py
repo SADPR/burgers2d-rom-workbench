@@ -65,6 +65,15 @@ def _cluster_primary_dim(model_k, r_k, n_primary):
     return n_total_k
 
 
+def _resolve_local_selector_mode(selector_mode):
+    mode = str(selector_mode).strip().lower()
+    if mode not in ("linear", "nonlinear"):
+        raise ValueError(
+            "selector_mode must be one of: 'linear', 'nonlinear'."
+        )
+    return mode
+
+
 def _predict_rbf_secondary(
     q_p,
     q_p_train,
@@ -101,6 +110,64 @@ def _predict_rbf_secondary(
         )
 
     raise ValueError(f"Unsupported kernel type: {kernel_name}")
+
+
+def _build_local_selector_coords_rbf(
+    *,
+    state,
+    u0_k,
+    V_k,
+    model_k,
+    n_primary,
+    selector_mode,
+    q_primary_hint=None,
+):
+    """
+    Build reduced coordinates used by local cluster selection for POD-RBF.
+
+    - linear mode: full linear projection V_k^T (state - u0_k)
+    - nonlinear mode: if RBF closure is active, use [q_p, q_s(q_p), 0, ...]
+      with q_p from q_primary_hint (when provided) or from projection;
+      otherwise fallback to linear projection.
+    """
+    q_lin_full = (V_k.T @ (state - u0_k)).reshape(-1)
+    if selector_mode == "linear":
+        return q_lin_full
+
+    r_k = V_k.shape[1]
+    n_total_k = _cluster_total_dim(model_k, r_k)
+    has_rbf = bool(model_k.get("has_rbf", False))
+    n_secondary = int(model_k.get("n_secondary", 0))
+    if (not has_rbf) or (n_secondary <= 0) or (n_total_k <= int(n_primary)):
+        return q_lin_full
+
+    n_primary_k = min(int(n_primary), n_total_k)
+    q_sel = np.zeros(r_k, dtype=float)
+
+    if q_primary_hint is None:
+        q_p_eff = q_lin_full[:n_primary_k].copy()
+    else:
+        q_primary_hint = np.asarray(q_primary_hint, dtype=float).reshape(-1)
+        q_p_eff = np.zeros(n_primary_k, dtype=float)
+        ncopy = min(q_primary_hint.size, n_primary_k)
+        q_p_eff[:ncopy] = q_primary_hint[:ncopy]
+
+    q_sel[:n_primary_k] = q_p_eff
+
+    n_secondary_eff = min(n_secondary, max(0, n_total_k - n_primary_k))
+    if n_secondary_eff > 0:
+        q_s_pred = _predict_rbf_secondary(
+            q_p=q_p_eff,
+            q_p_train=np.asarray(model_k["q_p_train"], dtype=float),
+            W=np.asarray(model_k["W"], dtype=float),
+            epsilon=float(model_k["epsilon"]),
+            scaler=model_k["scaler"],
+            kernel_name=model_k.get("kernel_name", "gaussian"),
+            echo_level=0,
+        )
+        q_sel[n_primary_k : n_primary_k + n_secondary_eff] = q_s_pred[:n_secondary_eff]
+
+    return q_sel
 
 
 def _rbf_secondary_jacobian(
@@ -656,6 +723,7 @@ def compute_ECSW_training_matrix_2D_rbf_local(
     max_gn_its=20,
     tol_rel=1e-2,
     init_cluster=None,
+    selector_mode="linear",
 ):
     """
     ECSW training matrix for the local POD-RBF ROM.
@@ -663,6 +731,7 @@ def compute_ECSW_training_matrix_2D_rbf_local(
     n_tot, n_snaps = snaps.shape
     n_hdm = n_tot // 2
     K = len(V_list)
+    selector_mode = _resolve_local_selector_mode(selector_mode)
 
     r_dof = []
     for k in range(K):
@@ -700,7 +769,15 @@ def compute_ECSW_training_matrix_2D_rbf_local(
 
         V_k0 = np.asarray(V_list[k0], dtype=float)
         u0_k0 = np.asarray(u0_list[k0], dtype=float)
-        y_k0 = V_k0.T @ (u_i - u0_k0)
+        y_k0 = _build_local_selector_coords_rbf(
+            state=u_i,
+            u0_k=u0_k0,
+            V_k=V_k0,
+            model_k=models[k0],
+            n_primary=n_primary,
+            selector_mode=selector_mode,
+            q_primary_hint=None,
+        )
 
         k = select_cluster_reduced(k0, y_k0, d_const, g_list)
 
@@ -928,6 +1005,7 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_rbf(
     tol_ic=1e-10,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    selector_mode="linear",
 ):
     """
     Local POD-RBF manifold ROM for the 2D inviscid Burgers equation.
@@ -935,6 +1013,7 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_rbf(
     w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
     N = w0.size
     K = len(V_list)
+    selector_mode = _resolve_local_selector_mode(selector_mode)
 
     if d_const.shape != (K, K):
         raise ValueError(f"d_const has shape {d_const.shape}, expected ({K}, {K})")
@@ -1007,7 +1086,15 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_rbf(
         if verbose:
             print(f"[LOCAL-POD-RBF] Timestep {it}/{num_steps}")
 
-        q_full_k = V_k.T @ (wp - u0_k)
+        q_full_k = _build_local_selector_coords_rbf(
+            state=wp,
+            u0_k=u0_k,
+            V_k=V_k,
+            model_k=models[k],
+            n_primary=n_primary,
+            selector_mode=selector_mode,
+            q_primary_hint=qp if selector_mode == "nonlinear" else None,
+        )
         k_new = select_cluster_reduced(k, q_full_k, d_const, g_list)
 
         if k_new != k:
@@ -1298,12 +1385,14 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_rbf_ecsw(
     tol_ic=1e-10,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    selector_mode="linear",
 ):
     """
     ECSW local POD-RBF manifold ROM for the 2D inviscid Burgers equation.
     """
     w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
     weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+    selector_mode = _resolve_local_selector_mode(selector_mode)
 
     N_full = w0.size
     N_cells = N_full // 2
@@ -1417,7 +1506,19 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_rbf_ecsw(
         if verbose and (it % 10 == 0 or it == num_steps - 1):
             print(f"[LOCAL-POD-RBF-ECSW] Timestep {it}/{num_steps}")
 
-        k_new = select_cluster_reduced_trunc(k, qp, d_const, g_list, n_dof_k)
+        if selector_mode == "linear":
+            k_new = select_cluster_reduced_trunc(k, qp, d_const, g_list, n_dof_k)
+        else:
+            q_full_k = _build_local_selector_coords_rbf(
+                state=wp_full,
+                u0_k=u0_k,
+                V_k=V_k,
+                model_k=models[k],
+                n_primary=n_primary,
+                selector_mode=selector_mode,
+                q_primary_hint=qp,
+            )
+            k_new = select_cluster_reduced(k, q_full_k, d_const, g_list)
 
         if k_new != k:
             if verbose:

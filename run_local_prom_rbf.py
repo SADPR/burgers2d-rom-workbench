@@ -105,6 +105,7 @@ def main(
     normal_eq_reg=1e-12,
     init_cluster=None,
     verbose=True,
+    selector_mode="nonlinear",
 ):
     results_dir = "Results"
     if snap_folder is None:
@@ -119,6 +120,9 @@ def main(
     grid_y = GRID_Y
     w0 = np.asarray(W0, dtype=np.float64).reshape(-1).copy()
     mu_rom = [float(mu1), float(mu2)]
+    selector_mode = str(selector_mode).strip().lower()
+    if selector_mode not in ("linear", "nonlinear"):
+        raise ValueError("selector_mode must be one of: 'linear', 'nonlinear'.")
 
     num_cells_x = grid_x.size - 1
     num_cells_y = grid_y.size - 1
@@ -154,6 +158,7 @@ def main(
         "[LOCAL-PROM-RBF] Clusters with active RBF closure: "
         f"{sum(has_rbf_flags)}/{K}"
     )
+    print(f"[LOCAL-PROM-RBF] Cluster selector mode: {selector_mode}")
     print(f"[LOCAL-PROM-RBF] Reduced linear solver: {linear_solver}")
     if str(linear_solver).strip().lower() == "normal_eq":
         print(f"[LOCAL-PROM-RBF] normal_eq_reg: {float(normal_eq_reg):.3e}")
@@ -181,6 +186,7 @@ def main(
         tol_ic=tol_ic,
         linear_solver=linear_solver,
         normal_eq_reg=normal_eq_reg,
+        selector_mode=selector_mode,
     )
     elapsed_rom = time.time() - t0
 
@@ -321,6 +327,7 @@ def main(
                         normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
                     ),
                     ("init_cluster", init_cluster),
+                    ("selector_mode", selector_mode),
                     ("verbose", bool(verbose)),
                 ],
             ),

@@ -307,21 +307,24 @@ def build_local_qm_bases(
     )
 
 
-def precompute_quantities(u0_list, uc_list, V_list):
+def precompute_quantities(u0_list, uc_list, V_list, H_list):
     K = len(V_list)
     d_const = np.zeros((K, K), dtype=np.float64)
     g_list = np.empty((K, K), dtype=object)
+    m_list = np.empty((K, K), dtype=object)
     T_list = np.empty((K, K), dtype=object)
     h_list = np.empty((K, K), dtype=object)
 
     for k in range(K):
         u0_k = np.asarray(u0_list[k], dtype=np.float64)
         V_k = np.asarray(V_list[k], dtype=np.float64)
+        H_k = np.asarray(H_list[k], dtype=np.float64)
         for l in range(K):
             uc_l = np.asarray(uc_list[l], dtype=np.float64)
             diff = u0_k - uc_l
             d_const[k, l] = float(diff @ diff)
             g_list[k, l] = V_k.T @ diff
+            m_list[k, l] = H_k.T @ diff
 
     for l in range(K):
         V_l = np.asarray(V_list[l], dtype=np.float64)
@@ -332,7 +335,7 @@ def precompute_quantities(u0_list, uc_list, V_list):
             T_list[l, k] = V_l.T @ V_k
             h_list[l, k] = V_l.T @ (u0_k - u0_l)
 
-    return d_const, g_list, T_list, h_list
+    return d_const, g_list, m_list, T_list, h_list
 
 
 def save_npz(filename, **kwargs):
@@ -410,7 +413,9 @@ def main():
     elapsed_local_qm = time.time() - t0
 
     t0 = time.time()
-    d_const, g_list, T_list, h_list = precompute_quantities(u0_list, uc_list, V_list)
+    d_const, g_list, m_list, T_list, h_list = precompute_quantities(
+        u0_list, uc_list, V_list, H_list
+    )
     elapsed_precompute = time.time() - t0
 
     t0 = time.time()
@@ -428,6 +433,7 @@ def main():
         cluster_indices=as_object_array(cluster_indices),
         d_const=d_const,
         g_list=g_list,
+        m_list=m_list,
         T_list=T_list,
         h_list=h_list,
     )
@@ -502,6 +508,7 @@ def main():
                 "outputs",
                 [
                     ("local_qm_model_npz", local_model_file),
+                    ("m_list_shape", m_list.shape),
                     ("summary_txt", report_path),
                 ],
             ),

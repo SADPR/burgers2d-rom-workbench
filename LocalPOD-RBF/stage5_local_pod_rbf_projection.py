@@ -312,6 +312,7 @@ def main(
     snap_folder=os.path.join(parent_dir, "Results", "param_snaps"),
     local_model_file=os.path.join(script_dir, "local_pod_rbf_all_offline.npz"),
     output_dir=script_dir,
+    selector_mode="nonlinear",
 ):
 
     os.makedirs(output_dir, exist_ok=True)
@@ -320,6 +321,9 @@ def main(
     print(f"[ONLINE-RBF] dt={dt}, num_steps={num_steps}")
     print(f"[ONLINE-RBF] Snap folder: {snap_folder}")
     print(f"[ONLINE-RBF] Offline model file: {local_model_file}")
+    selector_mode = str(selector_mode).strip().lower()
+    if selector_mode not in ("linear", "nonlinear"):
+        raise ValueError("selector_mode must be one of: 'linear', 'nonlinear'.")
 
     # ---------------- Load offline local POD–RBF model ----------------
     print(f"\n[ONLINE-RBF] Loading local POD–RBF model...")
@@ -335,6 +339,7 @@ def main(
 
     K = len(V_list)
     print(f"[ONLINE-RBF] Loaded {K} clusters. n_primary = {n_primary}\n")
+    print(f"[ONLINE-RBF] Cluster selector mode = {selector_mode}")
 
     # ---------------- Load HDM trajectory ----------------
     print(f"[ONLINE-RBF] Loading HDM for μ1={mu1:.3f}, μ2={mu2:.3f}")
@@ -376,6 +381,8 @@ def main(
         u0_k = u0_list[k_current]
         V_k  = V_list[k_current]
         y_k  = V_k.T @ (u_t - u0_k)
+        if selector_mode == "nonlinear":
+            _, y_k = local_pod_rbf_project(u_t, k_current, u0_list, V_list, models, n_primary)
 
         # One-step Grimberg reduced-space update
         k_new = select_cluster_reduced(k_current, y_k, d_const, g_list)
@@ -522,6 +529,7 @@ def main(
                     ("offline_model_file", local_model_file),
                     ("n_clusters", int(K)),
                     ("n_primary", int(n_primary)),
+                    ("selector_mode", selector_mode),
                 ],
             ),
             (

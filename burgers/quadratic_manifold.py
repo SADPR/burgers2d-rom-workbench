@@ -21,6 +21,7 @@ from .gauss_newton import (
 )
 from .quadratic_manifold_utils import u_qm
 from .quadratic_manifold_utils import J_qm
+from .quadratic_manifold_utils import build_Q_symmetric
 
 
 def _select_initial_cluster(w, uc_list):
@@ -44,6 +45,59 @@ def _prepare_reference(u_ref, size):
     if u_ref.size != size:
         raise ValueError(f"u_ref has size {u_ref.size}, expected {size}")
     return u_ref
+
+
+def _normalize_local_qm_selector_mode(selector_mode):
+    mode = str(selector_mode).strip().lower()
+    if mode not in ("linear", "quadratic"):
+        raise ValueError(
+            "selector_mode must be one of: 'linear', 'quadratic'."
+        )
+    return mode
+
+
+def _precompute_local_qm_quadratic_selector_terms(u0_list, uc_list, H_list):
+    """
+    Precompute nonlinear selector vectors:
+
+        m_{k,l} = H_k^T (u0_k - uc_l)
+
+    so that
+
+        score_l = 2 g_{k,l}^T q_k + 2 m_{k,l}^T Q(q_k) + d_const[k,l].
+    """
+    K = len(H_list)
+    m_list = [[None for _ in range(K)] for _ in range(K)]
+    for k in range(K):
+        u0_k = np.asarray(u0_list[k], dtype=np.float64).reshape(-1)
+        H_k = np.asarray(H_list[k], dtype=np.float64)
+        for l in range(K):
+            uc_l = np.asarray(uc_list[l], dtype=np.float64).reshape(-1)
+            diff = u0_k - uc_l
+            m_list[k][l] = (H_k.T @ diff).reshape(-1)
+    return m_list
+
+
+def _select_cluster_reduced_quadratic(k_current, q_k, d_const, g_list, m_list):
+    """
+    Quadratic-manifold reduced selector:
+
+        l* = argmin_l (2 g_{k,l}^T q_k + 2 m_{k,l}^T Q(q_k) + d_const[k,l]).
+    """
+    K = d_const.shape[0]
+    q_k = np.asarray(q_k, dtype=np.float64).reshape(-1)
+    Q_k, _ = build_Q_symmetric(q_k)
+
+    scores = np.empty(K, dtype=np.float64)
+    for l in range(K):
+        g_kl = np.asarray(g_list[k_current][l], dtype=np.float64).reshape(-1)
+        m_kl = np.asarray(m_list[k_current][l], dtype=np.float64).reshape(-1)
+        scores[l] = (
+            2.0 * (g_kl @ q_k)
+            + 2.0 * (m_kl @ Q_k)
+            + d_const[k_current, l]
+        )
+    return int(np.argmin(scores))
 
 
 def inviscid_burgers_implicit2D_LSPG_qm(
@@ -367,6 +421,7 @@ def compute_ECSW_training_matrix_2D_qm_local(
     snaps,
     prev_snaps,
     u0_list,
+    uc_list,
     V_list,
     H_list,
     d_const,
@@ -379,6 +434,8 @@ def compute_ECSW_training_matrix_2D_qm_local(
     mu,
     max_gn_its=20,
     tol_rel=1e-2,
+    selector_mode="linear",
+    m_list=None,
 ):
     """
     ECSW training matrix for the local quadratic-manifold ROM.
@@ -386,6 +443,18 @@ def compute_ECSW_training_matrix_2D_qm_local(
     n_tot, n_snaps = snaps.shape
     n_hdm = n_tot // 2
     r_max = max(V.shape[1] for V in V_list)
+    selector_mode = _normalize_local_qm_selector_mode(selector_mode)
+
+    if selector_mode == "quadratic" and m_list is None:
+        if uc_list is None:
+            raise ValueError(
+                "Quadratic selector requires uc_list or precomputed m_list."
+            )
+        m_list = _precompute_local_qm_quadratic_selector_terms(
+            u0_list=u0_list,
+            uc_list=uc_list,
+            H_list=H_list,
+        )
 
     C = np.zeros((r_max * n_snaps, n_hdm))
 
@@ -401,7 +470,16 @@ def compute_ECSW_training_matrix_2D_qm_local(
         u0_k0 = u0_list[k0]
         y_k0 = V_k0.T @ (u_i - u0_k0)
 
-        k = select_cluster_reduced(k0, y_k0, d_const, g_list)
+        if selector_mode == "linear":
+            k = select_cluster_reduced(k0, y_k0, d_const, g_list)
+        else:
+            k = _select_cluster_reduced_quadratic(
+                k_current=k0,
+                q_k=y_k0,
+                d_const=d_const,
+                g_list=g_list,
+                m_list=m_list,
+            )
 
         u0_k = u0_list[k]
         V_k = V_list[k]
@@ -467,6 +545,8 @@ def inviscid_burgers_implicit2D_LSPG_local_qm(
     tol_q0=1e-6,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    selector_mode="linear",
+    m_list=None,
 ):
     """
     Local quadratic-manifold LSPG ROM for the 2D inviscid Burgers equation:
@@ -475,6 +555,14 @@ def inviscid_burgers_implicit2D_LSPG_local_qm(
     """
 
     w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
+    selector_mode = _normalize_local_qm_selector_mode(selector_mode)
+
+    if selector_mode == "quadratic" and m_list is None:
+        m_list = _precompute_local_qm_quadratic_selector_terms(
+            u0_list=u0_list,
+            uc_list=uc_list,
+            H_list=H_list,
+        )
 
     N = w0.size
     K = len(V_list)
@@ -521,7 +609,16 @@ def inviscid_burgers_implicit2D_LSPG_local_qm(
     for it in range(num_steps):
         print(f"[LOCAL-QM-LSPG] Timestep {it}/{num_steps}")
 
-        k_new = select_cluster_reduced(k, qp, d_const, g_list)
+        if selector_mode == "linear":
+            k_new = select_cluster_reduced(k, qp, d_const, g_list)
+        else:
+            k_new = _select_cluster_reduced_quadratic(
+                k_current=k,
+                q_k=qp,
+                d_const=d_const,
+                g_list=g_list,
+                m_list=m_list,
+            )
 
         if k_new != k:
             print(f"  -> Cluster switch: {k} -> {k_new}")
@@ -616,6 +713,8 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
     tol_q0=1e-6,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    selector_mode="linear",
+    m_list=None,
 ):
     """
     Local quadratic-manifold ECSW-LSPG HROM for the 2D inviscid Burgers equation:
@@ -625,6 +724,14 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
 
     w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
     weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+    selector_mode = _normalize_local_qm_selector_mode(selector_mode)
+
+    if selector_mode == "quadratic" and m_list is None:
+        m_list = _precompute_local_qm_quadratic_selector_terms(
+            u0_list=u0_list,
+            uc_list=uc_list,
+            H_list=H_list,
+        )
 
     N_full = w0.size
     N_cells = N_full // 2
@@ -720,7 +827,16 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
     for it in range(num_steps):
         print(f"[LOCAL-QM-LSPG-ECSW] Timestep {it}/{num_steps}")
 
-        k_new = select_cluster_reduced(k, qp, d_const, g_list)
+        if selector_mode == "linear":
+            k_new = select_cluster_reduced(k, qp, d_const, g_list)
+        else:
+            k_new = _select_cluster_reduced_quadratic(
+                k_current=k,
+                q_k=qp,
+                d_const=d_const,
+                g_list=g_list,
+                m_list=m_list,
+            )
 
         if k_new != k:
             print(f"  -> Cluster switch: {k} -> {k_new}")

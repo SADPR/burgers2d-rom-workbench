@@ -121,6 +121,7 @@ def main(
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
     verbose=True,
+    selector_mode="nonlinear",
 ):
     results_dir = "Results"
     if snap_folder is None:
@@ -144,6 +145,9 @@ def main(
         raise ValueError(
             "jacobian_mode must be one of: 'auto', 'analytic', 'forward_fd', 'central_fd'."
         )
+    selector_mode = str(selector_mode).strip().lower()
+    if selector_mode not in ("linear", "nonlinear"):
+        raise ValueError("selector_mode must be one of: 'linear', 'nonlinear'.")
 
     print("\n====================================================")
     print("           LOCAL POD-GPR PROM")
@@ -193,6 +197,7 @@ def main(
         f"{sum(has_gpr_flags)}/{K}"
     )
     print(f"[LOCAL-PROM-GPR] Jacobian mode: {jacobian_mode}")
+    print(f"[LOCAL-PROM-GPR] Cluster selector mode: {selector_mode}")
     print(f"[LOCAL-PROM-GPR] Reduced linear solver: {linear_solver}")
     if str(linear_solver).strip().lower() == "normal_eq":
         print(f"[LOCAL-PROM-GPR] normal_eq_reg: {float(normal_eq_reg):.3e}")
@@ -223,6 +228,7 @@ def main(
         tol_ic=tol_ic,
         linear_solver=linear_solver,
         normal_eq_reg=normal_eq_reg,
+        selector_mode=selector_mode,
     )
     elapsed_rom = time.time() - t0
 
@@ -365,6 +371,7 @@ def main(
                     ("init_cluster", init_cluster),
                     ("use_custom_predict", bool(use_custom_predict)),
                     ("jacobian_mode", jacobian_mode),
+                    ("selector_mode", selector_mode),
                     ("fd_eps", fd_eps),
                     ("verbose", bool(verbose)),
                 ],

@@ -86,6 +86,14 @@ def load_local_qm_model(filename):
         for l in range(K):
             g_list[k][l] = np.asarray(g_raw[k, l], dtype=np.float64).reshape(-1)
 
+    m_list = None
+    if "m_list" in data.files:
+        m_raw = np.asarray(data["m_list"], dtype=object)
+        m_list = [[None for _ in range(K)] for _ in range(K)]
+        for k in range(K):
+            for l in range(K):
+                m_list[k][l] = np.asarray(m_raw[k, l], dtype=np.float64).reshape(-1)
+
     n_list = (
         np.asarray(data["n_list"], dtype=int).tolist()
         if "n_list" in data.files
@@ -97,7 +105,19 @@ def load_local_qm_model(filename):
         else None
     )
 
-    return S_shape, u0_list, uc_list, V_list, H_list, cluster_indices, d_const, g_list, n_list, n_trad_list
+    return (
+        S_shape,
+        u0_list,
+        uc_list,
+        V_list,
+        H_list,
+        cluster_indices,
+        d_const,
+        g_list,
+        m_list,
+        n_list,
+        n_trad_list,
+    )
 
 
 def main(
@@ -114,6 +134,7 @@ def main(
     init_cluster=None,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    selector_mode="quadratic",
 ):
     results_dir = "Results"
     snap_folder = os.path.join(results_dir, "param_snaps")
@@ -126,6 +147,9 @@ def main(
     grid_y = GRID_Y
     w0 = np.asarray(W0, dtype=np.float64).copy()
     mu_rom = [mu1, mu2]
+    selector_mode = str(selector_mode).strip().lower()
+    if selector_mode not in ("linear", "quadratic"):
+        raise ValueError("selector_mode must be one of: 'linear', 'quadratic'.")
 
     num_cells_x = grid_x.size - 1
     num_cells_y = grid_y.size - 1
@@ -146,6 +170,7 @@ def main(
         cluster_indices,
         d_const,
         g_list,
+        m_list,
         n_list,
         n_trad_list,
     ) = load_local_qm_model(local_model_file)
@@ -161,6 +186,7 @@ def main(
     print(f"[LOCAL-QPROM] Reduced linear solver: {linear_solver}")
     if str(linear_solver).strip().lower() == "normal_eq":
         print(f"[LOCAL-QPROM] normal_eq_reg: {float(normal_eq_reg):.3e}")
+    print(f"[LOCAL-QPROM] Cluster selector mode: {selector_mode}")
 
     t0 = time.time()
     rom_snaps_qm, stats = inviscid_burgers_implicit2D_LSPG_local_qm(
@@ -184,6 +210,8 @@ def main(
         tol_q0=tol_q0,
         linear_solver=linear_solver,
         normal_eq_reg=normal_eq_reg,
+        selector_mode=selector_mode,
+        m_list=m_list,
     )
     elapsed_qprom = time.time() - t0
 
@@ -286,7 +314,8 @@ def main(
                 "configuration",
                 [
                     ("local_model_file", local_model_file),
-                    ("cluster_selector", "select_cluster_reduced (internal in local_qm solver)"),
+                    ("cluster_selector", "linear or quadratic (internal in local_qm solver)"),
+                    ("selector_mode", selector_mode),
                     ("relnorm_cutoff", relnorm_cutoff),
                     ("min_delta", min_delta),
                     ("max_its", max_its),
@@ -321,6 +350,7 @@ def main(
                     ("retained_modes_per_cluster", mode_counts),
                     ("n_trad_per_cluster", n_trad_list),
                     ("d_const_shape", d_const.shape),
+                    ("m_list_available_in_npz", m_list is not None),
                 ],
             ),
             (

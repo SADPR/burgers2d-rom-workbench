@@ -80,6 +80,7 @@ def load_local_qm_data(filename=None):
     cluster_indices = [np.asarray(idx, dtype=int) for idx in data["cluster_indices"]]
     d_const = np.asarray(data["d_const"], dtype=np.float64)
     g_list = data["g_list"]
+    m_list = data["m_list"] if "m_list" in data.files else None
     T_list = data["T_list"]
     h_list = data["h_list"]
     n_list = (
@@ -99,6 +100,7 @@ def load_local_qm_data(filename=None):
         cluster_indices,
         d_const,
         g_list,
+        m_list,
         T_list,
         h_list,
     )
@@ -124,6 +126,17 @@ def select_cluster_reduced(k_current, q_k, d_const, g_list):
     return int(np.argmin(scores))
 
 
+def select_cluster_reduced_quadratic(k_current, q_k, d_const, g_list, m_list):
+    K = d_const.shape[0]
+    Q_k = build_Q_quadratic_symmetric_vec(q_k)
+    scores = np.empty(K, dtype=np.float64)
+    for l in range(K):
+        g_kl = np.asarray(g_list[k_current, l], dtype=np.float64)
+        m_kl = np.asarray(m_list[k_current, l], dtype=np.float64)
+        scores[l] = 2.0 * (g_kl @ q_k) + 2.0 * (m_kl @ Q_k) + d_const[k_current, l]
+    return int(np.argmin(scores))
+
+
 def switch_coordinates(q_old, k_old, k_new, T_list, h_list):
     T = np.asarray(T_list[k_new, k_old], dtype=np.float64)
     h = np.asarray(h_list[k_new, k_old], dtype=np.float64)
@@ -146,6 +159,7 @@ def local_qm_project(u, k, u0_list, uref_list, V_list, H_list):
 def main():
     # ---------------- user settings ----------------
     mu1, mu2 = 4.56, 0.019
+    selector_mode = "quadratic"  # "linear" or "quadratic"
     dt, num_steps = DT, NUM_STEPS
     snap_folder = os.path.join(parent_dir, "Results", "param_snaps")
     local_model_file = os.path.join(localquadratic_dir, "local_qm_data.npz")
@@ -162,12 +176,29 @@ def main():
         cluster_indices,
         d_const,
         g_list,
+        m_list,
         T_list,
         h_list,
     ) = load_local_qm_data(local_model_file)
+    m_list_in_file = m_list is not None
+
+    selector_mode = str(selector_mode).strip().lower()
+    if selector_mode not in ("linear", "quadratic"):
+        raise ValueError("selector_mode must be one of: 'linear', 'quadratic'.")
+    if selector_mode == "quadratic" and m_list is None:
+        Ktmp = len(H_list)
+        m_tmp = np.empty((Ktmp, Ktmp), dtype=object)
+        for k in range(Ktmp):
+            u0_k = np.asarray(u0_list[k], dtype=np.float64)
+            H_k = np.asarray(H_list[k], dtype=np.float64)
+            for l in range(Ktmp):
+                uc_l = np.asarray(uc_list[l], dtype=np.float64)
+                m_tmp[k, l] = H_k.T @ (u0_k - uc_l)
+        m_list = m_tmp
 
     K = len(V_list)
     print(f"[ONLINE-QM] Loaded {K} clusters.")
+    print(f"[ONLINE-QM] Cluster selector mode: {selector_mode}")
 
     w0 = np.asarray(W0, dtype=np.float64).copy()
 
@@ -209,7 +240,10 @@ def main():
     for t in range(1, T):
         u_t = hdm_snaps[:, t]
         u_rec_k, q_k = local_qm_project(u_t, k, u0_list, uref_list, V_list, H_list)
-        l_new = select_cluster_reduced(k, q_k, d_const, g_list)
+        if selector_mode == "linear":
+            l_new = select_cluster_reduced(k, q_k, d_const, g_list)
+        else:
+            l_new = select_cluster_reduced_quadratic(k, q_k, d_const, g_list, m_list)
 
         if l_new != k:
             q_l = switch_coordinates(q_k, k, l_new, T_list, h_list)
@@ -315,6 +349,7 @@ def main():
                     ("num_steps", num_steps),
                     ("local_model_file", local_model_file),
                     ("snap_folder", snap_folder),
+                    ("selector_mode", selector_mode),
                 ],
             ),
             (
@@ -324,6 +359,7 @@ def main():
                     ("num_clusters", K),
                     ("cluster_sizes_after_overlap", [int(len(i)) for i in cluster_indices]),
                     ("n_qm_per_cluster", n_list),
+                    ("m_list_available_in_npz", m_list_in_file),
                 ],
             ),
             (

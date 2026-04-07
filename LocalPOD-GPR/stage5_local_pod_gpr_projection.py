@@ -271,6 +271,7 @@ def main(
     local_model_file=os.path.join(script_dir, "local_pod_gpr_all_offline.npz"),
     output_dir=script_dir,
     use_custom_predict=True,
+    selector_mode="nonlinear",
 ):
 
     os.makedirs(output_dir, exist_ok=True)
@@ -279,6 +280,9 @@ def main(
     print(f"[ONLINE-GPR] dt={dt}, num_steps={num_steps}")
     print(f"[ONLINE-GPR] Snap folder: {snap_folder}")
     print(f"[ONLINE-GPR] Offline model file: {local_model_file}")
+    selector_mode = str(selector_mode).strip().lower()
+    if selector_mode not in ("linear", "nonlinear"):
+        raise ValueError("selector_mode must be one of: 'linear', 'nonlinear'.")
 
     # ---------------- Load offline local POD-GPR model ----------------
     print("\n[ONLINE-GPR] Loading local POD-GPR model...")
@@ -294,6 +298,7 @@ def main(
 
     k_count = len(v_list)
     print(f"[ONLINE-GPR] Loaded {k_count} clusters. n_primary = {n_primary}\n")
+    print(f"[ONLINE-GPR] Cluster selector mode = {selector_mode}")
 
     # ---------------- Load HDM trajectory ----------------
     print(f"[ONLINE-GPR] Loading HDM for mu1={mu1:.3f}, mu2={mu2:.3f}")
@@ -335,6 +340,16 @@ def main(
         u0_k = u0_list[k_current]
         v_k = v_list[k_current]
         y_k = v_k.T @ (u_t - u0_k)
+        if selector_mode == "nonlinear":
+            _, y_k = local_pod_gpr_project(
+                u=u_t,
+                k=k_current,
+                u0_list=u0_list,
+                v_list=v_list,
+                models=models,
+                n_primary=n_primary,
+                use_custom_predict=use_custom_predict,
+            )
 
         # One-step Grimberg reduced-space update
         k_new = select_cluster_reduced(k_current, y_k, d_const, g_list)
@@ -484,6 +499,7 @@ def main(
                     ("n_clusters", int(k_count)),
                     ("n_primary", int(n_primary)),
                     ("use_custom_predict", bool(use_custom_predict)),
+                    ("selector_mode", selector_mode),
                 ],
             ),
             (
