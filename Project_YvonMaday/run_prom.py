@@ -174,7 +174,7 @@ def _compute_ecsw_weights(
     num_steps,
     mu_samples,
     snap_folder,
-    snap_sample_factor=10,
+    snap_sample_factor=50,
     snap_time_offset=3,
 ):
     if snap_sample_factor < 1:
@@ -261,7 +261,7 @@ def _load_or_build_ecsw_weights(
     snap_folder,
     stage2_weights_path=None,
     rebuild_weights=False,
-    snap_sample_factor=10,
+    snap_sample_factor=50,
     snap_time_offset=3,
 ):
     os.makedirs(RUNS_ECSW_DIR, exist_ok=True)
@@ -308,9 +308,9 @@ def main(
     use_ecsw=True,
     total_modes=None,
     rebuild_ecsw_weights=False,
-    ecsw_snap_sample_factor=10,
+    ecsw_snap_sample_factor=50,
     ecsw_snap_time_offset=3,
-    ecsw_num_training_mu=1,
+    ecsw_num_training_mu=9,
     use_stage2_ecsw_weights=True,
     save_rom_snaps=True,
     make_plots=True,
@@ -572,8 +572,8 @@ if __name__ == "__main__":
     parser.add_argument("--mu2", type=float, default=0.019, help="Second parameter value")
     parser.add_argument("--total-modes", type=int, default=None, help="Total reduced modes (n_tot)")
     parser.add_argument("--rebuild-ecsw", action="store_true", help="Force ECSW recomputation")
-    parser.add_argument("--ecsw-num-training-mu", type=int, default=1, help="Number of mu trajectories for ECSW training")
-    parser.add_argument("--ecsw-snap-sample-factor", type=int, default=10, help="Snapshot stride for ECSW training")
+    parser.add_argument("--ecsw-num-training-mu", type=int, default=9, help="Number of mu trajectories for ECSW training")
+    parser.add_argument("--ecsw-snap-sample-factor", type=int, default=50, help="Snapshot stride for ECSW training")
     parser.add_argument("--ecsw-snap-time-offset", type=int, default=3, help="Snapshot start offset for ECSW training")
     parser.add_argument("--no-ecsw", action="store_true", help="Disable ECSW even if backend='hprom'")
     parser.add_argument("--no-stage2-ecsw", action="store_true", help="Do not reuse Stage2 ECSW weights")

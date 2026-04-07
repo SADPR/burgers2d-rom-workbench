@@ -55,12 +55,16 @@ Useful flags:
 --backend {prom,hprom}
 --total-modes <int>
 --rebuild-ecsw / --no-rebuild-ecsw
---ecsw-num-training-mu <int>
---ecsw-snap-sample-factor <int>
---ecsw-snap-time-offset <int>
+--ecsw-num-training-mu <int>      # default: 9
+--ecsw-snap-sample-factor <int>   # default: 50
+--ecsw-snap-time-offset <int>     # default: 3
 --no-save-rom-snaps
 --no-plots
 ```
+
+Current HPROM default policy:
+- use all 9 training parameter points for ECSW
+- time-stride 50 for ECSW snapshot pairs (about 2% temporal sampling per mu for 500 steps)
 
 Per-parameter Stage-2 files are now canonical:
 - `mu.npy`
@@ -178,9 +182,9 @@ Useful flags for all `run_prom_ann_case_*` scripts:
 --model-path <absolute_or_relative_checkpoint_path>
 --no-ecsw
 --rebuild-ecsw
---ecsw-num-training-mu <int>
---ecsw-snap-sample-factor <int>
---ecsw-snap-time-offset <int>
+--ecsw-num-training-mu <int>      # default: 9
+--ecsw-snap-sample-factor <int>   # default: 50
+--ecsw-snap-time-offset <int>     # default: 3
 --max-its <int>
 --relnorm-cutoff <float>
 --min-delta <float>

@@ -205,7 +205,7 @@ def _load_or_build_case3_ecsw_weights(
     mu_samples,
     snap_folder,
     rebuild_weights=False,
-    snap_sample_factor=10,
+    snap_sample_factor=50,
     snap_time_offset=3,
 ):
     expected_num_cells = (grid_x.size - 1) * (grid_y.size - 1)
@@ -369,8 +369,8 @@ def main(argv=None):
     )
     parser.add_argument("--no-ecsw", action="store_true", help="Disable ECSW (HPROM falls back to PROM).")
     parser.add_argument("--rebuild-ecsw", action="store_true", help="Recompute ECSW weights.")
-    parser.add_argument("--ecsw-num-training-mu", type=int, default=1)
-    parser.add_argument("--ecsw-snap-sample-factor", type=int, default=10)
+    parser.add_argument("--ecsw-num-training-mu", type=int, default=9)
+    parser.add_argument("--ecsw-snap-sample-factor", type=int, default=50)
     parser.add_argument("--ecsw-snap-time-offset", type=int, default=3)
     parser.add_argument("--max-its", type=int, default=20)
     parser.add_argument("--relnorm-cutoff", type=float, default=1e-5)

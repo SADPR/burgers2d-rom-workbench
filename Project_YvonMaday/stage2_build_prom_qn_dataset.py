@@ -138,7 +138,7 @@ def _compute_ecsw_weights(
     num_steps,
     mu_samples,
     snap_folder,
-    snap_sample_factor=10,
+    snap_sample_factor=50,
     snap_time_offset=3,
 ):
     if snap_sample_factor < 1:
@@ -228,7 +228,7 @@ def _load_or_build_ecsw_weights(
     mu_samples,
     snap_folder,
     rebuild_weights=True,
-    snap_sample_factor=10,
+    snap_sample_factor=50,
     snap_time_offset=3,
 ):
     expected_num_cells = (grid_x.size - 1) * (grid_y.size - 1)
@@ -276,9 +276,9 @@ def main(argv=None):
     linear_solver = "lstsq"
     normal_eq_reg = 1e-12
     rebuild_ecsw_weights = True
-    ecsw_snap_sample_factor = 10
+    ecsw_snap_sample_factor = 50
     ecsw_snap_time_offset = 3
-    ecsw_num_training_mu = 1
+    ecsw_num_training_mu = 9
 
     parser = argparse.ArgumentParser(
         description="Build Stage-2 qN dataset with selectable PROM/HPROM backend."
