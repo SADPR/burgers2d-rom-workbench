@@ -1,0 +1,81 @@
+[run]
+timestamp: 2026-04-08T12:40:27
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+model_dir: POD-DL/pod_dl_model
+basis_file: N/A
+compute_ecsw: True
+weights_file: POD-DL/pod_dl_model/ecsw_weights_dl.npy
+weights_source: computed
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+snap_time_offset: 3
+ecsw_sampling_policy: global_param_time_stratified
+ecsw_snapshot_percent: 2.00000000e+00
+ecsw_random_seed: 42
+mu_samples: [[4.25, 0.015], [4.25, 0.0225], [4.25, 0.03], [4.875, 0.015], [4.875, 0.0225], [4.875, 0.03], [5.5, 0.015], [5.5, 0.0225], [5.5, 0.03]]
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+linear_solver: lstsq
+normal_eq_reg: N/A
+solver_threads: 1
+uref_mode: auto
+use_u_ref: True
+u_ref_source: POD-DL/u_ref.npy
+u_ref_l2_norm: 8.17426148e+02
+provided_uref_file: N/A
+checkpoint_use_u_ref: True
+stage2_use_u_ref: True
+stage2_projection_metadata: POD-DL/stage2_projection_metadata.npz
+
+[discretization]
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[pod_dl_model]
+model_pt: POD-DL/pod_dl_model/pod_dl_autoencoder.pt
+basis_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-DL/basis.npy
+basis_q_shape: (125000, 151)
+q_dim: 151
+latent_dim: 5
+hidden_dims: (192, 96, 48)
+activation: tanh
+scaling: minmax_-1_1
+checkpoint_seed: 42
+
+[ecsw]
+num_nonzero_weights: 451
+weights_sum: 6.25000000e+04
+ecsw_time_seconds: 1.65809086e+02
+ecsw_residual: 2.32877451e-14
+training_matrix_shape: (450, 62500)
+snapshot_candidates_total: 4473
+snapshot_selected_total: 90
+snapshot_selected_per_mu: [10, 10, 10, 10, 10, 10, 10, 10, 10]
+
+[hprom_timing]
+total_hprom_time_seconds: 1.24512064e+01
+avg_hprom_time_per_step_seconds: 2.49024129e-02
+gn_iterations_total: 1949
+avg_gn_iterations_per_step: 3.89800000e+00
+jacobian_time_seconds: 9.21571708e+00
+residual_time_seconds: 1.13651752e+00
+linear_solve_time_seconds: 3.17768812e-01
+hdm_load_or_solve_time_seconds: 2.93302298e-01
+
+[error_metrics]
+relative_l2_error: 1.42174948e-02
+relative_error_percent: 1.42174948e+00
+
+[outputs]
+hprom_snapshots_npy: Results/hprom_dl_snaps_mu1_4.56_mu2_0.019.npy
+latent_trajectory_npy: Results/hprom_dl_latent_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/hprom_dl_mu1_4.56_mu2_0.019.png
+ecsw_weights_npy: POD-DL/pod_dl_model/ecsw_weights_dl.npy
+reduced_mesh_plot_png: Results/hprom_dl_reduced_mesh.png
+summary_txt: Results/hprom_dl_summary_mu1_4.56_mu2_0.019.txt

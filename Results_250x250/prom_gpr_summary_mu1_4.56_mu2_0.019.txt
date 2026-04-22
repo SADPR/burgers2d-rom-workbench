@@ -1,5 +1,5 @@
 [run]
-timestamp: 2026-04-04T07:10:04
+timestamp: 2026-04-06T10:54:36
 mu1: 4.56000000e+00
 mu2: 1.90000000e-02
 
@@ -40,18 +40,18 @@ learned_kernel: 31.6**2 * Matern(length_scale=1.36, nu=1.5)
 analytic_jacobian_compatible: True
 
 [prom_timing]
-total_prom_time_seconds: 1.42462890e+02
-avg_prom_time_per_step_seconds: 2.84925779e-01
+total_prom_time_seconds: 1.34891060e+02
+avg_prom_time_per_step_seconds: 2.69782121e-01
 gn_iterations_total: 1749
 avg_gn_iterations_per_step: 3.49800000e+00
-jacobian_time_seconds: 6.98593917e+01
-residual_time_seconds: 9.68085432e+00
-linear_solve_time_seconds: 5.05350034e+01
-hdm_load_or_solve_time_seconds: 3.27164650e-01
+jacobian_time_seconds: 7.11168485e+01
+residual_time_seconds: 1.00458426e+01
+linear_solve_time_seconds: 4.16123984e+01
+hdm_load_or_solve_time_seconds: 3.33694220e-01
 
 [error_metrics]
-relative_l2_error: 2.11178123e-02
-relative_error_percent: 2.11178123e+00
+relative_l2_error: 2.11177684e-02
+relative_error_percent: 2.11177684e+00
 
 [outputs]
 rom_snapshots_npy: Results/prom_gpr_snaps_mu1_4.56_mu2_0.019.npy

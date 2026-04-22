@@ -1,0 +1,21 @@
+solver_variant: tmp_case2_transfer_n10_model_to_n20
+mu_test: [4.875, 0.0225]
+device: cpu
+model_name: case2_model.pt
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage3/models/case2_model.pt
+loader_variant: legacy
+basis_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+total_modes: 151
+n_primary_target: 20
+n_secondary_full_checkpoint: 141
+drop_first_secondary: 10
+n_secondary_used: 131
+online_solve_elapsed_s: 140.0731303691864
+num_iterations: 1500
+jac_time_s: 32.30121445655823
+res_time_s: 6.094966888427734
+ls_time_s: 85.08413577079773
+relative_error_percent: 0.688600921325407
+snaps_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/Case2/tmp_case2_transfer_n10_to_n20_prom_mu1_4.875_mu2_0.0225_n20_ntot151_snaps.npy
+plot_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/Case2/tmp_case2_transfer_n10_to_n20_prom_mu1_4.875_mu2_0.0225_n20_ntot151_hdm_vs_rom.png

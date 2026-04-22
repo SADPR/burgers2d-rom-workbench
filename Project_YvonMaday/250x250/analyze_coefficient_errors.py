@@ -256,6 +256,33 @@ def case_snaps_path(stage, case_id, mu, n_p, n_tot):
     return runs_root / f"Case{case_id}" / f"{run_name}_snaps.npy"
 
 
+def case2_variant_snaps_path(stage, variant, mu, n_tot):
+    if stage == "baseline":
+        runs_root = THIS_DIR / "Results" / "Runs" / "Case2"
+        if variant == "pg":
+            run_name = f"case2_petrov_galerkin_prom_ann_{mu_tag(mu)}_n10_ntot{n_tot}"
+        elif variant == "n20":
+            run_name = f"case2_prom_ann_{mu_tag(mu)}_n20_ntot{n_tot}"
+        elif variant == "n20_trim":
+            run_name = f"tmp_case2_transfer_n10_to_n20_prom_{mu_tag(mu)}_n20_ntot{n_tot}"
+        else:
+            raise ValueError(f"Unsupported case2 variant: {variant}")
+    elif stage == "enriched":
+        runs_root = THIS_DIR / "Results_Enrichment" / "Runs" / "Case2"
+        if variant == "pg":
+            run_name = f"case2_petrov_galerkin_prom_ann_enriched_{mu_tag(mu)}_n10_ntot{n_tot}"
+        elif variant == "n20":
+            run_name = f"case2_prom_ann_enriched_{mu_tag(mu)}_n20_ntot{n_tot}"
+        elif variant == "n20_trim":
+            # No enriched trimmed-transfer runs by default.
+            return Path("__missing__")
+        else:
+            raise ValueError(f"Unsupported case2 variant: {variant}")
+    else:
+        raise ValueError(f"Unsupported stage: {stage}")
+    return runs_root / f"{run_name}_snaps.npy"
+
+
 def dd_qn_path(stage, mu, n_tot):
     if stage == "baseline":
         root = THIS_DIR / "Results" / "Runs" / "DataDriven"
@@ -330,10 +357,21 @@ def plot_coeff_error_curves(
     title,
 ):
     x = np.arange(1, n_tot + 1)
-    model_order = ["Case 1", "Case 2", "Case 3", "Data-driven"]
+    model_order = [
+        "Case 1",
+        "Case 2",
+        "Case 2 PG",
+        "Case 2 n=20",
+        "Case 2 n=20 (trimmed)",
+        "Case 3",
+        "Data-driven",
+    ]
     colors = {
         "Case 1": "tab:red",
         "Case 2": "tab:blue",
+        "Case 2 PG": "tab:purple",
+        "Case 2 n=20": "tab:brown",
+        "Case 2 n=20 (trimmed)": "tab:pink",
         "Case 3": "tab:green",
         "Data-driven": "tab:orange",
     }
@@ -475,26 +513,47 @@ def build_stage_qn_dict(stage, mu, n_p, n_tot, basis, u_ref, cache_projected=Tru
     )
     q_dd = np.asarray(np.load(dd_qn_path(stage, mu, n_tot), allow_pickle=False), dtype=np.float64)
 
-    for name, q in {
-        "Linear": q_linear,
-        "Case 1": q_case1,
-        "Case 2": q_case2,
-        "Case 3": q_case3,
-        "Data-driven": q_dd,
-    }.items():
-        if q.shape != q_linear.shape:
-            raise ValueError(
-                f"Shape mismatch at stage={stage}, mu={mu}, model={name}: "
-                f"got {q.shape}, expected {q_linear.shape}"
-            )
+    q_case2_pg = None
+    q_case2_n20 = None
+    q_case2_n20_trim = None
+    pg_snaps = case2_variant_snaps_path(stage, "pg", mu, n_tot)
+    if pg_snaps.exists():
+        q_case2_pg = project_snaps_to_qn(
+            pg_snaps, basis, u_ref, cache_projected=cache_projected
+        )
+    n20_snaps = case2_variant_snaps_path(stage, "n20", mu, n_tot)
+    if n20_snaps.exists():
+        q_case2_n20 = project_snaps_to_qn(
+            n20_snaps, basis, u_ref, cache_projected=cache_projected
+        )
+    n20_trim_snaps = case2_variant_snaps_path(stage, "n20_trim", mu, n_tot)
+    if n20_trim_snaps.exists():
+        q_case2_n20_trim = project_snaps_to_qn(
+            n20_trim_snaps, basis, u_ref, cache_projected=cache_projected
+        )
 
-    return {
+    q_dict = {
         "Linear": q_linear,
         "Case 1": q_case1,
         "Case 2": q_case2,
         "Case 3": q_case3,
         "Data-driven": q_dd,
     }
+    if q_case2_pg is not None:
+        q_dict["Case 2 PG"] = q_case2_pg
+    if q_case2_n20 is not None:
+        q_dict["Case 2 n=20"] = q_case2_n20
+    if q_case2_n20_trim is not None:
+        q_dict["Case 2 n=20 (trimmed)"] = q_case2_n20_trim
+
+    for name, q in q_dict.items():
+        if q.shape != q_linear.shape:
+            raise ValueError(
+                f"Shape mismatch at stage={stage}, mu={mu}, model={name}: "
+                f"got {q.shape}, expected {q_linear.shape}"
+            )
+
+    return q_dict
 
 
 def decomposition_case_terms(case_name, mu, t_vec, q_ref, q_mod, models, n_p, n_tot):
@@ -647,7 +706,18 @@ def main():
 
             abs_curves = {}
             rel_curves = {}
-            for model_name in ("Case 1", "Case 2", "Case 3", "Data-driven"):
+            curve_model_order = [
+                "Case 1",
+                "Case 2",
+                "Case 2 PG",
+                "Case 2 n=20",
+                "Case 2 n=20 (trimmed)",
+                "Case 3",
+                "Data-driven",
+            ]
+            for model_name in curve_model_order:
+                if model_name not in q_dict:
+                    continue
                 q_mod = q_dict[model_name]
                 abs_mode, rel_mode = per_mode_abs_rel(q_ref, q_mod)
                 abs_curves[model_name] = abs_mode

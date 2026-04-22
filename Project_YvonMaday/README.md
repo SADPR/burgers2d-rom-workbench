@@ -56,7 +56,9 @@ Useful flags:
 --total-modes <int>
 --rebuild-ecsw / --no-rebuild-ecsw
 --ecsw-num-training-mu <int>      # default: 9
---ecsw-snap-sample-factor <int>   # default: 50
+--ecsw-snapshot-percent <float>   # default: 2.0
+--ecsw-random-seed <int>          # default: 42
+--ecsw-ensure-mu-coverage / --ecsw-no-ensure-mu-coverage
 --ecsw-snap-time-offset <int>     # default: 3
 --no-save-rom-snaps
 --no-plots
@@ -64,7 +66,8 @@ Useful flags:
 
 Current HPROM default policy:
 - use all 9 training parameter points for ECSW
-- time-stride 50 for ECSW snapshot pairs (about 2% temporal sampling per mu for 500 steps)
+- use `global_param_time_stratified` ECSW snapshot selection
+- select `2%` of global candidate `(mu, time)` pairs with parameter-aware allocation
 
 Per-parameter Stage-2 files are now canonical:
 - `mu.npy`
@@ -76,6 +79,7 @@ Per-parameter Stage-2 files are now canonical:
 Scripts:
 - `stage3_perform_training_case_1_ann.py`
 - `stage3_perform_training_case_2_ann.py`
+- `stage3_perform_training_case_2_prnn.py` (optional PRNN-style Case 2 trainer)
 - `stage3_perform_training_case_3_ann.py`
 - `stage3_perform_training_rom_data_driven.py`
 
@@ -123,6 +127,7 @@ Note:
 ANN closures (CLI):
 - `run_prom_ann_case_1.py`
 - `run_prom_ann_case_2.py`
+- `run_prom_ann_case_2_prnn.py` (optional PRNN-style Case 2 runner; PROM/HPROM)
 - `run_prom_ann_case_3.py`
 - `run_prom_ann_case_2_petrov_galerkin.py` (experimental Case 2 variant; PROM/HPROM)
 
@@ -149,6 +154,36 @@ Notes for the experimental Case 2 variant:
 ```bash
 python3 run_prom_ann_case_2_petrov_galerkin.py --model-name case2_model_n20.pt --mu1 4.56 --mu2 0.019
 python3 run_prom_ann_case_2_petrov_galerkin.py --model-path /abs/path/to/case2_model_enriched.pt --mu1 4.56 --mu2 0.019
+```
+
+Optional PRNN-style Case 2 workflow (separate from production Case 2):
+- Mapping is still Case 2: `qN_s = N(mu1, mu2, t)`.
+- Training uses a composite loss:
+  - data term on `qN_s`
+  - projected residual term on the HDM residual:
+    - `u_hat = u_ref + V qN_p_ref + Vbar qN_s_pred`
+    - `L_res = mean ||P^T r(u_hat)||^2`, with `P in {V_tot, V}`
+- Defaults are isolated to avoid overwriting standard runs:
+  - model: `case2_model_prnn.pt`
+  - summary: `Results/Stage3/case2_prnn_training_summary.txt`
+  - run tags include `ann_prnn`
+
+Train:
+```bash
+python3 stage3_perform_training_case_2_prnn.py \
+  --dataset-backend prom \
+  --primary-modes 10 \
+  --model-name case2_model_prnn.pt \
+  --omega-data 1.0 \
+  --omega-residual 1e-2 \
+  --physics-projection vtot \
+  --physics-subsample 8
+```
+
+Run online:
+```bash
+python3 run_prom_ann_case_2_prnn.py --backend prom  --mu1 4.56 --mu2 0.019 --model-name case2_model_prnn.pt
+python3 run_prom_ann_case_2_prnn.py --backend hprom --mu1 4.56 --mu2 0.019 --model-name case2_model_prnn.pt
 ```
 
 PROM vs HPROM examples:
@@ -558,3 +593,46 @@ Main outputs:
 - CSV summaries:
   - `250x250/Figures/coeff_errors/model_error_summary.csv`
   - `250x250/Figures/coeff_errors/decomposition_summary.csv`
+
+Current plotting behavior for Case 2 `n=20`:
+- If baseline native `n=20` runs exist, they are plotted as `Case 2 n=20`.
+- If baseline trimmed-transfer TMP runs exist (`tmp_case2_transfer_n10_to_n20_*`), they are additionally plotted as `Case 2 n=20 (trimmed)`.
+- Enriched plots keep the native enriched `n=20` model only.
+
+## 7) Optional TMP Check: Use n=10 Case-2 model for n=20 runs by slicing outputs
+
+If Case 2 `n=20` training is unstable, an optional diagnostic is:
+- keep the Case-2 model trained at `n=10` (predicts 141 secondary modes),
+- run with `n=20`,
+- drop the first 10 predicted secondary entries (modes 11..20),
+- use the remaining 131 entries (modes 21..151).
+
+TMP script:
+- `run_case2_n20_from_n10_model_tmp.py`
+
+Notes:
+- This is a diagnostic path (not the main production workflow).
+- Outputs are written under `Results/Runs/Case2/` with `tmp_` prefixes.
+- Recommended usage in this project: baseline only.
+- For enriched runs, keep the native enriched `n=20` model (`case2_model_enriched_n20.pt`) as primary result.
+
+Baseline checkpoint (`case2_model.pt`) at 3 points:
+```bash
+python3 run_case2_n20_from_n10_model_tmp.py \
+  --mu1 4.875 --mu2 0.0225 \
+  --model-name case2_model.pt \
+  --target-primary-modes 20 \
+  --drop-first-secondary 10
+
+python3 run_case2_n20_from_n10_model_tmp.py \
+  --mu1 4.56 --mu2 0.019 \
+  --model-name case2_model.pt \
+  --target-primary-modes 20 \
+  --drop-first-secondary 10
+
+python3 run_case2_n20_from_n10_model_tmp.py \
+  --mu1 5.19 --mu2 0.026 \
+  --model-name case2_model.pt \
+  --target-primary-modes 20 \
+  --drop-first-secondary 10
+```

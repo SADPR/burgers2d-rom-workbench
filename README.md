@@ -224,6 +224,8 @@ python3 run_hprom_ann.py
 ```
 
 ## POD-DL workflow
+TODO: rename `pod_dl` to `pod_ae` consistently across scripts, file names, and paths (deferred for now).
+
 1. POD basis:
 ```bash
 python3 POD-DL/stage1_build_pod_basis.py

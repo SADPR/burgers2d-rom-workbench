@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import numpy as np
@@ -114,56 +115,113 @@ def _plot_comparison(
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Generate PROM/HPROM comparison figures with fixed colors."
+    )
+    parser.add_argument(
+        "--variant",
+        choices=("prom", "hprom"),
+        default="prom",
+        help="Model family to plot (default: prom).",
+    )
+    args = parser.parse_args()
+
     base = Path(__file__).resolve().parent
     out_dir = base / "Figures"
 
     hdm_path = base / f"hdm_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy"
     hdm_snaps = np.asarray(np.load(hdm_path), dtype=np.float64)
 
-    models = [
-        {
-            "label": "PROM",
-            "color": "#B8860B",  # dark yellow
-            "snap": base / f"prom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
-            "out": out_dir / "prom_vs_hdm.png",
-        },
-        {
-            "label": "Local PROM",
-            "color": "#B8860B",  # dark yellow
-            "snap": base / f"local_prom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
-            "out": out_dir / "local_prom_vs_hdm.png",
-        },
-        {
-            "label": "QPROM",
-            "color": "#1f77b4",  # blue
-            "snap": base / f"qprom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
-            "out": out_dir / "qprom_vs_hdm.png",
-        },
-        {
-            "label": "Local QPROM",
-            "color": "#1f77b4",  # blue
-            "snap": base / f"local_qprom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
-            "out": out_dir / "local_qprom_vs_hdm.png",
-        },
-        {
-            "label": "PROM-GPR",
-            "color": "#228B22",  # green
-            "snap": base / f"prom_gpr_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
-            "out": out_dir / "prom_gpr_vs_hdm.png",
-        },
-        {
-            "label": "Local PROM-GPR",
-            "color": "#228B22",  # green
-            "snap": base / f"local_prom_gpr_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
-            "out": out_dir / "local_prom_gpr_vs_hdm.png",
-        },
-        {
-            "label": "PROM-POD-DL",
-            "color": "#d62728",  # red
-            "snap": base / f"prom_dl_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
-            "out": out_dir / "prom_dl_vs_hdm.png",
-        },
-    ]
+    if args.variant == "prom":
+        models = [
+            {
+                "label": "PROM",
+                "color": "#B8860B",  # dark yellow
+                "snap": base / f"prom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "prom_vs_hdm.png",
+            },
+            {
+                "label": "Local PROM",
+                "color": "#B8860B",  # dark yellow
+                "snap": base / f"local_prom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "local_prom_vs_hdm.png",
+            },
+            {
+                "label": "QPROM",
+                "color": "#1f77b4",  # blue
+                "snap": base / f"qprom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "qprom_vs_hdm.png",
+            },
+            {
+                "label": "Local QPROM",
+                "color": "#1f77b4",  # blue
+                "snap": base / f"local_qprom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "local_qprom_vs_hdm.png",
+            },
+            {
+                "label": "PROM-GPR",
+                "color": "#228B22",  # green
+                "snap": base / f"prom_gpr_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "prom_gpr_vs_hdm.png",
+            },
+            {
+                "label": "Local PROM-GPR",
+                "color": "#228B22",  # green
+                "snap": base / f"local_prom_gpr_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "local_prom_gpr_vs_hdm.png",
+            },
+            {
+                "label": "PROM-POD-AE",
+                "color": "#d62728",  # red
+                "snap": base / f"prom_dl_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "prom_dl_vs_hdm.png",
+            },
+        ]
+    else:
+        models = [
+            {
+                "label": "HPROM",
+                "color": "#B8860B",  # dark yellow
+                "snap": base / f"hprom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "hprom_vs_hdm.png",
+            },
+            {
+                "label": "Local HPROM",
+                "color": "#B8860B",  # dark yellow
+                "snap": base / f"local_hprom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "local_hprom_vs_hdm.png",
+            },
+            {
+                "label": "HQPROM",
+                "color": "#1f77b4",  # blue
+                "snap": base / f"hqprom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "hqprom_vs_hdm.png",
+            },
+            {
+                "label": "Local HQPROM",
+                "color": "#1f77b4",  # blue
+                "snap": base / f"local_hqprom_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "local_hqprom_vs_hdm.png",
+            },
+            {
+                "label": "HPROM-GPR",
+                "color": "#228B22",  # green
+                "snap": base / f"hprom_gpr_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "hprom_gpr_vs_hdm.png",
+            },
+            {
+                "label": "Local HPROM-GPR",
+                "color": "#228B22",  # green
+                "snap": base / f"local_hprom_gpr_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "local_hprom_gpr_vs_hdm.png",
+            },
+            {
+                "label": "HPROM-POD-AE",
+                "color": "#d62728",  # red
+                "snap": base / f"hprom_dl_snaps_mu1_{MU1:.2f}_mu2_{MU2:.3f}.npy",
+                "out": out_dir / "hprom_dl_vs_hdm.png",
+            },
+        ]
 
     for item in models:
         rom_snaps = np.asarray(np.load(item["snap"]), dtype=np.float64)
