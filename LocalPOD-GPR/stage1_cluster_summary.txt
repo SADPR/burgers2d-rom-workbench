@@ -1,5 +1,5 @@
 [run]
-timestamp: 2026-03-18T22:54:38
+timestamp: 2026-04-26T05:17:56
 script: stage1_cluster_snapshots_u.py
 
 [configuration]
@@ -9,26 +9,26 @@ phi: 1.00000000e-01
 time_subsample: 1
 dt: 5.00000000e-02
 num_steps: 500
-snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+snap_folder: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Results/param_snaps
 
 [snapshot_matrix]
-S_w_shape: (20000, 4509)
+S_w_shape: (125000, 4509)
 num_parameters: 9
 num_snapshots: 4509
 time_indices_count: 501
 
 [clusters]
-primary_sizes: [473, 491, 520, 467, 461, 419, 479, 481, 463, 255]
-overlap_sizes: [567, 590, 610, 560, 553, 496, 574, 528, 556, 296]
-min_overlap_size: 296
-max_overlap_size: 610
+primary_sizes: [538, 432, 493, 310, 445, 488, 461, 424, 474, 444]
+overlap_sizes: [586, 518, 586, 357, 535, 585, 554, 511, 554, 533]
+min_overlap_size: 357
+max_overlap_size: 586
 
 [timings_seconds]
-build_snapshot_matrix: 9.17743444e-01
-clustering: 4.01380448e+01
-total: 4.43693707e+01
+build_snapshot_matrix: 1.34054372e+01
+clustering: 1.41255159e+02
+total: 2.83080489e+02
 
 [outputs]
-clusters_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/local_gpr_clusters_full.npz
-cluster_sizes_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/stage1_cluster_sizes.png
-summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/LocalPOD-GPR/stage1_cluster_summary.txt
+clusters_npz: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD-GPR/local_gpr_clusters_full.npz
+cluster_sizes_png: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD-GPR/stage1_cluster_sizes.png
+summary_txt: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD-GPR/stage1_cluster_summary.txt

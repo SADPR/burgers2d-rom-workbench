@@ -7,6 +7,7 @@ using the modern `burgers/` modules and save outputs consistently with
 run_prom.py.
 """
 
+import argparse
 import os
 import time
 from datetime import datetime
@@ -86,6 +87,7 @@ def main(
     compute_ecsw=True,
     num_modes=None,
     pod_dir="POD",
+    results_dir="Results",
     snap_time_offset=3,
     mu_samples=None,
     ecsw_snapshot_percent=2.0,
@@ -107,6 +109,8 @@ def main(
     pod_dir : str
         Preferred POD artifact directory (default: "POD").
         Legacy fallback "Results/POD" is used if needed.
+    results_dir : str
+        Output directory for plots, summaries, and ROM snapshots.
     snap_time_offset : int
         Time offset between "current" and "previous" snapshots in ECSW
         training blocks.
@@ -131,7 +135,9 @@ def main(
     # ------------------------------------------------------------------
     # Folders
     # ------------------------------------------------------------------
-    results_dir = "Results"
+    results_dir = str(results_dir)
+    if not results_dir.strip():
+        raise ValueError("results_dir must be a non-empty path.")
     pod_dir_requested = pod_dir
     snap_folder = os.path.join(results_dir, "param_snaps")
     legacy_pod_dir = os.path.join(results_dir, "POD")
@@ -504,6 +510,7 @@ def main(
             (
                 "configuration",
                 [
+                    ("results_dir", results_dir),
                     ("pod_dir_requested", pod_dir_requested),
                     ("pod_dir_used", pod_dir),
                     ("compute_ecsw", compute_ecsw),
@@ -605,4 +612,87 @@ def main(
 
 
 if __name__ == "__main__":
-    main(mu1=4.56, mu2=0.019, compute_ecsw=True)
+    parser = argparse.ArgumentParser(
+        description="Run global linear HPROM (ECSW-LSPG) for a single parameter."
+    )
+    parser.add_argument("--mu1", type=float, default=4.56, help="First parameter value.")
+    parser.add_argument("--mu2", type=float, default=0.019, help="Second parameter value.")
+    parser.add_argument(
+        "--num-modes",
+        type=int,
+        default=None,
+        help="Number of POD modes to use (default: all available modes).",
+    )
+    parser.add_argument(
+        "--pod-dir",
+        type=str,
+        default="POD",
+        help="Directory containing POD artifacts (basis/sigma/u_ref/weights).",
+    )
+    parser.add_argument(
+        "--results-dir",
+        type=str,
+        default="Results",
+        help="Output directory for snapshots, plots, and summaries.",
+    )
+    parser.add_argument(
+        "--snap-time-offset",
+        type=int,
+        default=3,
+        help="ECSW snapshot time offset.",
+    )
+    parser.add_argument(
+        "--ecsw-snapshot-percent",
+        type=float,
+        default=2.0,
+        help="Percent of candidate ECSW snapshot pairs to select.",
+    )
+    parser.add_argument(
+        "--ecsw-random-seed",
+        type=int,
+        default=42,
+        help="Random seed for ECSW snapshot selection.",
+    )
+    parser.add_argument(
+        "--linear-solver",
+        choices=("lstsq", "normal_eq"),
+        default="lstsq",
+        help="Reduced Gauss-Newton linear solver.",
+    )
+    parser.add_argument(
+        "--normal-eq-reg",
+        type=float,
+        default=1e-12,
+        help="Regularization used when linear_solver=normal_eq.",
+    )
+
+    ecsw_group = parser.add_mutually_exclusive_group()
+    ecsw_group.add_argument(
+        "--compute-ecsw",
+        dest="compute_ecsw",
+        action="store_true",
+        help="Build ECSW weights from training snapshots.",
+    )
+    ecsw_group.add_argument(
+        "--no-compute-ecsw",
+        dest="compute_ecsw",
+        action="store_false",
+        help="Reuse previously saved ECSW weights.",
+    )
+    parser.set_defaults(compute_ecsw=True)
+
+    args = parser.parse_args()
+
+    main(
+        mu1=args.mu1,
+        mu2=args.mu2,
+        compute_ecsw=args.compute_ecsw,
+        num_modes=args.num_modes,
+        pod_dir=args.pod_dir,
+        results_dir=args.results_dir,
+        snap_time_offset=args.snap_time_offset,
+        ecsw_snapshot_percent=args.ecsw_snapshot_percent,
+        ecsw_random_seed=args.ecsw_random_seed,
+        linear_solver=args.linear_solver,
+        normal_eq_reg=args.normal_eq_reg,
+    )

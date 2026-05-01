@@ -62,7 +62,42 @@ python3 run_prom.py
 ```
 4. Online HPROM (ECSW):
 ```bash
-python3 run_hprom.py
+python3 run_hprom.py --mu1 4.56 --mu2 0.019 --compute-ecsw
+```
+
+### `run_hprom.py` CLI quick reference
+Common options:
+- `--mu1`, `--mu2`: test parameter.
+- `--num-modes`: truncation size of the POD basis (for example `151`).
+- `--pod-dir`: POD artifact directory (default `POD`).
+- `--results-dir`: output folder for snapshots/plots/summaries (default `Results`).
+- `--compute-ecsw` / `--no-compute-ecsw`: build ECSW weights or reuse existing ones.
+
+Example 3-point linear HPROM campaign (reusing existing ECSW weights):
+```bash
+python3 run_hprom.py --mu1 4.56 --mu2 0.019 --num-modes 151 --results-dir Results_250x250_Paper --no-compute-ecsw
+python3 run_hprom.py --mu1 4.75 --mu2 0.020 --num-modes 151 --results-dir Results_250x250_Paper --no-compute-ecsw
+python3 run_hprom.py --mu1 5.19 --mu2 0.026 --num-modes 151 --results-dir Results_250x250_Paper --no-compute-ecsw
+```
+
+Optional max-error extraction over those 3 summaries:
+```bash
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+base = Path("Results_250x250_Paper")
+cases = [(4.56, 0.019), (4.75, 0.020), (5.19, 0.026)]
+vals = []
+for mu1, mu2 in cases:
+    p = base / f"hprom_summary_mu1_{mu1:.2f}_mu2_{mu2:.3f}.txt"
+    txt = p.read_text()
+    err = float(re.search(r"relative_error_percent:\s*([0-9eE+\-.]+)", txt).group(1))
+    vals.append((mu1, mu2, err))
+    print(f"{mu1:.2f}, {mu2:.3f} -> {err:.6f}%")
+mx = max(vals, key=lambda x: x[2])
+print(f"MAX relative_error_percent = {mx[2]:.6f}% at ({mx[0]:.2f}, {mx[1]:.3f})")
+PY
 ```
 
 ## Local POD workflow
@@ -113,6 +148,31 @@ python3 LocalQuadratic/stage2_local_qm_projection.py
 python3 run_local_qprom.py
 python3 run_local_hqprom.py
 ```
+
+### Local HQPROM sweep launcher
+To sweep multiple `(zeta_qua, alpha_ridge)` candidates without editing files manually:
+```bash
+python3 launch_local_hqprom_sweep.py
+```
+
+Useful options:
+```bash
+# custom candidate lists
+python3 launch_local_hqprom_sweep.py --zetas "0.2,0.5,0.8" --ridge-alphas "1e-4,1,1e4"
+
+# custom output folder and explicit test points
+python3 launch_local_hqprom_sweep.py \
+  --root-dir LocalQuadraticSweep/local_hqprom_sweep_paper \
+  --points "4.56,0.019;4.75,0.020;5.19,0.026"
+
+# force rerun even if summary.csv already has status=ok rows
+python3 launch_local_hqprom_sweep.py --force
+```
+
+Notes:
+- The script builds the global snapshot matrix and clustering once, then loops candidates.
+- It writes per-candidate artifacts under `LocalQuadraticSweep/.../<tag>/` and appends to `summary.csv`.
+- Resume behavior: by default it skips candidates already marked as `status=ok` in `summary.csv`.
 
 ## POD-RBF workflow
 1. POD basis:
@@ -249,8 +309,7 @@ python3 run_hprom_dl.py
 ```
 
 `run_hprom_dl.py` follows the same ECSW logic as other HPROM runners: run once with
-`compute_ecsw=True` to generate ECSW weights, then you can reuse them with
-`compute_ecsw=False`.
+ECSW construction enabled, then reuse the saved weights in later runs.
 
 ## What to expect in outputs
 Online `run_*.py` scripts generally save:
@@ -300,7 +359,7 @@ Relative errors from the corresponding summary files (`relative_error_percent`):
 ## Practical usage notes
 - Run scripts from repository root so relative paths resolve correctly.
 - If a run is "slow", first check whether snapshots are being computed vs loaded from cache.
-- HPROM (`run_hprom_*`) needs ECSW weights. If missing, rerun with `compute_ecsw=True` first.
+- HPROM (`run_hprom_*`) needs ECSW weights. If missing, rerun with ECSW construction enabled (`--compute-ecsw`) first.
 - Many scripts support `u_ref` centering (`auto/on/off`). Keep this consistent with how the basis/model was trained.
 
 ## Minimal recommended memory refresher (4 months later)

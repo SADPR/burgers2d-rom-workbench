@@ -1,0 +1,33 @@
+mu_test: [4.56, 0.019]
+device: cpu
+model_name: case2_model_prnn.pt
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage3/models/case2_model_prnn.pt
+model_hidden_dims: (32, 64, 128, 256, 256)
+model_activation: elu
+model_dropout: 0.0
+model_omega_data: 1.0
+model_omega_residual: 0.01
+model_physics_projection: vtot
+model_loss_form: two_stage(optional): data-only pretrain then omega_data*MSE(qN_s)+omega_residual*mean(||P^T r(u_hat)||^2)
+basis_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+solve_backend_requested: prom
+solve_backend_effective: prom
+use_ecsw: True
+rebuild_ecsw_weights: False
+ecsw_num_training_mu: 9
+ecsw_snap_sample_factor: 50
+ecsw_snap_time_offset: 3
+ecsw_weights_path: N/A
+ecsw_residual: nan
+n_ecsw_elements: None
+ecsw_setup_elapsed_s: 0.0
+online_solve_elapsed_s: 163.4234938621521
+elapsed_s: 163.4234938621521
+num_iterations: 1500
+jac_time_s: 50.79342436790466
+res_time_s: 9.160069465637207
+ls_time_s: 45.92074942588806
+relative_error_percent: 1.4783718101167256
+snaps_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/Case2/case2_prnn_prom_ann_prnn_mu1_4.560_mu2_0.0190_n10_ntot151_snaps.npy
+plot_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/Case2/case2_prnn_prom_ann_prnn_mu1_4.560_mu2_0.0190_n10_ntot151_hdm_vs_rom.png

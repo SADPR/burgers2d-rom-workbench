@@ -1,0 +1,68 @@
+[run]
+timestamp: 2026-04-24T07:08:36
+mu1: 4.75000000e+00
+mu2: 2.00000000e-02
+
+[configuration]
+results_dir: Results
+pod_dir_requested: POD
+pod_dir_used: POD
+compute_ecsw: False
+num_modes_requested: 96
+snap_time_offset: 3
+ecsw_sampling_policy: global_param_time_stratified
+ecsw_snapshot_percent: 2.00000000e+00
+ecsw_random_seed: 42
+mu_samples: [[4.25, 0.015], [4.25, 0.0225], [4.25, 0.03], [4.875, 0.015], [4.875, 0.0225], [4.875, 0.03], [5.5, 0.015], [5.5, 0.0225], [5.5, 0.03]]
+linear_solver: lstsq
+normal_eq_reg: N/A
+
+[discretization]
+dt: 5.00000000e-02
+num_steps: 500
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[pod_basis]
+basis_size: 96
+n_available_modes: 96
+energy_captured: 9.99502670e-01
+energy_lost: 4.97330346e-04
+centered_basis_used: True
+reference_source: loaded_file
+u_ref_l2_norm: 8.17426148e+02
+
+[ecsw]
+num_nonzero_weights: 4824
+weights_sum: 6.25000000e+04
+ecsw_time_seconds: N/A
+ecsw_residual: N/A
+training_matrix_shape: N/A
+snapshot_candidates_total: N/A
+snapshot_selected_total: N/A
+snapshot_selected_per_mu: N/A
+
+[hprom_timing]
+total_hprom_time_seconds: 5.14799058e+01
+avg_hprom_time_per_step_seconds: 1.02959812e-01
+gn_iterations_total: 1500
+avg_gn_iterations_per_step: 3.00000000e+00
+jacobian_time_seconds: 6.54183602e+00
+residual_time_seconds: 3.99548984e+00
+linear_solve_time_seconds: 3.43215785e+01
+hdm_load_or_solve_time_seconds: 5.21430969e-01
+
+[error_metrics]
+relative_l2_error: 1.00107854e-02
+relative_error_percent: 1.00107854e+00
+
+[outputs]
+hprom_snapshots_npy: Results/hprom_snaps_mu1_4.75_mu2_0.020.npy
+comparison_plot_png: Results/hprom_mu1_4.75_mu2_0.020.png
+basis_npy: POD/basis.npy
+sigma_npy: POD/sigma.npy
+u_ref_npy: POD/u_ref.npy
+ecsw_weights_npy: POD/ecsw_weights_lspg.npy
+ecsw_reduced_mesh_png: N/A
+ecsw_sampling_3d_png: N/A

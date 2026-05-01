@@ -16,7 +16,7 @@ SEED = 1234557
 #   and neural network runs
 DT = 0.05
 NUM_STEPS = 500
-NUM_CELLS = 100
+NUM_CELLS = 250
 XL, XU = 0, 100
 U0 = np.ones((NUM_CELLS, NUM_CELLS))
 V0 = U0.copy()

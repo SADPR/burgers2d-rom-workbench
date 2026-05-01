@@ -595,15 +595,27 @@ Local-HPROM-GPR ($N_c=3$) & 3 & 11--32 & 53 & 0.371 & 0.029 & 7\,670.959 \\
 k^+=\arg\min_{\ell}\|\mathbf u^s-\mathbf u_{c,\ell}\|_2^2.
 \]
 \[
-\|\mathbf u^s-\mathbf u_{c,\ell}\|_2^2
-=
-\|\mathbf q_{k^-}\|_2^2
-+
-2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf V_{k^-}\mathbf q_{k^-}
-+
-\|\mathbf u_{0,k^-}-\mathbf u_{c,\ell}\|_2^2.
+\text{Let }\mathbf a_\ell:=\mathbf u_{0,k^-}-\mathbf u_{c,\ell},\quad
+\mathbf b:=\mathbf V_{k^-}\mathbf q_{k^-}.
 \]
-Drop the $\ell$-independent term $\|\mathbf q_{k^-}\|_2^2$ and precompute
+\[
+\|\mathbf u^s-\mathbf u_{c,\ell}\|_2^2
+=\|\mathbf a_\ell+\mathbf b\|_2^2
+=\|\mathbf a_\ell\|_2^2+\|\mathbf b\|_2^2+2\,\mathbf a_\ell^T\mathbf b.
+\]
+\[
+\|\mathbf b\|_2^2=\|\mathbf V_{k^-}\mathbf q_{k^-}\|_2^2
+\ \text{is independent of }\ell.
+\]
+\[
+\Rightarrow\ 
+k^+=\arg\min_{\ell}
+\Big[
+\|\mathbf u_{0,k^-}-\mathbf u_{c,\ell}\|_2^2
++2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf V_{k^-}\mathbf q_{k^-}
+\Big].
+\]
+Precompute
 \[
 \mathbf g_{k^-,\ell}:=\mathbf V_{k^-}^T(\mathbf u_{0,k^-}-\mathbf u_{c,\ell}),
 \qquad
@@ -622,14 +634,35 @@ k^+=\arg\min_{\ell}\left(2\,\mathbf g_{k^-,\ell}^T\mathbf q_{k^-}+d_{k^-,\ell}\r
 +\mathbf H_{k^-}(\mathbf q_{k^-}\otimes\mathbf q_{k^-}).
 \]
 \[
+\text{Let }\mathbf a_\ell:=\mathbf u_{0,k^-}-\mathbf u_{c,\ell},\quad
+\mathbf b:=\mathbf V_{k^-}\mathbf q_{k^-},\quad
+\mathbf c:=\mathbf H_{k^-}(\mathbf q_{k^-}\otimes\mathbf q_{k^-}).
+\]
+\[
 k^+=\arg\min_{\ell}\|\mathbf u^s-\mathbf u_{c,\ell}\|_2^2
 =
 \arg\min_{\ell}
+\|\mathbf a_\ell+\mathbf b+\mathbf c\|_2^2.
+\]
+\[
+\|\mathbf a_\ell+\mathbf b+\mathbf c\|_2^2
+=\|\mathbf a_\ell\|_2^2+\|\mathbf b\|_2^2+\|\mathbf c\|_2^2
++2\,\mathbf a_\ell^T\mathbf b
++2\,\mathbf a_\ell^T\mathbf c
++2\,\mathbf b^T\mathbf c.
+\]
+\[
+\|\mathbf b\|_2^2,\ \|\mathbf c\|_2^2,\ 2\,\mathbf b^T\mathbf c
+\ \text{are independent of }\ell.
+\]
+\[
+\Rightarrow\ 
+k^+=\arg\min_{\ell}
 \Big[
 \|\mathbf u_{0,k^-}-\mathbf u_{c,\ell}\|_2^2
 \]
 \[
-\qquad
+\quad
 +2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf V_{k^-}\mathbf q_{k^-}
 +2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf H_{k^-}(\mathbf q_{k^-}\otimes\mathbf q_{k^-})
 \Big].
@@ -662,14 +695,32 @@ k^+=\arg\min_{\ell}
 \bar{\mathbf q}_{k^-}=\mathcal N_{\mathrm{GPR},k^-}(\mathbf q_{k^-}).
 \]
 \[
-\|\mathbf u^s-\mathbf u_{c,\ell}\|_2^2
-=
-\|\mathbf u_{0,k^-}-\mathbf u_{c,\ell}\|_2^2
-+2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf V_{k^-}\mathbf q_{k^-}
+\text{Let }\mathbf a_\ell:=\mathbf u_{0,k^-}-\mathbf u_{c,\ell},\quad
+\mathbf b:=\mathbf V_{k^-}\mathbf q_{k^-},\quad
+\mathbf c:=\bar{\mathbf V}_{k^-}\bar{\mathbf q}_{k^-}.
 \]
 \[
+\|\mathbf u^s-\mathbf u_{c,\ell}\|_2^2
+=\|\mathbf a_\ell+\mathbf b+\mathbf c\|_2^2
+\]
+\[
+\ =\ \|\mathbf a_\ell\|_2^2+\|\mathbf b\|_2^2+\|\mathbf c\|_2^2
++2\,\mathbf a_\ell^T\mathbf b
++2\,\mathbf a_\ell^T\mathbf c
++2\,\mathbf b^T\mathbf c.
+\]
+\[
+\|\mathbf b\|_2^2,\ \|\mathbf c\|_2^2,\ 2\,\mathbf b^T\mathbf c
+\ \text{are independent of }\ell.
+\]
+\[
+\Rightarrow\ 
+k^+=\arg\min_{\ell}
+\Big[
+\|\mathbf u_{0,k^-}-\mathbf u_{c,\ell}\|_2^2
++2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf V_{k^-}\mathbf q_{k^-}
 +2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\bar{\mathbf V}_{k^-}\bar{\mathbf q}_{k^-}
-+(\ell\text{-independent terms}).
+\Big].
 \]
 Hence, with
 \[

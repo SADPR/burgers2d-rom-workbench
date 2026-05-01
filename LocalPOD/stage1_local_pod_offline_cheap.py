@@ -416,7 +416,7 @@ def main():
 
     # ---------------- user choices ----------------
     n_clusters = 10
-    pod_tol = 1e-6
+    pod_tol = 1.5e-3
     pod_method = "rsvd"
     dt = DT
     num_steps = NUM_STEPS

@@ -1,0 +1,76 @@
+[run]
+timestamp: 2026-04-26T03:29:38
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+compute_ecsw: True
+local_model_file: LocalPOD/local_pod_data.npz
+weights_file: Results/local_hprom_ecsw_weights.npy
+cluster_selector: select_cluster_reduced
+snap_time_offset: 3
+ecsw_sampling_policy: local_cluster_param_time_stratified
+ecsw_snapshot_percent: 2.00000000e+00
+ecsw_random_seed: 42
+ecsw_cluster_min_per_cluster: 1
+mu_samples: [[4.25, 0.015], [4.25, 0.0225], [4.25, 0.03], [4.875, 0.015], [4.875, 0.0225], [4.875, 0.03], [5.5, 0.015], [5.5, 0.0225], [5.5, 0.03]]
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+linear_solver: lstsq
+normal_eq_reg: N/A
+snap_folder: Results/param_snaps
+
+[discretization]
+dt: 5.00000000e-02
+num_steps: 500
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[local_model]
+offline_snapshot_matrix_shape: (125000, 4509)
+num_clusters: 10
+cluster_sizes_after_overlap: [586, 518, 586, 357, 535, 585, 554, 511, 554, 533]
+retained_modes_per_cluster: [14, 15, 20, 23, 14, 15, 18, 15, 22, 16]
+d_const_shape: (10, 10)
+
+[ecsw]
+num_nonzero_weights: 1522
+weights_sum: 6.25000000e+04
+ecsw_time_seconds: 1.13437070e+03
+ecsw_residual: 4.16080517e-14
+training_matrix_shape: (2070, 62500)
+snapshot_candidates_total: 4473
+snapshot_selected_total: 90
+snapshot_selected_per_mu: [10, 10, 10, 10, 10, 10, 10, 10, 10]
+snapshot_cluster_candidates_per_mu: [[70, 54, 68, 0, 54, 59, 59, 53, 24, 56], [68, 53, 63, 0, 54, 59, 56, 52, 37, 55], [65, 51, 57, 0, 54, 59, 53, 52, 53, 53], [57, 48, 58, 6, 50, 54, 53, 47, 73, 51], [56, 48, 54, 24, 49, 54, 51, 47, 65, 49], [54, 47, 50, 46, 49, 54, 48, 46, 55, 48], [48, 44, 51, 61, 45, 50, 49, 43, 61, 45], [47, 44, 48, 75, 45, 50, 47, 42, 55, 44], [46, 43, 44, 92, 45, 49, 45, 42, 48, 43]]
+snapshot_cluster_selected_per_mu: [[2, 1, 1, 0, 1, 1, 1, 1, 1, 1], [2, 1, 1, 0, 1, 1, 1, 1, 1, 1], [2, 1, 1, 0, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
+
+[local_hprom_timing]
+total_local_hprom_time_seconds: 1.26027029e+01
+avg_local_hprom_time_per_step_seconds: 2.52054057e-02
+gn_iterations_total: 1501
+avg_gn_iterations_per_step: 3.00200000e+00
+jacobian_time_seconds: 4.76123810e+00
+residual_time_seconds: 3.07067680e+00
+linear_solve_time_seconds: 1.57922292e+00
+hdm_load_or_solve_time_seconds: 3.39164019e-01
+
+[cluster_metrics]
+initial_cluster: 0
+final_cluster: 8
+cluster_switches: 8
+cluster_visit_counts: [66, 50, 60, 0, 52, 57, 55, 50, 58, 53]
+
+[error_metrics]
+relative_l2_error: 9.56052819e-03
+relative_error_percent: 9.56052819e-01
+
+[outputs]
+local_hprom_snapshots_npy: Results/local_hprom_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/local_hprom_mu1_4.56_mu2_0.019.png
+ecsw_weights_npy: Results/local_hprom_ecsw_weights.npy
+ecsw_reduced_mesh_png: Results/local_hprom_reduced_mesh.png
+ecsw_sampling_3d_png: Results/local_hprom_ecsw_sampling_3d.png
+summary_txt: Results/local_hprom_summary_mu1_4.56_mu2_0.019.txt

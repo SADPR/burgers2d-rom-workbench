@@ -97,6 +97,41 @@ def build_Q_quadratic_symmetric(q_mat):
     return q_mat[i_triu, :] * q_mat[j_triu, :]
 
 
+def compute_q_scales(q_mat, mode="off", eps=1e-12):
+    """
+    Compute per-coordinate scaling for reduced coordinates q.
+
+    Returns
+    -------
+    scales : (n,) ndarray
+        Positive scales so that q_scaled = q / scales.
+    mode_used : str
+        Normalized mode label.
+    """
+    mode_used = str(mode).strip().lower()
+    if mode_used in ("off", "none", "false", "0"):
+        return np.ones(q_mat.shape[0], dtype=np.float64), "off"
+    if mode_used in ("std", "standard", "standardize"):
+        scales = np.std(q_mat, axis=1, ddof=1)
+        scales = np.asarray(scales, dtype=np.float64)
+        bad = ~np.isfinite(scales) | (scales < float(eps))
+        if np.any(bad):
+            scales[bad] = 1.0
+        return scales, "std"
+    raise ValueError(
+        "q_normalization_mode must be one of: "
+        "'off', 'std'. "
+        f"Got: {mode}"
+    )
+
+
+def compute_q_pair_scales(q_scales):
+    """Return per-monomial scales d_i d_j for upper-triangular pairs (i<=j)."""
+    q_scales = np.asarray(q_scales, dtype=np.float64).reshape(-1)
+    i_triu, j_triu = np.triu_indices(q_scales.size)
+    return q_scales[i_triu] * q_scales[j_triu]
+
+
 def compute_H_ridge(E, Q, alpha):
     m = Q.shape[0]
     A = Q @ Q.T + alpha * np.eye(m, dtype=np.float64)
@@ -220,6 +255,8 @@ def build_local_qm_bases(
     zeta_qua=0.1,
     alpha_ridge=1e-4,
     pod_method="svd",
+    q_normalization_mode="off",
+    q_normalization_eps=1e-12,
 ):
     """
     For each cluster k:
@@ -277,11 +314,27 @@ def build_local_qm_bases(
         )
 
         V_k = U_full_k[:, :n_k]
-        q_mat_k = V_k.T @ S_k_centered
-        S_lin_k = u_ref_k[:, None] + V_k @ q_mat_k
+        q_mat_k_raw = V_k.T @ S_k_centered
+        q_scales_k, q_norm_mode_used = compute_q_scales(
+            q_mat_k_raw,
+            mode=q_normalization_mode,
+            eps=q_normalization_eps,
+        )
+        q_mat_k = q_mat_k_raw / q_scales_k[:, None]
+        S_lin_k = u_ref_k[:, None] + V_k @ q_mat_k_raw
         E_k = S_k - S_lin_k
         Q_k = build_Q_quadratic_symmetric(q_mat_k)
-        H_k = compute_H_ridge(E_k, Q_k, alpha=alpha_ridge)
+        H_k_scaled = compute_H_ridge(E_k, Q_k, alpha=alpha_ridge)
+        q_pair_scales_k = compute_q_pair_scales(q_scales_k)
+        # Convert to raw-q convention so online/local solvers stay unchanged.
+        H_k = H_k_scaled / q_pair_scales_k[None, :]
+
+        if q_norm_mode_used != "off":
+            print(
+                f"[OFFLINE-QM] Cluster {k}: q-normalization={q_norm_mode_used}, "
+                f"scale[min/mean/max]=({np.min(q_scales_k):.3e}/"
+                f"{np.mean(q_scales_k):.3e}/{np.max(q_scales_k):.3e})"
+            )
 
         u0_list.append(u0_k)
         uc_list.append(u_ck)
@@ -353,6 +406,8 @@ def main():
     pod_tol = 1e-6
     zeta_qua = 0.1
     alpha_ridge = 1e-4
+    q_normalization_mode = "off"  # "off" or "std"
+    q_normalization_eps = 1e-12
     pod_method = "svd"  # "svd" or "rsvd"
 
     clustering_method = "kmeans"  # "kmeans" or "fuzzy"
@@ -363,6 +418,10 @@ def main():
     print(f"[OFFLINE-QM] Clustering method: {clustering_method}, phi={phi}")
     print(
         f"[OFFLINE-QM] Local POD truncation: tol={pod_tol:.1e}, method={pod_method}"
+    )
+    print(
+        f"[OFFLINE-QM] Reduced-coordinate normalization: mode={q_normalization_mode}, "
+        f"eps={q_normalization_eps:.1e}"
     )
 
     run_start = time.time()
@@ -409,6 +468,8 @@ def main():
         zeta_qua=zeta_qua,
         alpha_ridge=alpha_ridge,
         pod_method=pod_method,
+        q_normalization_mode=q_normalization_mode,
+        q_normalization_eps=q_normalization_eps,
     )
     elapsed_local_qm = time.time() - t0
 
@@ -466,6 +527,8 @@ def main():
                     ("pod_method", pod_method),
                     ("zeta_qua", zeta_qua),
                     ("alpha_ridge", alpha_ridge),
+                    ("q_normalization_mode", q_normalization_mode),
+                    ("q_normalization_eps", q_normalization_eps),
                     ("num_training_parameters", len(param_list)),
                     ("snap_folder", snap_folder),
                 ],

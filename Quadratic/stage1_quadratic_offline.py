@@ -72,6 +72,41 @@ def build_Q_symmetric_matrix(q_mat):
     return q_mat[i_triu, :] * q_mat[j_triu, :]
 
 
+def compute_q_scales(q_mat, mode="off", eps=1e-12):
+    """
+    Compute per-coordinate scaling for reduced coordinates q.
+
+    Returns
+    -------
+    scales : (n,) ndarray
+        Positive scales so that q_scaled = q / scales.
+    mode_used : str
+        Normalized mode label.
+    """
+    mode_used = str(mode).strip().lower()
+    if mode_used in ("off", "none", "false", "0"):
+        return np.ones(q_mat.shape[0], dtype=np.float64), "off"
+    if mode_used in ("std", "standard", "standardize"):
+        scales = np.std(q_mat, axis=1, ddof=1)
+        scales = np.asarray(scales, dtype=np.float64)
+        bad = ~np.isfinite(scales) | (scales < float(eps))
+        if np.any(bad):
+            scales[bad] = 1.0
+        return scales, "std"
+    raise ValueError(
+        "q_normalization_mode must be one of: "
+        "'off', 'std'. "
+        f"Got: {mode}"
+    )
+
+
+def compute_q_pair_scales(q_scales):
+    """Return per-monomial scales d_i d_j for upper-triangular pairs (i<=j)."""
+    q_scales = np.asarray(q_scales, dtype=np.float64).reshape(-1)
+    i_triu, j_triu = np.triu_indices(q_scales.size)
+    return q_scales[i_triu] * q_scales[j_triu]
+
+
 def pod_rank_from_tolerance(singular_values, pod_tol):
     svals = np.asarray(singular_values, dtype=np.float64)
     if svals.size == 0:
@@ -120,6 +155,8 @@ def main(
     dt=DT,
     num_steps=NUM_STEPS,
     center_mode="on",
+    q_normalization_mode="off",
+    q_normalization_eps=1e-12,
     save_sv_plot=True,
 ):
     results_dir = os.path.join(parent_dir, "Results")
@@ -200,14 +237,25 @@ def main(
     # Build Q and compute H
     # ------------------------------------------------------------------
     t0 = time.time()
-    q_mat = V.T @ S_centered
-    S_lin = V @ q_mat + u_ref[:, None]
+    q_mat_raw = V.T @ S_centered
+    q_scales, q_norm_mode_used = compute_q_scales(
+        q_mat_raw,
+        mode=q_normalization_mode,
+        eps=q_normalization_eps,
+    )
+    q_mat = q_mat_raw / q_scales[:, None]
+    S_lin = V @ q_mat_raw + u_ref[:, None]
     E = S - S_lin
     Q = build_Q_symmetric_matrix(q_mat)
     elapsed_q_build = time.time() - t0
 
     t0 = time.time()
-    H = compute_H_ridge(E, Q, ridge_alpha=ridge_alpha)
+    H_scaled = compute_H_ridge(E, Q, ridge_alpha=ridge_alpha)
+    q_pair_scales = compute_q_pair_scales(q_scales)
+    # Convert back to raw-q convention so online code remains unchanged:
+    #   E ~= H_scaled * Q(q_scaled),   q_scaled_i = q_i / d_i
+    #   => E ~= H_raw * Q(q), with H_raw[:,ij] = H_scaled[:,ij] / (d_i d_j)
+    H = H_scaled / q_pair_scales[None, :]
     elapsed_h = time.time() - t0
 
     # ------------------------------------------------------------------
@@ -232,6 +280,10 @@ def main(
         center_mode=np.str_(center_mode),
         use_u_ref=np.bool_(use_u_ref),
         u_ref_source=np.str_(u_ref_source),
+        q_normalization_mode=np.str_(q_norm_mode_used),
+        q_normalization_eps=np.float64(q_normalization_eps),
+        q_scales=q_scales.astype(np.float64),
+        q_pair_scales=q_pair_scales.astype(np.float64),
         n_trad=np.int64(n_trad),
         n_qua_raw=np.float64(n_qua_raw),
         n_qua_corr=np.int64(n_qua_corr),
@@ -281,6 +333,8 @@ def main(
                     ("pod_tol", pod_tol),
                     ("zeta_qua", zeta_qua),
                     ("ridge_alpha", ridge_alpha),
+                    ("q_normalization_mode", q_norm_mode_used),
+                    ("q_normalization_eps", q_normalization_eps),
                     ("snap_folder", snap_folder),
                 ],
             ),
@@ -315,6 +369,9 @@ def main(
                     ("Q_shape", Q.shape),
                     ("u_ref_l2_norm", np.linalg.norm(u_ref)),
                     ("linear_residual_l2_norm", np.linalg.norm(E)),
+                    ("q_scale_min", float(np.min(q_scales))),
+                    ("q_scale_max", float(np.max(q_scales))),
+                    ("q_scale_mean", float(np.mean(q_scales))),
                 ],
             ),
             (

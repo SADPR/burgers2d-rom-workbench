@@ -1,0 +1,30 @@
+[run]
+timestamp: 2026-04-23T06:55:10
+mu1: 4.75000000e+00
+mu2: 2.00000000e-02
+
+[configuration]
+save_snaps: True
+save_plot: True
+snap_folder: Results/param_snaps
+
+[discretization]
+dt: 5.00000000e-02
+num_steps: 500
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[fom_timing]
+total_hdm_time_seconds: 7.55886880e+02
+avg_hdm_time_per_step_seconds: 1.51177376e+00
+
+[snapshot_stats]
+snapshot_shape: (125000, 501)
+snapshot_l2_norm: 1.92577847e+04
+snapshot_min: 1.53981918e-65
+snapshot_max: 5.50359839e+00
+
+[outputs]
+hdm_snapshots_npy: Results/hdm_snaps_mu1_4.75_mu2_0.020.npy
+hdm_plot_png: Results/hdm_mu1_4.75_mu2_0.020.png

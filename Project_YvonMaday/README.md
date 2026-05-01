@@ -174,11 +174,16 @@ python3 stage3_perform_training_case_2_prnn.py \
   --dataset-backend prom \
   --primary-modes 10 \
   --model-name case2_model_prnn.pt \
+  --pretrain-epochs 120 \
   --omega-data 1.0 \
   --omega-residual 1e-2 \
   --physics-projection vtot \
   --physics-subsample 8
 ```
+
+Notes:
+- `--epochs` is the total budget.
+- `--pretrain-epochs` runs data-only first (`omega_residual=0`) and then the remaining epochs are PRNN fine-tuning.
 
 Run online:
 ```bash

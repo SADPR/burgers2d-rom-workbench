@@ -222,7 +222,7 @@ def plot_cluster_ranks(r_list, out_png):
 def main(
     clusters_file=os.path.join(script_dir, "local_gpr_clusters_full.npz"),
     snap_folder=os.path.join(parent_dir, "Results", "param_snaps"),
-    eps2_pod=1e-6,
+    eps2_pod=1e-4,
     output_file=os.path.join(script_dir, "local_gpr_pod_per_cluster.npz"),
     plot_dir=os.path.join(script_dir, "stage2_pod_plots"),
     rank_plot_file=os.path.join(script_dir, "stage2_cluster_ranks.png"),

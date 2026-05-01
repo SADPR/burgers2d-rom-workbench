@@ -261,6 +261,8 @@ def case2_variant_snaps_path(stage, variant, mu, n_tot):
         runs_root = THIS_DIR / "Results" / "Runs" / "Case2"
         if variant == "pg":
             run_name = f"case2_petrov_galerkin_prom_ann_{mu_tag(mu)}_n10_ntot{n_tot}"
+        elif variant == "prnn":
+            run_name = f"case2_prnn_prom_ann_prnn_{mu_tag(mu)}_n10_ntot{n_tot}"
         elif variant == "n20":
             run_name = f"case2_prom_ann_{mu_tag(mu)}_n20_ntot{n_tot}"
         elif variant == "n20_trim":
@@ -271,6 +273,9 @@ def case2_variant_snaps_path(stage, variant, mu, n_tot):
         runs_root = THIS_DIR / "Results_Enrichment" / "Runs" / "Case2"
         if variant == "pg":
             run_name = f"case2_petrov_galerkin_prom_ann_enriched_{mu_tag(mu)}_n10_ntot{n_tot}"
+        elif variant == "prnn":
+            # No enriched PRNN run by default in this campaign.
+            return Path("__missing__")
         elif variant == "n20":
             run_name = f"case2_prom_ann_enriched_{mu_tag(mu)}_n20_ntot{n_tot}"
         elif variant == "n20_trim":
@@ -360,6 +365,7 @@ def plot_coeff_error_curves(
     model_order = [
         "Case 1",
         "Case 2",
+        "Case 2 PRNN",
         "Case 2 PG",
         "Case 2 n=20",
         "Case 2 n=20 (trimmed)",
@@ -369,6 +375,7 @@ def plot_coeff_error_curves(
     colors = {
         "Case 1": "tab:red",
         "Case 2": "tab:blue",
+        "Case 2 PRNN": "tab:cyan",
         "Case 2 PG": "tab:purple",
         "Case 2 n=20": "tab:brown",
         "Case 2 n=20 (trimmed)": "tab:pink",
@@ -442,22 +449,35 @@ def plot_error_heatmap_grid(
     title,
     cbar_label,
 ):
-    model_order = ["Case 1", "Case 2", "Case 3", "Data-driven"]
+    preferred_order = [
+        "Case 1",
+        "Case 2",
+        "Case 2 PRNN",
+        "Case 2 PG",
+        "Case 2 n=20",
+        "Case 2 n=20 (trimmed)",
+        "Case 3",
+        "Data-driven",
+    ]
+    model_order = [name for name in preferred_order if name in err_mats]
+    if not model_order:
+        raise ValueError("No heatmap data to plot.")
+
+    n_models = len(model_order)
+    ncols = 2 if n_models <= 4 else 3
+    nrows = int(np.ceil(n_models / ncols))
     fig, axes = plt.subplots(
-        2,
-        2,
-        figsize=(12.0, 8.4),
+        nrows,
+        ncols,
+        figsize=(5.2 * ncols, 2.8 * nrows + 1.2),
         sharex=True,
         sharey=True,
     )
-    axes = axes.ravel()
+    axes = np.atleast_1d(axes).ravel()
 
     vals = []
     for name in model_order:
-        if name in err_mats:
-            vals.append(err_mats[name].ravel())
-    if not vals:
-        raise ValueError("No heatmap data to plot.")
+        vals.append(err_mats[name].ravel())
     vals = np.concatenate(vals)
     vmax = float(np.percentile(vals, 99.0))
     if not np.isfinite(vmax) or vmax <= 0.0:
@@ -484,14 +504,21 @@ def plot_error_heatmap_grid(
         ax.set_title(name)
         ax.grid(False)
 
-    axes[0].set_ylabel("Coefficient index $i$")
-    axes[2].set_ylabel("Coefficient index $i$")
-    axes[2].set_xlabel("Time $t$")
-    axes[3].set_xlabel("Time $t$")
+    for idx, ax in enumerate(axes):
+        row = idx // ncols
+        col = idx % ncols
+        if col == 0:
+            ax.set_ylabel("Coefficient index $i$")
+        if row == nrows - 1:
+            ax.set_xlabel("Time $t$")
+
+    for ax in axes[n_models:]:
+        ax.axis("off")
+
     fig.suptitle(title)
     # Keep a dedicated colorbar axis outside the subplot grid to avoid overlap.
-    fig.subplots_adjust(left=0.07, right=0.88, bottom=0.08, top=0.90, wspace=0.08, hspace=0.12)
-    cax = fig.add_axes([0.90, 0.18, 0.022, 0.65])
+    fig.subplots_adjust(left=0.06, right=0.88, bottom=0.08, top=0.90, wspace=0.08, hspace=0.16)
+    cax = fig.add_axes([0.90, 0.16, 0.022, 0.68])
     cbar = fig.colorbar(im, cax=cax)
     cbar.set_label(cbar_label)
     fig.savefig(out_path, dpi=220)
@@ -514,8 +541,14 @@ def build_stage_qn_dict(stage, mu, n_p, n_tot, basis, u_ref, cache_projected=Tru
     q_dd = np.asarray(np.load(dd_qn_path(stage, mu, n_tot), allow_pickle=False), dtype=np.float64)
 
     q_case2_pg = None
+    q_case2_prnn = None
     q_case2_n20 = None
     q_case2_n20_trim = None
+    prnn_snaps = case2_variant_snaps_path(stage, "prnn", mu, n_tot)
+    if prnn_snaps.exists():
+        q_case2_prnn = project_snaps_to_qn(
+            prnn_snaps, basis, u_ref, cache_projected=cache_projected
+        )
     pg_snaps = case2_variant_snaps_path(stage, "pg", mu, n_tot)
     if pg_snaps.exists():
         q_case2_pg = project_snaps_to_qn(
@@ -539,6 +572,8 @@ def build_stage_qn_dict(stage, mu, n_p, n_tot, basis, u_ref, cache_projected=Tru
         "Case 3": q_case3,
         "Data-driven": q_dd,
     }
+    if q_case2_prnn is not None:
+        q_dict["Case 2 PRNN"] = q_case2_prnn
     if q_case2_pg is not None:
         q_dict["Case 2 PG"] = q_case2_pg
     if q_case2_n20 is not None:
@@ -709,6 +744,7 @@ def main():
             curve_model_order = [
                 "Case 1",
                 "Case 2",
+                "Case 2 PRNN",
                 "Case 2 PG",
                 "Case 2 n=20",
                 "Case 2 n=20 (trimmed)",
@@ -765,7 +801,19 @@ def main():
             abs_heat = {}
             rel_heat = {}
             denom_mode = np.maximum(np.linalg.norm(q_ref, axis=1, keepdims=True), 1e-14)
-            for model_name in ("Case 1", "Case 2", "Case 3", "Data-driven"):
+            heatmap_model_order = [
+                "Case 1",
+                "Case 2",
+                "Case 2 PRNN",
+                "Case 2 PG",
+                "Case 2 n=20",
+                "Case 2 n=20 (trimmed)",
+                "Case 3",
+                "Data-driven",
+            ]
+            for model_name in heatmap_model_order:
+                if model_name not in q_dict:
+                    continue
                 q_mod = q_dict[model_name]
                 eabs = np.abs(q_ref - q_mod)
                 abs_heat[model_name] = eabs

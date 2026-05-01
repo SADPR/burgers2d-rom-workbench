@@ -22,7 +22,7 @@ This note revisits explicit higher-mode injection and compares three nonlinear c
 
 All experiments are carried out on the 2D parametric inviscid Burgers benchmark on the $250\times250$ mesh. We use a two-stage workflow: a baseline training set built from 9 structured parameter points, and an enrichment stage adding 20 Latin-hypercube points (generated with PROM solves). The trained maps are evaluated online with PROM only, and compared against a purely data-driven baseline $q_N(t;\mu)\approx\mathcal G(\mu,t)$ and a linear PROM reference in the full truncated space.
 
-Results show that enrichment improves the ANN closures and the purely data-driven surrogate across the test set, while the linear $n_{\mathrm{tot}}$-PROM remains the most accurate reference at a significantly higher online cost. For Case~2, a Petrov-Galerkin (PG) variant improves accuracy but is markedly slower, and the $n=20$ split highlights a data-limited baseline regime that is strongly corrected after enrichment. Overall, the PROM-consistent training/evaluation protocol clarifies the comparison between linear and nonlinear reduced formulations.
+Results show that enrichment improves the ANN closures and the purely data-driven surrogate across the test set, while the linear $n_{\mathrm{tot}}$-PROM remains the most accurate reference at a significantly higher online cost. For Case~2, a Petrov-Galerkin (PG) variant improves accuracy but is markedly slower, and the $n=20$ split highlights a data-limited baseline regime that is strongly corrected after enrichment. A physics-regularized Case~2 PRNN training variant is feasible but remains expensive offline and yields mixed baseline gains. Overall, the PROM-consistent training/evaluation protocol clarifies the comparison between linear and nonlinear reduced formulations.
 \end{abstract}
 
 \vspace{-1.0em}
@@ -606,7 +606,7 @@ We follow the sequence below:
 \[
 \mathbf q_N^{\mathrm{PROM}}(t;\bm\mu)=\begin{bmatrix}\mathbf q(t;\bm\mu)\\ \bar{\mathbf q}(t;\bm\mu)\end{bmatrix}.
 \]
-\item Train four nonlinear maps from this dataset: Case 1, Case 2, Case 3, and the purely data-driven map $\mathcal G(\bm\mu,t)\approx \mathbf q_N^{\mathrm{PROM}}$.
+\item Train four nonlinear maps from this dataset: Case 1, Case 2, Case 3, and the purely data-driven map $\mathcal G(\bm\mu,t)\approx \mathbf q_N^{\mathrm{PROM}}$. In addition, we test a Case~2 PRNN variant with combined data and projected-residual loss.
 \item Evaluate all models at three points (verification point first, then two off-grid test points):
 \[
 \bm\mu^{(v)}=(4.875,0.0225),\qquad
@@ -632,6 +632,44 @@ For the production runs in this report (Case~1, Case~2, Case~3, and data-driven)
 followed by an output layer of task-dependent size. Training uses AdamW with learning rate $10^{-3}$, weight decay $10^{-6}$, early stopping (patience $120$), and fixed seed $42$.
 Case~1, Case~2, Case~3, and data-driven use batch size $128$.
 For Case~2 with $n=20$, we also tested several alternative architectures/activations and optimizer settings; the best run in our tests still used this same baseline architecture.
+
+\paragraph{Case 2 PRNN training (offline).}
+For the Case~2 closure map $\bar{\mathbf q}=\mathcal M_\theta(\bm\mu,t)$, we tested a physics-regularized training objective:
+\[
+\mathcal L(\theta)=\omega_{\mathrm{data}}\mathcal L_{\mathrm{data}}(\theta)+\omega_{\mathrm{res}}\mathcal L_{\mathrm{res}}(\theta).
+\]
+The data term is
+\[
+\mathcal L_{\mathrm{data}}
+=
+\frac{1}{N_b}\sum_{j=1}^{N_b}
+\left\|
+\mathcal M_\theta(\bm\mu_j,t_j)-\bar{\mathbf q}^{\mathrm{ref}}_j
+\right\|_2^2.
+\]
+The physics term is built from a projected HDM residual:
+\[
+\widehat{\mathbf u}_j
+=
+\mathbf u_{\mathrm{ref}}+\mathbf V\,\mathbf q^{\mathrm{ref}}_j
++\overline{\mathbf V}\,\mathcal M_\theta(\bm\mu_j,t_j),\qquad
+\mathcal L_{\mathrm{res}}
+=
+\frac{1}{N_{\mathrm{phys}}}\sum_{j\in\mathcal I_{\mathrm{phys}}}
+\frac{1}{k}
+\left\|
+\mathbf P^T\mathbf r(\widehat{\mathbf u}_j;\bm\mu_j)
+\right\|_2^2,
+\]
+with $\mathbf P\in\{\mathbf V_{\mathrm{tot}},\mathbf V\}$ and $k=\dim(\mathrm{Range}(\mathbf P))$. In this campaign we use $\mathbf P=\mathbf V_{\mathrm{tot}}$.
+Using the available residual Jacobian $\mathbf J_j=\partial \mathbf r/\partial \mathbf u|_{\widehat{\mathbf u}_j}$, the residual term contributes
+\[
+\frac{\partial \mathcal L_{\mathrm{res}}}{\partial \bar{\mathbf q}_j}
+\approx
+\frac{2}{k}\,
+\overline{\mathbf V}^{T}\mathbf J_j^{T}\mathbf P\left(\mathbf P^T\mathbf r_j\right).
+\]
+To keep training affordable, we use a two-stage schedule (data-only pretraining, then short PRNN fine-tuning), stochastic subsampling of physics rows ($\texttt{physics\_subsample}$), and optional sparse evaluation frequency ($\texttt{physics\_every}$). Even with these controls, PRNN training remains substantially more expensive than pure data training for Case~2.
 
 \paragraph{Dataset sizes.}
 Baseline Stage-3 training uses $M=4509$ samples ($9\times501$).  
@@ -668,8 +706,8 @@ Figure~\ref{fig:stage2_sampling_lhs20} shows the original $3\times3$ training po
 \subsection{Baseline models (9-point training dataset)}
 \label{sec:baseline_prom_250}
 
-Table~\ref{tab:baseline_prom_250} reports trajectory-level relative errors and online runtimes for the PROM-consistent campaign. We include two linear references (the main $n_{\mathrm{tot}}=151$ PROM and an additional linear PROM with $n_{\mathrm{tot}}=76$), the three ANN closure variants, the Case~2 Petrov-Galerkin (PG) variant, two Case~2 $n=20$ baseline variants (native $n=20$ training and $n=10\to n=20$ trimmed transfer), and the purely data-driven model. The HPROM backend remains available in the codebase, but it is not used for the quantitative tables in this section.
-In all result tables below, ``Case~2 + PG'' denotes the \emph{Case~2 with enriched residual testing} formulation introduced above.
+Table~\ref{tab:baseline_prom_250} reports trajectory-level relative errors and online runtimes for the PROM-consistent campaign. We include two linear references (the main $n_{\mathrm{tot}}=151$ PROM and an additional linear PROM with $n_{\mathrm{tot}}=76$), the three ANN closure variants, the Case~2 Petrov-Galerkin (PG) oracle diagnostic, a Case~2 PRNN variant (same Case~2 map with projected-residual regularization in training), two Case~2 $n=20$ baseline variants (native $n=20$ training and $n=10\to n=20$ trimmed transfer), and the purely data-driven model. The HPROM backend remains available in the codebase, but it is not used for the quantitative tables in this section.
+In all result tables below, ``Case~2 + PG Oracle'' denotes the \emph{oracle-injected Case~2 PG} run (secondary coordinates injected from linear $n_{\mathrm{tot}}$-PROM). The non-oracle PG variant is not included in this version of the report.
 The trajectory-level relative error is computed against the HDM trajectory:
 \[
 \mathrm{RelErr}(\bm\mu)
@@ -693,7 +731,8 @@ Linear PROM ($n_{\mathrm{tot}}=151$) & 0.410 & 0.450 & 0.463 & 921.943 & 871.356
 Linear PROM ($n_{\mathrm{tot}}=76$) & 1.314 & 1.574 & 1.398 & 449.279 & 450.632 & 451.384 \\
 Case 1 ANN ($\bar{\mathbf q}=\mathcal N(\mathbf q)$) & 0.708 & 0.716 & 1.103 & 148.840 & 147.333 & 149.762 \\
 Case 2 ANN ($\bar{\mathbf q}=\mathcal M(\bm\mu,t)$) & 0.874 & 1.224 & 1.507 & 90.985 & 92.647 & 91.022 \\
-Case 2 ANN + PG (enriched residual testing) & 0.793 & 1.202 & 1.223 & 409.562 & 409.104 & 406.139 \\
+Case 2 ANN + PG Oracle (enriched residual testing) & 0.793 & 1.202 & 1.223 & 409.562 & 409.104 & 406.139 \\
+Case 2 PRNN (two-stage, projected residual regularization) & 0.999 & 1.478 & 1.150 & 158.195 & 163.423 & 159.270 \\
 Case 2 ANN ($n=20$, $\bar n=131$, native $n=20$ model) & 0.652 & 6.502 & 3.755 & 146.334 & 141.090 & 141.372 \\
 Case 2 ANN ($n=20$, $\bar n=131$, $n=10\to n=20$ trimmed transfer) & 0.689 & 1.056 & 1.035 & 140.073 & 143.743 & 143.484 \\
 Case 3 ANN ($\bar{\mathbf q}=\mathcal H(\mathbf q,\bm\mu,t)$) & 0.655 & 0.765 & 0.788 & 149.478 & 149.438 & 151.618 \\
@@ -710,7 +749,7 @@ The second $n=20$ Case~2 baseline row is a transfer run that reuses the baseline
 \subsection{Enriched models (9+20 training dataset)}
 \label{sec:enriched_prom_250}
 
-For enrichment, we augment the baseline $9$ trajectories with $20$ LHS trajectories and retrain all four nonlinear maps. Table~\ref{tab:enriched_prom_250} reports PROM results at the same three points, including the Case~2 PG and $n=20$ variants. The linear reference rows are unchanged and are included for reference.
+For enrichment, we augment the baseline $9$ trajectories with $20$ LHS trajectories and retrain all four nonlinear maps. Table~\ref{tab:enriched_prom_250} reports PROM results at the same three points, including the Case~2 PG Oracle and $n=20$ variants. The linear reference rows are unchanged and are included for reference. The Case~2 PRNN row is marked as not run in the current enriched campaign.
 
 \begin{table}[H]
 \centering
@@ -725,7 +764,8 @@ Linear PROM ($n_{\mathrm{tot}}=151$) & 0.410 & 0.450 & 0.463 & 921.943 & 871.356
 Linear PROM ($n_{\mathrm{tot}}=76$) & 1.314 & 1.574 & 1.398 & 449.279 & 450.632 & 451.384 \\
 Case 1 ANN (enriched) & 0.681 & 0.561 & 0.922 & 156.034 & 156.136 & 156.006 \\
 Case 2 ANN (enriched) & 0.894 & 0.962 & 0.875 & 91.416 & 91.013 & 90.763 \\
-Case 2 ANN + PG (enriched) & 0.685 & 0.754 & 0.714 & 413.579 & 411.149 & 415.588 \\
+Case 2 ANN + PG Oracle (enriched) & 0.685 & 0.754 & 0.714 & 413.579 & 411.149 & 415.588 \\
+Case 2 PRNN (enriched) & -- & -- & -- & -- & -- & -- \\
 Case 2 ANN ($n=20$, $\bar n=131$, enriched) & 0.499 & 0.550 & 0.548 & 140.796 & 141.836 & 141.215 \\
 Case 3 ANN (enriched) & 0.473 & 0.517 & 0.532 & 156.095 & 155.333 & 165.269 \\
 Data-driven (enriched) & 0.860 & 0.928 & 0.896 & 0.006 & 0.006 & 0.006 \\
@@ -764,7 +804,8 @@ Linear PROM ($n_{\mathrm{tot}}=151$) & 0.82 & 0.86 & 0.83 & 0.82 & 0.86 & 0.83 \
 Linear PROM ($n_{\mathrm{tot}}=76$) & 1.68 & 1.67 & 1.68 & 1.68 & 1.67 & 1.68 \\
 Case 1 ANN & 5.07 & 5.10 & 5.06 & 4.83 & 4.81 & 4.86 \\
 Case 2 ANN & 8.29 & 8.10 & 8.32 & 8.25 & 8.25 & 8.35 \\
-Case 2 ANN + PG & 1.84 & 1.84 & 1.87 & 1.82 & 1.83 & 1.82 \\
+Case 2 ANN + PG Oracle & 1.84 & 1.84 & 1.87 & 1.82 & 1.83 & 1.82 \\
+Case 2 PRNN & 4.77 & 4.59 & 4.76 & -- & -- & -- \\
 Case 2 ANN ($n=20$, native) & 5.15 & 5.32 & 5.36 & 5.36 & 5.29 & 5.37 \\
 Case 2 ANN ($n=20$, trimmed transfer) & 5.38 & 5.22 & 5.28 & -- & -- & -- \\
 Case 3 ANN & 5.05 & 5.02 & 5.00 & 4.83 & 4.83 & 4.58 \\
@@ -800,7 +841,8 @@ Linear PROM ($n_{\mathrm{tot}}=151$) & 0.410 & 0.410 & 0.00 & 0.450 & 0.450 & 0.
 Linear PROM ($n_{\mathrm{tot}}=76$) & 1.314 & 1.314 & 0.00 & 1.574 & 1.574 & 0.00 & 1.398 & 1.398 & 0.00 \\
 Case 1 ANN & 0.708 & 0.681 & 3.75 & 0.716 & 0.561 & 21.68 & 1.103 & 0.922 & 16.43 \\
 Case 2 ANN & 0.874 & 0.894 & -2.36 & 1.224 & 0.962 & 21.39 & 1.507 & 0.875 & 41.96 \\
-Case 2 ANN + PG & 0.793 & 0.685 & 13.56 & 1.202 & 0.754 & 37.28 & 1.223 & 0.714 & 41.59 \\
+Case 2 ANN + PG Oracle & 0.793 & 0.685 & 13.56 & 1.202 & 0.754 & 37.28 & 1.223 & 0.714 & 41.59 \\
+Case 2 PRNN & 0.999 & -- & -- & 1.478 & -- & -- & 1.150 & -- & -- \\
 Case 2 ANN ($n=20$) & 0.652 & 0.499 & 23.56 & 6.502 & 0.550 & 91.54 & 3.755 & 0.548 & 85.40 \\
 Case 3 ANN & 0.655 & 0.473 & 27.75 & 0.765 & 0.517 & 32.45 & 0.788 & 0.532 & 32.44 \\
 Data-driven & 0.874 & 0.860 & 1.67 & 1.832 & 0.928 & 49.35 & 1.580 & 0.896 & 43.28 \\
@@ -810,7 +852,7 @@ Data-driven & 0.874 & 0.860 & 1.67 & 1.832 & 0.928 & 49.35 & 1.580 & 0.896 & 43.
 \end{table}
 
 \paragraph{Remark and practical takeaway.}
-In this PROM-consistent campaign, the linear $n_{\mathrm{tot}}=151$ PROM remains the most accurate reference but at the highest online cost. The additional linear run with $n_{\mathrm{tot}}=76$ reduces linear runtime to about $450$\,s but with larger trajectory errors (about $1.3$--$1.6$\%). For Case~2, the PG variant improves all three enriched-point errors relative to the standard Case~2 row, but with a substantially larger runtime (speed-up near $1.8\times$ only). For the $n=20$ Case~2 split, we report both baseline variants: the native $n=20$ model and a baseline transfer run ($n=10\to n=20$ trimming). The transfer run yields much better off-grid baseline behavior than the native baseline model (from $6.502\%\to1.056\%$ at $\bm\mu^{(1)}$ and $3.755\%\to1.035\%$ at $\bm\mu^{(2)}$), while the enriched native-$n=20$ model already achieves low errors (about $0.55\%$) at both off-grid points.
+In this PROM-consistent campaign, the linear $n_{\mathrm{tot}}=151$ PROM remains the most accurate reference but at the highest online cost. The additional linear run with $n_{\mathrm{tot}}=76$ reduces linear runtime to about $450$\,s but with larger trajectory errors (about $1.3$--$1.6$\%). For Case~2, the PG Oracle row improves all three enriched-point errors relative to the standard Case~2 row, but with a substantially larger runtime (speed-up near $1.8\times$ only). The PRNN-trained Case~2 row shows mixed baseline impact (improvement at $\bm\mu^{(2)}$, degradation at $\bm\mu^{(v)}$ and $\bm\mu^{(1)}$) and is slower online than standard Case~2 (about $4.6$--$4.8\times$ speed-up vs about $8.1$--$8.3\times$), so it is not a dominant tradeoff in the present setting. For the $n=20$ Case~2 split, we report both baseline variants: the native $n=20$ model and a baseline transfer run ($n=10\to n=20$ trimming). The transfer run yields much better off-grid baseline behavior than the native baseline model (from $6.502\%\to1.056\%$ at $\bm\mu^{(1)}$ and $3.755\%\to1.035\%$ at $\bm\mu^{(2)}$), while the enriched native-$n=20$ model already achieves low errors (about $0.55\%$) at both off-grid points.
 
 \paragraph{PG oracle sanity check (implementation).}
 As a temporary implementation check, we ran the Case~2 PG solve using an oracle truncated trajectory $\bar{\mathbf q}(t)$ taken directly from the linear $n_{\mathrm{tot}}$-PROM (instead of ANN prediction). On the verification and test points, this oracle-PG run converges to the linear PROM solution within printed precision: relative error vs linear PROM is $0.000\%$, relative primary-coordinate mismatch is $0.000\%$--$0.001\%$, and relative truncated-coordinate mismatch is $0.000\%$. The corresponding HDM errors match the linear-PROM level on the checked points (e.g., $0.410\%$ and $0.450\%$). This supports that the PG assembly/solve is consistent; the practical PG gap in Table~\ref{tab:baseline_prom_250} and Table~\ref{tab:enriched_prom_250} is driven by closure-map accuracy, not by the PG implementation itself.
@@ -829,13 +871,13 @@ In the direct baseline $n=20$ training, this appears as severe off-grid degradat
 \subsection{Coefficient-space error analysis and source decomposition}
 \label{sec:coeff_errors_250}
 
-Unless stated otherwise, the coefficient-space diagnostics below correspond to the standard $n=10$ closure models (without the PG Case~2 variant and without the $n=20$ split), and use the linear $n_{\mathrm{tot}}=151$ PROM coefficients as reference.
+Unless stated otherwise, the coefficient-space diagnostics below use the linear $n_{\mathrm{tot}}=151$ PROM coefficients as reference. Baseline plots include the extended Case~2 family (PG, PRNN, and $n=20$ variants), while enriched plots include all available enriched runs.
 
 To isolate reduced-coordinate effects, we use the linear $n_{\mathrm{tot}}$-PROM coefficients as reference:
 \[
 \mathbf q^{\mathrm{ref}}(t;\bm\mu) := \mathbf q_N^{\mathrm{Linear\ PROM}}(t;\bm\mu).
 \]
-For each model $m\in\{\text{Case~1, Case~2, Case~3, Data-driven}\}$, with coefficients $\mathbf q^{(m)}$, we define per-mode trajectory errors
+For each model $m$, with coefficients $\mathbf q^{(m)}$, we define per-mode trajectory errors
 \[
 E_i^{\mathrm{abs}}(m;\bm\mu)=\left\|q_i^{\mathrm{ref}}-q_i^{(m)}\right\|_2,\qquad
 E_i^{\mathrm{rel}}(m;\bm\mu)=\frac{E_i^{\mathrm{abs}}(m;\bm\mu)}{\left\|q_i^{\mathrm{ref}}\right\|_2}.
@@ -866,6 +908,7 @@ Method & Baseline $\eta_q$ [\%] & Baseline $\eta_{\bar q}$ [\%] & Enriched $\eta
 \hline
 Case 1 ANN & 0.80 & 7.55 & 0.67 & 6.08 \\
 Case 2 ANN & 1.54 & 9.88 & 1.62 & 4.49 \\
+Case 2 PRNN & 1.64 & 10.17 & -- & -- \\
 Case 3 ANN & 0.71 & 6.40 & 0.29 & 2.69 \\
 Data-driven & 2.04 & 11.69 & 1.08 & 7.46 \\
 \hline
@@ -873,7 +916,7 @@ Data-driven & 2.04 & 11.69 & 1.08 & 7.46 \\
 \end{table}
 
 \paragraph{Error-source decomposition for closure models.}
-For Cases~1--3, the truncated-coordinate error $\mathbf e_{\bar q,\mathrm{tot}}$ can be decomposed as follows.
+For Cases~1--3, the truncated-coordinate error $\mathbf e_{\bar q,\mathrm{tot}}$ can be decomposed as follows. The Case~2 PRNN model uses the same Case~2 functional structure $\bar{\mathbf q}=\mathcal M(\bm\mu,t)$, so its decomposition has the same form (no Source~3 term); we report it as an additional baseline reference in Table~\ref{tab:decomposition_summary_250}.
 There is no independent ``Source~1'' term for $\bar{\mathbf q}$ because $\bar{\mathbf q}$ is not solved as an independent unknown in these closure models. Source~1 acts on $\bar{\mathbf q}$ only indirectly through Source~3 when the closure depends on $\mathbf q$ (Cases~1 and~3). For Case~2, Source~3 is identically absent.
 
 \textbf{Case 1:}
@@ -915,6 +958,7 @@ Stage & Case & Source 2 [\%] & Source 3 [\%] & Total $\eta_{\bar q}$ [\%] \\
 \hline
 Baseline & Case 1 & 5.50 & 6.13 & 7.55 \\
 Baseline & Case 2 & 9.88 & -- & 9.88 \\
+Baseline & Case 2 PRNN & 10.17 & -- & 10.17 \\
 Baseline & Case 3 & 3.58 & 5.84 & 6.40 \\
 Enriched & Case 1 & 3.44 & 5.33 & 6.08 \\
 Enriched & Case 2 & 4.49 & -- & 4.49 \\
@@ -923,47 +967,47 @@ Enriched & Case 3 & 2.40 & 1.68 & 2.69 \\
 \end{tabular}
 \end{table}
 
-Figures~\ref{fig:coeff_abs_rel_baseline_verif}--\ref{fig:coeff_abs_rel_enriched_mu2} show per-index absolute and relative coefficient errors for all three reported parameter points. The display order is parameter-first; for each parameter point, we report baseline first and enriched second. Baseline curves include Case~1, Case~2, Case~2 with enriched residual testing (PG), Case~2 $n=20$ (native), Case~2 $n=20$ (trimmed transfer), Case~3, and data-driven; enriched curves include the corresponding models except the trimmed-transfer baseline diagnostic.
+Figures~\ref{fig:coeff_abs_rel_baseline_verif}--\ref{fig:coeff_abs_rel_enriched_mu2} show per-index absolute and relative coefficient errors for all three reported parameter points. The display order is parameter-first; for each parameter point, we report baseline first and enriched second. Baseline curves include Case~1, Case~2, Case~2 PRNN, Case~2 PG Oracle, Case~2 $n=20$ (native), Case~2 $n=20$ (trimmed transfer), Case~3, and data-driven; enriched curves include the available enriched models (no enriched PRNN or trimmed-transfer run in this campaign).
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.94\textwidth]{Figures/coeff_errors/baseline_mu1_4.875_mu2_0.0225_coeff_abs_rel_vs_index.png}
-\caption{Baseline stage: per-index absolute and relative coefficient errors vs linear $n_{\mathrm{tot}}$-PROM reference at $\bm\mu^{(v)}=(4.875,0.0225)$, including Case~2 PG, Case~2 $n=20$ (native), and Case~2 $n=20$ (trimmed transfer).}
+\caption{Baseline stage: per-index absolute and relative coefficient errors vs linear $n_{\mathrm{tot}}$-PROM reference at $\bm\mu^{(v)}=(4.875,0.0225)$, including Case~2 PRNN, Case~2 PG Oracle, Case~2 $n=20$ (native), and Case~2 $n=20$ (trimmed transfer).}
 \label{fig:coeff_abs_rel_baseline_verif}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.94\textwidth]{Figures/coeff_errors/enriched_mu1_4.875_mu2_0.0225_coeff_abs_rel_vs_index.png}
-\caption{Enriched stage: per-index absolute and relative coefficient errors vs linear $n_{\mathrm{tot}}$-PROM reference at $\bm\mu^{(v)}=(4.875,0.0225)$, including Case~2 PG and Case~2 $n=20$ (native).}
+\caption{Enriched stage: per-index absolute and relative coefficient errors vs linear $n_{\mathrm{tot}}$-PROM reference at $\bm\mu^{(v)}=(4.875,0.0225)$, including Case~2 PG Oracle and Case~2 $n=20$ (native).}
 \label{fig:coeff_abs_rel_enriched_verif}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.94\textwidth]{Figures/coeff_errors/baseline_mu1_4.560_mu2_0.0190_coeff_abs_rel_vs_index.png}
-\caption{Baseline stage: per-index absolute and relative coefficient errors at $\bm\mu^{(1)}=(4.56,0.019)$, including Case~2 PG, Case~2 $n=20$ (native), and Case~2 $n=20$ (trimmed transfer).}
+\caption{Baseline stage: per-index absolute and relative coefficient errors at $\bm\mu^{(1)}=(4.56,0.019)$, including Case~2 PRNN, Case~2 PG Oracle, Case~2 $n=20$ (native), and Case~2 $n=20$ (trimmed transfer).}
 \label{fig:coeff_abs_rel_baseline_mu1}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.94\textwidth]{Figures/coeff_errors/enriched_mu1_4.560_mu2_0.0190_coeff_abs_rel_vs_index.png}
-\caption{Enriched stage: per-index absolute and relative coefficient errors at $\bm\mu^{(1)}=(4.56,0.019)$, including Case~2 PG and Case~2 $n=20$ (native).}
+\caption{Enriched stage: per-index absolute and relative coefficient errors at $\bm\mu^{(1)}=(4.56,0.019)$, including Case~2 PG Oracle and Case~2 $n=20$ (native).}
 \label{fig:coeff_abs_rel_enriched_mu1}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.94\textwidth]{Figures/coeff_errors/baseline_mu1_5.190_mu2_0.0260_coeff_abs_rel_vs_index.png}
-\caption{Baseline stage: per-index absolute and relative coefficient errors at $\bm\mu^{(2)}=(5.19,0.026)$, including Case~2 PG, Case~2 $n=20$ (native), and Case~2 $n=20$ (trimmed transfer).}
+\caption{Baseline stage: per-index absolute and relative coefficient errors at $\bm\mu^{(2)}=(5.19,0.026)$, including Case~2 PRNN, Case~2 PG Oracle, Case~2 $n=20$ (native), and Case~2 $n=20$ (trimmed transfer).}
 \label{fig:coeff_abs_rel_baseline_mu2}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.94\textwidth]{Figures/coeff_errors/enriched_mu1_5.190_mu2_0.0260_coeff_abs_rel_vs_index.png}
-\caption{Enriched stage: per-index absolute and relative coefficient errors at $\bm\mu^{(2)}=(5.19,0.026)$, including Case~2 PG and Case~2 $n=20$ (native).}
+\caption{Enriched stage: per-index absolute and relative coefficient errors at $\bm\mu^{(2)}=(5.19,0.026)$, including Case~2 PG Oracle and Case~2 $n=20$ (native).}
 \label{fig:coeff_abs_rel_enriched_mu2}
 \end{figure}
 
@@ -971,19 +1015,19 @@ Figures~\ref{fig:coeff_abs_rel_baseline_verif}--\ref{fig:coeff_abs_rel_enriched_
 \subsection{Qualitative comparison: HDM vs all models}
 \label{sec:qual_prom_250}
 
-Figures~\ref{fig:all_models_baseline_prom} and \ref{fig:all_models_enriched_prom} compare HDM (black) against Case~1 (red), Case~2 (blue), Case~3 (green), and data-driven (orange), ordered as $\bm\mu^{(v)}$, $\bm\mu^{(1)}$, and $\bm\mu^{(2)}$.
+Figures~\ref{fig:all_models_baseline_prom} and \ref{fig:all_models_enriched_prom} compare HDM (black) against ANN-ROM variants, ordered as $\bm\mu^{(v)}$, $\bm\mu^{(1)}$, and $\bm\mu^{(2)}$. The baseline panel includes Case~2 PRNN in addition to Case~1/2/3 and data-driven; the enriched panel reports the available enriched models.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/baseline_prom_hdm_vs_all_models.png}
-\caption{Baseline models, PROM online solve: HDM vs Case~1/2/3 and data-driven at $\bm\mu^{(v)}$, $\bm\mu^{(1)}$, and $\bm\mu^{(2)}$.}
+\caption{Baseline models, PROM online solve: HDM vs Case~1, Case~2, Case~2 PRNN, Case~3, and data-driven at $\bm\mu^{(v)}$, $\bm\mu^{(1)}$, and $\bm\mu^{(2)}$.}
 \label{fig:all_models_baseline_prom}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/enriched_prom_hdm_vs_all_models.png}
-\caption{Enriched models, PROM online solve: HDM vs Case~1/2/3 and data-driven at $\bm\mu^{(v)}$, $\bm\mu^{(1)}$, and $\bm\mu^{(2)}$.}
+\caption{Enriched models, PROM online solve: HDM vs available enriched models (Case~1/2/3 and data-driven) at $\bm\mu^{(v)}$, $\bm\mu^{(1)}$, and $\bm\mu^{(2)}$.}
 \label{fig:all_models_enriched_prom}
 \end{figure}
 
@@ -991,89 +1035,89 @@ Figures~\ref{fig:all_models_baseline_prom} and \ref{fig:all_models_enriched_prom
 \subsection{Time-Resolved Coefficient Error Heatmaps}
 \label{sec:coeff_heatmaps}
 
-To visualize error propagation in time, we report coefficient-index vs time heatmaps at $\bm\mu^{(v)}$, $\bm\mu^{(1)}$, and $\bm\mu^{(2)}$, with linear $n_{\mathrm{tot}}$-PROM coefficients as reference.
+To visualize error propagation in time, we report coefficient-index vs time heatmaps at $\bm\mu^{(v)}$, $\bm\mu^{(1)}$, and $\bm\mu^{(2)}$, with linear $n_{\mathrm{tot}}$-PROM coefficients as reference. Baseline heatmaps include all available baseline variants (Case~1, Case~2, Case~2 PRNN, Case~2 PG Oracle, Case~2 $n=20$ native, Case~2 $n=20$ trimmed transfer, Case~3, data-driven). Enriched heatmaps include all available enriched variants (Case~1, Case~2, Case~2 PG Oracle, Case~2 $n=20$ native, Case~3, data-driven).
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/baseline_mu1_4.875_mu2_0.0225_coeff_abs_heatmap_grid.png}
-\caption{Baseline stage: absolute coefficient error heatmaps $\left|q_i^{\mathrm{ref}}(t)-q_i^{(m)}(t)\right|$ for Case~1, Case~2, Case~3, and data-driven models.}
+\caption{Baseline stage: absolute coefficient error heatmaps $\left|q_i^{\mathrm{ref}}(t)-q_i^{(m)}(t)\right|$ for all available baseline models.}
 \label{fig:hm_baseline_abs_verif}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/baseline_mu1_4.875_mu2_0.0225_coeff_rel_heatmap_grid.png}
-\caption{Baseline stage: relative coefficient error heatmaps using normalization by $\|q_i^{\mathrm{ref}}\|_2$.}
+\caption{Baseline stage: relative coefficient error heatmaps for all available baseline models, using normalization by $\|q_i^{\mathrm{ref}}\|_2$.}
 \label{fig:hm_baseline_rel_verif}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/enriched_mu1_4.875_mu2_0.0225_coeff_abs_heatmap_grid.png}
-\caption{Enriched stage: absolute coefficient error heatmaps at $\bm\mu^{(v)}$.}
+\caption{Enriched stage: absolute coefficient error heatmaps at $\bm\mu^{(v)}$ for all available enriched models.}
 \label{fig:hm_enriched_abs_verif}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/enriched_mu1_4.875_mu2_0.0225_coeff_rel_heatmap_grid.png}
-\caption{Enriched stage: relative coefficient error heatmaps at $\bm\mu^{(v)}$.}
+\caption{Enriched stage: relative coefficient error heatmaps at $\bm\mu^{(v)}$ for all available enriched models.}
 \label{fig:hm_enriched_rel_verif}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/baseline_mu1_4.560_mu2_0.0190_coeff_abs_heatmap_grid.png}
-\caption{Baseline stage: absolute coefficient error heatmaps at $\bm\mu^{(1)}=(4.56,0.019)$.}
+\caption{Baseline stage: absolute coefficient error heatmaps at $\bm\mu^{(1)}=(4.56,0.019)$ for all available baseline models.}
 \label{fig:hm_baseline_abs_mu1}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/baseline_mu1_4.560_mu2_0.0190_coeff_rel_heatmap_grid.png}
-\caption{Baseline stage: relative coefficient error heatmaps at $\bm\mu^{(1)}=(4.56,0.019)$.}
+\caption{Baseline stage: relative coefficient error heatmaps at $\bm\mu^{(1)}=(4.56,0.019)$ for all available baseline models.}
 \label{fig:hm_baseline_rel_mu1}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/enriched_mu1_4.560_mu2_0.0190_coeff_abs_heatmap_grid.png}
-\caption{Enriched stage: absolute coefficient error heatmaps at $\bm\mu^{(1)}=(4.56,0.019)$.}
+\caption{Enriched stage: absolute coefficient error heatmaps at $\bm\mu^{(1)}=(4.56,0.019)$ for all available enriched models.}
 \label{fig:hm_enriched_abs_mu1}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/enriched_mu1_4.560_mu2_0.0190_coeff_rel_heatmap_grid.png}
-\caption{Enriched stage: relative coefficient error heatmaps at $\bm\mu^{(1)}=(4.56,0.019)$.}
+\caption{Enriched stage: relative coefficient error heatmaps at $\bm\mu^{(1)}=(4.56,0.019)$ for all available enriched models.}
 \label{fig:hm_enriched_rel_mu1}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/baseline_mu1_5.190_mu2_0.0260_coeff_abs_heatmap_grid.png}
-\caption{Baseline stage: absolute coefficient error heatmaps at $\bm\mu^{(2)}=(5.19,0.026)$.}
+\caption{Baseline stage: absolute coefficient error heatmaps at $\bm\mu^{(2)}=(5.19,0.026)$ for all available baseline models.}
 \label{fig:hm_baseline_abs_mu2}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/baseline_mu1_5.190_mu2_0.0260_coeff_rel_heatmap_grid.png}
-\caption{Baseline stage: relative coefficient error heatmaps at $\bm\mu^{(2)}=(5.19,0.026)$.}
+\caption{Baseline stage: relative coefficient error heatmaps at $\bm\mu^{(2)}=(5.19,0.026)$ for all available baseline models.}
 \label{fig:hm_baseline_rel_mu2}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/enriched_mu1_5.190_mu2_0.0260_coeff_abs_heatmap_grid.png}
-\caption{Enriched stage: absolute coefficient error heatmaps at $\bm\mu^{(2)}=(5.19,0.026)$.}
+\caption{Enriched stage: absolute coefficient error heatmaps at $\bm\mu^{(2)}=(5.19,0.026)$ for all available enriched models.}
 \label{fig:hm_enriched_abs_mu2}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.98\textwidth]{Figures/coeff_errors/enriched_mu1_5.190_mu2_0.0260_coeff_rel_heatmap_grid.png}
-\caption{Enriched stage: relative coefficient error heatmaps at $\bm\mu^{(2)}=(5.19,0.026)$.}
+\caption{Enriched stage: relative coefficient error heatmaps at $\bm\mu^{(2)}=(5.19,0.026)$ for all available enriched models.}
 \label{fig:hm_enriched_rel_mu2}
 \end{figure}
 

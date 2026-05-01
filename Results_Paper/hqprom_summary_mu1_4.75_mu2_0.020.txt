@@ -1,0 +1,78 @@
+[run]
+timestamp: 2026-04-30T03:02:20
+mu1: 4.75000000e+00
+mu2: 2.00000000e-02
+
+[configuration]
+compute_ecsw: False
+qm_dir: Quadratic
+weights_file: Results/hqprom_ecsw_weights.npy
+snap_time_offset: 3
+ecsw_sampling_policy: global_param_time_stratified
+ecsw_snapshot_percent: 2.00000000e+00
+ecsw_random_seed: 42
+mu_samples: [[4.25, 0.015], [4.25, 0.0225], [4.25, 0.03], [4.875, 0.015], [4.875, 0.0225], [4.875, 0.03], [5.5, 0.015], [5.5, 0.0225], [5.5, 0.03]]
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_q0: 20
+tol_q0: 1.00000000e-06
+linear_solver: lstsq
+normal_eq_reg: N/A
+snap_folder: Results/param_snaps
+
+[discretization]
+dt: 5.00000000e-02
+num_steps: 500
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[manifold]
+V_shape: (125000, 39)
+H_shape: (125000, 780)
+u_ref_shape: (125000,)
+sigma_shape: (39,)
+n: 39
+m: 780
+u_ref_l2_norm: 8.17426148e+02
+metadata_n_trad: 151
+metadata_n_final: 39
+metadata_pod_tol: 1.00000000e-04
+metadata_zeta_qua: 1.50000000e+00
+
+[ecsw]
+num_nonzero_weights: 3505
+weights_sum: 6.25000000e+04
+ecsw_time_seconds: N/A
+ecsw_residual: N/A
+training_matrix_shape: N/A
+snapshot_candidates_total: N/A
+snapshot_selected_total: N/A
+snapshot_selected_per_mu: N/A
+
+[hqprom_timing]
+total_hqprom_time_seconds: 5.54487786e+01
+avg_hqprom_time_per_step_seconds: 1.10897557e-01
+gn_iterations_total: 2000
+avg_gn_iterations_per_step: 4.00000000e+00
+jacobian_time_seconds: 8.58598471e+00
+residual_time_seconds: 5.64257669e+00
+linear_solve_time_seconds: 3.43341095e+01
+hdm_load_or_solve_time_seconds: 4.93205309e-01
+
+[error_metrics]
+relative_l2_error: 8.49008549e-03
+relative_error_percent: 8.49008549e-01
+
+[outputs]
+hqprom_snapshots_npy: Results/hqprom_snaps_mu1_4.75_mu2_0.020.npy
+comparison_plot_png: Results/hqprom_mu1_4.75_mu2_0.020.png
+summary_txt: Results/hqprom_summary_mu1_4.75_mu2_0.020.txt
+ecsw_weights_npy: Results/hqprom_ecsw_weights.npy
+ecsw_reduced_mesh_png: N/A
+qm_V_npy: Quadratic/qm_V.npy
+qm_H_npy: Quadratic/qm_H.npy
+qm_uref_npy: Quadratic/qm_uref.npy
+qm_sigma_npy: Quadratic/qm_sigma.npy
+qm_metadata_npz: Quadratic/qm_metadata.npz

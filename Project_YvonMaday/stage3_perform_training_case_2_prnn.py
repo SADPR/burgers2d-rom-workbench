@@ -476,6 +476,12 @@ def main(argv=None):
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-6)
     parser.add_argument("--epochs", type=int, default=400)
+    parser.add_argument(
+        "--pretrain-epochs",
+        type=int,
+        default=0,
+        help="Number of initial data-only epochs (omega_residual=0). Remaining epochs are PRNN fine-tuning.",
+    )
     parser.add_argument("--patience", type=int, default=80)
     parser.add_argument("--min-improve", type=float, default=1e-12)
     parser.add_argument("--clip-grad", type=float, default=1.0)
@@ -555,6 +561,7 @@ def main(argv=None):
     lr = float(args.lr)
     weight_decay = float(args.weight_decay)
     epochs = int(args.epochs)
+    pretrain_epochs = int(args.pretrain_epochs)
     patience = int(args.patience)
     min_improve = float(args.min_improve)
     clip_grad = float(args.clip_grad)
@@ -582,6 +589,10 @@ def main(argv=None):
         raise ValueError(f"--weight-decay must be >=0, got {weight_decay}.")
     if epochs <= 0 or patience <= 0:
         raise ValueError("--epochs and --patience must be positive.")
+    if pretrain_epochs < 0:
+        raise ValueError("--pretrain-epochs must be >= 0.")
+    if pretrain_epochs > epochs:
+        raise ValueError("--pretrain-epochs cannot exceed --epochs.")
     if min_improve < 0.0:
         raise ValueError("--min-improve must be >= 0.")
     if log_epoch_every <= 0:
@@ -607,6 +618,8 @@ def main(argv=None):
     print(f"[Case2-PRNN] dropout = {dropout}")
     print(f"[Case2-PRNN] omega_data = {omega_data}")
     print(f"[Case2-PRNN] omega_residual = {omega_residual}")
+    print(f"[Case2-PRNN] pretrain_epochs = {pretrain_epochs}")
+    print(f"[Case2-PRNN] finetune_epochs = {max(0, epochs - pretrain_epochs)}")
     print(f"[Case2-PRNN] physics_projection = {physics_projection}")
     print(f"[Case2-PRNN] physics_subsample = {physics_subsample}")
     print(f"[Case2-PRNN] val_physics_subsample = {val_physics_subsample}")
@@ -692,132 +705,183 @@ def main(argv=None):
 
     cache = _build_basis_and_ops(dataset_ntot=dataset_ntot, primary_modes=primary_modes)
 
-    best_val = float("inf")
-    best_state = None
-    bad = 0
+    def _run_stage(stage_name: str, start_epoch: int, stage_epochs: int, stage_omega_residual: float):
+        if stage_epochs <= 0:
+            return {
+                "name": stage_name,
+                "epochs_ran": 0,
+                "best_val": np.nan,
+                "best_state": None,
+            }
 
-    t0 = time.time()
-    num_tr_batches = len(dl_tr)
-    for ep in range(1, epochs + 1):
-        epoch_t0 = time.time()
-        model.train()
+        stage_best_val = float("inf")
+        stage_best_state = None
+        stage_bad = 0
+        num_tr_batches = len(dl_tr)
 
-        tr_total_sum = 0.0
-        tr_data_sum = 0.0
-        tr_data_count = 0
-        tr_res_sum = 0.0
-        tr_res_count = 0
+        for local_ep in range(1, stage_epochs + 1):
+            ep = start_epoch + local_ep - 1
+            epoch_t0 = time.time()
+            model.train()
 
-        if ep == 1 or (ep % log_epoch_every == 0):
-            print(f"[Epoch {ep:4d}] start")
+            tr_total_sum = 0.0
+            tr_data_sum = 0.0
+            tr_data_count = 0
+            tr_res_sum = 0.0
+            tr_res_count = 0
 
-        for batch_idx, (xb, yb, qpb, qppb, qspb, activeb) in enumerate(dl_tr, start=1):
-            batch_t0 = time.time()
-            xb = xb.to(device)
-            yb = yb.to(device)
-            qpb = qpb.to(device)
-            qppb = qppb.to(device)
-            qspb = qspb.to(device)
-            activeb = activeb.to(device)
+            if ep == 1 or (ep % log_epoch_every == 0):
+                print(f"[{stage_name}] [Epoch {ep:4d}] start")
 
-            opt.zero_grad(set_to_none=True)
-            pred = model(xb)
+            for batch_idx, (xb, yb, qpb, qppb, qspb, activeb) in enumerate(dl_tr, start=1):
+                batch_t0 = time.time()
+                xb = xb.to(device)
+                yb = yb.to(device)
+                qpb = qpb.to(device)
+                qppb = qppb.to(device)
+                qspb = qspb.to(device)
+                activeb = activeb.to(device)
 
-            loss_data_t = loss_fn(pred, yb)
-            loss_data_val = float(loss_data_t.detach().cpu().item())
+                opt.zero_grad(set_to_none=True)
+                pred = model(xb)
 
-            lres_val = 0.0
-            n_used = 0
-            grad_res = None
-            use_physics_batch = (omega_residual > 0.0) and (((batch_idx - 1) % physics_every) == 0)
-            if use_physics_batch:
-                lres_val, grad_res, n_used = _compute_batch_residual_loss_and_grad(
-                    pred_qs=pred,
-                    xb=xb,
-                    qpb=qpb,
-                    qppb=qppb,
-                    qspb=qspb,
-                    activeb=activeb,
-                    cache=cache,
-                    projection=physics_projection,
-                    physics_subsample=physics_subsample,
-                    with_grad=True,
-                )
+                loss_data_t = loss_fn(pred, yb)
+                loss_data_val = float(loss_data_t.detach().cpu().item())
 
-            need_retain = bool(omega_data > 0.0 and omega_residual > 0.0 and n_used > 0)
-            if omega_data > 0.0:
-                (omega_data * loss_data_t).backward(retain_graph=need_retain)
+                lres_val = 0.0
+                n_used = 0
+                grad_res = None
+                use_physics_batch = (stage_omega_residual > 0.0) and (((batch_idx - 1) % physics_every) == 0)
+                if use_physics_batch:
+                    lres_val, grad_res, n_used = _compute_batch_residual_loss_and_grad(
+                        pred_qs=pred,
+                        xb=xb,
+                        qpb=qpb,
+                        qppb=qppb,
+                        qspb=qspb,
+                        activeb=activeb,
+                        cache=cache,
+                        projection=physics_projection,
+                        physics_subsample=physics_subsample,
+                        with_grad=True,
+                    )
 
-            if omega_residual > 0.0 and n_used > 0:
-                pred.backward(gradient=omega_residual * grad_res)
+                need_retain = bool(omega_data > 0.0 and stage_omega_residual > 0.0 and n_used > 0)
+                if omega_data > 0.0:
+                    (omega_data * loss_data_t).backward(retain_graph=need_retain)
 
-            if clip_grad is not None and clip_grad > 0.0:
-                nn.utils.clip_grad_norm_(model.parameters(), clip_grad)
+                if stage_omega_residual > 0.0 and n_used > 0:
+                    pred.backward(gradient=stage_omega_residual * grad_res)
 
-            opt.step()
+                if clip_grad is not None and clip_grad > 0.0:
+                    nn.utils.clip_grad_norm_(model.parameters(), clip_grad)
 
-            bs = xb.shape[0]
-            tr_data_sum += loss_data_val * bs
-            tr_data_count += bs
+                opt.step()
 
-            if n_used > 0:
-                tr_res_sum += lres_val * n_used
-                tr_res_count += n_used
+                bs = xb.shape[0]
+                tr_data_sum += loss_data_val * bs
+                tr_data_count += bs
 
-            total_batch = omega_data * loss_data_val + omega_residual * lres_val
-            tr_total_sum += total_batch * bs
+                if n_used > 0:
+                    tr_res_sum += lres_val * n_used
+                    tr_res_count += n_used
 
-            if log_batch_every > 0 and (
-                batch_idx == 1
-                or batch_idx % log_batch_every == 0
-                or batch_idx == num_tr_batches
-            ):
-                batch_elapsed = time.time() - batch_t0
-                print(
-                    f"[Epoch {ep:4d} | batch {batch_idx:4d}/{num_tr_batches}] "
-                    f"data={loss_data_val:.3e} res={lres_val:.3e} nres={n_used} "
-                    f"use_phys={int(use_physics_batch)} batch_s={batch_elapsed:.2f}"
-                )
+                total_batch = omega_data * loss_data_val + stage_omega_residual * lres_val
+                tr_total_sum += total_batch * bs
 
-        tr_data = tr_data_sum / float(max(tr_data_count, 1))
-        tr_res = tr_res_sum / float(max(tr_res_count, 1)) if tr_res_count > 0 else 0.0
-        tr_total = tr_total_sum / float(max(tr_data_count, 1))
+                if log_batch_every > 0 and (
+                    batch_idx == 1
+                    or batch_idx % log_batch_every == 0
+                    or batch_idx == num_tr_batches
+                ):
+                    batch_elapsed = time.time() - batch_t0
+                    print(
+                        f"[{stage_name}] [Epoch {ep:4d} | batch {batch_idx:4d}/{num_tr_batches}] "
+                        f"data={loss_data_val:.3e} res={lres_val:.3e} nres={n_used} "
+                        f"use_phys={int(use_physics_batch)} batch_s={batch_elapsed:.2f}"
+                    )
 
-        va_total, va_data, va_res, va_res_count = _evaluate_validation(
-            model=model,
-            dl_val=dl_va,
-            loss_fn=loss_fn,
-            cache=cache,
-            projection=physics_projection,
-            val_physics_subsample=val_physics_subsample,
-            omega_data=omega_data,
-            omega_residual=omega_residual,
-            device=device,
-        )
+            tr_data = tr_data_sum / float(max(tr_data_count, 1))
+            tr_res = tr_res_sum / float(max(tr_res_count, 1)) if tr_res_count > 0 else 0.0
+            tr_total = tr_total_sum / float(max(tr_data_count, 1))
 
-        epoch_elapsed = time.time() - epoch_t0
-        if ep == 1 or ep % log_epoch_every == 0:
-            print(
-                f"[Epoch {ep:4d}] "
-                f"train_total={tr_total:.6e} (data={tr_data:.6e}, res={tr_res:.6e}, nres={tr_res_count}) | "
-                f"val_total={va_total:.6e} (data={va_data:.6e}, res={va_res:.6e}, nres={va_res_count}) | "
-                f"bad={bad} | epoch_s={epoch_elapsed:.2f}"
+            va_total, va_data, va_res, va_res_count = _evaluate_validation(
+                model=model,
+                dl_val=dl_va,
+                loss_fn=loss_fn,
+                cache=cache,
+                projection=physics_projection,
+                val_physics_subsample=val_physics_subsample,
+                omega_data=omega_data,
+                omega_residual=stage_omega_residual,
+                device=device,
             )
 
-        if va_total < best_val - min_improve:
-            best_val = va_total
-            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
-            bad = 0
-        else:
-            bad += 1
-            if bad >= patience:
-                print(f"[EarlyStop] epoch={ep} best_val_total={best_val:.6e}")
-                break
+            epoch_elapsed = time.time() - epoch_t0
+            if ep == 1 or ep % log_epoch_every == 0:
+                print(
+                    f"[{stage_name}] [Epoch {ep:4d}] "
+                    f"train_total={tr_total:.6e} (data={tr_data:.6e}, res={tr_res:.6e}, nres={tr_res_count}) | "
+                    f"val_total={va_total:.6e} (data={va_data:.6e}, res={va_res:.6e}, nres={va_res_count}) | "
+                    f"bad={stage_bad} | epoch_s={epoch_elapsed:.2f}"
+                )
 
-    if best_state is not None:
-        model.load_state_dict(best_state)
+            if va_total < stage_best_val - min_improve:
+                stage_best_val = va_total
+                stage_best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+                stage_bad = 0
+            else:
+                stage_bad += 1
+                if stage_bad >= patience:
+                    print(f"[{stage_name}] [EarlyStop] epoch={ep} best_val_total={stage_best_val:.6e}")
+                    break
+
+        if stage_best_state is not None:
+            model.load_state_dict(stage_best_state)
+
+        return {
+            "name": stage_name,
+            "epochs_ran": local_ep,
+            "best_val": stage_best_val,
+            "best_state": stage_best_state,
+        }
+
+    t0 = time.time()
+    stage_records = []
+    next_epoch = 1
+
+    if pretrain_epochs > 0:
+        print("[Case2-PRNN] Starting Stage A: data-only pretraining")
+        rec_a = _run_stage(
+            stage_name="stageA-data",
+            start_epoch=next_epoch,
+            stage_epochs=pretrain_epochs,
+            stage_omega_residual=0.0,
+        )
+        stage_records.append(rec_a)
+        next_epoch += rec_a["epochs_ran"]
+
+    finetune_epochs = max(0, epochs - pretrain_epochs)
+    if finetune_epochs > 0:
+        print("[Case2-PRNN] Starting Stage B: PRNN fine-tuning")
+        rec_b = _run_stage(
+            stage_name="stageB-prnn",
+            start_epoch=next_epoch,
+            stage_epochs=finetune_epochs,
+            stage_omega_residual=omega_residual,
+        )
+        stage_records.append(rec_b)
+        next_epoch += rec_b["epochs_ran"]
 
     elapsed = time.time() - t0
+
+    # Final reference metric from the last non-empty stage
+    non_empty = [r for r in stage_records if r["epochs_ran"] > 0]
+    if len(non_empty) == 0:
+        raise RuntimeError("No training stage was executed.")
+    best_val = non_empty[-1]["best_val"]
+    epochs_ran_total = int(sum(r["epochs_ran"] for r in non_empty))
+
     print(f"[Case2-PRNN] Training done in {elapsed:.2f}s. best_val_total={best_val:.6e}")
 
     ckpt = {
@@ -838,6 +902,9 @@ def main(argv=None):
         "lr": float(lr),
         "weight_decay": float(weight_decay),
         "epochs": int(epochs),
+        "pretrain_epochs": int(pretrain_epochs),
+        "finetune_epochs": int(max(0, epochs - pretrain_epochs)),
+        "epochs_ran_total": int(epochs_ran_total),
         "patience": int(patience),
         "omega_data": float(omega_data),
         "omega_residual": float(omega_residual),
@@ -848,9 +915,10 @@ def main(argv=None):
         "log_epoch_every": int(log_epoch_every),
         "log_batch_every": int(log_batch_every),
         "mapping": "qN_s = N(mu1, mu2, t)",
-        "loss_form": "omega_data*MSE(qN_s) + omega_residual*mean(||P^T r(u_hat)||^2)",
+        "loss_form": "two_stage(optional): data-only pretrain then omega_data*MSE(qN_s)+omega_residual*mean(||P^T r(u_hat)||^2)",
         "residual_type": "projected_hdm_residual",
         "residual_dt": float(DT),
+        "stage_records": stage_records,
     }
 
     torch.save(ckpt, model_path)
@@ -878,8 +946,10 @@ def main(argv=None):
             ("lr", float(lr)),
             ("weight_decay", float(weight_decay)),
             ("epochs", int(epochs)),
+            ("pretrain_epochs", int(pretrain_epochs)),
+            ("finetune_epochs", int(max(0, epochs - pretrain_epochs))),
             ("patience", int(patience)),
-            ("epochs_ran", ep),
+            ("epochs_ran_total", int(epochs_ran_total)),
             ("best_val_total", best_val),
             ("omega_data", float(omega_data)),
             ("omega_residual", float(omega_residual)),
@@ -894,6 +964,7 @@ def main(argv=None):
             ("seed", seed),
             ("device", device),
             ("elapsed_s", elapsed),
+            ("stage_records", stage_records),
         ],
     )
     print(f"[Case2-PRNN] Summary: {summary_path}")

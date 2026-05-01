@@ -231,6 +231,10 @@ def main(
                     ("metadata_n_trad", metadata.get("n_trad")),
                     ("metadata_pod_tol", metadata.get("pod_tol")),
                     ("metadata_zeta_qua", metadata.get("zeta_qua")),
+                    ("metadata_ridge_alpha", metadata.get("ridge_alpha")),
+                    ("metadata_q_normalization_mode", metadata.get("q_normalization_mode")),
+                    ("metadata_q_scale_min", np.min(metadata.get("q_scales")) if "q_scales" in metadata else None),
+                    ("metadata_q_scale_max", np.max(metadata.get("q_scales")) if "q_scales" in metadata else None),
                 ],
             ),
             (

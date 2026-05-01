@@ -7,7 +7,8 @@ Build two PROM comparison figures for the 250x250 campaign:
 2) Enriched PROM
 
 Each figure contains three points (two off-grid + one verification), and overlays:
-HDM (black), Case 1 (red), Case 2 (blue), Case 3 (green), Data-driven (orange).
+HDM (black), Case 1 (red), Case 2 (blue), Case 2-PRNN (cyan, if available),
+Case 3 (green), Data-driven (orange).
 """
 
 import glob
@@ -52,6 +53,11 @@ def _find_one(pattern):
     if not matches:
         raise FileNotFoundError(f"No file matched pattern:\n{pattern}")
     return matches[0]
+
+
+def _find_optional(pattern):
+    matches = sorted(glob.glob(pattern))
+    return matches[0] if matches else None
 
 
 def _find_hdm_snap(hdm_dirs, mu1, mu2):
@@ -103,6 +109,32 @@ def _dd_snap(results_root, mu1, mu2, enriched=False):
     return _find_one(pat)
 
 
+def _case2_prnn_snap_optional(results_root, mu1, mu2, enriched=False):
+    if enriched:
+        patterns = [
+            os.path.join(
+                results_root,
+                f"Runs/Case2/case2_prnn_prom_ann_prnn_enriched_mu1_{mu1:.3f}_mu2_{mu2:.4f}_n*_ntot*_snaps.npy",
+            ),
+            os.path.join(
+                results_root,
+                f"Runs/Case2/case2_prnn_prom_ann_prnn_mu1_{mu1:.3f}_mu2_{mu2:.4f}_n*_ntot*_snaps.npy",
+            ),
+        ]
+    else:
+        patterns = [
+            os.path.join(
+                results_root,
+                f"Runs/Case2/case2_prnn_prom_ann_prnn_mu1_{mu1:.3f}_mu2_{mu2:.4f}_n*_ntot*_snaps.npy",
+            )
+        ]
+    for pat in patterns:
+        found = _find_optional(pat)
+        if found is not None:
+            return found
+    return None
+
+
 def _load_all_snaps(results_root, hdm_dirs, mu1, mu2, backend, enriched=False):
     paths = {
         "HDM": _find_hdm_snap(hdm_dirs, mu1, mu2),
@@ -111,6 +143,10 @@ def _load_all_snaps(results_root, hdm_dirs, mu1, mu2, backend, enriched=False):
         "Case 3": _case_snap(results_root, 3, mu1, mu2, backend=backend, enriched=enriched),
         "Data-driven": _dd_snap(results_root, mu1, mu2, enriched=enriched),
     }
+    prnn_path = _case2_prnn_snap_optional(results_root, mu1, mu2, enriched=enriched)
+    if prnn_path is not None:
+        paths["Case 2 PRNN"] = prnn_path
+
     snaps = {name: np.load(path) for name, path in paths.items()}
     ref_shape = snaps["HDM"].shape
     for name, arr in snaps.items():
@@ -141,6 +177,7 @@ def _plot_group(output_path, title, results_root, hdm_dirs, mu_list, backend):
         "HDM": "black",
         "Case 1": "red",
         "Case 2": "blue",
+        "Case 2 PRNN": "cyan",
         "Case 3": "green",
         "Data-driven": "orange",
     }
@@ -160,7 +197,9 @@ def _plot_group(output_path, title, results_root, hdm_dirs, mu_list, backend):
             enriched=enriched,
         )
 
-        for model_name in ["HDM", "Case 1", "Case 2", "Case 3", "Data-driven"]:
+        model_order = ["HDM", "Case 1", "Case 2", "Case 2 PRNN", "Case 3", "Data-driven"]
+        model_order = [name for name in model_order if name in snaps]
+        for model_name in model_order:
             arr = snaps[model_name]
             for ind in steps:
                 is_final = ind == final_step
@@ -209,7 +248,14 @@ def _plot_group(output_path, title, results_root, hdm_dirs, mu_list, backend):
         axs[row, 1].grid(True)
 
     handles, labels = axs[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=5, frameon=True, bbox_to_anchor=(0.5, 0.995))
+    fig.legend(
+        handles,
+        labels,
+        loc="upper center",
+        ncol=max(5, len(labels)),
+        frameon=True,
+        bbox_to_anchor=(0.5, 0.995),
+    )
     fig.suptitle(title, y=1.035, fontsize=16)
     fig.text(
         0.5,
@@ -250,7 +296,7 @@ def main():
 
     _plot_group(
         output_path=baseline_out,
-        title="Baseline (9-point training, PROM online): HDM vs Case1/Case2/Case3/Data-driven",
+        title="Baseline (9-point training, PROM online): HDM vs Case1/Case2/Case2-PRNN/Case3/Data-driven",
         results_root=baseline_root,
         hdm_dirs=hdm_dirs,
         mu_list=[(mu1, mu2, False) for (mu1, mu2) in test_points],
