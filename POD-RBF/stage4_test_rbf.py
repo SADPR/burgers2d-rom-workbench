@@ -429,4 +429,4 @@ def main(
 
 
 if __name__ == "__main__":
-    main(target_mu=(4.75, 0.020), compare_pod=False)
+    main(target_mu=(4.56, 0.019), compare_pod=True)

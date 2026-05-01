@@ -105,12 +105,13 @@ def newton_raphson(func, jac, x0, max_its=20, relnorm_cutoff=1e-12, u_ref=None):
     """
     x = np.asarray(x0, dtype=np.float64).copy()
 
-    r0 = func(x)
-    init_norm = _safe_init_norm(np.linalg.norm(r0))
+    r = func(x)
+    init_norm = _safe_init_norm(np.linalg.norm(r))
     resnorms = []
 
     for it in range(max_its):
-        r = func(x)
+        if it > 0:
+            r = func(x)
         resnorm = np.linalg.norm(r)
         resnorms.append(resnorm)
 
@@ -147,14 +148,15 @@ def gauss_newton_LSPG(
 
     w = u_ref + basis @ y
 
-    r0 = func(w)
-    init_norm = _safe_init_norm(np.linalg.norm(r0))
+    r = func(w)
+    init_norm = _safe_init_norm(np.linalg.norm(r))
     resnorms = []
 
     for it in range(max_its):
-        t0 = time.time()
-        r = func(w)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(w)
+            res_time += time.time() - t0
 
         resnorm = np.linalg.norm(r)
         resnorms.append(resnorm)
@@ -216,19 +218,20 @@ def gauss_newton_ECSW_2D(
 
     w = u_ref + basis @ y
 
-    r0 = func(w)
-    if r0.shape[0] != weights.shape[0]:
+    r = func(w)
+    if r.shape[0] != weights.shape[0]:
         raise ValueError(
-            f"sample_weights and residual size mismatch: {weights.shape[0]} vs {r0.shape[0]}"
+            f"sample_weights and residual size mismatch: {weights.shape[0]} vs {r.shape[0]}"
         )
 
-    init_norm = _safe_init_norm(np.linalg.norm(sqrt_w * r0))
+    init_norm = _safe_init_norm(np.linalg.norm(sqrt_w * r))
     resnorms = []
 
     for it in range(max_its):
-        t0 = time.time()
-        r = func(w)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(w)
+            res_time += time.time() - t0
 
         resnorm = np.linalg.norm(sqrt_w * r)
         resnorms.append(resnorm)
@@ -292,14 +295,15 @@ def gauss_newton_LSPG_local(
 
     w = u_ref_eff + Vloc @ y
 
-    r0 = func(w)
-    init_norm = _safe_init_norm(np.linalg.norm(r0))
+    r = func(w)
+    init_norm = _safe_init_norm(np.linalg.norm(r))
     resnorms = []
 
     for it in range(max_its):
-        t0 = time.time()
-        r = func(w)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(w)
+            res_time += time.time() - t0
 
         resnorm = np.linalg.norm(r)
         resnorms.append(resnorm)
@@ -362,16 +366,17 @@ def gauss_newton_LSPG_local_ecsw(
     w_loc = u_ref_eff + V_loc @ q
 
     t0 = time.time()
-    r0 = res_fun(w_loc)
+    r = res_fun(w_loc)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(weights * r0))
+    init_norm = _safe_init_norm(np.linalg.norm(weights * r))
     resnorms = []
 
     for it in range(max_its):
-        t0 = time.time()
-        r = res_fun(w_loc)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = res_fun(w_loc)
+            res_time += time.time() - t0
 
         rw = weights * r
         resnorm = np.linalg.norm(rw)
@@ -429,16 +434,17 @@ def gauss_newton_LSPG_qm(
     w = u_qm(q, V, H, u_ref)
 
     t0 = time.time()
-    r0 = func_res(w)
+    r = func_res(w)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(r0))
+    init_norm = _safe_init_norm(np.linalg.norm(r))
     resnorms = []
 
     for it in range(max_its):
-        t0 = time.time()
-        r = func_res(w)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func_res(w)
+            res_time += time.time() - t0
 
         resnorm = np.linalg.norm(r)
         resnorms.append(resnorm)
@@ -565,16 +571,17 @@ def gauss_newton_LSPG_qm_ecsw(
     w_loc = u_qm(q, V_loc, H_loc, u_ref_loc)
 
     t0 = time.time()
-    r0 = res_fun(w_loc)
+    r = res_fun(w_loc)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(sample_weights * r0))
+    init_norm = _safe_init_norm(np.linalg.norm(sample_weights * r))
     resnorms = []
 
     for it in range(max_its):
-        t0 = time.time()
-        r = res_fun(w_loc)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = res_fun(w_loc)
+            res_time += time.time() - t0
 
         rw = sample_weights * r
         resnorm = np.linalg.norm(rw)
@@ -637,16 +644,16 @@ def gauss_newton_pod_ann(
         w = _call_decode(decode, y, with_grad=False)
 
     w_np = _to_numpy(w).squeeze()
-    r0 = func(w_np)
-    init_norm = _safe_init_norm(np.linalg.norm(r0))
+    r = func(w_np)
+    init_norm = _safe_init_norm(np.linalg.norm(r))
     resnorms = []
 
     for it in range(max_its):
         w_np = _to_numpy(w).squeeze()
-
-        t0 = time.time()
-        r = func(w_np)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(w_np)
+            res_time += time.time() - t0
 
         resnorm = np.linalg.norm(r)
         resnorms.append(resnorm)
@@ -739,16 +746,16 @@ def gauss_newton_pod_ann_ecsw(
         w = _call_decode(decode, y, with_grad=False)
 
     w_np = _to_numpy(w).squeeze()
-    r0 = func(w_np)
-    init_norm = _safe_init_norm(np.linalg.norm(weights * r0))
+    r = func(w_np)
+    init_norm = _safe_init_norm(np.linalg.norm(weights * r))
     resnorms = []
 
     for it in range(max_its):
         w_np = _to_numpy(w).squeeze()
-
-        t0 = time.time()
-        r = func(w_np)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(w_np)
+            res_time += time.time() - t0
 
         rw = weights * r
         resnorm = np.linalg.norm(rw)
@@ -920,16 +927,17 @@ def gauss_newton_pod_rbf(
     w = decode_rbf(y)
 
     t0 = time.time()
-    r0 = func(w)
+    r = func(w)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(r0))
+    init_norm = _safe_init_norm(np.linalg.norm(r))
     resnorms = []
 
     for it in range(max_its):
-        t0 = time.time()
-        r = func(w)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(w)
+            res_time += time.time() - t0
 
         resnorm = np.linalg.norm(r)
         resnorms.append(resnorm)
@@ -996,18 +1004,19 @@ def gauss_newton_pod_rbf_ecsw(
     w = decode_rbf(y)
 
     t0 = time.time()
-    r0 = func(w)
+    r = func(w)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(weights_uv * r0))
+    init_norm = _safe_init_norm(np.linalg.norm(weights_uv * r))
     resnorms = []
 
     J_frozen = None
 
     for it in range(max_its):
-        t0 = time.time()
-        r = func(w)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(w)
+            res_time += time.time() - t0
 
         rw = weights_uv * r
         resnorm = np.linalg.norm(rw)
@@ -1083,16 +1092,17 @@ def gauss_newton_pod_rbf_ecsw_old(
     weights_uv = np.concatenate((weights, weights))
 
     t0 = time.time()
-    r0 = func(w)
+    r = func(w)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(weights_uv * r0))
+    init_norm = _safe_init_norm(np.linalg.norm(weights_uv * r))
     resnorms = []
 
     for it in range(max_its):
-        t0 = time.time()
-        r = func(w)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(w)
+            res_time += time.time() - t0
 
         rw = weights_uv * r
         resnorm = np.linalg.norm(rw)
@@ -1149,16 +1159,17 @@ def gauss_newton_pod_gp_ecsw(
     weights_uv = np.concatenate((weights, weights))
 
     t0 = time.time()
-    r0 = func(w)
+    r = func(w)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(weights_uv * r0))
+    init_norm = _safe_init_norm(np.linalg.norm(weights_uv * r))
     resnorms = []
 
     for it in range(max_its):
-        t0 = time.time()
-        r = func(w)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(w)
+            res_time += time.time() - t0
 
         rw = weights_uv * r
         resnorm = np.linalg.norm(rw)
@@ -1220,18 +1231,18 @@ def gauss_newton_poddl(
     u_np = _to_numpy(u).squeeze()
 
     t0 = time.time()
-    r0 = func(u_np)
+    r = func(u_np)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(r0))
+    init_norm = _safe_init_norm(np.linalg.norm(r))
     resnorms = []
 
     for it in range(max_its):
         u_np = _to_numpy(u).squeeze()
-
-        t0 = time.time()
-        r = func(u_np)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(u_np)
+            res_time += time.time() - t0
 
         resnorm = np.linalg.norm(r)
         resnorms.append(resnorm)
@@ -1298,18 +1309,18 @@ def gauss_newton_poddl_ecsw(
     u_np = _to_numpy(u).squeeze()
 
     t0 = time.time()
-    r0 = func(u_np)
+    r = func(u_np)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(weights * r0))
+    init_norm = _safe_init_norm(np.linalg.norm(weights * r))
     resnorms = []
 
     for it in range(max_its):
         u_np = _to_numpy(u).squeeze()
-
-        t0 = time.time()
-        r = func(u_np)
-        res_time += time.time() - t0
+        if it > 0:
+            t0 = time.time()
+            r = func(u_np)
+            res_time += time.time() - t0
 
         rw = weights * r
         resnorm = np.linalg.norm(rw)

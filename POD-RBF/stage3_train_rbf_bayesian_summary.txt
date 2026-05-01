@@ -1,6 +1,6 @@
 [run]
-timestamp: 2026-03-20T03:55:28
-script: stage3_train_rbf_grid_search.py
+timestamp: 2026-03-20T04:09:22
+script: stage3_train_rbf_bayesian.py
 
 [configuration]
 basis_file: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/basis.npy
@@ -12,11 +12,18 @@ use_u_ref: True
 u_ref_source: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/stage2_projection_metadata.npz:u_ref_used
 u_ref_l2_norm: 8.17426148e+02
 kernel_candidates: ['imq']
-epsilon_grid: [0.5, 0.5853899568613896, 0.6853628031883593, 0.8024090035856695, 0.9394443439884115, 1.0998825680021054, 1.287720418070694, 1.5076371999678686, 1.7651113509036338, 2.066556915122055, 2.419483326789812, 2.83268248059268, 3.3164477502323266, 3.882830410883109, 4.54593985345391, 5.322295069415713, 6.2312361621777015, 7.295406136340671, 8.541314966877565, 10.0]
-lambda_grid: [1e-12]
+epsilon_values: N/A
+lambda_values: N/A
+epsilon_range: [0.5, 10.0]
+lambda_range: [1e-12, 1e-08]
+epsilon_fixed: False
+lambda_fixed: True
 duplicate_tol: 1.00000000e-03
 cv_folds: 5
 random_seed: 42
+acq_func: EI
+n_calls: 40
+n_random_starts: 10
 
 [data_shapes]
 basis_shape: (125000, 151)
@@ -26,16 +33,16 @@ x_train_filtered_shape: (4501, 10)
 y_train_filtered_shape: (4501, 141)
 W_shape: (4501, 141)
 
-[grid_search]
-total_combinations: 20
-valid_combinations: 20
+[bayesian_search]
+evaluated_combinations: 40
+valid_combinations: 40
 failed_combinations: 0
 best_kernel: imq
-best_epsilon: 1.76511135e+00
+best_epsilon: 1.75127897e+00
 best_lambda: 1.00000000e-12
-best_cv_relative_error_percent: 9.54246352e-03
-top5: [{'rank': 1, 'kernel': 'imq', 'epsilon': 1.7651113509036338, 'lambda': 1e-12, 'cv_rel_err_pct': 0.009542463522570507}, {'rank': 2, 'kernel': 'imq', 'epsilon': 1.5076371999678686, 'lambda': 1e-12, 'cv_rel_err_pct': 0.011592722703748778}, {'rank': 3, 'kernel': 'imq', 'epsilon': 2.066556915122055, 'lambda': 1e-12, 'cv_rel_err_pct': 0.01231125778904527}, {'rank': 4, 'kernel': 'imq', 'epsilon': 1.287720418070694, 'lambda': 1e-12, 'cv_rel_err_pct': 0.016463520910630056}, {'rank': 5, 'kernel': 'imq', 'epsilon': 1.0998825680021054, 'lambda': 1e-12, 'cv_rel_err_pct': 0.025145806411747407}]
-search_time_seconds: 2.76736711e+02
+best_cv_relative_error_percent: 9.53185811e-03
+top5: [{'rank': 1, 'kernel': 'imq', 'epsilon': 1.7512789710928758, 'lambda': 1e-12, 'cv_rel_err_pct': 0.009531858107213435}, {'rank': 2, 'kernel': 'imq', 'epsilon': 1.7481498993774798, 'lambda': 1e-12, 'cv_rel_err_pct': 0.009535057955648194}, {'rank': 3, 'kernel': 'imq', 'epsilon': 1.7344294765831993, 'lambda': 1e-12, 'cv_rel_err_pct': 0.009536285581002182}, {'rank': 4, 'kernel': 'imq', 'epsilon': 1.7622165836970867, 'lambda': 1e-12, 'cv_rel_err_pct': 0.009553180789230406}, {'rank': 5, 'kernel': 'imq', 'epsilon': 1.727823072867406, 'lambda': 1e-12, 'cv_rel_err_pct': 0.009557249989305735}]
+search_time_seconds: 5.60616107e+02
 
 [outputs]
 model_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/pod_rbf_model
@@ -46,4 +53,4 @@ u_ref_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/pod_r
 q_p_normalized_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/pod_rbf_model/q_p_normalized.npy
 q_s_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/pod_rbf_model/q_s.npy
 weights_pkl: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/pod_rbf_model/rbf_weights.pkl
-summary_txt: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/stage3_train_rbf_summary.txt
+summary_txt: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/stage3_train_rbf_bayesian_summary.txt

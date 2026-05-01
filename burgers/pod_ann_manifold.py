@@ -931,9 +931,10 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
         resnorms = []
 
         for it in range(max_its):
-            t0 = time.time()
-            fk = compute_residual(wk)
-            res_time += time.time() - t0
+            if it > 0:
+                t0 = time.time()
+                fk = compute_residual(wk)
+                res_time += time.time() - t0
 
             rnorm = np.linalg.norm(fk)
             resnorms.append(rnorm)

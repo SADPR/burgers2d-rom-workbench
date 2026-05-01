@@ -1,0 +1,48 @@
+[run]
+timestamp: 2026-05-01T01:38:54
+script: stage1_local_qm_offline.py
+
+[configuration]
+dt: 5.00000000e-02
+num_steps: 500
+n_clusters: 10
+clustering_method: kmeans
+phi_overlap: 1.00000000e-01
+pod_tol: 1.00000000e-04
+pod_method: svd
+zeta_qua: 5.00000000e-01
+alpha_ridge: 3.00000000e-01
+q_normalization_mode: std
+q_normalization_eps: 1.00000000e-12
+num_training_parameters: 9
+snap_folder: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Results/param_snaps
+
+[snapshot_matrix]
+S_shape: (125000, 4509)
+state_size: 125000
+total_snapshots: 4509
+
+[clusters]
+cluster_sizes_disjoint: [538, 432, 493, 310, 445, 488, 461, 424, 474, 444]
+cluster_sizes_after_overlap: [586, 518, 586, 357, 535, 585, 554, 511, 554, 533]
+n_trad_per_cluster: [24, 30, 42, 47, 25, 25, 38, 27, 46, 34]
+n_qm_per_cluster: [8, 9, 11, 12, 8, 8, 11, 9, 12, 10]
+pod_energy_captured_per_cluster: [0.9999116570993357, 0.9999123002153157, 0.999900566154309, 0.9999064053004082, 0.9999090616536175, 0.9999047586879557, 0.9999033875687723, 0.9999151735885645, 0.9999000507000497, 0.9999089283577365]
+pod_energy_lost_per_cluster: [8.834290066428441e-05, 8.769978468425865e-05, 9.943384569099933e-05, 9.359469959180355e-05, 9.093834638251863e-05, 9.524131204430297e-05, 9.661243122771612e-05, 8.482641143547909e-05, 9.99492999502749e-05, 9.107164226351827e-05]
+min_n_qm: 8
+max_n_qm: 12
+avg_n_qm: 9.80000000e+00
+
+[timings_seconds]
+build_snapshots: 7.27125359e+00
+clustering: 1.33266990e+02
+overlap_build: 1.15389075e+02
+local_qm_build: 1.19577509e+02
+precompute_switching: 8.84089947e-01
+save_model: 1.60990620e+00
+total: 3.77999015e+02
+
+[outputs]
+local_qm_model_npz: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalQuadratic/local_qm_data.npz
+m_list_shape: (10, 10)
+summary_txt: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalQuadratic/stage1_local_qm_offline_summary.txt

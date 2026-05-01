@@ -1,0 +1,41 @@
+[run]
+timestamp: 2026-03-20T04:10:34
+script: stage4_test_rbf.py
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+model_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/pod_rbf_model
+uref_mode: auto
+use_u_ref: True
+u_ref_source: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/pod_rbf_model/u_ref.npy
+u_ref_l2_norm: 8.17426148e+02
+snap_folder: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+kernel_name: imq
+epsilon: 1.75127897e+00
+compare_pod: True
+
+[model_shapes]
+U_p_shape: (125000, 10)
+U_s_shape: (125000, 141)
+W_shape: (4501, 141)
+q_p_train_shape: (4501, 10)
+
+[timings_seconds]
+hdm_load_or_solve: 3.06054831e-01
+pod_rbf_reconstruction: 3.65159369e+00
+pod_reconstruction: 6.01635313e+00
+
+[errors]
+pod_rbf_relative_l2_error: 3.42633841e-02
+pod_rbf_relative_error_percent: 3.42633841e+00
+pod_relative_l2_error: 3.87857543e-03
+pod_relative_error_percent: 3.87857543e-01
+
+[outputs]
+pod_rbf_reconstruction_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/stage4_results/pod_rbf_reconstruction_mu1_4.56_mu2_0.019.npy
+pod_reconstruction_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/stage4_results/pod_reconstruction_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/stage4_results/pod_rbf_projection_mu1_4.56_mu2_0.019.png
+summary_txt: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-RBF/stage4_results/stage4_test_summary_mu1_4.56_mu2_0.019.txt

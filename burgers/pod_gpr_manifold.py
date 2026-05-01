@@ -123,20 +123,104 @@ def _gp_target_stats(gp_model, n_targets):
     return y_mean, y_std
 
 
-def _predict_gp_custom(gp_model, x_scaled):
+def _get_gp_runtime_cache(gp_model):
+    """
+    Cache GP arrays reused in tight online loops.
+    """
+    cache = getattr(gp_model, "_rom_gp_cache_v1", None)
+    if cache is not None:
+        return cache
+
+    X_train_ = np.asarray(gp_model.X_train_, dtype=np.float64)
+    alpha_ = np.asarray(gp_model.alpha_, dtype=np.float64)
+    if alpha_.ndim == 1:
+        alpha_ = alpha_[:, None]
+
+    y_mean, y_std = _gp_target_stats(gp_model, alpha_.shape[1])
+    kind, cval, length_scale = _gp_analytic_kernel_info(gp_model)
+
+    cache = {
+        "X_train": X_train_,
+        "alpha": alpha_,
+        "kernel": gp_model.kernel_,
+        "y_mean": y_mean,
+        "y_std": y_std,
+        "analytic_kind": kind,
+        "analytic_cval": cval,
+        "analytic_length_scale": length_scale,
+    }
+    setattr(gp_model, "_rom_gp_cache_v1", cache)
+    return cache
+
+
+def _get_scaler_affine_cache(scaler):
+    """
+    Cache affine scaling data when available:
+        x_scaled = (x - mean) / scale
+    """
+    cache = getattr(scaler, "_rom_scaler_cache_v1", None)
+    if cache is not None:
+        return cache
+
+    mean = getattr(scaler, "mean_", None)
+    scale = getattr(scaler, "scale_", None)
+    if mean is None or scale is None:
+        cache = None
+    else:
+        cache = {
+            "mean": np.asarray(mean, dtype=np.float64).reshape(-1),
+            "scale": np.asarray(scale, dtype=np.float64).reshape(-1),
+        }
+    setattr(scaler, "_rom_scaler_cache_v1", cache)
+    return cache
+
+
+def _scale_input_row(x_row, scaler, scaler_affine_cache=None):
+    """
+    Scale a single row vector. Uses cached affine transform when available.
+    """
+    x_row = np.asarray(x_row, dtype=np.float64).reshape(1, -1)
+    cache = scaler_affine_cache if scaler_affine_cache is not None else _get_scaler_affine_cache(scaler)
+    if cache is not None:
+        mean = cache["mean"]
+        scale = cache["scale"]
+        if mean.size == x_row.shape[1] and scale.size == x_row.shape[1]:
+            return (x_row - mean[None, :]) / scale[None, :]
+    return scaler.transform(x_row)
+
+
+def _get_model_runtime_cache(model_k):
+    """
+    Cache per-cluster model data (GP/scaler) reused by decode/jac/selector.
+    """
+    cache = model_k.get("_rom_runtime_cache_v1", None)
+    if cache is not None:
+        return cache
+
+    cache = {}
+    gp_model = model_k.get("gpr_model", None)
+    scaler = model_k.get("scaler", None)
+    if gp_model is not None:
+        cache["gp"] = _get_gp_runtime_cache(gp_model)
+    if scaler is not None:
+        cache["scaler_affine"] = _get_scaler_affine_cache(scaler)
+
+    model_k["_rom_runtime_cache_v1"] = cache
+    return cache
+
+
+def _predict_gp_custom(gp_model, x_scaled, runtime_cache=None):
     """
     Custom GP prediction from (kernel vector @ alpha), with optional
     de-normalization when normalize_y=True.
     """
-    X_train_ = gp_model.X_train_
-    alpha_ = np.asarray(gp_model.alpha_, dtype=np.float64)
-    kernel_ = gp_model.kernel_
+    cache = runtime_cache if runtime_cache is not None else _get_gp_runtime_cache(gp_model)
+    x_scaled = np.asarray(x_scaled, dtype=np.float64).reshape(1, -1)
 
-    k_vec = kernel_(X_train_, x_scaled).ravel()
-    y_pred = np.asarray(k_vec @ alpha_, dtype=np.float64).reshape(-1)
+    k_vec = cache["kernel"](cache["X_train"], x_scaled).ravel()
+    y_pred = np.asarray(k_vec @ cache["alpha"], dtype=np.float64).reshape(-1)
 
-    y_mean, y_std = _gp_target_stats(gp_model, y_pred.size)
-    y_pred = y_mean + y_std * y_pred
+    y_pred = cache["y_mean"] + cache["y_std"] * y_pred
     return y_pred
 
 
@@ -195,15 +279,23 @@ def _resolve_local_selector_mode(selector_mode):
     return mode
 
 
-def _predict_local_secondary_coords(model_k, q_p_eff, use_custom_predict=True):
+def _predict_local_secondary_coords(
+    model_k,
+    q_p_eff,
+    use_custom_predict=True,
+    runtime_cache=None,
+):
     """
     Predict local GPR secondary coordinates q_s from primary q_p.
     """
     gp_model = model_k["gpr_model"]
     scaler = model_k["scaler"]
-    x_scaled = scaler.transform(np.asarray(q_p_eff, dtype=np.float64).reshape(1, -1))
+    cache = runtime_cache if runtime_cache is not None else _get_model_runtime_cache(model_k)
+    gp_cache = cache.get("gp", None)
+    scaler_affine_cache = cache.get("scaler_affine", None)
+    x_scaled = _scale_input_row(q_p_eff, scaler, scaler_affine_cache)
     if use_custom_predict:
-        return _predict_gp_custom(gp_model, x_scaled)
+        return _predict_gp_custom(gp_model, x_scaled, runtime_cache=gp_cache)
     return np.asarray(gp_model.predict(x_scaled), dtype=np.float64).reshape(-1)
 
 
@@ -218,6 +310,7 @@ def _build_local_selector_coords_gpr(
     selector_mode,
     use_custom_predict=True,
     q_primary_hint=None,
+    runtime_cache=None,
 ):
     """
     Build reduced coordinates used by local cluster selection for POD-GPR.
@@ -226,9 +319,9 @@ def _build_local_selector_coords_gpr(
     - nonlinear mode: [q_p, q_s(q_p), 0, ..., 0], where q_s is GPR-predicted
       and q_p comes from q_primary_hint when provided (otherwise from projection).
     """
-    q_lin_full = (V_k.T @ (state - u0_k)).reshape(-1)
     if selector_mode == "linear":
-        return q_lin_full
+        q_lin_full = V_k.T @ (state - u0_k)
+        return np.asarray(q_lin_full, dtype=np.float64).reshape(-1)
 
     r_k = V_k.shape[1]
     n_total_k = _cluster_total_dim(model_k, r_k)
@@ -239,6 +332,8 @@ def _build_local_selector_coords_gpr(
     q_sel = np.zeros(r_k, dtype=np.float64)
 
     if q_primary_hint is None:
+        q_lin_full = V_k.T @ (state - u0_k)
+        q_lin_full = np.asarray(q_lin_full, dtype=np.float64).reshape(-1)
         q_p_eff = q_lin_full[:n_primary_k].copy()
     else:
         q_primary_hint = np.asarray(q_primary_hint, dtype=np.float64).reshape(-1)
@@ -255,6 +350,7 @@ def _build_local_selector_coords_gpr(
                 model_k=model_k,
                 q_p_eff=q_p_eff,
                 use_custom_predict=use_custom_predict,
+                runtime_cache=runtime_cache,
             )
             q_sel[n_primary_k : n_primary_k + n_secondary_eff] = q_s_pred[:n_secondary_eff]
 
@@ -324,6 +420,8 @@ def decode_gp(
     scaler,
     u_ref=None,
     use_custom_predict=True,
+    runtime_cache=None,
+    scaler_affine_cache=None,
     echo_level=0,
 ):
     """
@@ -355,15 +453,15 @@ def decode_gp(
     basis2 = np.asarray(basis2, dtype=np.float64)
     u_ref = _prepare_reference(u_ref, basis.shape[0])
 
-    x_in = q_p.reshape(1, -1)
-    x_scaled = scaler.transform(x_in)
+    x_scaled = _scale_input_row(q_p, scaler, scaler_affine_cache)
 
     t0 = time.time()
 
     if not use_custom_predict:
         q_s_pred = np.asarray(gp_model.predict(x_scaled), dtype=np.float64).ravel()
     else:
-        q_s_pred = _predict_gp_custom(gp_model, x_scaled)
+        gp_cache = runtime_cache if runtime_cache is not None else _get_gp_runtime_cache(gp_model)
+        q_s_pred = _predict_gp_custom(gp_model, x_scaled, runtime_cache=gp_cache)
 
     if echo_level > 0:
         print(f"[decode_gp] Time to predict q_s: {time.time() - t0:.6f} s")
@@ -415,6 +513,8 @@ def jac_gp(
     basis,
     basis2,
     scaler,
+    runtime_cache=None,
+    scaler_affine_cache=None,
     echo_level=0,
 ):
     """
@@ -433,14 +533,18 @@ def jac_gp(
     basis = np.asarray(basis, dtype=np.float64)
     basis2 = np.asarray(basis2, dtype=np.float64)
 
-    x_scaled = scaler.transform(q_p.reshape(1, -1)).ravel()
-    scale_factors = scaler.scale_
+    x_scaled = _scale_input_row(q_p, scaler, scaler_affine_cache).ravel()
+    if scaler_affine_cache is not None:
+        scale_factors = scaler_affine_cache["scale"]
+    else:
+        scale_factors = np.asarray(scaler.scale_, dtype=np.float64).reshape(-1)
 
-    X_train = gp_model.X_train_
-    alpha = np.asarray(gp_model.alpha_, dtype=np.float64)
-    if alpha.ndim == 1:
-        alpha = alpha[:, None]
-    kind, cval, length_scale = _gp_analytic_kernel_info(gp_model)
+    gp_cache = runtime_cache if runtime_cache is not None else _get_gp_runtime_cache(gp_model)
+    X_train = gp_cache["X_train"]
+    alpha = gp_cache["alpha"]
+    kind = gp_cache["analytic_kind"]
+    cval = gp_cache["analytic_cval"]
+    length_scale = gp_cache["analytic_length_scale"]
     if kind is None:
         kernel_obj = getattr(gp_model, "kernel_", getattr(gp_model, "kernel", None))
         raise ValueError(
@@ -452,8 +556,7 @@ def jac_gp(
         grad_k = matern15_grad(x_scaled, X_train, length_scale, cval)
     else:
         grad_k = rbf_grad(x_scaled, X_train, length_scale, cval)
-    y_mean, y_std = _gp_target_stats(gp_model, alpha.shape[1])
-    del y_mean
+    y_std = gp_cache["y_std"]
 
     dq_s_dx_scaled = (alpha.T @ grad_k) * y_std[:, None]
     dq_s_dx_real = dq_s_dx_scaled * scale_factors
@@ -475,6 +578,8 @@ def jac_gp_forward_difference(
     fd_eps=1e-6,
     echo_level=0,
     use_custom_predict=True,
+    runtime_cache=None,
+    scaler_affine_cache=None,
 ):
     """
     Forward-difference approximation of the POD-GPR tangent matrix.
@@ -488,15 +593,19 @@ def jac_gp_forward_difference(
 
     step1_start = time.time()
     x_in = q_p.reshape(1, -1)
-    x_scaled = scaler.transform(x_in)
-    scale_factors = scaler.scale_
+    x_scaled = _scale_input_row(x_in, scaler, scaler_affine_cache)
+    if scaler_affine_cache is not None:
+        scale_factors = scaler_affine_cache["scale"]
+    else:
+        scale_factors = np.asarray(scaler.scale_, dtype=np.float64).reshape(-1)
     step1_time = time.time() - step1_start
 
     step2_start = time.time()
     if not use_custom_predict:
         q_s_base = np.asarray(gp_model.predict(x_scaled), dtype=np.float64).ravel()
     else:
-        q_s_base = _predict_gp_custom(gp_model, x_scaled)
+        gp_cache = runtime_cache if runtime_cache is not None else _get_gp_runtime_cache(gp_model)
+        q_s_base = _predict_gp_custom(gp_model, x_scaled, runtime_cache=gp_cache)
     step2_time = time.time() - step2_start
 
     step3_start = time.time()
@@ -507,9 +616,12 @@ def jac_gp_forward_difference(
     iteration_times = []
 
     if use_custom_predict:
-        X_train_ = gp_model.X_train_
-        alpha_ = np.asarray(gp_model.alpha_, dtype=np.float64)
-        kernel_ = gp_model.kernel_
+        gp_cache = runtime_cache if runtime_cache is not None else _get_gp_runtime_cache(gp_model)
+        X_train_ = gp_cache["X_train"]
+        alpha_ = gp_cache["alpha"]
+        kernel_ = gp_cache["kernel"]
+        y_mean = gp_cache["y_mean"]
+        y_std = gp_cache["y_std"]
 
     for j in range(r_p):
         iter_start = time.time()
@@ -521,7 +633,6 @@ def jac_gp_forward_difference(
         else:
             k_vec_plus = kernel_(X_train_, x_plus).ravel()
             q_s_plus = np.asarray(k_vec_plus @ alpha_, dtype=np.float64).reshape(-1)
-            y_mean, y_std = _gp_target_stats(gp_model, q_s_plus.size)
             q_s_plus = y_mean + y_std * q_s_plus
 
         iter_time = time.time() - iter_start
@@ -559,6 +670,8 @@ def jac_gp_central_difference(
     fd_eps=1e-6,
     echo_level=0,
     use_custom_predict=True,
+    runtime_cache=None,
+    scaler_affine_cache=None,
 ):
     """
     Central-difference approximation of the POD-GPR tangent matrix.
@@ -571,19 +684,25 @@ def jac_gp_central_difference(
     basis2 = np.asarray(basis2, dtype=np.float64)
 
     x_in = q_p.reshape(1, -1)
-    x_scaled = scaler.transform(x_in)
-    scale_factors = scaler.scale_
+    x_scaled = _scale_input_row(x_in, scaler, scaler_affine_cache)
+    if scaler_affine_cache is not None:
+        scale_factors = scaler_affine_cache["scale"]
+    else:
+        scale_factors = np.asarray(scaler.scale_, dtype=np.float64).reshape(-1)
 
     if use_custom_predict:
-        X_train_ = gp_model.X_train_
-        alpha_ = np.asarray(gp_model.alpha_, dtype=np.float64)
-        kernel_ = gp_model.kernel_
+        gp_cache = runtime_cache if runtime_cache is not None else _get_gp_runtime_cache(gp_model)
+        X_train_ = gp_cache["X_train"]
+        alpha_ = gp_cache["alpha"]
+        kernel_ = gp_cache["kernel"]
+        y_mean = gp_cache["y_mean"]
+        y_std = gp_cache["y_std"]
 
     baseline_start = time.time()
     if not use_custom_predict:
         q_s_base = np.asarray(gp_model.predict(x_scaled), dtype=np.float64).ravel()
     else:
-        q_s_base = _predict_gp_custom(gp_model, x_scaled)
+        q_s_base = _predict_gp_custom(gp_model, x_scaled, runtime_cache=gp_cache)
     baseline_time = time.time() - baseline_start
 
     r_p = x_scaled.shape[1]
@@ -606,7 +725,6 @@ def jac_gp_central_difference(
             q_s_plus = np.asarray(k_vec_plus @ alpha_, dtype=np.float64).reshape(-1)
             k_vec_minus = kernel_(X_train_, x_minus).ravel()
             q_s_minus = np.asarray(k_vec_minus @ alpha_, dtype=np.float64).reshape(-1)
-            y_mean, y_std = _gp_target_stats(gp_model, q_s_plus.size)
             q_s_plus = y_mean + y_std * q_s_plus
             q_s_minus = y_mean + y_std * q_s_minus
 
@@ -661,6 +779,8 @@ def compute_ECSW_training_matrix_2D_gpr(
     n_hdm = n_tot // 2
     n_red = basis.shape[1]
     u_ref = _prepare_reference(u_ref, n_tot)
+    gp_cache = _get_gp_runtime_cache(gp_model)
+    scaler_affine_cache = _get_scaler_affine_cache(scaler)
 
     C = np.zeros((n_red * n_snaps, n_hdm))
 
@@ -674,6 +794,8 @@ def compute_ECSW_training_matrix_2D_gpr(
                 basis=basis,
                 basis2=basis2,
                 scaler=scaler,
+                runtime_cache=gp_cache,
+                scaler_affine_cache=scaler_affine_cache,
                 echo_level=0,
             )
         if jacobian_mode == "forward_fd":
@@ -686,6 +808,8 @@ def compute_ECSW_training_matrix_2D_gpr(
                 fd_eps=fd_eps,
                 echo_level=0,
                 use_custom_predict=use_custom_predict,
+                runtime_cache=gp_cache,
+                scaler_affine_cache=scaler_affine_cache,
             )
         if jacobian_mode == "central_fd":
             return jac_gp_central_difference(
@@ -697,6 +821,8 @@ def compute_ECSW_training_matrix_2D_gpr(
                 fd_eps=fd_eps,
                 echo_level=0,
                 use_custom_predict=use_custom_predict,
+                runtime_cache=gp_cache,
+                scaler_affine_cache=scaler_affine_cache,
             )
         raise ValueError(f"Unsupported jacobian_mode: {jacobian_mode}")
 
@@ -714,6 +840,8 @@ def compute_ECSW_training_matrix_2D_gpr(
             scaler=scaler,
             u_ref=u_ref,
             use_custom_predict=use_custom_predict,
+            runtime_cache=gp_cache,
+            scaler_affine_cache=scaler_affine_cache,
             echo_level=0,
         )
         init_res = np.linalg.norm(w_rec - snap)
@@ -742,6 +870,8 @@ def compute_ECSW_training_matrix_2D_gpr(
                 scaler=scaler,
                 u_ref=u_ref,
                 use_custom_predict=use_custom_predict,
+                runtime_cache=gp_cache,
+                scaler_affine_cache=scaler_affine_cache,
                 echo_level=0,
             )
             curr_res = np.linalg.norm(w_rec - snap)
@@ -832,6 +962,7 @@ def compute_ECSW_training_matrix_2D_gpr_local(
             selector_mode=selector_mode,
             use_custom_predict=use_custom_predict,
             q_primary_hint=None,
+            runtime_cache=_get_model_runtime_cache(models[k0]),
         )
         k = select_cluster_reduced(k0, y_k0, d_const, g_list)
 
@@ -971,6 +1102,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
     basis = np.asarray(basis, dtype=np.float64)
     basis2 = np.asarray(basis2, dtype=np.float64)
     u_ref = _prepare_reference(u_ref, w0.size)
+    gp_cache = _get_gp_runtime_cache(gp_model)
+    scaler_affine_cache = _get_scaler_affine_cache(scaler)
 
     Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
 
@@ -985,6 +1118,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
             scaler=scaler,
             u_ref=u_ref,
             use_custom_predict=use_custom_predict,
+            runtime_cache=gp_cache,
+            scaler_affine_cache=scaler_affine_cache,
             echo_level=0,
         )
 
@@ -996,6 +1131,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
                 basis=basis,
                 basis2=basis2,
                 scaler=scaler,
+                runtime_cache=gp_cache,
+                scaler_affine_cache=scaler_affine_cache,
                 echo_level=0,
             )
         if mode == "forward_fd":
@@ -1008,6 +1145,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
                 fd_eps=fd_eps,
                 echo_level=0,
                 use_custom_predict=use_custom_predict,
+                runtime_cache=gp_cache,
+                scaler_affine_cache=scaler_affine_cache,
             )
         if mode == "central_fd":
             return jac_gp_central_difference(
@@ -1019,6 +1158,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr(
                 fd_eps=fd_eps,
                 echo_level=0,
                 use_custom_predict=use_custom_predict,
+                runtime_cache=gp_cache,
+                scaler_affine_cache=scaler_affine_cache,
             )
 
         raise ValueError(f"Unsupported jacobian_mode: {mode}")
@@ -1117,6 +1258,7 @@ def decode_gpr_local(
     u0_k = np.asarray(u0_list[k], dtype=np.float64).reshape(-1)
     V_k = np.asarray(V_list[k], dtype=np.float64)
     model_k = models[k]
+    model_cache = _get_model_runtime_cache(model_k)
 
     r_k = V_k.shape[1]
     n_total_k = _cluster_total_dim(model_k, r_k)
@@ -1144,6 +1286,8 @@ def decode_gpr_local(
         scaler=model_k["scaler"],
         u_ref=u0_k,
         use_custom_predict=use_custom_predict,
+        runtime_cache=model_cache.get("gp", None),
+        scaler_affine_cache=model_cache.get("scaler_affine", None),
         echo_level=0,
     )
 
@@ -1183,6 +1327,7 @@ def jac_gpr_local(
     basis2 = V_k[:, n_primary_k:n_total_k]
     gp_model = model_k["gpr_model"]
     scaler = model_k["scaler"]
+    model_cache = _get_model_runtime_cache(model_k)
 
     mode = _resolve_local_jacobian_mode(jacobian_mode, model_k)
     if mode == "analytic":
@@ -1192,6 +1337,8 @@ def jac_gpr_local(
             basis=basis,
             basis2=basis2,
             scaler=scaler,
+            runtime_cache=model_cache.get("gp", None),
+            scaler_affine_cache=model_cache.get("scaler_affine", None),
             echo_level=0,
         )
     if mode == "forward_fd":
@@ -1204,6 +1351,8 @@ def jac_gpr_local(
             fd_eps=fd_eps,
             echo_level=0,
             use_custom_predict=use_custom_predict,
+            runtime_cache=model_cache.get("gp", None),
+            scaler_affine_cache=model_cache.get("scaler_affine", None),
         )
     if mode == "central_fd":
         return jac_gp_central_difference(
@@ -1215,6 +1364,8 @@ def jac_gpr_local(
             fd_eps=fd_eps,
             echo_level=0,
             use_custom_predict=use_custom_predict,
+            runtime_cache=model_cache.get("gp", None),
+            scaler_affine_cache=model_cache.get("scaler_affine", None),
         )
 
     raise ValueError(f"Unsupported local jacobian mode: {mode}")
@@ -1353,6 +1504,7 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr(
             selector_mode=selector_mode,
             use_custom_predict=use_custom_predict,
             q_primary_hint=qp if selector_mode == "nonlinear" else None,
+            runtime_cache=_get_model_runtime_cache(models[k]),
         )
         k_new = select_cluster_reduced(k, q_full_k, d_const, g_list)
 
@@ -1460,6 +1612,7 @@ def decode_gpr_local_ecsw(
     u0_loc_k = np.asarray(u0_loc_list[k], dtype=np.float64).reshape(-1)
     V_loc_k = np.asarray(V_loc_list[k], dtype=np.float64)
     model_k = models[k]
+    model_cache = _get_model_runtime_cache(model_k)
 
     _, r_k = V_loc_k.shape
     n_total_k = _cluster_total_dim(model_k, r_k)
@@ -1488,6 +1641,8 @@ def decode_gpr_local_ecsw(
         scaler=model_k["scaler"],
         u_ref=u0_loc_k,
         use_custom_predict=use_custom_predict,
+        runtime_cache=model_cache.get("gp", None),
+        scaler_affine_cache=model_cache.get("scaler_affine", None),
         echo_level=0,
     )
 
@@ -1532,6 +1687,7 @@ def jac_gpr_local_ecsw(
     basis2_loc = V_loc_k[:, n_primary_k:n_total_k]
     gp_model = model_k["gpr_model"]
     scaler = model_k["scaler"]
+    model_cache = _get_model_runtime_cache(model_k)
 
     mode = _resolve_local_jacobian_mode(jacobian_mode, model_k)
     if mode == "analytic":
@@ -1541,6 +1697,8 @@ def jac_gpr_local_ecsw(
             basis=basis_loc,
             basis2=basis2_loc,
             scaler=scaler,
+            runtime_cache=model_cache.get("gp", None),
+            scaler_affine_cache=model_cache.get("scaler_affine", None),
             echo_level=0,
         )
     if mode == "forward_fd":
@@ -1553,6 +1711,8 @@ def jac_gpr_local_ecsw(
             fd_eps=fd_eps,
             echo_level=0,
             use_custom_predict=use_custom_predict,
+            runtime_cache=model_cache.get("gp", None),
+            scaler_affine_cache=model_cache.get("scaler_affine", None),
         )
     if mode == "central_fd":
         return jac_gp_central_difference(
@@ -1564,6 +1724,8 @@ def jac_gpr_local_ecsw(
             fd_eps=fd_eps,
             echo_level=0,
             use_custom_predict=use_custom_predict,
+            runtime_cache=model_cache.get("gp", None),
+            scaler_affine_cache=model_cache.get("scaler_affine", None),
         )
 
     raise ValueError(f"Unsupported local ECSW jacobian mode: {mode}")
@@ -1751,6 +1913,7 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
             selector_mode=selector_mode,
             use_custom_predict=use_custom_predict,
             q_primary_hint=qp if selector_mode == "nonlinear" else None,
+            runtime_cache=_get_model_runtime_cache(models[k]),
         )
         k_new = select_cluster_reduced(k, q_full_k, d_const, g_list)
 
@@ -1893,6 +2056,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr_ecsw(
     basis2 = np.asarray(basis2, dtype=np.float64)
     weights = np.asarray(weights, dtype=np.float64).reshape(-1)
     u_ref = _prepare_reference(u_ref, w0.size)
+    gp_cache = _get_gp_runtime_cache(gp_model)
+    scaler_affine_cache = _get_scaler_affine_cache(scaler)
 
     N_full = w0.size
     N_cells = N_full // 2
@@ -1944,6 +2109,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr_ecsw(
             scaler=scaler,
             u_ref=u_ref_loc,
             use_custom_predict=use_custom_predict,
+            runtime_cache=gp_cache,
+            scaler_affine_cache=scaler_affine_cache,
             echo_level=0,
         )
 
@@ -1955,6 +2122,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr_ecsw(
                 basis=basis_loc,
                 basis2=basis2_loc,
                 scaler=scaler,
+                runtime_cache=gp_cache,
+                scaler_affine_cache=scaler_affine_cache,
                 echo_level=0,
             )
         if jacobian_mode == "forward_fd":
@@ -1967,6 +2136,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr_ecsw(
                 fd_eps=fd_eps,
                 echo_level=0,
                 use_custom_predict=use_custom_predict,
+                runtime_cache=gp_cache,
+                scaler_affine_cache=scaler_affine_cache,
             )
         if jacobian_mode == "central_fd":
             return jac_gp_central_difference(
@@ -1978,6 +2149,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr_ecsw(
                 fd_eps=fd_eps,
                 echo_level=0,
                 use_custom_predict=use_custom_predict,
+                runtime_cache=gp_cache,
+                scaler_affine_cache=scaler_affine_cache,
             )
 
         raise ValueError(f"Unsupported jacobian_mode: {jacobian_mode}")

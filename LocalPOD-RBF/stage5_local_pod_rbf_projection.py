@@ -312,7 +312,7 @@ def main(
     snap_folder=os.path.join(parent_dir, "Results", "param_snaps"),
     local_model_file=os.path.join(script_dir, "local_pod_rbf_all_offline.npz"),
     output_dir=script_dir,
-    selector_mode="nonlinear",
+    selector_mode="linear",
 ):
 
     os.makedirs(output_dir, exist_ok=True)

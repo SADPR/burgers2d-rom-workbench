@@ -248,7 +248,7 @@ def main(
     patience=120,
     min_improve=1e-12,
     clip_grad=1.0,
-    latent_dim=10,
+    latent_dim=5,
     latent_sweep=(24, 32, 40, 48),
     use_latent_sweep=False,
     hidden_dims=(192, 96, 48),

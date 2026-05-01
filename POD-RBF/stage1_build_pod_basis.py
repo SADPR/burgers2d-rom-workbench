@@ -103,7 +103,7 @@ def main(
     dt=DT,
     num_steps=NUM_STEPS,
     pod_method="svd",
-    pod_tol=1e-6,
+    pod_tol=1e-4,
     num_modes=None,
     center=True,
 ):

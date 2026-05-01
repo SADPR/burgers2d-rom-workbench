@@ -1,5 +1,5 @@
 [run]
-timestamp: 2026-05-01T13:16:13
+timestamp: 2026-05-01T14:50:05
 mu1: 4.56000000e+00
 mu2: 1.90000000e-02
 
@@ -48,14 +48,14 @@ snapshot_cluster_candidates_per_mu: N/A
 snapshot_cluster_selected_per_mu: N/A
 
 [local_hprom_timing]
-total_local_hprom_time_seconds: 8.84589005e+00
-avg_local_hprom_time_per_step_seconds: 1.76917801e-02
+total_local_hprom_time_seconds: 1.05078917e+01
+avg_local_hprom_time_per_step_seconds: 2.10157833e-02
 gn_iterations_total: 1501
 avg_gn_iterations_per_step: 3.00200000e+00
-jacobian_time_seconds: 2.40108085e+00
-residual_time_seconds: 1.93320107e+00
-linear_solve_time_seconds: 1.70792127e+00
-hdm_load_or_solve_time_seconds: 2.04941034e-01
+jacobian_time_seconds: 2.94936442e+00
+residual_time_seconds: 1.77531886e+00
+linear_solve_time_seconds: 2.11162400e+00
+hdm_load_or_solve_time_seconds: 3.19800377e-01
 
 [cluster_metrics]
 initial_cluster: 0

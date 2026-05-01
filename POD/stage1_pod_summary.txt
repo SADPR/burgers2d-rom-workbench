@@ -1,40 +1,40 @@
 [run]
-timestamp: 2026-03-18T19:14:47
+timestamp: 2026-04-24T02:58:37
 script: stage1_build_pod_basis.py
 
 [configuration]
-snap_folder: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/Results/param_snaps
+snap_folder: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Results/param_snaps
 dt: 5.00000000e-02
 num_steps: 500
 pod_method: svd
-pod_tol: 1.00000000e-06
+pod_tol: 5.00000000e-04
 num_modes_requested: N/A
 center: True
 random_state: 0
 num_training_parameters: 9
 
 [snapshot_matrix]
-shape: (20000, 4509)
-state_size: 20000
+shape: (125000, 4509)
+state_size: 125000
 num_snapshots: 4509
 
 [pod_truncation]
-n_keep: 153
-energy_captured: 9.99999009e-01
-energy_lost: 9.91166165e-07
+n_keep: 96
+energy_captured: 9.99502670e-01
+energy_lost: 4.97330346e-04
 centered: True
 reference_source: mean
-u_ref_l2_norm: 3.27342686e+02
+u_ref_l2_norm: 8.17426148e+02
 
 [timings_seconds]
-build_snapshot_matrix: 3.00582647e-01
-compute_pod: 6.11060419e+01
-total: 6.14066246e+01
+build_snapshot_matrix: 5.47737455e+00
+compute_pod: 1.12427315e+02
+total: 1.17904690e+02
 
 [outputs]
-basis_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/basis.npy
-sigma_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/sigma.npy
-u_ref_npy: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/u_ref.npy
-singular_value_decay_png: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/stage1_pod_singular_value_decay.png
-metadata_npz: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/stage1_pod_metadata.npz
-summary_txt: /home/kratos/Documents/StanfordComputer/BurgersFD_Local/POD/stage1_pod_summary.txt
+basis_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD/basis.npy
+sigma_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD/sigma.npy
+u_ref_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD/u_ref.npy
+singular_value_decay_png: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD/stage1_pod_singular_value_decay.png
+metadata_npz: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD/stage1_pod_metadata.npz
+summary_txt: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD/stage1_pod_summary.txt

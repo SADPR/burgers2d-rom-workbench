@@ -119,7 +119,7 @@ def main(
     snap_folder=os.path.join(parent_dir, "Results", "param_snaps"),
     dt=DT,
     num_steps=NUM_STEPS,
-    primary_modes=5,
+    primary_modes=10,
     total_modes=None,
     uref_mode="auto",
     test_params=None,
@@ -128,7 +128,7 @@ def main(
         raise FileNotFoundError(f"Missing POD basis file: {basis_file}. Run stage1 first.")
 
     if test_params is None:
-        test_params = [[4.75, 0.020], [4.56, 0.019], [5.19, 0.026]]
+        test_params = [[4.56, 0.019]]
 
     os.makedirs(os.path.dirname(q_p_file), exist_ok=True)
     os.makedirs(snap_folder, exist_ok=True)

@@ -1,0 +1,43 @@
+[run]
+timestamp: 2026-03-20T08:54:43
+script: stage4_local_pod_rbf_training_bayesian.py
+
+[configuration]
+q_file: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD-RBF/local_rbf_q_per_cluster.npz
+n_primary: 5
+delta_duplicates: 1.00000000e-03
+n_splits_max: 5
+kernels: ['gaussian', 'imq']
+epsilon_values: N/A
+lambda_values: N/A
+epsilon_range: [0.1, 5.0]
+lambda_range: [1e-12, 1e-10]
+n_calls: 30
+n_random_starts: 8
+acq_func: EI
+random_seed: 42
+search_method: bayesian_optimization
+dt: 5.00000000e-02
+num_steps: 500
+
+[clusters]
+K: 10
+r_list: [24, 30, 42, 47, 25, 25, 38, 27, 46, 34]
+has_rbf: [True, True, True, True, True, True, True, True, True, True]
+best_kernel: ['imq', 'gaussian', 'gaussian', 'gaussian', 'gaussian', 'imq', 'gaussian', 'imq', 'imq', 'gaussian']
+best_epsilon: [0.46438763773195246, 1.0746601181498405, 1.1532209803924405, 1.552526685840827, 0.7634774491629157, 0.5602528067088728, 0.9050441241729458, 0.49419132333014026, 0.7411989328584556, 1.0093994595774507]
+best_lambda: [1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12, 1e-12]
+cv_rpe_percent: [1.4620258592401014, 0.1834313561247864, 0.03750848597068744, 0.00843801552569885, 0.10885852944012679, 0.14949576379434065, 0.11973655743880349, 0.16240814463384584, 0.06766403415374962, 0.11960675673419636]
+train_rpe_percent: [0.10070337273519771, 0.0031232230196592535, 0.0025391644645596694, 0.000287724468998601, 0.01121443143822909, 0.020585738661402283, 0.006007005218768123, 0.021880904082655424, 0.006441620985931424, 0.00384741592711641]
+search_evaluations: [30, 30, 30, 30, 30, 30, 30, 30, 30, 30]
+
+[timings_seconds]
+training: 1.72375840e+02
+total: 1.77531204e+02
+
+[outputs]
+models_pkl: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD-RBF/local_pod_rbf_models.pkl
+switching_npz: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD-RBF/local_pod_rbf_switching.npz
+all_in_one_npz: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD-RBF/local_pod_rbf_all_offline.npz
+train_error_png: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD-RBF/stage4_cluster_qs_train_error_bayesian.png
+summary_txt: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD-RBF/stage4_training_bayesian_summary.txt

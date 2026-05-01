@@ -1,5 +1,5 @@
 [run]
-timestamp: 2026-04-24T07:07:29
+timestamp: 2026-05-01T14:47:59
 mu1: 4.56000000e+00
 mu2: 1.90000000e-02
 
@@ -7,8 +7,8 @@ mu2: 1.90000000e-02
 results_dir: Results
 pod_dir_requested: POD
 pod_dir_used: POD
-compute_ecsw: True
-num_modes_requested: 96
+compute_ecsw: False
+num_modes_requested: N/A
 snap_time_offset: 3
 ecsw_sampling_policy: global_param_time_stratified
 ecsw_snapshot_percent: 2.00000000e+00
@@ -36,22 +36,22 @@ u_ref_l2_norm: 8.17426148e+02
 [ecsw]
 num_nonzero_weights: 4824
 weights_sum: 6.25000000e+04
-ecsw_time_seconds: 1.10651225e+04
-ecsw_residual: 1.49582849e-09
-training_matrix_shape: (8640, 62500)
-snapshot_candidates_total: 4473
-snapshot_selected_total: 90
-snapshot_selected_per_mu: [10, 10, 10, 10, 10, 10, 10, 10, 10]
+ecsw_time_seconds: N/A
+ecsw_residual: N/A
+training_matrix_shape: N/A
+snapshot_candidates_total: N/A
+snapshot_selected_total: N/A
+snapshot_selected_per_mu: N/A
 
 [hprom_timing]
-total_hprom_time_seconds: 4.43048925e+01
-avg_hprom_time_per_step_seconds: 8.86097851e-02
+total_hprom_time_seconds: 5.96408722e+01
+avg_hprom_time_per_step_seconds: 1.19281744e-01
 gn_iterations_total: 1500
 avg_gn_iterations_per_step: 3.00000000e+00
-jacobian_time_seconds: 6.32485104e+00
-residual_time_seconds: 3.95123029e+00
-linear_solve_time_seconds: 2.83240664e+01
-hdm_load_or_solve_time_seconds: 5.59657574e-01
+jacobian_time_seconds: 3.20271301e+00
+residual_time_seconds: 1.91421700e+00
+linear_solve_time_seconds: 4.90045459e+01
+hdm_load_or_solve_time_seconds: 9.27004814e-02
 
 [error_metrics]
 relative_l2_error: 1.09596500e-02
@@ -64,5 +64,5 @@ basis_npy: POD/basis.npy
 sigma_npy: POD/sigma.npy
 u_ref_npy: POD/u_ref.npy
 ecsw_weights_npy: POD/ecsw_weights_lspg.npy
-ecsw_reduced_mesh_png: Results/hprom_reduced_mesh.png
-ecsw_sampling_3d_png: Results/hprom_ecsw_sampling_3d.png
+ecsw_reduced_mesh_png: N/A
+ecsw_sampling_3d_png: N/A

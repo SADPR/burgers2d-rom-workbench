@@ -403,14 +403,14 @@ def main():
     num_steps = NUM_STEPS
     snap_folder = os.path.join(parent_dir, "Results", "param_snaps")
 
-    pod_tol = 1e-6
-    zeta_qua = 0.1
-    alpha_ridge = 1e-4
-    q_normalization_mode = "off"  # "off" or "std"
+    pod_tol = 1e-4
+    zeta_qua = 0.5
+    alpha_ridge = 0.3
+    q_normalization_mode = "std"
     q_normalization_eps = 1e-12
-    pod_method = "svd"  # "svd" or "rsvd"
+    pod_method = "svd"
 
-    clustering_method = "kmeans"  # "kmeans" or "fuzzy"
+    clustering_method = "kmeans"
     phi = 0.1
 
     os.makedirs(snap_folder, exist_ok=True)
