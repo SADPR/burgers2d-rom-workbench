@@ -223,8 +223,10 @@ Useful flags for all `run_prom_ann_case_*` scripts:
 --no-ecsw
 --rebuild-ecsw
 --ecsw-num-training-mu <int>      # default: 9
---ecsw-snap-sample-factor <int>   # default: 50
 --ecsw-snap-time-offset <int>     # default: 3
+--ecsw-snapshot-percent <float>   # default: 2.0
+--ecsw-random-seed <int>          # default: 42
+--ecsw-ensure-mu-coverage / --ecsw-no-ensure-mu-coverage
 --max-its <int>
 --relnorm-cutoff <float>
 --min-delta <float>

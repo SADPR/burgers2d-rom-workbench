@@ -40,6 +40,7 @@ from burgers.linear_manifold import (
     inviscid_burgers_implicit2D_LSPG_ecsw,
 )
 from burgers.randomized_singular_value_decomposition import RandomizedSingularValueDecomposition
+from burgers.ecsw_utils import build_ecsw_snapshot_plan
 
 try:
     from project_layout import (
@@ -174,18 +175,33 @@ def _compute_ecsw_weights(
     num_steps,
     mu_samples,
     snap_folder,
-    snap_sample_factor=50,
     snap_time_offset=3,
+    snapshot_percent=2.0,
+    snapshot_random_seed=42,
+    ensure_mu_coverage=True,
 ):
-    if snap_sample_factor < 1:
-        raise ValueError("snap_sample_factor must be >= 1.")
     if snap_time_offset < 1:
         raise ValueError("snap_time_offset must be >= 1.")
+    snapshot_percent = float(snapshot_percent)
+    if not np.isfinite(snapshot_percent) or snapshot_percent <= 0.0:
+        raise ValueError("snapshot_percent must be a finite value > 0.")
+
+    ecsw_plan = build_ecsw_snapshot_plan(
+        num_steps=num_steps,
+        snap_time_offset=snap_time_offset,
+        num_mu=len(mu_samples),
+        mode="global_param_time_stratified",
+        total_snapshots=None,
+        total_snapshots_percent=snapshot_percent,
+        mu_points=mu_samples,
+        random_seed=int(snapshot_random_seed),
+        ensure_mu_coverage=bool(ensure_mu_coverage),
+    )
 
     clist = []
     t0 = time.time()
 
-    for mu in mu_samples:
+    for imu, mu in enumerate(mu_samples):
         mu_snaps = load_or_compute_snaps(
             mu=mu,
             grid_x=grid_x,
@@ -196,9 +212,13 @@ def _compute_ecsw_weights(
             snap_folder=snap_folder,
         )
 
-        stop_col = num_steps
-        snaps_now = mu_snaps[:, snap_time_offset:stop_col:snap_sample_factor]
-        snaps_prev = mu_snaps[:, 0:stop_col - snap_time_offset:snap_sample_factor]
+        now_cols = np.asarray(ecsw_plan["selected_now_cols_by_mu"][imu], dtype=int)
+        if now_cols.size == 0:
+            continue
+        prev_cols = now_cols - snap_time_offset
+
+        snaps_now = mu_snaps[:, now_cols]
+        snaps_prev = mu_snaps[:, prev_cols]
 
         if snaps_now.shape[1] != snaps_prev.shape[1]:
             raise RuntimeError(
@@ -206,9 +226,7 @@ def _compute_ecsw_weights(
                 f"snaps_now has {snaps_now.shape[1]} columns, snaps_prev has {snaps_prev.shape[1]} columns."
             )
         if snaps_now.shape[1] == 0:
-            raise RuntimeError(
-                "ECSW training produced zero columns. Adjust snap_time_offset or snap_sample_factor."
-            )
+            continue
 
         ci = compute_ECSW_training_matrix_2D(
             snaps_now,
@@ -222,6 +240,12 @@ def _compute_ecsw_weights(
             mu,
         )
         clist.append(ci)
+
+    if not clist:
+        raise RuntimeError(
+            "ECSW training produced zero columns for all mu samples. "
+            "Increase ecsw_snapshot_percent or adjust snap_time_offset."
+        )
 
     C = np.vstack(clist)
     C_ecm = np.ascontiguousarray(C, dtype=np.float64)
@@ -246,7 +270,7 @@ def _compute_ecsw_weights(
     elapsed = time.time() - t0
     denom = np.linalg.norm(b)
     rel_res = float(np.linalg.norm(C_ecm @ weights - b) / denom) if denom > 0.0 else np.nan
-    return weights, rel_res, elapsed
+    return weights, rel_res, elapsed, ecsw_plan
 
 
 def _load_or_build_ecsw_weights(
@@ -261,8 +285,10 @@ def _load_or_build_ecsw_weights(
     snap_folder,
     stage2_weights_path=None,
     rebuild_weights=False,
-    snap_sample_factor=50,
     snap_time_offset=3,
+    snapshot_percent=2.0,
+    snapshot_random_seed=42,
+    ensure_mu_coverage=True,
 ):
     os.makedirs(RUNS_ECSW_DIR, exist_ok=True)
     expected_num_cells = (grid_x.size - 1) * (grid_y.size - 1)
@@ -285,7 +311,7 @@ def _load_or_build_ecsw_weights(
             weights = _load_checked(local_weights_path)
             return weights, local_weights_path, "loaded_local", np.nan, int(np.sum(weights > 0.0))
 
-    weights, rel_res, _ = _compute_ecsw_weights(
+    weights, rel_res, _, _ = _compute_ecsw_weights(
         basis=basis,
         grid_x=grid_x,
         grid_y=grid_y,
@@ -294,8 +320,10 @@ def _load_or_build_ecsw_weights(
         num_steps=num_steps,
         mu_samples=mu_samples,
         snap_folder=snap_folder,
-        snap_sample_factor=snap_sample_factor,
         snap_time_offset=snap_time_offset,
+        snapshot_percent=snapshot_percent,
+        snapshot_random_seed=snapshot_random_seed,
+        ensure_mu_coverage=ensure_mu_coverage,
     )
 
     np.save(local_weights_path, weights)
@@ -308,8 +336,10 @@ def main(
     use_ecsw=True,
     total_modes=None,
     rebuild_ecsw_weights=False,
-    ecsw_snap_sample_factor=50,
     ecsw_snap_time_offset=3,
+    ecsw_snapshot_percent=2.0,
+    ecsw_snapshot_random_seed=42,
+    ecsw_ensure_mu_coverage=True,
     ecsw_num_training_mu=9,
     use_stage2_ecsw_weights=True,
     save_rom_snaps=True,
@@ -396,8 +426,10 @@ def main(
             snap_folder=snap_folder,
             stage2_weights_path=stage2_weights_path,
             rebuild_weights=rebuild_ecsw_weights,
-            snap_sample_factor=ecsw_snap_sample_factor,
             snap_time_offset=ecsw_snap_time_offset,
+            snapshot_percent=ecsw_snapshot_percent,
+            snapshot_random_seed=ecsw_snapshot_random_seed,
+            ensure_mu_coverage=ecsw_ensure_mu_coverage,
         )
         ecsw_setup_elapsed = time.time() - t_ecsw0
 
@@ -533,8 +565,10 @@ def main(
             ("make_plots", bool(make_plots)),
             ("compute_hdm_error", bool(compute_hdm_error)),
             ("ecsw_num_training_mu", ecsw_num_training_mu),
-            ("ecsw_snap_sample_factor", ecsw_snap_sample_factor),
             ("ecsw_snap_time_offset", ecsw_snap_time_offset),
+            ("ecsw_snapshot_percent", ecsw_snapshot_percent),
+            ("ecsw_snapshot_random_seed", ecsw_snapshot_random_seed),
+            ("ecsw_ensure_mu_coverage", bool(ecsw_ensure_mu_coverage)),
             ("ecsw_weights_path", weights_path if effective_backend == "hprom" else "N/A"),
             ("ecsw_weights_source", weights_source),
             ("ecsw_residual", ecsw_residual),
@@ -573,8 +607,12 @@ if __name__ == "__main__":
     parser.add_argument("--total-modes", type=int, default=None, help="Total reduced modes (n_tot)")
     parser.add_argument("--rebuild-ecsw", action="store_true", help="Force ECSW recomputation")
     parser.add_argument("--ecsw-num-training-mu", type=int, default=9, help="Number of mu trajectories for ECSW training")
-    parser.add_argument("--ecsw-snap-sample-factor", type=int, default=50, help="Snapshot stride for ECSW training")
     parser.add_argument("--ecsw-snap-time-offset", type=int, default=3, help="Snapshot start offset for ECSW training")
+    parser.add_argument("--ecsw-snapshot-percent", type=float, default=2.0, help="Global percentage of ECSW snapshot pairs.")
+    parser.add_argument("--ecsw-random-seed", type=int, default=42, help="RNG seed for ECSW global param-time stratified sampling.")
+    parser.add_argument("--ecsw-ensure-mu-coverage", dest="ecsw_ensure_mu_coverage", action="store_true", help="Force at least one ECSW sample per mu (if budget allows).")
+    parser.add_argument("--ecsw-no-ensure-mu-coverage", dest="ecsw_ensure_mu_coverage", action="store_false", help="Disable forced per-mu ECSW coverage.")
+    parser.set_defaults(ecsw_ensure_mu_coverage=True)
     parser.add_argument("--no-ecsw", action="store_true", help="Disable ECSW even if backend='hprom'")
     parser.add_argument("--no-stage2-ecsw", action="store_true", help="Do not reuse Stage2 ECSW weights")
     parser.add_argument("--no-save-rom-snaps", action="store_true", help="Do not save rom_snaps.npy")
@@ -594,8 +632,10 @@ if __name__ == "__main__":
         use_ecsw=not args.no_ecsw,
         total_modes=args.total_modes,
         rebuild_ecsw_weights=args.rebuild_ecsw,
-        ecsw_snap_sample_factor=args.ecsw_snap_sample_factor,
         ecsw_snap_time_offset=args.ecsw_snap_time_offset,
+        ecsw_snapshot_percent=args.ecsw_snapshot_percent,
+        ecsw_snapshot_random_seed=args.ecsw_random_seed,
+        ecsw_ensure_mu_coverage=args.ecsw_ensure_mu_coverage,
         ecsw_num_training_mu=args.ecsw_num_training_mu,
         use_stage2_ecsw_weights=not args.no_stage2_ecsw,
         save_rom_snaps=not args.no_save_rom_snaps,
