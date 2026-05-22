@@ -1,0 +1,17 @@
+model_name: prom_pod_ae_model_enriched_hprom.pt
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage3/prom_coeff_dataset_ntot151_enriched_lhs20/models/prom_pod_ae_model_enriched_hprom.pt
+dataset_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage2/prom_coeff_dataset_ntot151_enriched_lhs20
+dataset_root: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results_Enrichment/Stage2/prom_coeff_dataset_ntot151_enriched_lhs20/per_mu
+dataset_ntot: 151
+dataset_backend: hprom
+samples_M: 14529
+q_dim: 151
+latent_dim: 5
+hidden_dims: (192, 96, 48)
+scaling: minmax_-1_1
+activation: tanh
+epochs_ran: 1610
+best_val_mse: 0.17050495743751526
+elapsed_s: 493.92839527130127
+seed: 42
+device: cpu

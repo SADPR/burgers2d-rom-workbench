@@ -1,0 +1,13 @@
+model_name: rom_data_driven_model_hprom.pt
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage3/models/rom_data_driven_model_hprom.pt
+dataset_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot151
+dataset_root: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot151/per_mu
+dataset_ntot: 151
+dataset_backend: hprom
+samples_M: 4509
+in_dim: 3
+n_tot: 151
+epochs_ran: 2000
+best_val_mse: 0.392201691865921
+seed: 42
+device: cpu

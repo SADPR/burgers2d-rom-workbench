@@ -44,6 +44,16 @@ def _prepare_reference(u_ref, size):
     return u_ref
 
 
+def _project_reduced_coords(basis, state_offset):
+    """
+    Least-squares reduced projection for possibly non-orthonormal bases.
+    """
+    basis = np.asarray(basis, dtype=np.float64)
+    state_offset = np.asarray(state_offset, dtype=np.float64).reshape(-1)
+    y, *_ = np.linalg.lstsq(basis, state_offset, rcond=None)
+    return y
+
+
 def _to_torch_vector(x, dtype=torch.float32, device=None):
     """
     Convert x to a 1D torch tensor.
@@ -144,7 +154,7 @@ def compute_ECSW_training_matrix_2D_pod_ann(
         snap = snaps[:, isnap]
         snap_prev = prev_snaps[:, isnap]
 
-        y0 = basis.T @ (snap - u_ref_vec)
+        y0 = _project_reduced_coords(basis, snap - u_ref_vec)
         y = torch.tensor(y0, dtype=torch.float32)
 
         w_rec = approx(y).squeeze().detach().cpu().numpy()
@@ -260,7 +270,7 @@ def compute_ECSW_training_matrix_2D_pod_ann_case2(
             qbar = ann_model(x).reshape(-1).detach().cpu().numpy()
 
         offset = u_ref_vec + basis2 @ qbar
-        q0 = basis.T @ (snap - u_ref_vec)
+        q0 = _project_reduced_coords(basis, snap - u_ref_vec)
         w_init = offset + basis @ q0
         snap_norm = np.linalg.norm(snap)
         denom = snap_norm if snap_norm > 0.0 else 1.0
@@ -359,7 +369,7 @@ def compute_ECSW_training_matrix_2D_pod_ann_case2_petrov_galerkin(
             qbar = ann_model(x).reshape(-1).detach().cpu().numpy()
 
         offset = u_ref_vec + basis2 @ qbar
-        q0 = basis.T @ (snap - u_ref_vec)
+        q0 = _project_reduced_coords(basis, snap - u_ref_vec)
         w_init = offset + basis @ q0
         snap_norm = np.linalg.norm(snap)
         denom = snap_norm if snap_norm > 0.0 else 1.0
@@ -454,7 +464,7 @@ def compute_ECSW_training_matrix_2D_pod_ann_case3(
         t_now = torch.tensor(float(t_samples[isnap]), dtype=torch.float32, device=device)
         snap_t = torch.tensor(snap, dtype=torch.float32, device=device)
 
-        y = torch.tensor(basis.T @ (snap - u_ref_vec), dtype=torch.float32, device=device)
+        y = torch.tensor(_project_reduced_coords(basis, snap - u_ref_vec), dtype=torch.float32, device=device)
 
         def _ann_eval(y_vec):
             x = torch.cat([y_vec.reshape(-1), tmu, t_now.reshape(1)], dim=0)
@@ -855,6 +865,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
     max_its=20,
     relnorm_cutoff=1e-5,
     min_delta=0.1,
+    y_init_table=None,
+    wp_table=None,
 ):
     """
     POD-ANN manifold ROM with decoder
@@ -877,15 +889,47 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
     ann_model = _align_module_device(ann_model, torch.device("cpu"))
 
     nred = V.shape[1]
-    y = V.T @ (w0 - u_ref_np)
-    y = y.astype(np.float64, copy=False)
+    y_default = _project_reduced_coords(V, w0 - u_ref_np).astype(np.float64, copy=False)
+    y = y_default
+    if y_init_table is not None:
+        y_init_table = np.asarray(y_init_table, dtype=np.float64)
+        if y_init_table.ndim != 2:
+            raise ValueError(f"y_init_table must be 2D, got {y_init_table.shape}")
+        if y_init_table.shape[0] != nred:
+            raise ValueError(
+                f"y_init_table row mismatch: got {y_init_table.shape[0]}, expected {nred}"
+            )
+        if y_init_table.shape[1] < (num_steps + 1):
+            raise ValueError(
+                f"y_init_table time-length too short: got {y_init_table.shape[1]}, "
+                f"expected at least {num_steps + 1}"
+            )
+        y = y_init_table[:, 0].copy()
+
+    if wp_table is not None:
+        wp_table = np.asarray(wp_table, dtype=np.float64)
+        if wp_table.ndim != 2:
+            raise ValueError(f"wp_table must be 2D, got {wp_table.shape}")
+        if wp_table.shape[0] != N:
+            raise ValueError(f"wp_table row mismatch: got {wp_table.shape[0]}, expected {N}")
+        if wp_table.shape[1] < (num_steps + 1):
+            raise ValueError(
+                f"wp_table time-length too short: got {wp_table.shape[1]}, "
+                f"expected at least {num_steps + 1}"
+            )
 
     snaps = np.zeros((N, num_steps + 1), dtype=np.float64)
     red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
 
     tgrid = dt * np.arange(num_steps + 1, dtype=np.float64)
 
-    device = next(ann_model.parameters()).device if hasattr(ann_model, "parameters") else torch.device("cpu")
+    if hasattr(ann_model, "parameters"):
+        try:
+            device = next(ann_model.parameters()).device
+        except StopIteration:
+            device = torch.device("cpu")
+    else:
+        device = torch.device("cpu")
     mu1 = float(mu[0])
     mu2 = float(mu[1])
 
@@ -902,6 +946,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
     red_coords[:, 0] = y
 
     wp = w.copy()
+    if wp_table is not None:
+        wp = wp_table[:, 0].copy()
 
     num_its = 0
     jac_time = 0.0
@@ -915,7 +961,11 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
         off = offset_np(tk1)
 
         yk = y.copy()
+        if y_init_table is not None:
+            yk = y_init_table[:, k + 1].copy()
         wk = off + V @ yk
+        if wp_table is not None:
+            wp = wp_table[:, k].copy()
 
         def compute_residual(w_state):
             return inviscid_burgers_res2D(w_state, grid_x, grid_y, dt, wp, mu, Dxec, Dyec)
@@ -964,6 +1014,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
         y = yk
         w = wk
         wp = w.copy()
+        if wp_table is not None:
+            wp = wp_table[:, k + 1].copy()
 
         snaps[:, k + 1] = w
         red_coords[:, k + 1] = y
@@ -990,6 +1042,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
     min_delta=0.1,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    y_init_table=None,
+    wp_table=None,
 ):
     """
     POD-ANN Case 2 with enriched residual testing (PROM only).
@@ -1031,7 +1085,34 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
         device = torch.device("cpu")
 
     nred = V.shape[1]
-    y = (V.T @ (w0 - u_ref_np)).astype(np.float64, copy=False)
+    y_default = _project_reduced_coords(V, w0 - u_ref_np).astype(np.float64, copy=False)
+    y = y_default
+    if y_init_table is not None:
+        y_init_table = np.asarray(y_init_table, dtype=np.float64)
+        if y_init_table.ndim != 2:
+            raise ValueError(f"y_init_table must be 2D, got {y_init_table.shape}")
+        if y_init_table.shape[0] != nred:
+            raise ValueError(
+                f"y_init_table row mismatch: got {y_init_table.shape[0]}, expected {nred}"
+            )
+        if y_init_table.shape[1] < (num_steps + 1):
+            raise ValueError(
+                f"y_init_table time-length too short: got {y_init_table.shape[1]}, "
+                f"expected at least {num_steps + 1}"
+            )
+        y = y_init_table[:, 0].copy()
+
+    if wp_table is not None:
+        wp_table = np.asarray(wp_table, dtype=np.float64)
+        if wp_table.ndim != 2:
+            raise ValueError(f"wp_table must be 2D, got {wp_table.shape}")
+        if wp_table.shape[0] != n_full:
+            raise ValueError(f"wp_table row mismatch: got {wp_table.shape[0]}, expected {n_full}")
+        if wp_table.shape[1] < (num_steps + 1):
+            raise ValueError(
+                f"wp_table time-length too short: got {wp_table.shape[1]}, "
+                f"expected at least {num_steps + 1}"
+            )
 
     snaps = np.zeros((n_full, num_steps + 1), dtype=np.float64)
     red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
@@ -1050,6 +1131,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
 
     w = offset_np(tgrid[0]) + V @ y
     wp = w.copy()
+    if wp_table is not None:
+        wp = wp_table[:, 0].copy()
 
     snaps[:, 0] = w
     red_coords[:, 0] = y
@@ -1069,7 +1152,11 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
         off = offset_np(tk1)
 
         yk = y.copy()
+        if y_init_table is not None:
+            yk = y_init_table[:, k + 1].copy()
         wk = off + V @ yk
+        if wp_table is not None:
+            wp = wp_table[:, k].copy()
         resnorms = []
         init_norm = None
 
@@ -1117,6 +1204,8 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
         y = yk
         w = wk
         wp = w.copy()
+        if wp_table is not None:
+            wp = wp_table[:, k + 1].copy()
 
         snaps[:, k + 1] = w
         red_coords[:, k + 1] = y
@@ -1517,7 +1606,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin_ecsw(
     Vbar_loc = Vbar_global[idx, :]
     Vtot_loc = np.concatenate((V_loc, Vbar_loc), axis=1)
 
-    y0 = V_global.T @ (w0 - u_ref_np)
+    y0 = _project_reduced_coords(V_global, w0 - u_ref_np)
     nred = int(y0.size)
 
     mu1 = float(mu[0])

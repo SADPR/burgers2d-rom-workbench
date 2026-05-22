@@ -35,6 +35,7 @@ if str(PROJECT_DIR) not in sys.path:
 from burgers.config import DT, NUM_STEPS  # noqa: E402
 from burgers.core import load_or_compute_snaps, plot_snaps  # noqa: E402
 from burgers.pod_ann_manifold import (  # noqa: E402
+    inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2,
     inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin,
 )
 
@@ -187,7 +188,9 @@ class OracleCase2FromLinearQNTmp(nn.Module):
 
     def __init__(self, qbar_table, dt, t0=0.0):
         super().__init__()
-        qb = np.asarray(qbar_table, dtype=np.float32)
+        # Keep oracle coefficients in float64 so the strict 0% oracle check
+        # is not polluted by float32 roundoff when comparing against linear qN.
+        qb = np.asarray(qbar_table, dtype=np.float64)
         if qb.ndim != 2:
             raise ValueError(f"qbar_table must be 2D, got shape {qb.shape}")
         self.register_buffer("qbar_table", torch.from_numpy(qb))  # (n_s, n_t)
@@ -212,9 +215,15 @@ class OracleCase2FromLinearQNTmp(nn.Module):
         raise ValueError(f"Unsupported input shape for oracle model: {tuple(x.shape)}")
 
 
-def _load_basis_and_reference(work_dir, n_tot):
-    basis_path = work_dir / "Results" / "Stage1" / "basis.npy"
-    uref_path = work_dir / "Results" / "Stage1" / "u_ref.npy"
+def _load_basis_and_reference(work_dir, n_tot, basis_path_override=None, uref_path_override=None):
+    if basis_path_override:
+        basis_path = Path(basis_path_override).expanduser().resolve()
+    else:
+        basis_path = work_dir / "Results" / "Stage1" / "basis.npy"
+    if uref_path_override:
+        uref_path = Path(uref_path_override).expanduser().resolve()
+    else:
+        uref_path = work_dir / "Results" / "Stage1" / "u_ref.npy"
 
     if not basis_path.exists():
         raise FileNotFoundError(f"Missing basis: {basis_path}")
@@ -235,6 +244,129 @@ def _load_basis_and_reference(work_dir, n_tot):
         )
 
     return basis[:, :n_tot], u_ref, basis_path, uref_path
+
+
+def _build_perturbed_qbar(qbar_oracle, perturb_percent, perturb_seed):
+    qbar_oracle = np.asarray(qbar_oracle, dtype=np.float64)
+    p = float(perturb_percent)
+    if p <= 0.0:
+        return qbar_oracle.copy(), np.zeros_like(qbar_oracle)
+
+    rng = np.random.default_rng(int(perturb_seed))
+    noise = rng.standard_normal(size=qbar_oracle.shape)
+    den = np.linalg.norm(noise)
+    if den <= 0.0:
+        raise RuntimeError("Random perturbation noise has zero norm.")
+    target_abs = (p / 100.0) * np.linalg.norm(qbar_oracle)
+    delta = noise * (target_abs / den)
+    return qbar_oracle + delta, delta
+
+
+def _solve_case2_pg_oracle(
+    *,
+    solver_variant,
+    oracle_model,
+    grid_x,
+    grid_y,
+    w0,
+    dt,
+    num_steps,
+    mu,
+    v,
+    vbar,
+    u_ref,
+    max_its,
+    relnorm_cutoff,
+    min_delta,
+    linear_solver,
+    normal_eq_reg,
+    y_init_table=None,
+    wp_table=None,
+):
+    t0 = time.time()
+    if str(solver_variant).strip().lower() == "plain":
+        snaps, rom_times = inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
+            grid_x=grid_x,
+            grid_y=grid_y,
+            w0=w0,
+            dt=dt,
+            num_steps=num_steps,
+            mu=mu,
+            ann_model=oracle_model,
+            ref=None,
+            basis=v,
+            basis2=vbar,
+            u_ref=u_ref,
+            max_its=int(max_its),
+            relnorm_cutoff=float(relnorm_cutoff),
+            min_delta=float(min_delta),
+            y_init_table=y_init_table,
+            wp_table=wp_table,
+        )
+    else:
+        snaps, rom_times = inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
+            grid_x=grid_x,
+            grid_y=grid_y,
+            w0=w0,
+            dt=dt,
+            num_steps=num_steps,
+            mu=mu,
+            ann_model=oracle_model,
+            ref=None,
+            basis=v,
+            basis2=vbar,
+            u_ref=u_ref,
+            max_its=int(max_its),
+            relnorm_cutoff=float(relnorm_cutoff),
+            min_delta=float(min_delta),
+            linear_solver=str(linear_solver),
+            normal_eq_reg=float(normal_eq_reg),
+            y_init_table=y_init_table,
+            wp_table=wp_table,
+        )
+    elapsed = time.time() - t0
+    return snaps, rom_times, elapsed
+
+
+def _align_time_series(*arrays):
+    """Trim 2D (state x time) arrays to a shared time length."""
+    if len(arrays) == 0:
+        raise ValueError("No arrays provided for alignment.")
+    min_t = min(int(np.asarray(a).shape[1]) for a in arrays)
+    return [np.asarray(a)[:, :min_t] for a in arrays], min_t
+
+
+def _project_snaps_to_basis_ls(basis, u_ref, snaps):
+    """
+    Least-squares reduced coordinates for possibly non-orthonormal bases.
+    """
+    basis = np.asarray(basis, dtype=np.float64)
+    u_ref = np.asarray(u_ref, dtype=np.float64).reshape(-1)
+    snaps = np.asarray(snaps, dtype=np.float64)
+    if snaps.ndim != 2:
+        raise ValueError(f"snaps must be 2D, got shape {snaps.shape}")
+    return np.linalg.lstsq(basis, snaps - u_ref[:, None], rcond=None)[0]
+
+
+def _cross_coupling_fro_norm(v, vbar):
+    v = np.asarray(v, dtype=np.float64)
+    vbar = np.asarray(vbar, dtype=np.float64)
+    return float(np.linalg.norm(v.T @ vbar, ord="fro"))
+
+
+def _should_use_strict_oracle(mode, v, vbar, *, threshold=1e-10):
+    m = str(mode).strip().lower()
+    if m == "strict":
+        return True, "forced"
+    if m == "legacy":
+        return False, "forced"
+    if m != "auto":
+        raise ValueError(f"Unsupported oracle mode: {mode}")
+
+    cross = _cross_coupling_fro_norm(v, vbar)
+    if cross > float(threshold):
+        return True, f"auto_cross_gt_{threshold:g}"
+    return False, f"auto_cross_le_{threshold:g}"
 
 
 def main(argv=None):
@@ -267,6 +399,63 @@ def main(argv=None):
         default=None,
         help="Optional override for linear run directory containing qN.npy and rom_snaps.npy.",
     )
+    parser.add_argument(
+        "--basis-path",
+        type=str,
+        default=None,
+        help="Optional basis path override (e.g. Results_Maday/.../basis_weighted.npy).",
+    )
+    parser.add_argument(
+        "--u-ref-path",
+        type=str,
+        default=None,
+        help="Optional u_ref path override (must match basis rows).",
+    )
+    parser.add_argument(
+        "--qbar-perturb-percent",
+        type=float,
+        default=0.0,
+        help="Relative perturbation level for oracle qbar in percent of ||qbar||_F.",
+    )
+    parser.add_argument(
+        "--qbar-perturb-seed",
+        type=int,
+        default=42,
+        help="RNG seed for qbar perturbation noise.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=None,
+        help="Optional output directory override.",
+    )
+    parser.add_argument(
+        "--run-tag-prefix",
+        type=str,
+        default="tmp_case2_pg_oracle_prom",
+        help="Output tag prefix.",
+    )
+    parser.add_argument(
+        "--solver-variant",
+        choices=("pg", "plain"),
+        default="pg",
+        help="`pg`: enriched residual testing (current default), `plain`: standard Case2 LSPG.",
+    )
+    parser.add_argument(
+        "--oracle-mode",
+        choices=("legacy", "strict", "auto"),
+        default="auto",
+        help=(
+            "legacy: keep previous behavior; strict: enforce linear-consistent per-step "
+            "initialization/previous-state in 0%% oracle; auto: activate strict when ||V^T Vbar||_F is non-negligible."
+        ),
+    )
+    parser.add_argument(
+        "--strict-cross-threshold",
+        type=float,
+        default=1e-10,
+        help="Threshold on ||V^T Vbar||_F used by --oracle-mode=auto.",
+    )
     args = parser.parse_args(argv)
 
     _set_plot_style()
@@ -290,16 +479,40 @@ def main(argv=None):
     if not lin_snaps_path.exists():
         raise FileNotFoundError(f"Missing linear rom_snaps file: {lin_snaps_path}")
 
-    qn_linear = np.asarray(np.load(qn_path, allow_pickle=False), dtype=np.float64)
+    qn_linear_raw = np.asarray(np.load(qn_path, allow_pickle=False), dtype=np.float64)
     lin_snaps = np.asarray(np.load(lin_snaps_path, allow_pickle=False), dtype=np.float64)
-    if qn_linear.ndim != 2:
-        raise ValueError(f"linear qN must be 2D, got shape {qn_linear.shape}")
-    if qn_linear.shape[0] < n_tot:
-        raise ValueError(f"linear qN has {qn_linear.shape[0]} modes, requested n_tot={n_tot}")
+    if qn_linear_raw.ndim != 2:
+        raise ValueError(f"linear qN must be 2D, got shape {qn_linear_raw.shape}")
+    if qn_linear_raw.shape[0] < n_tot:
+        raise ValueError(f"linear qN has {qn_linear_raw.shape[0]} modes, requested n_tot={n_tot}")
     if n_p < 1 or n_p >= n_tot:
         raise ValueError(f"Invalid split n_primary={n_p}, n_tot={n_tot}")
 
-    basis, u_ref, basis_path, uref_path = _load_basis_and_reference(work_dir, n_tot)
+    basis, u_ref, basis_path, uref_path = _load_basis_and_reference(
+        work_dir,
+        n_tot,
+        basis_path_override=args.basis_path,
+        uref_path_override=args.u_ref_path,
+    )
+    n_t_lin = min(int(qn_linear_raw.shape[1]), int(lin_snaps.shape[1]))
+    qn_linear = qn_linear_raw[:n_tot, :n_t_lin]
+    lin_snaps = lin_snaps[:, :n_t_lin]
+    lin_qn_recon_rel_err = (
+        np.linalg.norm(u_ref[:, None] + basis @ qn_linear - lin_snaps) / (np.linalg.norm(lin_snaps) + 1e-30)
+    )
+    qn_source = "qN_file"
+    if lin_qn_recon_rel_err > 1e-8:
+        print(
+            "[TMP-Case2-PG-Oracle] warning: linear qN is inconsistent with "
+            f"(basis, u_ref, rom_snaps), rel recon error = {lin_qn_recon_rel_err:.3e}. "
+            "Using LS-projected coordinates from rom_snaps for oracle construction."
+        )
+        qn_linear = _project_snaps_to_basis_ls(basis, u_ref, lin_snaps)
+        lin_qn_recon_rel_err = (
+            np.linalg.norm(u_ref[:, None] + basis @ qn_linear - lin_snaps) / (np.linalg.norm(lin_snaps) + 1e-30)
+        )
+        qn_source = "ls_from_rom_snaps"
+
     v = basis[:, :n_p]
     vbar = basis[:, n_p:n_tot]
 
@@ -315,6 +528,16 @@ def main(argv=None):
         raise ValueError(f"W0 size mismatch: got {w0.size}, expected {basis.shape[0]}")
     grid_x, grid_y, nx, ny = _infer_square_grid_tmp(w0.size)
 
+    cross_vt_vbar_fro = _cross_coupling_fro_norm(v, vbar)
+    use_strict_oracle, strict_reason = _should_use_strict_oracle(
+        args.oracle_mode, v, vbar, threshold=float(args.strict_cross_threshold)
+    )
+    print(
+        "[TMP-Case2-PG-Oracle] oracle_mode="
+        f"{args.oracle_mode} -> {'strict' if use_strict_oracle else 'legacy'} "
+        f"(reason={strict_reason}, ||V^T Vbar||_F={cross_vt_vbar_fro:.6e})"
+    )
+
     snap_folder, snap_folder_source = _resolve_snap_folder_tmp(work_dir)
     hdm_snaps, hdm_source = _load_hdm_snaps_tmp(
         mu=mu,
@@ -326,34 +549,50 @@ def main(argv=None):
         snap_folder=snap_folder,
     )
 
-    t0 = time.time()
-    pg_oracle_snaps, rom_times = inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
+    strict_y_table = qn_linear[:n_p, :] if use_strict_oracle else None
+    strict_wp_table = lin_snaps if use_strict_oracle else None
+
+    pg_oracle_snaps, rom_times, online_solve_elapsed = _solve_case2_pg_oracle(
+        solver_variant=args.solver_variant,
+        oracle_model=oracle_model,
         grid_x=grid_x,
         grid_y=grid_y,
         w0=w0,
         dt=dt,
         num_steps=num_steps,
         mu=mu,
-        ann_model=oracle_model,
-        ref=None,
-        basis=v,
-        basis2=vbar,
+        v=v,
+        vbar=vbar,
         u_ref=u_ref,
-        max_its=int(args.max_its),
-        relnorm_cutoff=float(args.relnorm_cutoff),
-        min_delta=float(args.min_delta),
-        linear_solver=str(args.linear_solver),
-        normal_eq_reg=float(args.normal_eq_reg),
+        max_its=args.max_its,
+        relnorm_cutoff=args.relnorm_cutoff,
+        min_delta=args.min_delta,
+        linear_solver=args.linear_solver,
+        normal_eq_reg=args.normal_eq_reg,
+        y_init_table=strict_y_table,
+        wp_table=strict_wp_table,
     )
-    online_solve_elapsed = time.time() - t0
+
+    # Align references and ROM trajectory to a common time window.
+    (aligned, n_t_used) = _align_time_series(hdm_snaps, lin_snaps, pg_oracle_snaps, qn_linear[:n_tot, :])
+    hdm_cmp, lin_cmp, pg_cmp, q_lin = aligned
+    if (
+        hdm_snaps.shape[1] != n_t_used
+        or lin_snaps.shape[1] != n_t_used
+        or pg_oracle_snaps.shape[1] != n_t_used
+        or qn_linear.shape[1] != n_t_used
+    ):
+        print(
+            "[TMP-Case2-PG-Oracle] warning: time-length mismatch detected; "
+            f"using common window n_t={n_t_used}."
+        )
 
     # Trajectory-level errors.
-    rel_err_hdm = 100.0 * np.linalg.norm(hdm_snaps - pg_oracle_snaps) / np.linalg.norm(hdm_snaps)
-    rel_err_vs_linear = 100.0 * np.linalg.norm(lin_snaps - pg_oracle_snaps) / np.linalg.norm(lin_snaps)
+    rel_err_hdm = 100.0 * np.linalg.norm(hdm_cmp - pg_cmp) / np.linalg.norm(hdm_cmp)
+    rel_err_vs_linear = 100.0 * np.linalg.norm(lin_cmp - pg_cmp) / np.linalg.norm(lin_cmp)
 
     # Reduced-coordinate consistency checks against linear qN.
-    q_pg = basis.T @ (pg_oracle_snaps - u_ref[:, None])
-    q_lin = qn_linear[:n_tot, :]
+    q_pg = _project_snaps_to_basis_ls(basis, u_ref, pg_cmp)
     rel_q_primary = 100.0 * np.linalg.norm(q_pg[:n_p, :] - q_lin[:n_p, :]) / np.linalg.norm(q_lin[:n_p, :])
     rel_q_secondary = (
         100.0
@@ -361,25 +600,96 @@ def main(argv=None):
         / np.linalg.norm(q_lin[n_p:, :])
     )
 
-    out_dir = work_dir / "Results" / "Runs" / "Case2"
+    if args.output_dir is not None:
+        out_dir = Path(args.output_dir).expanduser().resolve()
+    else:
+        out_dir = work_dir / "Results" / "Runs" / "Case2"
     out_dir.mkdir(parents=True, exist_ok=True)
-    run_tag = f"tmp_case2_pg_oracle_prom_{mu_tag}_n{n_p}_ntot{n_tot}"
+    basis_tag = Path(basis_path).stem
+    pert_pct = float(args.qbar_perturb_percent)
+    run_tag = f"{args.run_tag_prefix}_{mu_tag}_n{n_p}_ntot{n_tot}_{basis_tag}_pert{pert_pct:.2f}pct"
     out_snaps = out_dir / f"{run_tag}_snaps.npy"
     out_qn = out_dir / f"{run_tag}_qN.npy"
+    out_pert_snaps = out_dir / f"{run_tag}_snaps_pert.npy"
+    out_pert_qn = out_dir / f"{run_tag}_qN_pert.npy"
     out_png = out_dir / f"{run_tag}_hdm_vs_linear_vs_pg_oracle.png"
     out_txt = out_dir / f"{run_tag}_summary.txt"
 
     np.save(out_snaps, pg_oracle_snaps)
     np.save(out_qn, q_pg)
 
-    plot_steps = list(range(0, num_steps + 1, 100))
-    if num_steps not in plot_steps:
-        plot_steps.append(num_steps)
+    pert_enabled = pert_pct > 0.0
+    rel_err_hdm_pert = np.nan
+    rel_err_vs_linear_pert = np.nan
+    rel_q_primary_pert = np.nan
+    rel_q_secondary_pert = np.nan
+    contamination_gain_primary = np.nan
+    contamination_gain_state = np.nan
+    delta_qbar_abs = 0.0
+    delta_qbar_rel_percent = 0.0
+    pert_its = np.nan
+    pert_jac = np.nan
+    pert_res = np.nan
+    pert_ls = np.nan
+    pert_elapsed = np.nan
+    pg_pert_snaps = None
+    pg_pert_cmp = None
+    q_pg_pert = None
+    if pert_enabled:
+        qbar_pert, delta_qbar = _build_perturbed_qbar(
+            qbar_oracle=qbar_oracle[:, :n_t_used],
+            perturb_percent=pert_pct,
+            perturb_seed=args.qbar_perturb_seed,
+        )
+        oracle_model_pert = OracleCase2FromLinearQNTmp(qbar_table=qbar_pert, dt=dt)
+        pg_pert_snaps, pert_times, pert_elapsed = _solve_case2_pg_oracle(
+            solver_variant=args.solver_variant,
+            oracle_model=oracle_model_pert,
+            grid_x=grid_x,
+            grid_y=grid_y,
+            w0=w0,
+            dt=dt,
+            num_steps=num_steps,
+            mu=mu,
+            v=v,
+            vbar=vbar,
+            u_ref=u_ref,
+            max_its=args.max_its,
+            relnorm_cutoff=args.relnorm_cutoff,
+            min_delta=args.min_delta,
+            linear_solver=args.linear_solver,
+            normal_eq_reg=args.normal_eq_reg,
+            y_init_table=strict_y_table if use_strict_oracle else None,
+            wp_table=None,
+        )
+        pert_its, pert_jac, pert_res, pert_ls = pert_times
+        pg_pert_cmp = np.asarray(pg_pert_snaps, dtype=np.float64)[:, :n_t_used]
+        rel_err_hdm_pert = 100.0 * np.linalg.norm(hdm_cmp - pg_pert_cmp) / np.linalg.norm(hdm_cmp)
+        rel_err_vs_linear_pert = 100.0 * np.linalg.norm(lin_cmp - pg_pert_cmp) / np.linalg.norm(lin_cmp)
+
+        q_pg_pert = _project_snaps_to_basis_ls(basis, u_ref, pg_pert_cmp)
+        rel_q_primary_pert = 100.0 * np.linalg.norm(q_pg_pert[:n_p, :] - q_lin[:n_p, :]) / np.linalg.norm(q_lin[:n_p, :])
+        rel_q_secondary_pert = 100.0 * np.linalg.norm(q_pg_pert[n_p:, :] - q_lin[n_p:, :]) / np.linalg.norm(q_lin[n_p:, :])
+
+        delta_qbar_abs = float(np.linalg.norm(delta_qbar))
+        delta_qbar_rel_percent = 100.0 * delta_qbar_abs / (np.linalg.norm(qbar_oracle[:, :n_t_used]) + 1e-30)
+        delta_q_primary_abs = float(np.linalg.norm(q_pg_pert[:n_p, :] - q_pg[:n_p, :]))
+        delta_state_abs = float(np.linalg.norm(pg_pert_cmp - pg_cmp))
+        contamination_gain_primary = delta_q_primary_abs / (delta_qbar_abs + 1e-30)
+        contamination_gain_state = delta_state_abs / (delta_qbar_abs + 1e-30)
+
+        np.save(out_pert_snaps, pg_pert_snaps)
+        np.save(out_pert_qn, q_pg_pert)
+
+    plot_last = n_t_used - 1
+    plot_steps = list(range(0, plot_last + 1, 100))
+    if plot_last not in plot_steps:
+        plot_steps.append(plot_last)
 
     fig, ax1, ax2 = plot_snaps(
         grid_x,
         grid_y,
-        hdm_snaps,
+        hdm_cmp,
         plot_steps,
         label="HDM",
         color="black",
@@ -389,7 +699,7 @@ def main(argv=None):
     plot_snaps(
         grid_x,
         grid_y,
-        lin_snaps,
+        lin_cmp,
         plot_steps,
         label="Linear PROM (n_tot)",
         fig_ax=(fig, ax1, ax2),
@@ -400,7 +710,7 @@ def main(argv=None):
     plot_snaps(
         grid_x,
         grid_y,
-        pg_oracle_snaps,
+        pg_cmp,
         plot_steps,
         label="Case 2 PG Oracle TMP",
         fig_ax=(fig, ax1, ax2),
@@ -408,6 +718,18 @@ def main(argv=None):
         linewidth=2.0,
         linestyle="solid",
     )
+    if pert_enabled and pg_pert_cmp is not None:
+        plot_snaps(
+            grid_x,
+            grid_y,
+            pg_pert_cmp,
+            plot_steps,
+            label=f"Case 2 PG Oracle + perturb ({pert_pct:.2f}%)",
+            fig_ax=(fig, ax1, ax2),
+            color="tab:red",
+            linewidth=2.0,
+            linestyle="-.",
+        )
     ax1.legend()
     ax2.legend()
     plt.tight_layout()
@@ -418,12 +740,13 @@ def main(argv=None):
     _write_kv_txt(
         out_txt,
         [
-            ("solver_variant", "tmp_case2_pg_oracle_check"),
+            ("solver_variant", f"tmp_case2_oracle_{args.solver_variant}"),
             ("mu_test", mu),
             ("grid_nx", nx),
             ("grid_ny", ny),
             ("n_primary", n_p),
             ("n_tot", n_tot),
+            ("n_time_used", int(n_t_used)),
             ("work_dir", str(work_dir)),
             ("snap_folder", str(snap_folder)),
             ("snap_folder_source", snap_folder_source),
@@ -431,6 +754,16 @@ def main(argv=None):
             ("hdm_source_path", str(hdm_source) if hdm_source is not None else "computed_via_load_or_compute_snaps"),
             ("basis_path", str(basis_path)),
             ("u_ref_path", str(uref_path)),
+            ("linear_qn_source", qn_source),
+            ("linear_qn_reconstruction_rel_error", lin_qn_recon_rel_err),
+            ("oracle_mode_requested", str(args.oracle_mode)),
+            ("oracle_mode_effective", "strict" if use_strict_oracle else "legacy"),
+            ("oracle_mode_reason", strict_reason),
+            ("cross_vt_vbar_fro", cross_vt_vbar_fro),
+            ("strict_cross_threshold", float(args.strict_cross_threshold)),
+            ("qbar_perturb_percent_requested", pert_pct),
+            ("qbar_perturb_seed", int(args.qbar_perturb_seed)),
+            ("qbar_perturb_rel_percent_actual", delta_qbar_rel_percent),
             ("online_solve_elapsed_s", online_solve_elapsed),
             ("num_iterations", num_its),
             ("jac_time_s", jac_time),
@@ -440,8 +773,21 @@ def main(argv=None):
             ("relative_error_percent_vs_linear_prom", rel_err_vs_linear),
             ("relative_q_primary_error_percent_vs_linear", rel_q_primary),
             ("relative_q_secondary_error_percent_vs_linear", rel_q_secondary),
+            ("online_solve_elapsed_pert_s", pert_elapsed),
+            ("num_iterations_pert", pert_its),
+            ("jac_time_pert_s", pert_jac),
+            ("res_time_pert_s", pert_res),
+            ("ls_time_pert_s", pert_ls),
+            ("relative_error_percent_vs_hdm_pert", rel_err_hdm_pert),
+            ("relative_error_percent_vs_linear_prom_pert", rel_err_vs_linear_pert),
+            ("relative_q_primary_error_percent_vs_linear_pert", rel_q_primary_pert),
+            ("relative_q_secondary_error_percent_vs_linear_pert", rel_q_secondary_pert),
+            ("contamination_gain_primary_dq_over_dqbar", contamination_gain_primary),
+            ("contamination_gain_state_du_over_dqbar", contamination_gain_state),
             ("snaps_output", str(out_snaps)),
             ("qN_output", str(out_qn)),
+            ("snaps_pert_output", str(out_pert_snaps) if pert_enabled else "N/A"),
+            ("qN_pert_output", str(out_pert_qn) if pert_enabled else "N/A"),
             ("plot_output", str(out_png)),
         ],
     )
@@ -450,6 +796,11 @@ def main(argv=None):
     print(f"[TMP-Case2-PG-Oracle] relative error vs linear PROM: {rel_err_vs_linear:.3f}%")
     print(f"[TMP-Case2-PG-Oracle] rel q_primary vs linear: {rel_q_primary:.3f}%")
     print(f"[TMP-Case2-PG-Oracle] rel q_secondary vs linear: {rel_q_secondary:.3f}%")
+    if pert_enabled:
+        print(f"[TMP-Case2-PG-Oracle] perturb actual rel ||dqbar||/||qbar||: {delta_qbar_rel_percent:.3f}%")
+        print(f"[TMP-Case2-PG-Oracle] contamination gain primary: {contamination_gain_primary:.6e}")
+        print(f"[TMP-Case2-PG-Oracle] contamination gain state:   {contamination_gain_state:.6e}")
+        print(f"[TMP-Case2-PG-Oracle] rel q_primary vs linear (pert): {rel_q_primary_pert:.3f}%")
     print(f"[TMP-Case2-PG-Oracle] saved summary: {out_txt}")
     print(f"[TMP-Case2-PG-Oracle] saved plot:    {out_png}")
 

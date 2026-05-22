@@ -1,5 +1,5 @@
 [run]
-timestamp: 2026-04-30T03:02:20
+timestamp: 2026-05-01T08:17:28
 mu1: 4.75000000e+00
 mu2: 2.00000000e-02
 
@@ -52,14 +52,14 @@ snapshot_selected_total: N/A
 snapshot_selected_per_mu: N/A
 
 [hqprom_timing]
-total_hqprom_time_seconds: 5.54487786e+01
-avg_hqprom_time_per_step_seconds: 1.10897557e-01
+total_hqprom_time_seconds: 5.41509366e+01
+avg_hqprom_time_per_step_seconds: 1.08301873e-01
 gn_iterations_total: 2000
 avg_gn_iterations_per_step: 4.00000000e+00
-jacobian_time_seconds: 8.58598471e+00
-residual_time_seconds: 5.64257669e+00
-linear_solve_time_seconds: 3.43341095e+01
-hdm_load_or_solve_time_seconds: 4.93205309e-01
+jacobian_time_seconds: 8.61785316e+00
+residual_time_seconds: 4.47127390e+00
+linear_solve_time_seconds: 3.40375125e+01
+hdm_load_or_solve_time_seconds: 3.04056644e-01
 
 [error_metrics]
 relative_l2_error: 8.49008549e-03

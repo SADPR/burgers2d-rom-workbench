@@ -1,10 +1,10 @@
 [run]
-timestamp: 2026-05-01T01:49:24
+timestamp: 2026-05-01T08:22:50
 mu1: 4.56000000e+00
 mu2: 1.90000000e-02
 
 [configuration]
-compute_ecsw: True
+compute_ecsw: False
 local_model_file: LocalQuadratic/local_qm_data.npz
 weights_file: Results/local_hqprom_ecsw_weights.npy
 snap_time_offset: 3
@@ -44,24 +44,24 @@ m_list_available_in_npz: True
 [ecsw]
 num_nonzero_weights: 871
 weights_sum: 6.25000000e+04
-ecsw_time_seconds: 5.82572752e+02
-ecsw_residual: 1.44885622e-13
-training_matrix_shape: (1080, 62500)
-snapshot_candidates_total: 4473
-snapshot_selected_total: 90
-snapshot_selected_per_mu: [10, 10, 10, 10, 10, 10, 10, 10, 10]
-snapshot_cluster_candidates_per_mu: [[70, 54, 68, 0, 54, 59, 59, 53, 24, 56], [68, 53, 63, 0, 54, 59, 56, 52, 37, 55], [65, 51, 57, 0, 54, 59, 53, 52, 53, 53], [57, 48, 58, 6, 50, 54, 53, 47, 73, 51], [56, 48, 54, 24, 49, 54, 51, 47, 65, 49], [54, 47, 50, 46, 49, 54, 48, 46, 55, 48], [48, 44, 51, 61, 45, 50, 49, 43, 61, 45], [47, 44, 48, 75, 45, 50, 47, 42, 55, 44], [46, 43, 44, 92, 45, 49, 45, 42, 48, 43]]
-snapshot_cluster_selected_per_mu: [[2, 1, 1, 0, 1, 1, 1, 1, 1, 1], [2, 1, 1, 0, 1, 1, 1, 1, 1, 1], [2, 1, 1, 0, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
+ecsw_time_seconds: N/A
+ecsw_residual: N/A
+training_matrix_shape: N/A
+snapshot_candidates_total: N/A
+snapshot_selected_total: N/A
+snapshot_selected_per_mu: N/A
+snapshot_cluster_candidates_per_mu: N/A
+snapshot_cluster_selected_per_mu: N/A
 
 [local_hqprom_timing]
-total_local_hqprom_time_seconds: 1.71977408e+01
-avg_local_hqprom_time_per_step_seconds: 3.43954816e-02
+total_local_hqprom_time_seconds: 1.52783785e+01
+avg_local_hqprom_time_per_step_seconds: 3.05567570e-02
 gn_iterations_total: 1915
 avg_gn_iterations_per_step: 3.83000000e+00
-jacobian_time_seconds: 6.43056679e+00
-residual_time_seconds: 2.85771585e+00
-linear_solve_time_seconds: 1.78112888e+00
-hdm_load_or_solve_time_seconds: 5.04482746e-01
+jacobian_time_seconds: 6.34985399e+00
+residual_time_seconds: 2.25879478e+00
+linear_solve_time_seconds: 1.64747548e+00
+hdm_load_or_solve_time_seconds: 3.01190615e-01
 
 [cluster_metrics]
 initial_cluster: 0
@@ -81,7 +81,7 @@ relative_error_percent: 4.09044401e-01
 local_hqprom_snapshots_npy: Results/local_hqprom_snaps_mu1_4.56_mu2_0.019.npy
 comparison_plot_png: Results/local_hqprom_mu1_4.56_mu2_0.019.png
 ecsw_weights_npy: Results/local_hqprom_ecsw_weights.npy
-ecsw_reduced_mesh_png: Results/local_hqprom_reduced_mesh.png
-ecsw_sampling_3d_png: Results/local_hqprom_ecsw_sampling_3d.png
+ecsw_reduced_mesh_png: N/A
+ecsw_sampling_3d_png: N/A
 local_qm_model_npz: LocalQuadratic/local_qm_data.npz
 summary_txt: Results/local_hqprom_summary_mu1_4.56_mu2_0.019.txt

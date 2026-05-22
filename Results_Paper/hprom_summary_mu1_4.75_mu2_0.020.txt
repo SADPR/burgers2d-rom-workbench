@@ -1,5 +1,5 @@
 [run]
-timestamp: 2026-04-24T07:08:36
+timestamp: 2026-05-01T08:14:32
 mu1: 4.75000000e+00
 mu2: 2.00000000e-02
 
@@ -8,7 +8,7 @@ results_dir: Results
 pod_dir_requested: POD
 pod_dir_used: POD
 compute_ecsw: False
-num_modes_requested: 96
+num_modes_requested: N/A
 snap_time_offset: 3
 ecsw_sampling_policy: global_param_time_stratified
 ecsw_snapshot_percent: 2.00000000e+00
@@ -44,14 +44,14 @@ snapshot_selected_total: N/A
 snapshot_selected_per_mu: N/A
 
 [hprom_timing]
-total_hprom_time_seconds: 5.14799058e+01
-avg_hprom_time_per_step_seconds: 1.02959812e-01
+total_hprom_time_seconds: 4.20595596e+01
+avg_hprom_time_per_step_seconds: 8.41191192e-02
 gn_iterations_total: 1500
 avg_gn_iterations_per_step: 3.00000000e+00
-jacobian_time_seconds: 6.54183602e+00
-residual_time_seconds: 3.99548984e+00
-linear_solve_time_seconds: 3.43215785e+01
-hdm_load_or_solve_time_seconds: 5.21430969e-01
+jacobian_time_seconds: 6.26246142e+00
+residual_time_seconds: 2.71159625e+00
+linear_solve_time_seconds: 2.77243650e+01
+hdm_load_or_solve_time_seconds: 4.80289221e-01
 
 [error_metrics]
 relative_l2_error: 1.00107854e-02

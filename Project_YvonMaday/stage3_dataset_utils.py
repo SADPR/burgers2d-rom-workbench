@@ -30,7 +30,12 @@ def _read_meta(dataset_dir: str):
     return meta, meta_path
 
 
-def resolve_stage3_dataset(this_dir: str, requested_ntot=None, expected_backend="hprom"):
+def resolve_stage3_dataset(
+    this_dir: str,
+    requested_ntot=None,
+    expected_backend="hprom",
+    requested_dataset_dir=None,
+):
     """
     Return:
       - per_mu_root: <dataset_dir>/per_mu
@@ -45,7 +50,35 @@ def resolve_stage3_dataset(this_dir: str, requested_ntot=None, expected_backend=
     """
     search_roots = [STAGE2_DIR, this_dir]
 
-    if requested_ntot is not None:
+    if requested_dataset_dir is not None:
+        dataset_dir = os.path.abspath(os.path.expanduser(str(requested_dataset_dir)))
+        per_mu_root = os.path.join(dataset_dir, "per_mu")
+        if not os.path.isdir(per_mu_root):
+            raise FileNotFoundError(
+                f"Missing per_mu folder in requested dataset directory:\n  - {dataset_dir}"
+            )
+
+        meta, meta_path = _read_meta(dataset_dir)
+        meta_ntot = meta.get("total_modes")
+        if requested_ntot is not None:
+            detected_ntot = int(requested_ntot)
+        elif meta_ntot is not None:
+            detected_ntot = int(meta_ntot)
+        else:
+            match = re.fullmatch(r"prom_coeff_dataset_ntot(\d+)", os.path.basename(dataset_dir))
+            if match is None:
+                raise ValueError(
+                    "Unable to infer n_tot from requested dataset directory name and metadata "
+                    "has no 'total_modes'. Please pass --dataset-ntot explicitly."
+                )
+            detected_ntot = int(match.group(1))
+
+        if meta_ntot is not None and int(meta_ntot) != int(detected_ntot):
+            raise ValueError(
+                f"Dataset metadata mismatch in '{meta_path}': total_modes={meta_ntot} "
+                f"but resolved ntot={detected_ntot}."
+            )
+    elif requested_ntot is not None:
         detected_ntot = int(requested_ntot)
         dataset_candidates = [
             stage2_dataset_dir(detected_ntot),
@@ -65,6 +98,7 @@ def resolve_stage3_dataset(this_dir: str, requested_ntot=None, expected_backend=
                 "Missing dataset directory for requested ntot. Checked:\n"
                 f"{checked}"
             )
+        meta, meta_path = _read_meta(dataset_dir)
     else:
         candidates = []
         for root in search_roots:
@@ -90,8 +124,7 @@ def resolve_stage3_dataset(this_dir: str, requested_ntot=None, expected_backend=
 
         candidates.sort(key=lambda x: (x[0], x[1]))
         _, detected_ntot, dataset_dir, per_mu_root = candidates[-1]
-
-    meta, meta_path = _read_meta(dataset_dir)
+        meta, meta_path = _read_meta(dataset_dir)
 
     if expected_backend is not None:
         backend = str(meta.get("solve_backend", "")).strip().lower()

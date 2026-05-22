@@ -38,6 +38,19 @@ def _prepare_reference(u_ref, size):
     return u_ref
 
 
+def _project_reduced_coords(basis, state_offset):
+    """
+    Compute reduced coordinates for a possibly non-orthonormal basis.
+
+    Uses least-squares projection:
+        argmin_y || basis @ y - state_offset ||_2
+    """
+    basis = np.asarray(basis, dtype=np.float64)
+    state_offset = np.asarray(state_offset, dtype=np.float64).reshape(-1)
+    y, *_ = np.linalg.lstsq(basis, state_offset, rcond=None)
+    return y
+
+
 def _select_initial_cluster(w, uc_list):
     """
     Select the initial local cluster in full space by nearest centroid.
@@ -194,7 +207,7 @@ def inviscid_burgers_implicit2D_LSPG(
     snaps = np.zeros((w0.size, num_steps + 1), dtype=np.float64)
     red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
 
-    y0 = basis.T @ (w0 - u_ref)
+    y0 = _project_reduced_coords(basis, w0 - u_ref)
     w_init = u_ref + basis @ y0
 
     snaps[:, 0] = w_init
@@ -309,7 +322,7 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
     basis_ecsw = basis[idx, :]
     u_ref_ecsw = u_ref[idx]
 
-    y0 = basis.T @ (w0 - u_ref)
+    y0 = _project_reduced_coords(basis, w0 - u_ref)
     w0_full = u_ref + basis @ y0
 
     red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
@@ -442,7 +455,7 @@ def inviscid_burgers_implicit2D_LSPG_local(
     V_k = np.asarray(V_list[k], dtype=np.float64)
     n_k = V_k.shape[1]
 
-    q0 = V_k.T @ (w0 - u0_k)
+    q0 = _project_reduced_coords(V_k, w0 - u0_k)
     w_init = u0_k + V_k @ q0
 
     snaps[:, 0] = w_init
@@ -476,7 +489,7 @@ def inviscid_burgers_implicit2D_LSPG_local(
             u0_k = np.asarray(u0_list[k], dtype=np.float64)
             V_k = np.asarray(V_list[k], dtype=np.float64)
             n_k = V_k.shape[1]
-            qp = V_k.T @ (wp - u0_k)
+            qp = _project_reduced_coords(V_k, wp - u0_k)
         else:
             n_k = V_k.shape[1]
 
@@ -603,7 +616,7 @@ def inviscid_burgers_implicit2D_LSPG_local_ecsw(
     V_loc_k = V_loc_list[k]
     n_k = V_k.shape[1]
 
-    q0 = V_k.T @ (w0 - u0_k)
+    q0 = _project_reduced_coords(V_k, w0 - u0_k)
     w0_full = u0_k + V_k @ q0
     w0_loc = u0_loc_k + V_loc_k @ q0
 
@@ -640,7 +653,7 @@ def inviscid_burgers_implicit2D_LSPG_local_ecsw(
             u0_loc_k = u0_loc_list[k]
             V_loc_k = V_loc_list[k]
             n_k = V_k.shape[1]
-            qp = V_k.T @ (wp_full - u0_k)
+            qp = _project_reduced_coords(V_k, wp_full - u0_k)
         else:
             n_k = V_k.shape[1]
 

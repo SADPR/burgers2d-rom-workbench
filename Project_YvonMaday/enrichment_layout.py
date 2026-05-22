@@ -19,6 +19,8 @@ ENRICHMENT_RUNS_CASE1_DIR = os.path.join(ENRICHMENT_RUNS_DIR, "Case1")
 ENRICHMENT_RUNS_CASE2_DIR = os.path.join(ENRICHMENT_RUNS_DIR, "Case2")
 ENRICHMENT_RUNS_CASE3_DIR = os.path.join(ENRICHMENT_RUNS_DIR, "Case3")
 ENRICHMENT_RUNS_DATA_DRIVEN_DIR = os.path.join(ENRICHMENT_RUNS_DIR, "DataDriven")
+ENRICHMENT_RUNS_POD_AE_DIR = os.path.join(ENRICHMENT_RUNS_DIR, "PODAE")
+ENRICHMENT_RUNS_POD_DL_DIR = os.path.join(ENRICHMENT_RUNS_DIR, "PODDL")
 ENRICHMENT_RUNS_ECSW_DIR = os.path.join(ENRICHMENT_RUNS_DIR, "ECSW")
 
 
@@ -34,6 +36,8 @@ def ensure_enrichment_dirs():
         ENRICHMENT_RUNS_CASE2_DIR,
         ENRICHMENT_RUNS_CASE3_DIR,
         ENRICHMENT_RUNS_DATA_DRIVEN_DIR,
+        ENRICHMENT_RUNS_POD_AE_DIR,
+        ENRICHMENT_RUNS_POD_DL_DIR,
         ENRICHMENT_RUNS_ECSW_DIR,
     ):
         os.makedirs(path, exist_ok=True)
@@ -44,4 +48,3 @@ def enrichment_stage2_dataset_dir(total_modes, lhs_samples):
         ENRICHMENT_STAGE2_DIR,
         f"prom_coeff_dataset_ntot{int(total_modes)}_enriched_lhs{int(lhs_samples)}",
     )
-

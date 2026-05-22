@@ -1,0 +1,97 @@
+[run]
+timestamp: 2026-05-09T22:42:21
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+model_dir: POD-GPLVM/pod_gplvm_model_smoke_sparse
+compute_ecsw: True
+weights_file: POD-GPLVM/pod_gplvm_model_smoke_sparse/ecsw_weights_gplvm.npy
+weights_source: computed
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 2
+snap_time_offset: 1
+ecsw_sampling_policy: global_param_time_stratified
+ecsw_snapshot_percent: 1.00000000e+02
+ecsw_random_seed: 42
+mu_samples: [[4.75, 0.02]]
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 3
+max_its_ic: 5
+tol_ic: 1.00000000e-12
+ic_inverse_method: bounded_trf
+ic_inverse_n_starts: 5
+ic_inverse_bound_margin_rel: 2.00000000e-01
+ic_inverse_bound_margin_abs: 2.50000000e-01
+ic_inverse_prior_weight: 1.00000000e-03
+ic_inverse_loss: linear
+ic_inverse_f_scale: 1.00000000e+00
+ecsw_inverse_method: bounded_trf
+ecsw_inverse_n_starts: 3
+ecsw_inverse_bound_margin_rel: 2.00000000e-01
+ecsw_inverse_bound_margin_abs: 2.50000000e-01
+ecsw_inverse_prior_weight: 1.00000000e-03
+ecsw_inverse_loss: linear
+ecsw_inverse_f_scale: 1.00000000e+00
+linear_solver: lstsq
+normal_eq_reg: N/A
+uref_mode: auto
+use_u_ref: True
+u_ref_source: POD-GPLVM/pod_gplvm_model_smoke_sparse/u_ref.npy
+u_ref_l2_norm: 8.17426148e+02
+decoder_mode: sparse_dtc
+sparse_num_inducing: 300
+provided_uref_file: N/A
+stage2_use_u_ref: True
+stage2_projection_metadata: POD-GPLVM/stage2_projection_metadata.npz
+
+[discretization]
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[gplvm_model]
+U_q_shape: (125000, 151)
+latent_dim: 3
+n_train_latent: 320
+decoder_mode: sparse_dtc
+sparse_num_inducing: 300
+ell: 1.00000000e+00
+sf: 1.00000000e+00
+sn: 1.00000000e-02
+
+[ecsw]
+num_nonzero_weights: 4
+weights_sum: 6.25000000e+04
+ecsw_time_seconds: 9.64731693e-01
+ecsw_residual: 4.55102305e-15
+training_matrix_shape: (3, 62500)
+snapshot_candidates_total: 1
+snapshot_selected_total: 1
+snapshot_selected_per_mu: [1]
+
+[hprom_timing]
+total_hprom_time_seconds: 3.12833309e-01
+avg_hprom_time_per_step_seconds: 1.56416655e-01
+gn_iterations_total: 6
+avg_gn_iterations_per_step: 3.00000000e+00
+jacobian_time_seconds: 3.13735008e-03
+residual_time_seconds: 7.66992569e-04
+linear_solve_time_seconds: 3.29017639e-04
+hdm_load_or_solve_time_seconds: 9.31572914e-02
+
+[error_metrics]
+relative_l2_error: 1.20143608e+00
+relative_error_percent: 1.20143608e+02
+
+[outputs]
+hprom_snapshots_npy: Results/hprom_gplvm_snaps_mu1_4.56_mu2_0.019.npy
+latent_trajectory_npy: Results/hprom_gplvm_latent_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: Results/hprom_gplvm_mu1_4.56_mu2_0.019.png
+ecsw_weights_npy: POD-GPLVM/pod_gplvm_model_smoke_sparse/ecsw_weights_gplvm.npy
+ecsw_reduced_mesh_png: Results/hprom_gplvm_reduced_mesh.png
+summary_txt: Results/hprom_gplvm_summary_mu1_4.56_mu2_0.019.txt
+model_npz: POD-GPLVM/pod_gplvm_model_smoke_sparse/gplvm_model.npz
+U_q_npy: POD-GPLVM/pod_gplvm_model_smoke_sparse/U_q.npy

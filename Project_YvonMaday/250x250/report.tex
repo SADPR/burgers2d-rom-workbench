@@ -731,7 +731,7 @@ Linear PROM ($n_{\mathrm{tot}}=151$) & 0.410 & 0.450 & 0.463 & 921.943 & 871.356
 Linear PROM ($n_{\mathrm{tot}}=76$) & 1.314 & 1.574 & 1.398 & 449.279 & 450.632 & 451.384 \\
 Case 1 ANN ($\bar{\mathbf q}=\mathcal N(\mathbf q)$) & 0.708 & 0.716 & 1.103 & 148.840 & 147.333 & 149.762 \\
 Case 2 ANN ($\bar{\mathbf q}=\mathcal M(\bm\mu,t)$) & 0.874 & 1.224 & 1.507 & 90.985 & 92.647 & 91.022 \\
-Case 2 ANN + PG Oracle (enriched residual testing) & 0.793 & 1.202 & 1.223 & 409.562 & 409.104 & 406.139 \\
+Case 2 ANN + PG Oracle (enriched residual testing) & 0.410 & 0.450 & -- & 489.729 & 472.371 & -- \\
 Case 2 PRNN (two-stage, projected residual regularization) & 0.999 & 1.478 & 1.150 & 158.195 & 163.423 & 159.270 \\
 Case 2 ANN ($n=20$, $\bar n=131$, native $n=20$ model) & 0.652 & 6.502 & 3.755 & 146.334 & 141.090 & 141.372 \\
 Case 2 ANN ($n=20$, $\bar n=131$, $n=10\to n=20$ trimmed transfer) & 0.689 & 1.056 & 1.035 & 140.073 & 143.743 & 143.484 \\
@@ -749,7 +749,7 @@ The second $n=20$ Case~2 baseline row is a transfer run that reuses the baseline
 \subsection{Enriched models (9+20 training dataset)}
 \label{sec:enriched_prom_250}
 
-For enrichment, we augment the baseline $9$ trajectories with $20$ LHS trajectories and retrain all four nonlinear maps. Table~\ref{tab:enriched_prom_250} reports PROM results at the same three points, including the Case~2 PG Oracle and $n=20$ variants. The linear reference rows are unchanged and are included for reference. The Case~2 PRNN row is marked as not run in the current enriched campaign.
+For enrichment, we augment the baseline $9$ trajectories with $20$ LHS trajectories and retrain all four nonlinear maps. Table~\ref{tab:enriched_prom_250} reports PROM results at the same three points, including the Case~2 $n=20$ variants. The linear reference rows are unchanged and are included for reference. The Case~2 PRNN row is marked as not run in the current enriched campaign. The PG Oracle was used only as a baseline sanity diagnostic and was not run in the enriched campaign.
 
 \begin{table}[H]
 \centering
@@ -764,7 +764,7 @@ Linear PROM ($n_{\mathrm{tot}}=151$) & 0.410 & 0.450 & 0.463 & 921.943 & 871.356
 Linear PROM ($n_{\mathrm{tot}}=76$) & 1.314 & 1.574 & 1.398 & 449.279 & 450.632 & 451.384 \\
 Case 1 ANN (enriched) & 0.681 & 0.561 & 0.922 & 156.034 & 156.136 & 156.006 \\
 Case 2 ANN (enriched) & 0.894 & 0.962 & 0.875 & 91.416 & 91.013 & 90.763 \\
-Case 2 ANN + PG Oracle (enriched) & 0.685 & 0.754 & 0.714 & 413.579 & 411.149 & 415.588 \\
+Case 2 ANN + PG Oracle (enriched) & -- & -- & -- & -- & -- & -- \\
 Case 2 PRNN (enriched) & -- & -- & -- & -- & -- & -- \\
 Case 2 ANN ($n=20$, $\bar n=131$, enriched) & 0.499 & 0.550 & 0.548 & 140.796 & 141.836 & 141.215 \\
 Case 3 ANN (enriched) & 0.473 & 0.517 & 0.532 & 156.095 & 155.333 & 165.269 \\
@@ -804,7 +804,7 @@ Linear PROM ($n_{\mathrm{tot}}=151$) & 0.82 & 0.86 & 0.83 & 0.82 & 0.86 & 0.83 \
 Linear PROM ($n_{\mathrm{tot}}=76$) & 1.68 & 1.67 & 1.68 & 1.68 & 1.67 & 1.68 \\
 Case 1 ANN & 5.07 & 5.10 & 5.06 & 4.83 & 4.81 & 4.86 \\
 Case 2 ANN & 8.29 & 8.10 & 8.32 & 8.25 & 8.25 & 8.35 \\
-Case 2 ANN + PG Oracle & 1.84 & 1.84 & 1.87 & 1.82 & 1.83 & 1.82 \\
+Case 2 ANN + PG Oracle & 1.54 & 1.59 & -- & -- & -- & -- \\
 Case 2 PRNN & 4.77 & 4.59 & 4.76 & -- & -- & -- \\
 Case 2 ANN ($n=20$, native) & 5.15 & 5.32 & 5.36 & 5.36 & 5.29 & 5.37 \\
 Case 2 ANN ($n=20$, trimmed transfer) & 5.38 & 5.22 & 5.28 & -- & -- & -- \\
@@ -841,7 +841,7 @@ Linear PROM ($n_{\mathrm{tot}}=151$) & 0.410 & 0.410 & 0.00 & 0.450 & 0.450 & 0.
 Linear PROM ($n_{\mathrm{tot}}=76$) & 1.314 & 1.314 & 0.00 & 1.574 & 1.574 & 0.00 & 1.398 & 1.398 & 0.00 \\
 Case 1 ANN & 0.708 & 0.681 & 3.75 & 0.716 & 0.561 & 21.68 & 1.103 & 0.922 & 16.43 \\
 Case 2 ANN & 0.874 & 0.894 & -2.36 & 1.224 & 0.962 & 21.39 & 1.507 & 0.875 & 41.96 \\
-Case 2 ANN + PG Oracle & 0.793 & 0.685 & 13.56 & 1.202 & 0.754 & 37.28 & 1.223 & 0.714 & 41.59 \\
+Case 2 ANN + PG Oracle & 0.410 & -- & -- & 0.450 & -- & -- & -- & -- & -- \\
 Case 2 PRNN & 0.999 & -- & -- & 1.478 & -- & -- & 1.150 & -- & -- \\
 Case 2 ANN ($n=20$) & 0.652 & 0.499 & 23.56 & 6.502 & 0.550 & 91.54 & 3.755 & 0.548 & 85.40 \\
 Case 3 ANN & 0.655 & 0.473 & 27.75 & 0.765 & 0.517 & 32.45 & 0.788 & 0.532 & 32.44 \\
@@ -852,10 +852,10 @@ Data-driven & 0.874 & 0.860 & 1.67 & 1.832 & 0.928 & 49.35 & 1.580 & 0.896 & 43.
 \end{table}
 
 \paragraph{Remark and practical takeaway.}
-In this PROM-consistent campaign, the linear $n_{\mathrm{tot}}=151$ PROM remains the most accurate reference but at the highest online cost. The additional linear run with $n_{\mathrm{tot}}=76$ reduces linear runtime to about $450$\,s but with larger trajectory errors (about $1.3$--$1.6$\%). For Case~2, the PG Oracle row improves all three enriched-point errors relative to the standard Case~2 row, but with a substantially larger runtime (speed-up near $1.8\times$ only). The PRNN-trained Case~2 row shows mixed baseline impact (improvement at $\bm\mu^{(2)}$, degradation at $\bm\mu^{(v)}$ and $\bm\mu^{(1)}$) and is slower online than standard Case~2 (about $4.6$--$4.8\times$ speed-up vs about $8.1$--$8.3\times$), so it is not a dominant tradeoff in the present setting. For the $n=20$ Case~2 split, we report both baseline variants: the native $n=20$ model and a baseline transfer run ($n=10\to n=20$ trimming). The transfer run yields much better off-grid baseline behavior than the native baseline model (from $6.502\%\to1.056\%$ at $\bm\mu^{(1)}$ and $3.755\%\to1.035\%$ at $\bm\mu^{(2)}$), while the enriched native-$n=20$ model already achieves low errors (about $0.55\%$) at both off-grid points.
+In this PROM-consistent campaign, the linear $n_{\mathrm{tot}}=151$ PROM remains the most accurate reference but at the highest online cost. The additional linear run with $n_{\mathrm{tot}}=76$ reduces linear runtime to about $450$\,s but with larger trajectory errors (about $1.3$--$1.6$\%). For Case~2, the PG Oracle check was run only at $\bm\mu^{(v)}$ and $\bm\mu^{(1)}$ in baseline, where it matches the linear-PROM error level (about $0.41$--$0.45$\%) with a larger runtime (speed-up about $1.5\times$). No enriched PG Oracle campaign was run in this dataset. The PRNN-trained Case~2 row shows mixed baseline impact (improvement at $\bm\mu^{(2)}$, degradation at $\bm\mu^{(v)}$ and $\bm\mu^{(1)}$) and is slower online than standard Case~2 (about $4.6$--$4.8\times$ speed-up vs about $8.1$--$8.3\times$), so it is not a dominant tradeoff in the present setting. For the $n=20$ Case~2 split, we report both baseline variants: the native $n=20$ model and a baseline transfer run ($n=10\to n=20$ trimming). The transfer run yields much better off-grid baseline behavior than the native baseline model (from $6.502\%\to1.056\%$ at $\bm\mu^{(1)}$ and $3.755\%\to1.035\%$ at $\bm\mu^{(2)}$), while the enriched native-$n=20$ model already achieves low errors (about $0.55\%$) at both off-grid points.
 
 \paragraph{PG oracle sanity check (implementation).}
-As a temporary implementation check, we ran the Case~2 PG solve using an oracle truncated trajectory $\bar{\mathbf q}(t)$ taken directly from the linear $n_{\mathrm{tot}}$-PROM (instead of ANN prediction). On the verification and test points, this oracle-PG run converges to the linear PROM solution within printed precision: relative error vs linear PROM is $0.000\%$, relative primary-coordinate mismatch is $0.000\%$--$0.001\%$, and relative truncated-coordinate mismatch is $0.000\%$. The corresponding HDM errors match the linear-PROM level on the checked points (e.g., $0.410\%$ and $0.450\%$). This supports that the PG assembly/solve is consistent; the practical PG gap in Table~\ref{tab:baseline_prom_250} and Table~\ref{tab:enriched_prom_250} is driven by closure-map accuracy, not by the PG implementation itself.
+As a temporary implementation check, we ran the Case~2 PG solve using an oracle truncated trajectory $\bar{\mathbf q}(t)$ taken directly from the linear $n_{\mathrm{tot}}$-PROM (instead of ANN prediction). On the checked baseline points $\bm\mu^{(v)}$ and $\bm\mu^{(1)}$, this oracle-PG run converges to the linear PROM solution within printed precision: relative error vs linear PROM is $0.000\%$, relative primary-coordinate mismatch is $0.000\%$--$0.001\%$, and relative truncated-coordinate mismatch is $0.000\%$. The corresponding HDM errors match the linear-PROM level on the checked points ($0.410\%$ and $0.450\%$). This supports that the PG assembly/solve is consistent; the practical PG gap observed in non-oracle PG runs is driven by closure-map accuracy, not by the PG implementation itself.
 
 % =========================================================
 \subsection{Interpretation of the Case 2 $n=20$ behavior}

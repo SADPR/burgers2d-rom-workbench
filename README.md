@@ -311,6 +311,66 @@ python3 run_hprom_dl.py
 `run_hprom_dl.py` follows the same ECSW logic as other HPROM runners: run once with
 ECSW construction enabled, then reuse the saved weights in later runs.
 
+## POD-GPLVM workflow
+1. Ensure training HDM snapshots are available:
+```bash
+python3 run_fom_training.py
+```
+2. POD basis:
+```bash
+python3 POD-GPLVM/stage1_build_pod_basis.py
+```
+3. Project snapshots to POD coordinates:
+```bash
+python3 POD-GPLVM/stage2_project_training_data.py
+```
+4. Train POD-GPLVM in POD space (`q -> z -> q`):
+```bash
+python3 POD-GPLVM/stage3_train_gplvm.py
+```
+Default Stage 3 behavior:
+- uses all training points (`max_train_samples=None`)
+- enables bounded-validation inversion (`val_inverse_method="bounded_trf"`)
+- builds a sparse decoder automatically when `n_train > sparse_num_inducing` (default `300`)
+- uses restart logic if L-BFGS-B false-converges early
+
+If you want to force sparse decoder + stronger restarts explicitly:
+```bash
+cd POD-GPLVM
+python3 - <<'PY'
+import stage3_train_gplvm as s
+s.main(
+    max_train_samples=None,
+    sparse_decoder="on",
+    sparse_num_inducing=400,
+    auto_restart=True,
+    max_restarts=3,
+)
+PY
+```
+5. Test reconstruction:
+```bash
+python3 POD-GPLVM/stage4_test_gplvm.py
+```
+Stage 4 now uses bounded multi-start `q -> z` inversion by default.
+
+6. Online PROM:
+```bash
+python3 run_prom_gplvm.py
+```
+7. Online HPROM:
+```bash
+python3 run_hprom_gplvm.py
+```
+
+Online note: both `run_prom_gplvm.py` and `run_hprom_gplvm.py` use bounded multi-start
+inverse solves for the initial latent state `z0` (and HPROM ECSW construction), consistent
+with the Stage 4 inversion logic.
+
+Current behavior note: `run_hprom_gplvm.py` calls `main(mu1=4.56, mu2=0.019,
+compute_ecsw=True)` in `__main__`, so it rebuilds ECSW weights each time unless
+you change that call.
+
 ## What to expect in outputs
 Online `run_*.py` scripts generally save:
 - snapshots (`*.npy`)

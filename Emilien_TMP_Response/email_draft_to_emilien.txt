@@ -1,0 +1,23 @@
+Dear Emilien,
+
+Thank you for the clarifications and for the new plots. This is much clearer now.
+
+As mentioned in my previous email, this is good progress: the RB/projection error is now under control, so the basis seems to be doing its job. With the new train/test coloring, the remaining issue is clearly the GP generalization.
+
+Since you confirmed that the GP-training points are the basis-construction points, and that you already use one GP per coefficient with input/output scaling, I think the next useful diagnostic is to look directly at the coefficient functions.
+
+If it is not too much trouble, could you make one more set of plots? For each of the 80 retained coefficients, could you plot the true/RB coefficient and the GP-predicted coefficient on the same graph, as a function of frequency? It may be easier to split this into four figures:
+
+- q_1 to q_20
+- q_21 to q_40
+- q_41 to q_60
+- q_61 to q_80
+
+For the true/reference coefficients, it would be useful to keep the training and test frequencies visually distinct, as you did in the error plots. Then the GP prediction can simply be overlaid on the same axes. This should show more directly whether the GP fails already on the dominant coefficients, or mainly on higher-index coefficients, and whether the problem is phase, amplitude, oscillation frequency, or localized peaks.
+
+Since the coefficients are complex, it would be best to plot the exact quantities used to train the GP. For example, if you train on real and imaginary parts, plot true vs GP for Re(q_i) and Im(q_i), or at least one of them first. If you train on modulus/phase, then plot those quantities instead.
+
+Then I think we will be able to discuss the GP failure much more concretely.
+
+Best regards,
+Sebastian

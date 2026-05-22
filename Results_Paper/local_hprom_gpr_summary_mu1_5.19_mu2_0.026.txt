@@ -1,5 +1,5 @@
 [run]
-timestamp: 2026-04-26T08:39:18
+timestamp: 2026-05-01T08:24:25
 mu1: 5.19000000e+00
 mu2: 2.60000000e-02
 
@@ -29,7 +29,7 @@ use_custom_predict: True
 jacobian_mode: auto
 selector_mode: nonlinear
 fd_eps: 1.00000000e-06
-verbose: True
+verbose: False
 
 [discretization]
 num_cells_x: 250
@@ -59,14 +59,14 @@ snapshot_cluster_candidates_per_mu: N/A
 snapshot_cluster_selected_per_mu: N/A
 
 [hprom_timing]
-total_hprom_time_seconds: 1.68162937e+01
-avg_hprom_time_per_step_seconds: 3.36325874e-02
+total_hprom_time_seconds: 1.57626913e+01
+avg_hprom_time_per_step_seconds: 3.15253825e-02
 gn_iterations_total: 1999
 avg_gn_iterations_per_step: 3.99800000e+00
-jacobian_time_seconds: 8.60904551e+00
-residual_time_seconds: 1.71784616e+00
-linear_solve_time_seconds: 5.45427799e-01
-hdm_load_or_solve_time_seconds: 3.03644896e-01
+jacobian_time_seconds: 8.35050917e+00
+residual_time_seconds: 1.52862120e+00
+linear_solve_time_seconds: 5.73939085e-01
+hdm_load_or_solve_time_seconds: 3.29188585e-01
 
 [cluster_metrics]
 initial_cluster: 0

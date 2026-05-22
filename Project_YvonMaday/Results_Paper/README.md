@@ -6,14 +6,19 @@ Scope for first deployment:
 - `Case 1` ANN closure
 - `Case 2` ANN closure
 - `Case 3` ANN closure
-- data-driven direct-coefficient surrogate (`(mu,t) -> q_N`)
+- non-intrusive coefficient-space POD-NN-ROM surrogate (`(mu,t) -> q_N`)
 - enriched counterparts
-- data-driven latent POD-DL surrogate (`(mu,t) -> z -> q_N`) (planned integration)
-- PROM-POD-AE intrusive latent-manifold baseline (planned integration)
+- non-intrusive latent POD-DL-ROM surrogate (`(mu,t) -> z -> q_N`) (**baseline integrated**)
+- PROM-POD-AE intrusive latent-manifold baseline (**baseline integrated**)
 
 Naming convention used in this campaign:
-- `POD-DL` means the non-intrusive latent data-driven family (Fresca/Manzoni style).
+- `POD-DL-ROM` means the non-intrusive latent data-driven family (Fresca/Manzoni style).
+- `POD-NN-ROM` means the non-intrusive coefficient-space map `(mu,t) -> q_N`.
 - `PROM-POD-AE` means the intrusive latent-manifold projection track (conceptually similar to intrusive nonlinear-manifold HPROM literature, but with our project naming).
+- Paper/table labels (recommended):
+  - `POD-NN-ROM`: direct coefficient-space map `(\mu,t) -> q_N`
+  - `POD-DL-ROM`: latent map `(\mu,t) -> z -> q_N`
+  - `PROM-POD-AE`: intrusive latent-manifold residual-minimization track
 
 Important policy for this campaign:
 - Stage-2 dataset generation uses `--backend hprom`.
@@ -106,6 +111,45 @@ python3 stage3_perform_training_rom_data_driven.py \
   --dataset-backend hprom \
   --dataset-ntot 151 \
   --model-name rom_data_driven_model_hprom.pt
+
+python3 stage3_perform_training_prom_pod_ae.py \
+  --dataset-backend hprom \
+  --dataset-ntot 151 \
+  --model-name prom_pod_ae_model_hprom.pt \
+  --latent-dim 5 \
+  --hidden-dims 192,96,48 \
+  --activation tanh \
+  --scaling minmax_-1_1
+
+python3 stage3_perform_training_pod_dl_data_driven.py \
+  --dataset-backend hprom \
+  --dataset-ntot 151 \
+  --model-name pod_dl_data_driven_model_hprom.pt \
+  --latent-dim 5 \
+  --encoder-hidden-dims 192,96,48 \
+  --decoder-hidden-dims 48,96,192 \
+  --dynamics-hidden-dims 64,128,128 \
+  --activation tanh \
+  --x-scaling minmax_-1_1 \
+  --q-scaling minmax_-1_1 \
+  --omega-data 1.0 \
+  --omega-latent 0.1
+
+# Optional POD-DL-ROM variant (dynamics branch closer to POD-NN-ROM MLP):
+python3 stage3_perform_training_pod_dl_data_driven.py \
+  --dataset-backend hprom \
+  --dataset-ntot 151 \
+  --model-name <your_pod_dl_model_name>.pt \
+  --latent-dim 20 \
+  --encoder-hidden-dims 192,96,48 \
+  --decoder-hidden-dims 48,96,192 \
+  --dynamics-hidden-dims 32,64,128,256,256 \
+  --activation elu \
+  --x-scaling zscore \
+  --q-scaling zscore \
+  --omega-data 1.0 \
+  --omega-latent 0.02 \
+  --pretrain-epochs 150
 ```
 
 ---
@@ -159,6 +203,22 @@ python3 run_rom_data_driven.py --mu1 5.19  --mu2 0.026  --model-name rom_data_dr
 
 ```
 
+### 4.4 Latent tracks (baseline)
+
+PROM-POD-AE (intrusive, online HPROM):
+```bash
+python3 run_prom_pod_ae.py --backend hprom --mu1 4.875 --mu2 0.0225 --model-name prom_pod_ae_model_hprom.pt $ECSW_ARGS
+python3 run_prom_pod_ae.py --backend hprom --mu1 4.56  --mu2 0.019  --model-name prom_pod_ae_model_hprom.pt $ECSW_ARGS
+python3 run_prom_pod_ae.py --backend hprom --mu1 5.19  --mu2 0.026  --model-name prom_pod_ae_model_hprom.pt $ECSW_ARGS
+```
+
+POD-DL-ROM (non-intrusive latent data-driven):
+```bash
+python3 run_pod_dl_data_driven.py --mu1 4.875 --mu2 0.0225 --model-name <your_pod_dl_model_name>.pt
+python3 run_pod_dl_data_driven.py --mu1 4.56  --mu2 0.019  --model-name <your_pod_dl_model_name>.pt
+python3 run_pod_dl_data_driven.py --mu1 5.19  --mu2 0.026  --model-name <your_pod_dl_model_name>.pt
+```
+
 ---
 
 ## 5) Stage 2 Enrichment Dataset (HPROM)
@@ -205,6 +265,21 @@ python3 stage3_perform_training_rom_data_driven_enriched.py \
   --dataset-ntot 151 \
   --model-name rom_data_driven_model_enriched_hprom.pt
 
+python3 stage3_perform_training_prom_pod_ae_enriched.py \
+  --dataset-backend hprom \
+  --dataset-ntot 151 \
+  --latent-dim 5 \
+  --hidden-dims 256,128,64 \
+  --model-name prom_pod_ae_model_enriched_hprom.pt
+
+python3 stage3_perform_training_pod_dl_data_driven_enriched.py \
+  --dataset-backend hprom \
+  --dataset-ntot 151 \
+  --latent-dim 5 \
+  --encoder-hidden-dims 256,128 \
+  --decoder-hidden-dims 128,256 \
+  --dynamics-hidden-dims 64,128,128 \
+  --model-name pod_dl_data_driven_model_enriched_hprom.pt
 ```
 
 ---
@@ -228,24 +303,38 @@ python3 run_rom_data_driven_enriched.py --mu1 4.875 --mu2 0.0225 --model-name ro
 python3 run_rom_data_driven_enriched.py --mu1 4.56  --mu2 0.019  --model-name rom_data_driven_model_enriched_hprom.pt
 python3 run_rom_data_driven_enriched.py --mu1 5.19  --mu2 0.026  --model-name rom_data_driven_model_enriched_hprom.pt
 
+python3 run_prom_pod_ae_enriched.py --backend hprom --mu1 4.875 --mu2 0.0225 --model-name prom_pod_ae_model_enriched_hprom.pt
+python3 run_prom_pod_ae_enriched.py --backend hprom --mu1 4.56  --mu2 0.019  --model-name prom_pod_ae_model_enriched_hprom.pt
+python3 run_prom_pod_ae_enriched.py --backend hprom --mu1 5.19  --mu2 0.026  --model-name prom_pod_ae_model_enriched_hprom.pt
+
+python3 run_pod_dl_data_driven_enriched.py --mu1 4.875 --mu2 0.0225 --model-name pod_dl_data_driven_model_enriched_hprom.pt
+python3 run_pod_dl_data_driven_enriched.py --mu1 4.56  --mu2 0.019  --model-name pod_dl_data_driven_model_enriched_hprom.pt
+python3 run_pod_dl_data_driven_enriched.py --mu1 5.19  --mu2 0.026  --model-name pod_dl_data_driven_model_enriched_hprom.pt
+
 ```
 
 ---
 
-## 8) Latent Tracks (Planned Integration)
+## 8) Latent Track Status (Current)
 
-Current status for this `Project_YvonMaday` campaign:
-- `Case 1/2/3 + data-driven direct-coefficient` are already integrated.
-- `data-driven latent POD-DL` and `PROM-POD-AE intrusive latent manifold` are available at repo root level but not yet unified into this exact Stage2/Stage3 layout.
+Now integrated directly in `Project_YvonMaday`:
+- `stage3_perform_training_prom_pod_ae.py`
+- `run_prom_pod_ae.py`
+- `stage3_perform_training_pod_dl_data_driven.py`
+- `run_pod_dl_data_driven.py`
+- `stage3_perform_training_prom_pod_ae_enriched.py`
+- `run_prom_pod_ae_enriched.py`
+- `stage3_perform_training_pod_dl_data_driven_enriched.py`
+- `run_pod_dl_data_driven_enriched.py`
 
-Reference scripts at repo root:
-- `POD-DL/stage1_build_pod_basis.py`
-- `POD-DL/stage2_project_training_data.py`
-- `POD-DL/stage3_train_autoencoder.py`
-- `run_hprom_dl.py` (HPROM-DL online)
+Naming used in this manuscript:
+- `POD-NN-ROM`: non-intrusive coefficient-space map `(mu,t) -> q_N`.
+- `POD-DL-ROM`: non-intrusive latent data-driven map `(mu,t) -> z -> q_N`.
+- `PROM-POD-AE`: intrusive latent-manifold method solved online by PROM/HPROM residual minimization.
 
-Next integration step for this paper campaign:
-- add `Project_YvonMaday`-local wrappers so both latent tracks run on the same parameter/test protocol and table format.
+Current status:
+- baseline latent comparisons: integrated.
+- enriched latent comparisons: integrated.
 
 ---
 
@@ -255,6 +344,35 @@ Canonical run outputs are still written by each runner under:
 - baseline: `Results/Runs/...`
 - enriched: `Results_Enrichment/Runs/...`
 
+Latent baseline output folders:
+- `Results/Runs/PODAE/`
+- `Results/Runs/PODDL/`
+
+Latent enriched output folders:
+- `Results_Enrichment/Runs/PODAE/`
+- `Results_Enrichment/Runs/PODDL/`
+
 For paper assembly, keep this folder (`Results_Paper/`) as:
 - runbook + manuscript draft,
 - optional curated exports copied from canonical run folders.
+
+---
+
+## 10) Manuscript Update Checklist
+
+For baseline tables/figures in `manuscript.tex`, collect summaries from:
+- linear HPROM reference: `Results/Runs/Linear/*_summary.txt`
+- ANN closures: `Results/Runs/Case1/*_summary.txt`, `Case2/*_summary.txt`, `Case3/*_summary.txt`
+- POD-NN-ROM: `Results/Runs/DataDriven/*/rom_data_driven_summary.txt`
+- PROM-POD-AE: `Results/Runs/PODAE/*_summary.txt`
+- POD-DL-ROM: `Results/Runs/PODDL/*/pod_dl_data_driven_summary.txt`
+
+For enriched tables/figures, use:
+- ANN closures: `Results_Enrichment/Runs/Case1/*_summary.txt`, `Case2/*_summary.txt`, `Case3/*_summary.txt`
+- POD-NN-ROM: `Results_Enrichment/Runs/DataDriven/*/rom_data_driven_enriched_summary.txt`
+- PROM-POD-AE: `Results_Enrichment/Runs/PODAE/*_summary.txt`
+- POD-DL-ROM: `Results_Enrichment/Runs/PODDL/*/pod_dl_data_driven_enriched_summary.txt`
+
+For enriched tables/figures:
+- use `Results_Enrichment/Runs/Case1`, `Case2`, `Case3`, `DataDriven`.
+- latent enriched rows should be marked pending until enriched latent wrappers are added.

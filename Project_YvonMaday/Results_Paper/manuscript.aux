@@ -16,59 +16,98 @@
 \@writefile{toc}{\contentsline {paragraph}{Naming convention used in this manuscript.}{1}{section*.2}\protected@file@percent }
 \citation{farhat2015structure}
 \citation{de2023hyper}
-\@writefile{toc}{\contentsline {section}{\numberline {2}Linear PROM/HPROM Reference and Notation}{2}{section.3}\protected@file@percent }
-\newlabel{sec:linear-rom}{{2}{2}{Linear PROM/HPROM Reference and Notation}{section.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}POD basis from SVD}{2}{subsection.4}\protected@file@percent }
-\newlabel{eq:linear-reconstruction}{{4}{2}{POD basis from SVD}{equation.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Linear time-discrete LSPG (PROM)}{2}{subsection.9}\protected@file@percent }
-\newlabel{eq:linear-lspg-min}{{5}{2}{Linear time-discrete LSPG (PROM)}{equation.10}{}}
-\newlabel{eq:linear-gn-update}{{7}{2}{Linear time-discrete LSPG (PROM)}{equation.12}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Linear HPROM via ECSW}{2}{subsection.13}\protected@file@percent }
-\newlabel{eq:linear-hprom-min}{{10}{2}{Linear HPROM via ECSW}{equation.16}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}ROM-consistent training targets}{2}{subsection.17}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3}Method I: PROM-ANN Closure Models}{3}{section.18}\protected@file@percent }
-\newlabel{sec:method-ann}{{3}{3}{Method I: PROM-ANN Closure Models}{section.18}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Manifold definitions}{3}{subsection.19}\protected@file@percent }
-\newlabel{eq:ann-manifold}{{15}{3}{Manifold definitions}{equation.24}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}LSPG/Gauss--Newton solve}{3}{subsection.25}\protected@file@percent }
-\newlabel{eq:ann-lspg-min}{{16}{3}{LSPG/Gauss--Newton solve}{equation.26}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}ECSW hyperreduced form}{3}{subsection.29}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Offline training target}{3}{subsection.31}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Linear HPROM Reference and Notation}{2}{section.3}\protected@file@percent }
+\newlabel{sec:linear-rom}{{2}{2}{Linear HPROM Reference and Notation}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Generic semi-discrete IVP and residual notation}{2}{subsection.4}\protected@file@percent }
+\newlabel{eq:generic-ivp}{{1}{2}{Generic semi-discrete IVP and residual notation}{equation.5}{}}
+\newlabel{eq:generic-discrete-residual}{{2}{2}{Generic semi-discrete IVP and residual notation}{equation.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}POD basis from SVD}{2}{subsection.7}\protected@file@percent }
+\newlabel{eq:linear-reconstruction}{{6}{2}{POD basis from SVD}{equation.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Linear time-discrete LSPG reference form}{2}{subsection.12}\protected@file@percent }
+\newlabel{eq:linear-lspg-min}{{7}{2}{Linear time-discrete LSPG reference form}{equation.13}{}}
+\newlabel{eq:linear-gn-update}{{9}{2}{Linear time-discrete LSPG reference form}{equation.15}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Linear HPROM via ECSW}{2}{subsection.16}\protected@file@percent }
+\newlabel{eq:linear-hprom-min}{{12}{2}{Linear HPROM via ECSW}{equation.19}{}}
+\@writefile{toc}{\contentsline {paragraph}{ROM-consistent training targets.}{3}{section*.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Method I: PROM-ANN Closure Models}{3}{section.21}\protected@file@percent }
+\newlabel{sec:method-ann}{{3}{3}{Method I: PROM-ANN Closure Models}{section.21}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Manifold definitions}{3}{subsection.22}\protected@file@percent }
+\newlabel{eq:ann-manifold}{{17}{3}{Manifold definitions}{equation.27}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}LSPG/Gauss--Newton solve}{3}{subsection.28}\protected@file@percent }
+\newlabel{eq:ann-lspg-min}{{18}{3}{LSPG/Gauss--Newton solve}{equation.29}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}ECSW hyperreduced form}{3}{subsection.32}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Offline training targets.}{3}{section*.34}\protected@file@percent }
 \citation{romor2025explicable}
 \citation{fresca2022pod}
 \citation{fresca2022pod}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Method II: PROM-POD-AE Latent Manifold}{4}{section.32}\protected@file@percent }
-\newlabel{sec:method-podae}{{4}{4}{Method II: PROM-POD-AE Latent Manifold}{section.32}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Autoencoder and latent manifold}{4}{subsection.33}\protected@file@percent }
-\newlabel{eq:podae-manifold}{{21}{4}{Autoencoder and latent manifold}{equation.35}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}LSPG/Gauss--Newton solve in latent coordinates}{4}{subsection.36}\protected@file@percent }
-\newlabel{eq:podae-lspg-min}{{22}{4}{LSPG/Gauss--Newton solve in latent coordinates}{equation.37}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}ECSW hyperreduced form}{4}{subsection.40}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Method III: Data-Driven Direct-Coefficient Baseline}{4}{section.42}\protected@file@percent }
-\newlabel{sec:method-datadriven}{{5}{4}{Method III: Data-Driven Direct-Coefficient Baseline}{section.42}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Model definition}{4}{subsection.43}\protected@file@percent }
-\newlabel{eq:data-driven-map-q}{{26}{4}{Model definition}{equation.44}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Training objective and online cost}{4}{subsection.45}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Method II: PROM-POD-AE Latent Manifold}{4}{section.35}\protected@file@percent }
+\newlabel{sec:method-podae}{{4}{4}{Method II: PROM-POD-AE Latent Manifold}{section.35}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Autoencoder and latent manifold}{4}{subsection.36}\protected@file@percent }
+\newlabel{eq:podae-manifold}{{23}{4}{Autoencoder and latent manifold}{equation.38}{}}
+\@writefile{toc}{\contentsline {paragraph}{Offline autoencoder training.}{4}{section*.39}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}LSPG/Gauss--Newton solve in latent coordinates}{4}{subsection.41}\protected@file@percent }
+\newlabel{eq:podae-lspg-min}{{25}{4}{LSPG/Gauss--Newton solve in latent coordinates}{equation.42}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}ECSW hyperreduced form}{4}{subsection.45}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Method III: POD-NN-ROM (Coefficient-Space, Non-Intrusive)}{4}{section.47}\protected@file@percent }
+\newlabel{sec:method-datadriven}{{5}{4}{Method III: POD-NN-ROM (Coefficient-Space, Non-Intrusive)}{section.47}{}}
+\@writefile{toc}{\contentsline {paragraph}{Model definition.}{4}{section*.48}\protected@file@percent }
+\newlabel{eq:data-driven-map-q}{{29}{4}{Model definition}{equation.49}{}}
+\citation{fresca2022pod}
 \citation{chen2021physics}
 \citation{sibuet2025discrete}
 \citation{barnett2023neural}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Method IV: Data-Driven Latent POD-DL Baseline}{5}{section.47}\protected@file@percent }
-\newlabel{sec:method-datadriven-latent}{{6}{5}{Method IV: Data-Driven Latent POD-DL Baseline}{section.47}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Model definition}{5}{subsection.48}\protected@file@percent }
-\newlabel{eq:data-driven-map-z}{{28}{5}{Model definition}{equation.49}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Training objective and online cost}{5}{subsection.50}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Optional Physics-Regularized Training Note}{5}{section.51}\protected@file@percent }
-\newlabel{sec:prnn-note}{{7}{5}{Optional Physics-Regularized Training Note}{section.51}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Burgers Benchmark and Experimental Protocol}{5}{section.52}\protected@file@percent }
-\newlabel{sec:burgers}{{8}{5}{Burgers Benchmark and Experimental Protocol}{section.52}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Governing equations and parameter domain}{5}{subsection.53}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Numerical discretization}{5}{subsection.58}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Training and evaluation protocol}{6}{subsection.59}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Backend-consistency policy}{6}{subsection.61}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Reported quantities}{6}{subsection.62}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {9}Shallow-Water Benchmark and Experimental Protocol}{6}{section.63}\protected@file@percent }
-\newlabel{sec:shallowwater}{{9}{6}{Shallow-Water Benchmark and Experimental Protocol}{section.63}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}Governing equations and parameterized initial condition}{6}{subsection.64}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Training objective and online cost.}{5}{section*.50}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Method IV: POD-DL-ROM (Latent, Non-Intrusive)}{5}{section.52}\protected@file@percent }
+\newlabel{sec:method-datadriven-latent}{{6}{5}{Method IV: POD-DL-ROM (Latent, Non-Intrusive)}{section.52}{}}
+\@writefile{toc}{\contentsline {paragraph}{Model definition.}{5}{section*.53}\protected@file@percent }
+\newlabel{eq:data-driven-map-z}{{31}{5}{Model definition}{equation.54}{}}
+\@writefile{toc}{\contentsline {paragraph}{Training objective and online cost.}{5}{section*.55}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Physics-Regularized Variant (Ancillary)}{5}{section.57}\protected@file@percent }
+\newlabel{sec:prnn-note}{{7}{5}{Physics-Regularized Variant (Ancillary)}{section.57}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Burgers Benchmark and Experimental Protocol}{5}{section.58}\protected@file@percent }
+\newlabel{sec:burgers}{{8}{5}{Burgers Benchmark and Experimental Protocol}{section.58}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Governing equations and parameter domain}{5}{subsection.59}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Numerical discretization}{6}{subsection.64}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Training and evaluation protocol}{6}{subsection.65}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Parameter domain $\mathcal  D$, baseline $3\times 3$ training points, enrichment LHS points, and evaluation points $\bm  {\mu }^{(v)}$, $\bm  {\mu }^{(1)}$, $\bm  {\mu }^{(2)}$.}}{6}{figure.68}\protected@file@percent }
+\newlabel{fig:parameter-domain-sampling}{{1}{6}{Parameter domain $\mathcal D$, baseline $3\times 3$ training points, enrichment LHS points, and evaluation points $\bm \mu ^{(v)}$, $\bm \mu ^{(1)}$, $\bm \mu ^{(2)}$}{figure.68}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}HPROM-Consistent Evaluation Pipeline}{6}{subsection.69}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Reported Metrics}{7}{subsection.70}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}Burgers Results in the HPROM-Consistent Setting}{7}{section.71}\protected@file@percent }
+\newlabel{sec:burgers-results}{{9}{7}{Burgers Results in the HPROM-Consistent Setting}{section.71}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}Error Definitions}{7}{subsection.72}\protected@file@percent }
+\newlabel{eq:traj-error-def}{{38}{7}{Error Definitions}{equation.73}{}}
+\newlabel{eq:coeff-error-def}{{39}{7}{Error Definitions}{equation.74}{}}
+\newlabel{eq:heatmap-error-def}{{40}{7}{Error Definitions}{equation.75}{}}
+\newlabel{eq:speedup-def}{{41}{7}{Error Definitions}{equation.76}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Trajectory Errors and Online Cost}{7}{subsection.77}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Baseline stage, HPROM online solve: relative trajectory errors (\%) vs HDM.}}{7}{table.79}\protected@file@percent }
+\newlabel{tab:burgers-baseline-errors}{{1}{7}{Baseline stage, HPROM online solve: relative trajectory errors (\%) vs HDM}{table.79}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Enriched stage, HPROM online solve: relative trajectory errors (\%) vs HDM.}}{8}{table.81}\protected@file@percent }
+\newlabel{tab:burgers-enriched-errors}{{2}{8}{Enriched stage, HPROM online solve: relative trajectory errors (\%) vs HDM}{table.81}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Average online cost over $\bm  {\mu }^{(v)}$, $\bm  {\mu }^{(1)}$, and $\bm  {\mu }^{(2)}$.}}{8}{table.83}\protected@file@percent }
+\newlabel{tab:burgers-online-cost}{{3}{8}{Average online cost over $\bm \mu ^{(v)}$, $\bm \mu ^{(1)}$, and $\bm \mu ^{(2)}$}{table.83}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}Solution Overlays}{8}{subsection.84}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Verification-point HDM snapshot at $t=10$ s (top) and extracted cut-planes (bottom).}}{8}{figure.86}\protected@file@percent }
+\newlabel{fig:verification-3d-cutplanes-t10}{{2}{8}{Verification-point HDM snapshot at $t=10$ s (top) and extracted cut-planes (bottom)}{figure.86}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Verification-point HDM snapshot at $t=20$ s (top) and extracted cut-planes (bottom).}}{9}{figure.88}\protected@file@percent }
+\newlabel{fig:verification-3d-cutplanes-t20}{{3}{9}{Verification-point HDM snapshot at $t=20$ s (top) and extracted cut-planes (bottom)}{figure.88}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Baseline models, HPROM online solve: HDM vs Linear HPROM, PROM-ANN Case~1, PROM-ANN Case~2, PROM-ANN Case~3, PROM-POD-AE, POD-NN-ROM, and POD-DL-ROM at the three evaluation points.}}{10}{figure.90}\protected@file@percent }
+\newlabel{fig:all-models-baseline-hprom}{{4}{10}{Baseline models, HPROM online solve: HDM vs Linear HPROM, PROM-ANN Case~1, PROM-ANN Case~2, PROM-ANN Case~3, PROM-POD-AE, POD-NN-ROM, and POD-DL-ROM at the three evaluation points}{figure.90}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Enriched models, HPROM online solve: HDM vs Linear HPROM, PROM-ANN Case~1, PROM-ANN Case~2, PROM-ANN Case~3, PROM-POD-AE, POD-NN-ROM, and POD-DL-ROM at the three evaluation points.}}{11}{figure.92}\protected@file@percent }
+\newlabel{fig:all-models-enriched-hprom}{{5}{11}{Enriched models, HPROM online solve: HDM vs Linear HPROM, PROM-ANN Case~1, PROM-ANN Case~2, PROM-ANN Case~3, PROM-POD-AE, POD-NN-ROM, and POD-DL-ROM at the three evaluation points}{figure.92}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.4}Coefficient-Space Diagnostics}{11}{subsection.93}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Baseline stage: per-index absolute and relative coefficient errors at $\bm  {\mu }^{(v)}=(4.875,0.0225)$.}}{12}{figure.95}\protected@file@percent }
+\newlabel{fig:coeff-curves-baseline-verif}{{6}{12}{Baseline stage: per-index absolute and relative coefficient errors at $\bm \mu ^{(v)}=(4.875,0.0225)$}{figure.95}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Enriched stage: per-index absolute and relative coefficient errors at $\bm  {\mu }^{(v)}=(4.875,0.0225)$.}}{13}{figure.97}\protected@file@percent }
+\newlabel{fig:coeff-curves-enriched-verif}{{7}{13}{Enriched stage: per-index absolute and relative coefficient errors at $\bm \mu ^{(v)}=(4.875,0.0225)$}{figure.97}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Baseline stage: absolute coefficient-error heatmaps at $\bm  {\mu }^{(v)}=(4.875,0.0225)$.}}{14}{figure.99}\protected@file@percent }
+\newlabel{fig:heatmap-abs-baseline-verif}{{8}{14}{Baseline stage: absolute coefficient-error heatmaps at $\bm \mu ^{(v)}=(4.875,0.0225)$}{figure.99}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Enriched stage: absolute coefficient-error heatmaps at $\bm  {\mu }^{(v)}=(4.875,0.0225)$.}}{15}{figure.101}\protected@file@percent }
+\newlabel{fig:heatmap-abs-enriched-verif}{{9}{15}{Enriched stage: absolute coefficient-error heatmaps at $\bm \mu ^{(v)}=(4.875,0.0225)$}{figure.101}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {10}Shallow-Water Benchmark and Experimental Protocol}{15}{section.102}\protected@file@percent }
+\newlabel{sec:shallowwater}{{10}{15}{Shallow-Water Benchmark and Experimental Protocol}{section.102}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.1}Governing equations and parameterized initial condition}{15}{subsection.103}\protected@file@percent }
 \bibstyle{unsrt}
 \bibdata{bibliography}
 \bibcite{antoulas2005approximation}{1}
@@ -78,11 +117,11 @@
 \bibcite{aghili2026nonlinear}{5}
 \bibcite{romor2025explicable}{6}
 \bibcite{fresca2022pod}{7}
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Numerical setup}{7}{subsection.69}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}Sampling protocol aligned with Burgers}{7}{subsection.70}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {10}Scope for the Current Draft}{7}{section.71}\protected@file@percent }
 \bibcite{farhat2015structure}{8}
 \bibcite{de2023hyper}{9}
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.2}Numerical setup}{16}{subsection.108}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.3}Sampling protocol aligned with Burgers}{16}{subsection.109}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {11}Scope of the Study}{16}{section.110}\protected@file@percent }
 \bibcite{chen2021physics}{10}
 \bibcite{sibuet2025discrete}{11}
-\gdef \@abspage@last{8}
+\gdef \@abspage@last{17}

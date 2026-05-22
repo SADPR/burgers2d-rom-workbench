@@ -1,0 +1,668 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{makecell}
+\sisetup{
+  round-mode=places,
+  round-precision=2,
+  exponent-mode=threshold,
+  exponent-thresholds=-2:2,
+  exponent-product=\times
+}
+
+\title{Choice of POD Metric and Stabilization of High Modes in Case-2 LSPG: \\Mathematical Formulation and Numerical Results}
+\author{Project\_YvonMaday}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Purpose of this note}
+This note presents, in a single document, the mathematical formulation of the three metric-based proposals and the numerical evidence obtained in the current test campaign.
+The presentation follows the same didactic style used in the previous theoretical note: first the model and reduced formulations, then the proposals, and finally the numerical interpretation.
+
+The reference test point is
+\[
+\bm\mu=(\mu_1,\mu_2)=(4.56,0.019),
+\]
+with reduced dimensions
+\[
+n_{\mathrm{tot}}=151,\qquad n=10,\qquad \bar n=n_{\mathrm{tot}}-n=141.
+\]
+
+\section{Context and notation}
+The full-order model is written in residual form as
+\[
+\mathbf R(\mathbf u(\bm\mu);\bm\mu)=\mathbf 0.
+\]
+For each parameter sample, a high-fidelity solver provides states
+\[
+\mathbf u_h(\bm\mu_i)\in\mathbb R^N,\qquad i=1,\ldots,N_{snap},
+\]
+from which a snapshot matrix is assembled:
+\[
+\mathbf S=[\mathbf u_h(\bm\mu_1),\ldots,\mathbf u_h(\bm\mu_{N_{snap}})]\in\mathbb R^{N\times N_{snap}}.
+\]
+
+The reduced basis is split as
+\[
+\mathbf V_{tot}=[\mathbf V\ \overline{\mathbf V}],
+\qquad
+\mathbf q_N=\begin{bmatrix}\mathbf q\\ \bar{\mathbf q}\end{bmatrix},
+\]
+with affine reconstruction
+\[
+\tilde{\mathbf u}=\mathbf u_{ref}+\mathbf V\mathbf q+\overline{\mathbf V}\bar{\mathbf q}.
+\]
+
+\section{Discrete residual and reduced objectives}
+At one implicit time step \(t_{k+1}\), for fixed parameter \(\bm\mu\), with previous state \(\mathbf w_k\), the discrete residual is
+\[
+\mathbf r^{k+1}(\mathbf w;\bm\mu)=\mathbf 0,
+\]
+and the Jacobian is
+\[
+\mathbf J^{k+1}(\mathbf w;\bm\mu)=\frac{\partial \mathbf r^{k+1}}{\partial \mathbf w}(\mathbf w;\bm\mu).
+\]
+
+\subsection*{Linear reduced reference problem}
+The linear reduced trajectory is obtained by solving, at each step,
+\[
+\mathbf q_{N,k+1}^{lin}
+=\arg\min_{\mathbf q_N\in\mathbb R^{n_{\mathrm{tot}}}}
+\frac12\left\|\mathbf r^{k+1}\big(\mathbf u_{ref}+\mathbf V_{tot}\mathbf q_N;\bm\mu\big)\right\|_2^2.
+\]
+This trajectory defines
+\[
+\mathbf q_N^{lin}(t_k;\bm\mu)=
+\begin{bmatrix}
+\mathbf q^{lin}(t_k;\bm\mu)\\
+\bar{\mathbf q}^{lin}(t_k;\bm\mu)
+\end{bmatrix}.
+\]
+
+\subsection*{Case-2 oracle setting}
+The oracle high coefficients are prescribed as
+\[
+\bar{\mathbf q}^{oracle}(t_k;\bm\mu)=\bar{\mathbf q}^{lin}(t_k;\bm\mu),
+\]
+and only low coordinates are solved online.
+The trial state is
+\[
+\begin{aligned}
+\mathbf w(\mathbf q,t_k;\bm\mu)
+&=\mathbf u_{ref}+\mathbf V\mathbf q
++\overline{\mathbf V}\bar{\mathbf q}^{oracle}(t_k;\bm\mu),\\
+\mathbf q&\in\mathbb R^{n}.
+\end{aligned}
+\]
+
+The low-coordinate objective used in this report is the projected LSPG objective:
+\[
+\begin{aligned}
+\mathbf q_{k+1}^{oracle,proj}(\bm\mu)
+&=\arg\min_{\mathbf q\in\mathbb R^{n}}
+\frac12\left\|\mathbf s^{k+1}(\mathbf q;\bm\mu)\right\|_2^2,\\
+\mathbf s^{k+1}(\mathbf q;\bm\mu)
+&=\left(\mathbf J^{k+1}\big(\mathbf w(\mathbf q,t_{k+1};\bm\mu);\bm\mu\big)\mathbf V_{tot}\right)^T\\
+&\quad\cdot\mathbf r^{k+1}\big(\mathbf w(\mathbf q,t_{k+1};\bm\mu);\bm\mu\big).
+\end{aligned}
+\]
+
+\paragraph{Oracle protocol.}
+For the unperturbed oracle (\(0\%\)), at each step \(k+1\) we set
+\[
+\mathbf q_{k+1}^{(0)}=\mathbf q_{low}^{lin}(t_{k+1};\bm\mu),
+\qquad
+\mathbf w_k=\mathbf u_{lin}(t_k;\bm\mu),
+\]
+and solve the same projected reduced optimization.
+For Proposal 2 and Proposal 3, linear coefficients are taken in the same corrected basis used online.
+This defines the \(0\%\) oracle experiment as a direct reproduction test of the corresponding linear reduced trajectory.
+
+\section{Why high-mode errors contaminate low coordinates}
+Define
+\[
+\mathbf J_L^{k+1}=\mathbf J^{k+1}\mathbf V,
+\qquad
+\mathbf J_H^{k+1}=\mathbf J^{k+1}\overline{\mathbf V}.
+\]
+For fixed high coordinates, the local low-coordinate objective is
+\[
+\Phi_{k+1}(\mathbf q;\bar{\mathbf q};\bm\mu)=
+\frac12\left\|
+\mathbf r^{k+1}\big(
+\mathbf u_{ref}+\mathbf V\mathbf q+\overline{\mathbf V}\bar{\mathbf q};\bm\mu
+\big)\right\|_{\mathbf P}^2,
+\]
+with stationarity
+\[
+\nabla_{\mathbf q}\Phi_{k+1}=(\mathbf J_L^{k+1})^T\mathbf P\,\mathbf r^{k+1}=\mathbf 0.
+\]
+
+If high coefficients are perturbed,
+\[
+\bar{\mathbf q}\mapsto \bar{\mathbf q}+\delta\bar{\mathbf q},
+\]
+then, after linearization,
+\[
+\delta\mathbf q
+=-\left((\mathbf J_L^{k+1})^T\mathbf P\mathbf J_L^{k+1}\right)^{-1}
+\left((\mathbf J_L^{k+1})^T\mathbf P\mathbf J_H^{k+1}\right)\delta\bar{\mathbf q}.
+\]
+Hence the transfer operator
+\[
+\mathbf T^{k+1}=
+\left((\mathbf J_L^{k+1})^T\mathbf P\mathbf J_L^{k+1}\right)^{-1}
+\left((\mathbf J_L^{k+1})^T\mathbf P\mathbf J_H^{k+1}\right)
+\]
+controls the amplification from high-mode errors to low-mode errors.
+
+\subsection*{How to measure \(\|\mathbf T\|\) and identify dangerous high-mode directions}
+The linearized relation
+\[
+\delta\mathbf q^{k+1}\approx-\mathbf T^{k+1}\delta\bar{\mathbf q}^{k+1}
+\]
+implies that the relevant gain is the induced operator norm
+\[
+\|\mathbf T^{k+1}\|_{2}
+=
+\sup_{\delta\bar{\mathbf q}\neq 0}
+\frac{\|\delta\mathbf q\|_2}{\|\delta\bar{\mathbf q}\|_2}.
+\]
+Therefore, \(\|\mathbf T^{k+1}\|_2\) is the worst-case local amplification from high-coordinate perturbations to low-coordinate perturbations.
+
+In practice, we compute \(\mathbf T^{k+1}\) at each time step from the linear reference trajectory:
+\[
+\mathbf T^{k+1}
+\in
+\arg\min_{\mathbf X\in\mathbb R^{n\times\bar n}}
+\left\|
+\mathbf J_L^{k+1}\mathbf X-\mathbf J_H^{k+1}
+\right\|_{\mathbf P,F},
+\]
+which is equivalent to
+\[
+\left((\mathbf J_L^{k+1})^T\mathbf P\mathbf J_L^{k+1}\right)\mathbf T^{k+1}
+=
+(\mathbf J_L^{k+1})^T\mathbf P\mathbf J_H^{k+1},
+\]
+with a small Tikhonov regularization in the \(n\times n\) system when needed.
+
+Now write the singular value decomposition
+\[
+\mathbf T^{k+1}=\mathbf U^{k+1}\mathbf\Sigma^{k+1}(\mathbf V^{k+1})^T,
+\qquad
+\mathbf\Sigma^{k+1}=
+\mathrm{diag}(\sigma_1^{k+1},\ldots,\sigma_r^{k+1}),
+\]
+where \(r=\min(n,\bar n)\) and
+\[
+\sigma_1^{k+1}\ge \sigma_2^{k+1}\ge\cdots\ge\sigma_r^{k+1}\ge 0.
+\]
+Then:
+\begin{itemize}[leftmargin=1.5em]
+\item \(\sigma_1^{k+1}=\|\mathbf T^{k+1}\|_2\): worst-case amplification factor.
+\item The right singular vector \(\mathbf v_1^{k+1}\in\mathbb R^{\bar n}\) gives the high-mode perturbation direction that maximizes low-mode contamination.
+\item The corresponding low-mode response direction is \(\mathbf u_1^{k+1}\in\mathbb R^n\).
+\end{itemize}
+
+For an actual perturbation \(\delta\bar{\mathbf q}\), let
+\[
+\delta\bar{\mathbf q}=\sum_{i=1}^{r} c_i\,\mathbf v_i,
+\qquad
+c_i=(\mathbf v_i)^T\delta\bar{\mathbf q}.
+\]
+Then
+\[
+\delta\mathbf q
+\approx
+-\sum_{i=1}^{r}\sigma_i c_i\,\mathbf u_i,
+\]
+and the squared low-error is decomposed as
+\[
+\|\delta\mathbf q\|_2^2
+\approx
+\sum_{i=1}^{r}\sigma_i^2 c_i^2.
+\]
+This decomposition is the quantitative way to say ``which high-mode directions are dangerous'':
+large \(\sigma_i\) with large projection \(c_i\) dominate contamination.
+
+Hence, beyond reporting a single \(1\%\) perturbation test, the \(\mathbf T\)-SVD analysis explains \emph{why} contamination is mild or severe, and whether the observed error is aligned with intrinsically sensitive directions.
+
+\section{Three metric-based proposals}
+\subsection*{Proposal 1: weighted POD with physically consistent metric}
+Weighted POD is defined from
+\[
+\mathbf C=\mathbf S^T\mathbf W\mathbf S.
+\]
+The baseline choice is
+\[
+\mathbf W=\mathbf M_{block}=
+\begin{bmatrix}
+\mathbf M_h & 0\\
+0 & \mathbf M_h
+\end{bmatrix},
+\]
+which corresponds to a discrete \(L^2\)-type norm of the vector state.
+
+To include LSPG sensitivity directly in the basis extraction, use
+\[
+\mathbf W_{eff}
+=\varepsilon\mathbf M_{block}
++\sum_s\omega_s\mathbf J_s^T\mathbf P_s\mathbf J_s,
+\qquad
+\omega_s\ge 0,
+\quad
+\sum_s\omega_s=1.
+\]
+
+\subsection*{Proposal 2: modify only high modes}
+Keep \(\mathbf V\) fixed and set
+\[
+\widetilde{\overline{\mathbf V}}=\overline{\mathbf V}-\mathbf V\mathbf K,
+\qquad
+\mathbf K=(\mathbf H_{LL}+\lambda\mathbf I)^{-1}\mathbf H_{LH},
+\]
+with
+\[
+\mathbf H_{LL}=\mathbf V^T\mathbf A\mathbf V,
+\qquad
+\mathbf H_{LH}=\mathbf V^T\mathbf A\overline{\mathbf V},
+\qquad
+\mathbf A=\sum_s\omega_s\mathbf J_s^T\mathbf P_s\mathbf J_s.
+\]
+This enforces low-high orthogonality in metric \(\mathbf A\) while preserving the low online subspace.
+
+\subsection*{Proposal 3: modify only low modes}
+Keep \(\overline{\mathbf V}\) fixed and set
+\[
+\widetilde{\mathbf V}=\mathbf V-\overline{\mathbf V}\mathbf L,
+\qquad
+\mathbf L=(\mathbf H_{HH}+\lambda\mathbf I)^{-1}\mathbf H_{HL},
+\]
+with
+\[
+\mathbf H_{HH}=\overline{\mathbf V}^T\mathbf A\overline{\mathbf V},
+\qquad
+\mathbf H_{HL}=\overline{\mathbf V}^T\mathbf A\mathbf V.
+\]
+
+\section{Numerical protocol at \texorpdfstring{\(\bm\mu=(4.56,0.019)\)}{mu=(4.56,0.019)}}
+Five basis families are compared:
+\begin{itemize}[leftmargin=1.5em]
+\item Euclidean POD basis,
+\item Proposal 1 with \(M_{block}\),
+\item Proposal 1 with \(W_{eff}\),
+\item Proposal 2 correction applied to Proposal 1 (\(W_{eff}\)),
+\item Proposal 3 correction applied to Proposal 1 (\(W_{eff}\)).
+\end{itemize}
+
+For each family, the following are evaluated:
+\begin{enumerate}[leftmargin=1.5em]
+\item Linear reduced reference trajectory.
+\item Oracle test with \(0\%\) perturbation.
+\item Oracle test with \(1\%\) perturbation of \(\bar{\mathbf q}^{oracle}\).
+\end{enumerate}
+
+For the Weff campaign reported here, Stage-1 and correction metrics are built with all available offline states:
+\[
+\{(\mu_i,t_k)\}_{\substack{i=1,\dots,N_\mu\\k=0,\dots,N_t}},
+\]
+without temporal subsampling and without random sample caps.
+The LSPG-averaged metric uses quadrature-consistent weights
+\[
+\omega_{i,k}
+\propto
+w_i^\mu\,w_k^t,
+\qquad
+w_i^\mu=\frac{1}{N_\mu},
+\]
+with trapezoidal weights in time:
+\[
+w_k^t=
+\begin{cases}
+\frac{\Delta t}{2}, & k=0,\\[2pt]
+\Delta t, & 1\le k\le N_t-1,\\[2pt]
+\frac{\Delta t}{2}, & k=N_t.
+\end{cases}
+\]
+After normalization,
+\[
+\sum_{i=1}^{N_\mu}\sum_{k=0}^{N_t}\omega_{i,k}=1.
+\]
+
+The regularization term in \(W_{eff}\) is set by trace scaling:
+\[
+\epsilon=\eta\,\frac{\mathrm{tr}(C_J)}{\mathrm{tr}(C_M)},
+\]
+where \(C_M=S^TM_{block}S\), \(C_J=S^T\!\left(\sum_{i,k}\omega_{i,k}J_{i,k}^TP_{i,k}J_{i,k}\right)\!S\), and \(\eta>0\) is a dimensionless user parameter.
+This makes \(\epsilon M_{block}\) relative to the LSPG-sensitivity scale instead of using an absolute \(\epsilon\).
+
+For cross-method comparison, \(n_{tot}\) is fixed to 151 modes in all branches.
+This isolates the effect of metric choice/correction from the effect of changing reduced dimension.
+
+\section{Results}
+\noindent
+\textbf{Note on oracle protocol.}
+All oracle tables below are obtained with the protocol defined in Section~2: the \(0\%\) oracle check uses the linear-reference previous state and step initialization for each basis family.
+Only the projected-residual oracle formulation is reported.
+
+\subsection*{Definition of reported error columns}
+All trajectory errors are reported on the common time grid and in percent. Let
+\begin{align*}
+U^{a} &=
+[\mathbf u^{a}(t_0),\ldots,\mathbf u^{a}(t_{N_t})],\\
+U^{lin} &=
+[\mathbf u^{lin}(t_0),\ldots,\mathbf u^{lin}(t_{N_t})],\\
+U^{hdm} &=
+[\mathbf u^{hdm}(t_0),\ldots,\mathbf u^{hdm}(t_{N_t})].
+\end{align*}
+where \(a\) denotes the method/basis row of each table.
+The state errors used in the tables are
+\[
+\mathrm{rel.\ err.\ vs\ HDM}(\%)
+=
+100\frac{\|U^{a}-U^{hdm}\|_F}{\|U^{hdm}\|_F},
+\]
+\[
+\mathrm{rel.\ err.\ vs\ linear}(\%)
+=
+100\frac{\|U^{a}-U^{lin}\|_F}{\|U^{lin}\|_F}.
+\]
+For the \(1\%\) oracle perturbation test, the same formulas are applied with perturbed trajectories \(U^{a,\delta}\):
+\[
+\mathrm{rel.\ err.\ vs\ HDM\ (1\%)}(\%)
+=
+100\frac{\|U^{a,\delta}-U^{hdm}\|_F}{\|U^{hdm}\|_F},
+\]
+\[
+\mathrm{rel.\ err.\ vs\ linear\ (1\%)}(\%)
+=
+100\frac{\|U^{a,\delta}-U^{lin}\|_F}{\|U^{lin}\|_F}.
+\]
+
+For reduced coordinates, with
+\[
+Q_{low}^{a}=[\mathbf q_{low}^{a}(t_0),\ldots,\mathbf q_{low}^{a}(t_{N_t})],
+\qquad
+Q_{low}^{lin}=[\mathbf q_{low}^{lin}(t_0),\ldots,\mathbf q_{low}^{lin}(t_{N_t})],
+\]
+the low-coefficient errors are
+\[
+\mathrm{rel.\ low\text{-}coeff\ (0\%)}(\%)
+=
+100\frac{\|Q_{low}^{a}-Q_{low}^{lin}\|_F}{\|Q_{low}^{lin}\|_F},
+\]
+\[
+\mathrm{rel.\ low\text{-}coeff\ (1\%)}(\%)
+=
+100\frac{\|Q_{low}^{a,\delta}-Q_{low}^{lin}\|_F}{\|Q_{low}^{lin}\|_F}.
+\]
+
+In Stage-1 diagnostics, the reported POD ``energy lost'' is
+\[
+\mathrm{energy\ lost}
+=
+1-\frac{\sum_{i=1}^{n_{keep}}\lambda_i}{\sum_{i=1}^{n_{avail}}\lambda_i},
+\]
+where \(\lambda_i\) are eigenvalues of the corresponding correlation operator.
+
+In the transfer-operator table, the drop column is
+\[
+\mathrm{drop\ in\ }\max_k\sigma_1(\mathbf T^k)\ \mathrm{vs\ Euclidean}(\%)
+=
+100\left(1-\frac{\max_k\sigma_1(\mathbf T^k)^{(a)}}{\max_k\sigma_1(\mathbf T^k)^{(eucl)}}\right).
+\]
+
+\subsection*{Stage-1 basis diagnostics}
+\begin{longtable}{lrrrr}
+\toprule
+Basis & \(n_{keep}\) & \(n_{avail}\) & energy lost & metric orthogonality check \\
+\midrule
+Euclidean & 151 & 4509 & \(\num{9.971640e-5}\) & -- \\
+Proposal 1 (\(M_{block}\)) & 151 & 4509 & \(\num{9.971640e-5}\) & \(\|V^T W V-I\|_F=\num{2.156567e-14}\) \\
+Proposal 1 (\(W_{eff}\)) & 151 & 1508 & \(\num{1.172032e-4}\) & -- (Gram check skipped in this run) \\
+\bottomrule
+\end{longtable}
+
+For Proposal 2 and Proposal 3 (built from Proposal 1 with \(W_{eff}\)):
+\[
+\|H_{LH}\|_F: \num{2.335794e-12}\rightarrow \num{2.335706e-24},
+\]
+\[
+\|H_{HL}\|_F: \num{2.335794e-12}\rightarrow \num{2.335649e-24}.
+\]
+However, correction amplitudes are very small:
+\[
+\|\mathbf K\|_F=\num{2.335794e-12},
+\qquad
+\|\mathbf L\|_F=\num{2.335794e-12}.
+\]
+
+\subsection*{Linear reduced reference errors}
+\begin{longtable}{lrrr}
+\toprule
+Basis & rel. error vs HDM (\%) & iterations & online time (s) \\
+\midrule
+Euclidean & \(\num{0.449823851425}\) & 1503 & \(\num{1055.559450}\) \\
+Proposal 1 (\(M_{block}\)) & \(\num{0.449823851425}\) & 1503 & \(\num{1050.393496}\) \\
+Proposal 1 (\(W_{eff}\)) & \(\num{0.459617265595}\) & 1500 & \(\num{1040.153574}\) \\
+Proposal 2 & \(\num{0.459617265595}\) & 1500 & \(\num{1039.912577}\) \\
+Proposal 3 & \(\num{0.459617265595}\) & 1500 & \(\num{1039.992687}\) \\
+\bottomrule
+\end{longtable}
+
+\subsection*{Oracle test, 0\% perturbation}
+\[
+\bar{\mathbf q}^{oracle}(t;\bm\mu)=\bar{\mathbf q}^{lin}(t;\bm\mu).
+\]
+\begin{longtable}{lrrr}
+\toprule
+Basis &
+\makecell[c]{rel. err.\\vs HDM (\%)} &
+\makecell[c]{rel. err.\\vs linear (\%)} &
+\makecell[c]{rel. low-coeff\\(\%)} \\
+\midrule
+Euclidean & \(\num{0.449823832130}\) & \(\num{1.996863e-6}\) & \(\num{4.706076e-6}\) \\
+Proposal 1 (\(M_{block}\)) & \(\num{0.449823832130}\) & \(\num{1.996863e-6}\) & \(\num{4.706076e-6}\) \\
+Proposal 1 (\(W_{eff}\)) & \(\num{0.459617238747}\) & \(\num{1.772036e-6}\) & \(\num{4.186324e-6}\) \\
+Proposal 2 & \(\num{0.459617238747}\) & \(\num{1.772036e-6}\) & \(\num{4.186324e-6}\) \\
+Proposal 3 & \(\num{0.459617238747}\) & \(\num{1.772036e-6}\) & \(\num{4.186324e-6}\) \\
+\bottomrule
+\end{longtable}
+
+\subsection*{Oracle perturbation tests (five-seed statistics at \(1\%\) and \(2\%\))}
+To assess directional representativeness at fixed amplitude, we ran five independent random perturbation directions (seeds \(11,23,42,77,101\)) for each basis family, at both perturbation levels \(1\%\) and \(2\%\), for a total of \(50\) oracle-PG runs.
+Each perturbation is normalized to satisfy
+\[
+\frac{\|\delta\bar{\mathbf q}\|_F}{\|\bar{\mathbf q}^{oracle}\|_F}\approx \alpha\%,
+\qquad \alpha\in\{1,2\}.
+\]
+All entries are reported as mean \(\pm\) standard deviation across the five seeds, in percent.
+In the table, labels are abbreviated as:
+\(E\) (Euclidean), \(P1(M)\) (Proposal 1 with \(M_{block}\)),
+\(P1(W)\) (Proposal 1 with \(W_{eff}\)), \(P2\) (Proposal 2), \(P3\) (Proposal 3).
+
+\begingroup
+\setlength{\tabcolsep}{2.5pt}
+\small
+\sisetup{
+  round-mode=places,
+  round-precision=3,
+  exponent-mode=threshold,
+  exponent-thresholds=-3:2,
+  output-exponent-marker=\mathrm{e}
+}
+\begin{longtable}{llrrr}
+\toprule
+Basis &
+\makecell[c]{perturbation\\level} &
+\makecell[c]{err. vs linear\\(\%)} &
+\makecell[c]{err. vs HDM\\(\%)} &
+\makecell[c]{rel. low-coeff\\(\%)} \\
+\midrule
+E & \(1\%\) & \(\num{0.0935}\pm\num{4.89e-4}\) & \(\num{0.4592}\pm\num{1.12e-4}\) & \(\num{0.0218}\pm\num{9.29e-3}\) \\
+E & \(2\%\) & \(\num{0.1879}\pm\num{1.36e-3}\) & \(\num{0.4867}\pm\num{3.94e-4}\) & \(\num{0.0609}\pm\num{2.04e-2}\) \\
+\midrule
+P1(M) & \(1\%\) & \(\num{0.0935}\pm\num{4.89e-4}\) & \(\num{0.4592}\pm\num{1.12e-4}\) & \(\num{0.0218}\pm\num{9.29e-3}\) \\
+P1(M) & \(2\%\) & \(\num{0.1879}\pm\num{1.36e-3}\) & \(\num{0.4867}\pm\num{3.94e-4}\) & \(\num{0.0609}\pm\num{2.04e-2}\) \\
+\midrule
+P1(W) & \(1\%\) & \(\num{0.0903}\pm\num{1.13e-4}\) & \(\num{0.4681}\pm\num{1.16e-4}\) & \(\num{0.0145}\pm\num{3.82e-3}\) \\
+P1(W) & \(2\%\) & \(\num{0.1811}\pm\num{3.85e-4}\) & \(\num{0.4931}\pm\num{2.16e-4}\) & \(\num{0.0413}\pm\num{9.33e-3}\) \\
+\midrule
+P2 & \(1\%\) & \(\num{0.0903}\pm\num{1.13e-4}\) & \(\num{0.4681}\pm\num{1.16e-4}\) & \(\num{0.0145}\pm\num{3.82e-3}\) \\
+P2 & \(2\%\) & \(\num{0.1811}\pm\num{3.85e-4}\) & \(\num{0.4931}\pm\num{2.16e-4}\) & \(\num{0.0413}\pm\num{9.33e-3}\) \\
+\midrule
+P3 & \(1\%\) & \(\num{0.0903}\pm\num{1.13e-4}\) & \(\num{0.4681}\pm\num{1.16e-4}\) & \(\num{0.0145}\pm\num{3.82e-3}\) \\
+P3 & \(2\%\) & \(\num{0.1811}\pm\num{3.85e-4}\) & \(\num{0.4931}\pm\num{2.16e-4}\) & \(\num{0.0413}\pm\num{9.33e-3}\) \\
+\bottomrule
+\end{longtable}
+\endgroup
+
+At \(1\%\), the Weff family (Proposal 1 with \(W_{eff}\), Proposal 2, Proposal 3) lowers the mean low-coordinate contamination from \(\num{0.0218}\%\) to \(\num{0.0145}\%\), i.e. \(33.7\%\) reduction relative to Euclidean/\(M_{block}\).
+At \(2\%\), the same reduction persists: \(\num{0.0609}\%\rightarrow\num{0.0413}\%\), i.e. \(32.3\%\) reduction.
+Across both families, doubling perturbation amplitude from \(1\%\) to \(2\%\) approximately doubles \(\mathrm{err.\ vs\ linear}\) (factor \(\approx 2.0\)), while \(\mathrm{rel.\ low\text{-}coeff}\) grows superlinearly (factor \(\approx 2.8\)).
+
+\subsection*{Transfer-operator norm and SVD diagnostics}
+Using the linear reference trajectory, we evaluated \(\mathbf T^k\) at each time step and extracted
+\(\sigma_1(\mathbf T^k)=\|\mathbf T^k\|_2\).
+Here \(\sigma_1\) denotes the largest \emph{singular value} of \(\mathbf T^k\), not an eigenvalue.
+This distinction is essential because \(\mathbf T^k\in\mathbb R^{n\times\bar n}\) is rectangular.
+By definition of the induced Euclidean norm,
+\[
+\|\mathbf T^k\|_2
+=
+\sup_{\mathbf x\neq 0}\frac{\|\mathbf T^k\mathbf x\|_2}{\|\mathbf x\|_2}
+=
+\sigma_{\max}(\mathbf T^k)
+=
+\sigma_1(\mathbf T^k),
+\]
+so \(\sigma_1\) is the worst-case low-mode amplification factor for a unit perturbation in high-coordinate space.
+
+The corresponding right singular vector \(\mathbf v_1^k\in\mathbb R^{\bar n}\) identifies the high-mode direction that maximizes contamination at step \(k\), and the left singular vector \(\mathbf u_1^k\in\mathbb R^n\) gives the associated low-mode response direction.
+\begin{longtable}{lrrrr}
+\toprule
+Basis &
+\makecell[c]{\(\max_k \sigma_1(\mathbf T^k)\)} &
+\makecell[c]{mean\\\(\sigma_1(\mathbf T^k)\)} &
+\makecell[c]{p95\\\(\sigma_1(\mathbf T^k)\)} &
+\makecell[c]{drop in\\\(\max_k \sigma_1\) vs Euclidean (\%)} \\
+\midrule
+Euclidean & \(\num{3.472890e-2}\) & \(\num{2.837604e-2}\) & \(\num{3.383001e-2}\) & \(\num{0.0}\) \\
+Proposal 1 (\(M_{block}\)) & \(\num{3.472890e-2}\) & \(\num{2.837604e-2}\) & \(\num{3.383001e-2}\) & \(\num{0.0}\) \\
+Proposal 1 (\(W_{eff}\)) & \(\num{2.056093e-2}\) & \(\num{1.456762e-2}\) & \(\num{1.965330e-2}\) & \(\num{40.80}\) \\
+Proposal 2 & \(\num{2.056093e-2}\) & \(\num{1.456762e-2}\) & \(\num{1.965330e-2}\) & \(\num{40.80}\) \\
+Proposal 3 & \(\num{2.056093e-2}\) & \(\num{1.456762e-2}\) & \(\num{1.965330e-2}\) & \(\num{40.80}\) \\
+\bottomrule
+\end{longtable}
+Hence, in this run, the measurable reduction in the low/high contamination operator is produced by Proposal 1 (\(W_{eff}\)) relative to Euclidean/\(M_{block}\), while Proposal 2 and Proposal 3 do not add further reduction beyond that Weff baseline.
+An auxiliary fit diagnostic,
+\[
+\frac{\|\mathbf J_L\mathbf T-\mathbf J_H\|_F}{\|\mathbf J_H\|_F},
+\]
+is close to \(1\) for all branches in this case, meaning \(\mathbf J_H\) is largely transverse to \(\mathrm{Range}(\mathbf J_L)\); therefore \(\mathbf T\) captures the projected contamination channel, not a full reconstruction of high-block Jacobian directions.
+
+\paragraph{Dominant right-singular directions at \(\sigma_1\)-peak.}
+The leading entries of the right singular vector \(\mathbf v_1^k\) were extracted at the time step where \(\sigma_1(\mathbf T^k)\) is maximal for each branch.
+Indices below are reported with the implementation indexing convention (0-based).
+For clarity, if an entry is reported as \(j:a\), it means
+\[
+(\mathbf v_1^k)_j=a,
+\]
+where \(j\) refers to the \(j\)-th coordinate in the secondary-coefficient space
+\(\bar{\mathbf q}\in\mathbb R^{\bar n}\).
+Hence the same entry corresponds to full reduced index \(n+j\) in
+\[
+\mathbf q_N=
+\begin{bmatrix}
+\mathbf q\\
+\bar{\mathbf q}
+\end{bmatrix}.
+\]
+Equivalently, in state space, this component acts through column \(j\) of
+\(\overline{\mathbf V}\), i.e. through the mode \(\overline{\mathbf V}_{(:,j)}\).
+\begin{longtable}{lllp{0.40\textwidth}}
+\toprule
+Branch & \(\arg\max_k \sigma_1(\mathbf T^k)\) & \(t_k\) & dominant entries of \(\mathbf v_1^k\) (index:value) \\
+\midrule
+Euclidean / \(P1(M)\) & \(k=40\) & \(2.0\) &
+\(6\!:\!-2.201\mathrm{e}{-1},\ 5\!:\!2.192\mathrm{e}{-1},\ 7\!:\!2.010\mathrm{e}{-1},\ 4\!:\!-1.796\mathrm{e}{-1}\) \\
+Weff / \(P2\) / \(P3\) & \(k=42\) & \(2.1\) &
+\(5\!:\!2.539\mathrm{e}{-1},\ 12\!:\!-2.427\mathrm{e}{-1},\ 4\!:\!-2.383\mathrm{e}{-1},\ 6\!:\!-2.355\mathrm{e}{-1}\) \\
+\bottomrule
+\end{longtable}
+This confirms that the dominant contamination directions differ between
+the \(E/P1(M)\) branches and the Weff family.
+
+\section{Interpretation of the observed behavior}
+\subsection*{(i) Euclidean and \(M_{block}\) branches}
+At this mesh and test setting, both branches are numerically almost identical: same retained dimension, same energy loss, same linear error, and near-identical oracle behavior.
+This is consistent with the fact that the discrete mass weighting is close to a scaled Euclidean weighting on a structured grid.
+
+\subsection*{(ii) Effect of \(W_{eff}\)}
+The enriched metric modifies the snapshot correlation operator and changes the reduced basis geometry.
+This is visible in
+\begin{itemize}[leftmargin=1.5em]
+\item slightly different linear reference error,
+\item lower \(\|\mathbf T\|_2\) levels than Euclidean/\(M_{block}\) in this campaign.
+\end{itemize}
+
+\subsection*{(iii) Why Proposal 2 and Proposal 3 overlap here}
+In this run, computed correction operators are extremely small:
+\(\|K\|_F\sim 10^{-12}\), \(\|L\|_F\sim 10^{-12}\).
+Consequently, Proposal 2 and Proposal 3 remain almost indistinguishable from the uncorrected Weff basis, hence nearly identical numerical outputs.
+
+\subsection*{(iv) Unperturbed oracle reproduction in all branches}
+Under the oracle protocol above, the \(0\%\) mismatch is near machine precision for all five basis families:
+\[
+\text{rel. err. vs linear} \in [\num{1.77e-6},\,\num{2.00e-6}],
+\]
+for the projected-residual solve.
+
+The Weff-family cross products remain non-negligible in Euclidean coordinates,
+\[
+\|V^T\overline V\|_F
+\approx
+\begin{cases}
+\num{2.24e-15} & \text{Euclidean},\\
+\num{3.01e-14} & \text{Proposal 1 }(M_{block}),\\
+\num{2.81e-2} & \text{Weff / Proposal 2 / Proposal 3}.
+\end{cases}
+\]
+and this does not prevent near-exact reproduction in the unperturbed oracle test.
+
+\section{Oracle protocol and \texorpdfstring{\(\mathbf T\)}{T} diagnostics}
+The same oracle protocol is applied in every branch:
+\begin{enumerate}[leftmargin=1.5em]
+\item the oracle high coefficients are taken from the corresponding linear reduced trajectory in the same basis;
+\item at each time step, the previous state and reduced initialization are taken from that linear trajectory;
+\item the same projected-residual reduced objective is minimized in all branches.
+\end{enumerate}
+
+For the perturbation experiment, only the oracle high block is modified so that
+\[
+\frac{\|\delta\bar{\mathbf q}\|_F}{\|\bar{\mathbf q}^{oracle}\|_F}\approx \alpha\%,
+\]
+\(\alpha\in\{1,2\}\) in this report,
+while keeping the reduced basis and the online reduced formulation unchanged.
+
+Transfer-operator diagnostics are then evaluated along the same linear reference trajectory, reporting \(\max_t \sigma_1(\mathbf T^t)\), mean and p95 values, and the fit quality of \(\mathbf J_H\approx \mathbf J_L\mathbf T\). These diagnostics connect the measured contamination in oracle perturbation tests with the predicted linearized sensitivity directions.
+
+\section{Conclusions and immediate next experiments}
+\begin{enumerate}[leftmargin=1.5em]
+\item The \(M_{block}\)-weighted branch reproduces the Euclidean baseline almost exactly in this setting.
+\item The \(W_{eff}\) branch changes basis geometry and modifies both linear and oracle responses.
+\item At \(0\%\), all branches reproduce the corresponding linear reference up to \(\mathcal O(10^{-6})\%\) in state and reduced coordinates.
+\item Proposal 1 (\(W_{eff}\)) reduces \(\max_k\|\mathbf T^k\|_2\) from \(\num{3.472890e-2}\) to \(\num{2.056093e-2}\), i.e. about \(\num{40.80}\%\) reduction versus Euclidean/\(M_{block}\).
+\item In five-seed perturbation tests, the Weff family lowers low-coordinate contamination relative to Euclidean/\(M_{block}\) at both amplitudes: \(33.7\%\) reduction at \(1\%\) and \(32.3\%\) at \(2\%\).
+\item In this dataset, Proposal 2 and Proposal 3 do not reduce \(\|\mathbf T\|_2\) further beyond the Weff baseline, consistent with \(\|K\|_F,\|L\|_F\sim 10^{-12}\).
+\end{enumerate}
+
+\end{document}

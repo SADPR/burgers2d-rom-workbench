@@ -1,0 +1,34 @@
+mu_test: [4.56, 0.019]
+device: cpu
+model_name: prom_pod_ae_model.pt
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage3/models/prom_pod_ae_model.pt
+basis_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+q_dim: 151
+latent_dim: 5
+hidden_dims: (192, 96, 48)
+scaling: minmax_-1_1
+activation: tanh
+solve_backend_requested: hprom
+solve_backend_effective: hprom
+use_ecsw: True
+rebuild_ecsw_weights: False
+ecsw_num_training_mu: 9
+ecsw_snap_time_offset: 3
+ecsw_snapshot_percent: 2.0
+ecsw_snapshot_random_seed: 42
+ecsw_ensure_mu_coverage: True
+ecsw_weights_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/ECSW/ecsw_weights_pod_ae_ntot151.npy
+ecsw_residual: nan
+n_ecsw_elements: 451
+ecsw_setup_elapsed_s: 0.0018584728240966797
+online_solve_elapsed_s: 13.897077560424805
+elapsed_s: 13.897077560424805
+num_iterations: 1911
+jac_time_s: 8.680586576461792
+res_time_s: 0.7706365585327148
+ls_time_s: 0.28660106658935547
+relative_error_percent: 0.8680276686705424
+snaps_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/PODAE/podae_hprom_mu1_4.560_mu2_0.0190_ntot151_nz5_snaps.npy
+latent_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/PODAE/podae_hprom_mu1_4.560_mu2_0.0190_ntot151_nz5_latent.npy
+plot_output: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Runs/PODAE/podae_hprom_mu1_4.560_mu2_0.0190_ntot151_nz5_hdm_vs_rom.png

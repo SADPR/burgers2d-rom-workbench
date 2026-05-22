@@ -1,24 +1,24 @@
 [run]
-timestamp: 2026-04-25T12:35:48
+timestamp: 2026-05-14T15:30:30
 script: stage3_train_gpr.py
 
 [configuration]
-basis_file: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/basis.npy
-q_p_file: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/q_p.npy
-q_s_file: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/q_s.npy
-stage2_metadata_file: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/stage2_projection_metadata.npz
+basis_file: /home/kratos/burgers2d-rom-workbench/POD-GPR/basis.npy
+q_p_file: /home/kratos/burgers2d-rom-workbench/POD-GPR/q_p.npy
+q_s_file: /home/kratos/burgers2d-rom-workbench/POD-GPR/q_s.npy
+stage2_metadata_file: /home/kratos/burgers2d-rom-workbench/POD-GPR/stage2_projection_metadata.npz
 uref_mode: auto
 use_u_ref: True
-u_ref_source: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/stage2_projection_metadata.npz:u_ref_used
+u_ref_source: /home/kratos/burgers2d-rom-workbench/POD-GPR/stage2_projection_metadata.npz:u_ref_used
 u_ref_l2_norm: 8.17426148e+02
 kernel_name_requested: matern15
-alpha: 1.00000000e-04
+alpha: 1.00000000e-10
 length_scale_initial: 1.00000000e+00
 constant_value_initial: 1.00000000e+00
 length_scale_bounds: [0.01, 5.0]
 constant_value_bounds: [0.001, 1000.0]
 optimize_hyperparameters: True
-n_restarts_optimizer: 1
+n_restarts_optimizer: 3
 normalize_y: False
 duplicate_tol: 1.00000000e-03
 max_train_samples: N/A
@@ -37,22 +37,22 @@ x_validation_shape: (450, 20)
 gpr_alpha_shape: (4051, 131)
 
 [training_quality]
-train_relative_error_percent: 6.79092376e-02
-validation_relative_error_percent: 1.87319917e-01
-validation_relative_error_percent_mean_per_sample: 7.54736733e-02
-validation_relative_error_percent_max_per_sample: 1.89993070e+00
-learned_kernel: 9.21**2 * Matern(length_scale=5, nu=1.5)
-training_time_seconds: 3.64707508e+03
+train_relative_error_percent: 2.21871859e-07
+validation_relative_error_percent: 1.41134910e-01
+validation_relative_error_percent_mean_per_sample: 6.26527101e-02
+validation_relative_error_percent_max_per_sample: 1.14504965e+00
+learned_kernel: 9.95**2 * Matern(length_scale=5, nu=1.5)
+training_time_seconds: 2.46597267e+03
 
 [outputs]
-model_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/pod_gpr_model
-gpr_model_pkl: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/gpr_model.pkl
-scaler_pkl: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/scaler.pkl
-U_p_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/U_p.npy
-U_s_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/U_s.npy
-u_ref_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/u_ref.npy
-q_p_normalized_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/q_p_normalized.npy
-q_s_npy: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/q_s.npy
-training_metadata_npz: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/stage3_training_metadata.npz
-validation_error_png: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/stage3_validation_relative_error.png
-summary_txt: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/POD-GPR/stage3_train_gpr_summary.txt
+model_dir: /home/kratos/burgers2d-rom-workbench/POD-GPR/pod_gpr_model
+gpr_model_pkl: /home/kratos/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/gpr_model.pkl
+scaler_pkl: /home/kratos/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/scaler.pkl
+U_p_npy: /home/kratos/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/U_p.npy
+U_s_npy: /home/kratos/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/U_s.npy
+u_ref_npy: /home/kratos/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/u_ref.npy
+q_p_normalized_npy: /home/kratos/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/q_p_normalized.npy
+q_s_npy: /home/kratos/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/q_s.npy
+training_metadata_npz: /home/kratos/burgers2d-rom-workbench/POD-GPR/pod_gpr_model/stage3_training_metadata.npz
+validation_error_png: /home/kratos/burgers2d-rom-workbench/POD-GPR/stage3_validation_relative_error.png
+summary_txt: /home/kratos/burgers2d-rom-workbench/POD-GPR/stage3_train_gpr_summary.txt

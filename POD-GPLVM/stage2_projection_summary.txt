@@ -1,0 +1,36 @@
+[run]
+timestamp: 2026-05-09T21:26:45
+script: stage2_project_training_data.py
+
+[configuration]
+basis_file: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/basis.npy
+uref_mode: auto
+use_u_ref: True
+u_ref_file: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/u_ref.npy
+u_ref_l2_norm: 8.17426148e+02
+snap_folder: /home/kratos/burgers2d-rom-workbench/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+total_modes: 151
+
+[train_projection]
+num_train_params: 9
+train_params: [[4.25, 0.015], [4.25, 0.0225], [4.25, 0.03], [4.875, 0.015], [4.875, 0.0225], [4.875, 0.03], [5.5, 0.015], [5.5, 0.0225], [5.5, 0.03]]
+snaps_train_shape: (125000, 4509)
+q_train_shape: (151, 4509)
+train_load_time_seconds: 3.66479254e+00
+train_project_time_seconds: 1.83303213e+00
+
+[test_projection]
+num_test_params: 1
+test_params: [[4.56, 0.019]]
+snaps_test_shape: (125000, 501)
+q_test_shape: (151, 501)
+test_load_time_seconds: 4.14079428e-01
+test_project_time_seconds: 5.38885355e-01
+
+[outputs]
+q_train_npy: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/q.npy
+q_test_npy: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/q_test.npy
+metadata_npz: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage2_projection_metadata.npz
+summary_txt: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage2_projection_summary.txt

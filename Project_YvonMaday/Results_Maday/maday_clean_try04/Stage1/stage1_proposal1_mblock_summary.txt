@@ -1,0 +1,12 @@
+tag: maday_clean_try04
+script: Project_YvonMaday/stage1_lspg_weighted_pod.py
+timestamp: 2026-05-18T10:14:02
+snap_folder: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/../Results/param_snaps
+weighting: mblock
+n_keep: 151
+n_available: 4509
+energy_captured: 9.99900284e-01
+energy_lost: 9.97164041e-05
+weighted_orthonorm_fro_err: 2.15656711e-14
+reconstruction_rel_err_mu_test: 3.87857543e-03
+snapshot_assembly_time_s: 2.212468

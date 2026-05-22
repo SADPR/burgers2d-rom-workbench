@@ -1,0 +1,432 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+\title{Didactic Note on Prof. Maday's LSPG-Metric Proposals}
+\author{Aligned with \texttt{manuscript.tex} notation}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Purpose of this note}
+This note rewrites Prof. Maday's proposal using the same symbols as your manuscript:
+\[
+\mathbf V_{\mathrm{tot}}=[\mathbf V\ \overline{\mathbf V}],
+\qquad
+\mathbf q_N=
+\begin{bmatrix}
+\mathbf q\\
+\bar{\mathbf q}
+\end{bmatrix},
+\qquad
+\tilde{\mathbf u}=\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\bar{\mathbf q}.
+\]
+The goal is to explain, step by step, why small errors in high coefficients can strongly damage low-coefficient recovery in LSPG, and what three concrete remedies are being proposed.
+
+\section{Notation dictionary (quick reference)}
+We keep the notation consistent with \texttt{manuscript.tex}. Let $N$ denote full state dimension and $N_s$ the number of snapshots.
+
+\begin{center}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+Symbol & Meaning \\
+\midrule
+$\bm\mu$ & parameter vector (physical/ROM input parameter) \\
+$\mathbf u\in\mathbb R^N$ & full state vector \\
+$\mathbf u_{\mathrm{ref}}$ & reference state used for affine reconstruction \\
+$\mathbf V_{\mathrm{tot}}=[\mathbf V\ \overline{\mathbf V}]$ & reduced basis split into low and high blocks \\
+$\mathbf q_N=[\mathbf q;\bar{\mathbf q}]$ & reduced coefficients in full reduced space \\
+$\mathbf q\in\mathbb R^n$ & low/retained coefficients (online unknown in Case 2) \\
+$\bar{\mathbf q}\in\mathbb R^{\bar n}$ & high/truncated coefficients (closure output in Case 2) \\
+$\tilde{\mathbf u}$ & reconstructed state from reduced coordinates \\
+$\mathbf r(\mathbf u;\bm\mu)$ & time-discrete HDM residual \\
+$\mathbf J=\partial \mathbf r/\partial \mathbf u$ & residual Jacobian w.r.t.\ state \\
+$\mathbf P$ & SPD residual metric in LSPG norm $\|\mathbf r\|_{\mathbf P}^2=\mathbf r^T\mathbf P\mathbf r$ \\
+$\Phi(\mathbf q;\bar{\mathbf q})$ & local reduced LSPG objective (least-squares function) \\
+$\mathbf S\in\mathbb R^{N\times N_s}$ & snapshot matrix (typically centered snapshots as columns) \\
+$\mathbf W$ & SPD POD metric (state-space inner product matrix) \\
+$\mathbf C=\mathbf S^T\mathbf W\mathbf S$ & weighted snapshot correlation matrix \\
+$\bm\phi$ & POD mode in full state space \\
+$\mathbf z$ & coefficient vector in snapshot space ($\bm\phi=\mathbf S\mathbf z$) \\
+$\lambda$ & eigenvalue associated with POD mode \\
+$\mathbf A=\sum_s\omega_s\mathbf J_s^T\mathbf P_s\mathbf J_s$ & averaged LSPG sensitivity metric \\
+$\omega_s$ & nonnegative sample weights, $\sum_s\omega_s=1$ \\
+$\varepsilon$ & small regularization weight in $\mathbf W_{\mathrm{eff}}$ \\
+$\mathbf H_{LL},\mathbf H_{LH},\mathbf H_{HH},\mathbf H_{HL}$ & low/high block matrices induced by $\mathbf A$ \\
+$\mathbf K,\mathbf L$ & correction matrices used to update high/low basis blocks \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Where the issue comes from (in your current formulation)}
+In Case 2 of your manuscript, the closure gives
+\[
+\bar{\mathbf q}=\mathcal M(\bm\mu,t),
+\]
+and the online unknown is only $\mathbf q$, obtained by solving an LSPG least-squares problem at each time step.
+
+In practice, this means:
+\begin{itemize}[leftmargin=1.5em]
+\item $\bar{\mathbf q}$ is injected from a regressor (ANN, GPR, etc.),
+\item then LSPG solves for $\mathbf q$.
+\end{itemize}
+
+Prof. Maday's key observation is:
+\begin{itemize}[leftmargin=1.5em]
+\item if $\bar{\mathbf q}$ is exact, LSPG can recover a good $\mathbf q$,
+\item but if $\bar{\mathbf q}$ has even a small error, the solved $\mathbf q$ can drift a lot.
+\end{itemize}
+
+So the true problem is not only ``predict high coefficients accurately''; it is also ``make the reduced basis split robust so that high-mode errors do not contaminate low modes too much''.
+
+\section{Linearized contamination mechanism: full derivation}
+Let $\mathbf r(\mathbf u;\bm\mu)$ be the time-discrete residual and $\mathbf J=\partial \mathbf r/\partial \mathbf u$ the Jacobian at the current linearization point.
+
+Assume the residual norm is weighted by a symmetric positive matrix $\mathbf P$:
+\[
+\|\mathbf r\|_{\mathbf P}^2=\mathbf r^T\mathbf P\,\mathbf r.
+\]
+(If Euclidean residual norm is used, $\mathbf P=\mathbf I$.)
+
+Define the low/high Jacobian blocks
+\[
+\mathbf J_L:=\mathbf J\mathbf V,
+\qquad
+\mathbf J_H:=\mathbf J\overline{\mathbf V}.
+\]
+
+\subsection*{Step 1: local LSPG objective in low coordinates}
+For fixed time step and parameter, define
+\[
+\Phi(\mathbf q;\bar{\mathbf q})
+:=
+\frac12\left\|
+\mathbf r\!\left(
+\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\bar{\mathbf q}
+;\bm\mu\right)
+\right\|_{\mathbf P}^2.
+\]
+Here $\Phi$ is the local least-squares objective seen by the low coordinates $\mathbf q$ when the high coordinates $\bar{\mathbf q}$ are injected/fixed by closure.
+At a local optimum $(\mathbf q,\bar{\mathbf q})$, first-order optimality with respect to $\mathbf q$ gives
+\[
+\nabla_{\mathbf q}\Phi
+=
+\mathbf J_L^T\mathbf P\,\mathbf r
+=
+\mathbf0.
+\]
+
+\subsection*{Step 2: perturb only the high block}
+Now perturb the high block:
+\[
+\bar{\mathbf q}\mapsto \bar{\mathbf q}+\delta\bar{\mathbf q},
+\]
+and let the low solution shift to $\mathbf q+\delta\mathbf q$.
+Linearizing the residual:
+\[
+\mathbf r(\mathbf q+\delta\mathbf q,\bar{\mathbf q}+\delta\bar{\mathbf q})
+\approx
+\mathbf r
++\mathbf J_L\,\delta\mathbf q
++\mathbf J_H\,\delta\bar{\mathbf q}.
+\]
+
+\subsection*{Step 3: linearized least-squares normal equations}
+With fixed $\delta\bar{\mathbf q}$, the local problem in $\delta\mathbf q$ is
+\[
+\min_{\delta\mathbf q}
+\frac12
+\left\|
+\mathbf r+\mathbf J_L\delta\mathbf q+\mathbf J_H\delta\bar{\mathbf q}
+\right\|_{\mathbf P}^2.
+\]
+Normal equations:
+\[
+\mathbf J_L^T\mathbf P
+\left(
+\mathbf r+\mathbf J_L\delta\mathbf q+\mathbf J_H\delta\bar{\mathbf q}
+\right)
+=
+\mathbf0.
+\]
+Subtracting the unperturbed stationarity condition $\mathbf J_L^T\mathbf P\mathbf r=\mathbf0$:
+\[
+\mathbf J_L^T\mathbf P\mathbf J_L\,\delta\mathbf q
++
+\mathbf J_L^T\mathbf P\mathbf J_H\,\delta\bar{\mathbf q}
+=
+\mathbf0.
+\]
+If $\mathbf J_L^T\mathbf P\mathbf J_L$ is invertible, then
+\[
+\delta\mathbf q
+=
+-\left(\mathbf J_L^T\mathbf P\mathbf J_L\right)^{-1}
+\mathbf J_L^T\mathbf P\mathbf J_H\,\delta\bar{\mathbf q}.
+\]
+
+\subsection*{Step 4: transfer operator}
+Define
+\[
+\mathbf T
+:=
+\left(\mathbf J_L^T\mathbf P\mathbf J_L\right)^{-1}
+\mathbf J_L^T\mathbf P\mathbf J_H.
+\]
+Then
+\[
+\delta\mathbf q=-\mathbf T\,\delta\bar{\mathbf q}.
+\]
+So if $\|\mathbf T\|$ is large, small high-block errors can generate large low-block errors.
+
+\paragraph{Plain-language interpretation.}
+This is exactly your symptom: even when the high map looks ``reasonable'' on some metric, the online LSPG solve can still become fragile because the low/high decomposition is not well decoupled in the \emph{LSPG sensitivity metric}.
+
+\section{Proposal 1: use a better POD metric}
+\subsection{Weighted POD baseline}
+Instead of Euclidean SVD, use weighted POD with SPD matrix $\mathbf W$:
+\[
+\mathbf C=\mathbf S^T\mathbf W\mathbf S.
+\]
+Here $\mathbf S=[\mathbf s_1,\dots,\mathbf s_{N_s}]\in\mathbb R^{N\times N_s}$ is the snapshot matrix (usually centered snapshots), and $\mathbf W\in\mathbb R^{N\times N}$ defines the state-space inner product.
+\paragraph{Where this comes from (derivation).}
+For one POD mode $\bm\phi$, weighted POD maximizes captured weighted snapshot energy:
+\[
+\max_{\bm\phi\neq\mathbf0}
+\frac{\bm\phi^T\mathbf W\mathbf S\mathbf S^T\mathbf W\bm\phi}
+{\bm\phi^T\mathbf W\bm\phi}.
+\]
+The associated stationarity condition is
+\[
+\mathbf S\mathbf S^T\mathbf W\bm\phi=\lambda\bm\phi.
+\]
+Using method of snapshots, write $\bm\phi=\mathbf S\mathbf z$ (mode in the snapshot span). Substituting:
+\[
+\mathbf S^T\mathbf W\mathbf S\,\mathbf z=\lambda\mathbf z
+\quad\Longleftrightarrow\quad
+\mathbf C\mathbf z=\lambda\mathbf z.
+\]
+Then the weighted POD mode is reconstructed by
+\[
+\bm\phi=\frac{1}{\sqrt{\lambda}}\mathbf S\mathbf z,
+\]
+with normalization $\bm\phi^T\mathbf W\bm\phi=1$.
+
+For your two-component Burgers state, Prof. Maday suggests the natural state metric
+\[
+\mathbf W=\mathbf M_{\mathrm{block}}
+=
+\begin{bmatrix}
+\mathbf M_h & \mathbf 0\\
+\mathbf 0 & \mathbf M_h
+\end{bmatrix},
+\]
+which corresponds to a discrete $L^2$-type norm of $(u_x,u_y)$ instead of a plain coordinate-vector norm.
+
+\subsection{LSPG-aware enriched metric}
+To directly encode LSPG sensitivity into basis extraction, use
+\[
+\mathbf W_{\mathrm{eff}}
+=
+\varepsilon\,\mathbf M_{\mathrm{block}}
+\;+\;
+\sum_s \omega_s\,\mathbf J_s^T\mathbf P_s\mathbf J_s,
+\qquad
+\omega_s\ge 0,\ \sum_s\omega_s=1.
+\]
+Here each sample $s$ corresponds to a representative time-parameter point.
+\paragraph{Where this comes from (derivation).}
+Around a sample $s$, for a small state perturbation $\delta\mathbf u$, residual linearization gives
+\[
+\delta\mathbf r_s\approx \mathbf J_s\,\delta\mathbf u.
+\]
+Hence the weighted residual change is
+\[
+\|\delta\mathbf r_s\|_{\mathbf P_s}^2
+\approx
+\delta\mathbf u^T\mathbf J_s^T\mathbf P_s\mathbf J_s\,\delta\mathbf u.
+\]
+So $\mathbf J_s^T\mathbf P_s\mathbf J_s$ is the local quadratic form measuring ``LSPG sensitivity'' to perturbations.
+A weighted average over representative samples yields
+\[
+\mathbf A:=\sum_s\omega_s\,\mathbf J_s^T\mathbf P_s\mathbf J_s.
+\]
+Adding $\varepsilon\mathbf M_{\mathrm{block}}$ keeps a baseline state metric and regularization:
+\[
+\mathbf W_{\mathrm{eff}}=\varepsilon\mathbf M_{\mathrm{block}}+\mathbf A.
+\]
+
+\paragraph{Plain-language interpretation.}
+The second term penalizes directions that strongly affect residual minimization, so the basis is adapted to what LSPG actually ``cares about'', not only to snapshot energy.
+
+\section{Proposal 2: modify only high modes (keep $\mathbf V$ fixed)}
+This is the proposal Prof. Maday emphasized as attractive because online dimension and online solve structure stay unchanged.
+
+Define averaged LSPG metric
+\[
+\mathbf A:=\sum_s \omega_s\,\mathbf J_s^T\mathbf P_s\mathbf J_s.
+\]
+Then define blocks
+\[
+\mathbf H_{LL}:=\mathbf V^T\mathbf A\mathbf V,
+\qquad
+\mathbf H_{LH}:=\mathbf V^T\mathbf A\overline{\mathbf V}.
+\]
+\paragraph{Derivation of the correction formula.}
+Seek a corrected high basis in the form
+\[
+\widetilde{\overline{\mathbf V}}=\overline{\mathbf V}-\mathbf V\mathbf K,
+\]
+where $\mathbf K$ is unknown.
+Impose metric-orthogonality against low modes:
+\[
+\mathbf V^T\mathbf A\widetilde{\overline{\mathbf V}}=\mathbf0.
+\]
+Substitute:
+\[
+\mathbf V^T\mathbf A(\overline{\mathbf V}-\mathbf V\mathbf K)
+=
+\mathbf H_{LH}-\mathbf H_{LL}\mathbf K
+=
+\mathbf0.
+\]
+So
+\[
+\mathbf H_{LL}\mathbf K=\mathbf H_{LH}.
+\]
+If $\mathbf H_{LL}$ is invertible,
+\[
+\mathbf K=\mathbf H_{LL}^{-1}\mathbf H_{LH}.
+\]
+Hence
+\[
+\widetilde{\overline{\mathbf V}}
+=
+\overline{\mathbf V}
+-\mathbf V\,\mathbf H_{LL}^{-1}\mathbf H_{LH}.
+\]
+\paragraph{Direct verification.}
+\[
+\mathbf V^T\mathbf A\widetilde{\overline{\mathbf V}}
+=
+\mathbf H_{LH}-\mathbf H_{LL}\mathbf H_{LL}^{-1}\mathbf H_{LH}
+=
+\mathbf0.
+\]
+
+\paragraph{What this buys you.}
+Low modes are untouched, high modes are ``orthogonalized'' against low modes in the averaged LSPG metric, and the low/high contamination channel is reduced.
+
+\paragraph{Coordinate mapping note (important).}
+Let
+\[
+\mathbf K:=\mathbf H_{LL}^{-1}\mathbf H_{LH}.
+\]
+Because $\widetilde{\overline{\mathbf V}}=\overline{\mathbf V}-\mathbf V\mathbf K$, the same state can be written as
+\[
+\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\bar{\mathbf q}
+=
+\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\left(\widetilde{\overline{\mathbf V}}+\mathbf V\mathbf K\right)\bar{\mathbf q}
+=
+\mathbf u_{\mathrm{ref}}+\mathbf V\left(\mathbf q+\mathbf K\bar{\mathbf q}\right)+\widetilde{\overline{\mathbf V}}\,\bar{\mathbf q}.
+\]
+with one convenient choice
+\[
+\widetilde{\bar{\mathbf q}}=\bar{\mathbf q},
+\qquad
+\widetilde{\mathbf q}=\mathbf q+\mathbf K\bar{\mathbf q}.
+\]
+So the ``high'' coordinates can be kept as-is, while low coordinates are shifted consistently.
+
+\section{Proposal 3: modify only low modes (keep $\overline{\mathbf V}$ fixed)}
+Define
+\[
+\mathbf H_{HH}:=\overline{\mathbf V}^T\mathbf A\overline{\mathbf V},
+\qquad
+\mathbf H_{HL}:=\overline{\mathbf V}^T\mathbf A\mathbf V.
+\]
+\paragraph{Derivation of the correction formula.}
+Keep $\overline{\mathbf V}$ fixed and seek
+\[
+\widetilde{\mathbf V}=\mathbf V-\overline{\mathbf V}\mathbf L
+\]
+such that
+\[
+\overline{\mathbf V}^T\mathbf A\widetilde{\mathbf V}=\mathbf0.
+\]
+Substitute:
+\[
+\overline{\mathbf V}^T\mathbf A(\mathbf V-\overline{\mathbf V}\mathbf L)
+=
+\mathbf H_{HL}-\mathbf H_{HH}\mathbf L
+=
+\mathbf0.
+\]
+Thus
+\[
+\mathbf H_{HH}\mathbf L=\mathbf H_{HL},
+\qquad
+\mathbf L=\mathbf H_{HH}^{-1}\mathbf H_{HL},
+\]
+and therefore
+\[
+\widetilde{\mathbf V}
+=
+\mathbf V
+-\overline{\mathbf V}\,\mathbf H_{HH}^{-1}\mathbf H_{HL}.
+\]
+\paragraph{Direct verification.}
+\[
+\overline{\mathbf V}^T\mathbf A\widetilde{\mathbf V}
+=
+\mathbf H_{HL}-\mathbf H_{HH}\mathbf H_{HH}^{-1}\mathbf H_{HL}
+=
+\mathbf0.
+\]
+
+\paragraph{Interpretation.}
+This is the symmetric version: keep high block fixed, orthogonalize low block in the averaged LSPG metric.
+
+\section{How this maps to your current pipeline}
+\subsection*{Step A: build $\mathbf A$ on representative samples}
+Use a subset of Stage-2 trajectories (time and parameter points), compute Jacobians $\mathbf J_s$, and assemble
+\[
+\mathbf A\approx \sum_s \omega_s\,\mathbf J_s^T\mathbf P_s\mathbf J_s.
+\]
+
+\subsection*{Step B: choose one basis intervention}
+\begin{itemize}[leftmargin=1.5em]
+\item \textbf{Proposal 2 (high-only):} usually the least intrusive for Case 2, because low online unknown size remains $n$, and you can preserve interpretation of injected high block.
+\item \textbf{Proposal 3 (low-only):} also valid, but often more invasive for current closure workflows.
+\item \textbf{Proposal 1 (metric POD):} can be done independently or combined with Proposal 2/3.
+\end{itemize}
+
+\subsection*{Step C: regenerate consistent reduced data}
+After basis modification, reduced coefficients should be made consistent with the new basis (either via exact coordinate transformation when available, or by recomputing projection/reduced trajectories).
+
+\subsection*{Step D: retrain closure map and re-run offline/online tests}
+Then compare:
+\begin{itemize}[leftmargin=1.5em]
+\item low/high coefficient errors,
+\item LSPG residual norms,
+\item robustness at off-grid $\bm\mu$ points.
+\end{itemize}
+
+\section{What Prof. Maday is really suggesting (one-sentence summary)}
+Do not treat high-mode prediction error only as a regression problem; redesign the \emph{basis split and metric} so that LSPG dynamics is less sensitive to high-block perturbations.
+
+\section{Practical recommendation for your immediate next test}
+For your current Case-2 setup, the most direct first experiment is:
+\begin{enumerate}[leftmargin=1.5em]
+\item keep $n$ fixed and keep online algorithm unchanged,
+\item compute $\mathbf A$ from a representative set,
+\item apply Proposal 2 (high-mode correction),
+\item run the same Stage-2/Stage-3/evaluation protocol and compare against your current baseline.
+\end{enumerate}
+This isolates whether reduced-basis decoupling improves robustness without changing the online model size.
+
+\end{document}

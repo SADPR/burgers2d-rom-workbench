@@ -1,0 +1,37 @@
+[run]
+timestamp: 2026-05-09T21:26:13
+script: stage1_build_pod_basis.py
+
+[configuration]
+snap_folder: /home/kratos/burgers2d-rom-workbench/Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+pod_method: svd
+pod_tol: 1.00000000e-04
+num_modes_requested: N/A
+center: True
+num_training_parameters: 9
+
+[snapshot_matrix]
+shape: (125000, 4509)
+state_size: 125000
+num_snapshots: 4509
+
+[pod_truncation]
+n_keep: 151
+energy_captured: 9.99900284e-01
+energy_lost: 9.97164041e-05
+centered: True
+reference_source: mean
+
+[timings_seconds]
+build_snapshot_matrix: 9.82349610e+00
+compute_pod: 1.84394851e+02
+total: 1.94218347e+02
+
+[outputs]
+basis_npy: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/basis.npy
+sigma_npy: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/sigma.npy
+u_ref_npy: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/u_ref.npy
+singular_value_decay_png: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage1_pod_singular_value_decay.png
+summary_txt: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage1_pod_basis_summary.txt

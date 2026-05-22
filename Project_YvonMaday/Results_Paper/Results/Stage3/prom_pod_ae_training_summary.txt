@@ -1,0 +1,17 @@
+model_name: prom_pod_ae_model.pt
+model_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage3/models/prom_pod_ae_model.pt
+dataset_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot151
+dataset_root: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot151/per_mu
+dataset_ntot: 151
+dataset_backend: hprom
+samples_M: 4509
+q_dim: 151
+latent_dim: 5
+hidden_dims: (192, 96, 48)
+scaling: minmax_-1_1
+activation: tanh
+epochs_ran: 2915
+best_val_mse: 0.24684998393058777
+elapsed_s: 299.2103953361511
+seed: 42
+device: cpu

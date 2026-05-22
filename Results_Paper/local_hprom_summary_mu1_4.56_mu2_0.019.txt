@@ -1,10 +1,10 @@
 [run]
-timestamp: 2026-04-26T03:29:38
+timestamp: 2026-05-01T08:22:01
 mu1: 4.56000000e+00
 mu2: 1.90000000e-02
 
 [configuration]
-compute_ecsw: True
+compute_ecsw: False
 local_model_file: LocalPOD/local_pod_data.npz
 weights_file: Results/local_hprom_ecsw_weights.npy
 cluster_selector: select_cluster_reduced
@@ -38,24 +38,24 @@ d_const_shape: (10, 10)
 [ecsw]
 num_nonzero_weights: 1522
 weights_sum: 6.25000000e+04
-ecsw_time_seconds: 1.13437070e+03
-ecsw_residual: 4.16080517e-14
-training_matrix_shape: (2070, 62500)
-snapshot_candidates_total: 4473
-snapshot_selected_total: 90
-snapshot_selected_per_mu: [10, 10, 10, 10, 10, 10, 10, 10, 10]
-snapshot_cluster_candidates_per_mu: [[70, 54, 68, 0, 54, 59, 59, 53, 24, 56], [68, 53, 63, 0, 54, 59, 56, 52, 37, 55], [65, 51, 57, 0, 54, 59, 53, 52, 53, 53], [57, 48, 58, 6, 50, 54, 53, 47, 73, 51], [56, 48, 54, 24, 49, 54, 51, 47, 65, 49], [54, 47, 50, 46, 49, 54, 48, 46, 55, 48], [48, 44, 51, 61, 45, 50, 49, 43, 61, 45], [47, 44, 48, 75, 45, 50, 47, 42, 55, 44], [46, 43, 44, 92, 45, 49, 45, 42, 48, 43]]
-snapshot_cluster_selected_per_mu: [[2, 1, 1, 0, 1, 1, 1, 1, 1, 1], [2, 1, 1, 0, 1, 1, 1, 1, 1, 1], [2, 1, 1, 0, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
+ecsw_time_seconds: N/A
+ecsw_residual: N/A
+training_matrix_shape: N/A
+snapshot_candidates_total: N/A
+snapshot_selected_total: N/A
+snapshot_selected_per_mu: N/A
+snapshot_cluster_candidates_per_mu: N/A
+snapshot_cluster_selected_per_mu: N/A
 
 [local_hprom_timing]
-total_local_hprom_time_seconds: 1.26027029e+01
-avg_local_hprom_time_per_step_seconds: 2.52054057e-02
+total_local_hprom_time_seconds: 1.16080079e+01
+avg_local_hprom_time_per_step_seconds: 2.32160158e-02
 gn_iterations_total: 1501
 avg_gn_iterations_per_step: 3.00200000e+00
-jacobian_time_seconds: 4.76123810e+00
-residual_time_seconds: 3.07067680e+00
-linear_solve_time_seconds: 1.57922292e+00
-hdm_load_or_solve_time_seconds: 3.39164019e-01
+jacobian_time_seconds: 4.71264124e+00
+residual_time_seconds: 2.29492331e+00
+linear_solve_time_seconds: 1.59324694e+00
+hdm_load_or_solve_time_seconds: 3.02547693e-01
 
 [cluster_metrics]
 initial_cluster: 0
@@ -71,6 +71,6 @@ relative_error_percent: 9.56052819e-01
 local_hprom_snapshots_npy: Results/local_hprom_snaps_mu1_4.56_mu2_0.019.npy
 comparison_plot_png: Results/local_hprom_mu1_4.56_mu2_0.019.png
 ecsw_weights_npy: Results/local_hprom_ecsw_weights.npy
-ecsw_reduced_mesh_png: Results/local_hprom_reduced_mesh.png
-ecsw_sampling_3d_png: Results/local_hprom_ecsw_sampling_3d.png
+ecsw_reduced_mesh_png: N/A
+ecsw_sampling_3d_png: N/A
 summary_txt: Results/local_hprom_summary_mu1_4.56_mu2_0.019.txt

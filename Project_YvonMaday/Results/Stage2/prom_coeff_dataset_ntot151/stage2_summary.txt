@@ -1,0 +1,21 @@
+solve_backend: hprom
+dataset_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot151
+per_mu_dir: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/prom_coeff_dataset_ntot151/per_mu
+basis_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage1/u_ref.npy
+total_modes: 151
+coefficient_storage: qN_only
+num_traj: 9
+ecsw_num_training_mu: 9
+ecsw_snapshot_mode: global_param_time_stratified
+ecsw_snapshot_percent: 2.0
+ecsw_random_seed: 42
+ecsw_ensure_mu_coverage: True
+ecsw_snap_time_offset: 3
+ecsw_num_candidates_total: 4473
+ecsw_num_selected_total: 90
+ecsw_num_selected_per_mu: [10, 10, 10, 10, 10, 10, 10, 10, 10]
+ecsw_weights_path: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Project_YvonMaday/Results/Stage2/ecsw_weights_lspg_ntot151.npy
+ecsw_weights_source: computed
+ecsw_residual: 1.8471541150408925e-09
+n_ecsw_elements: 5722

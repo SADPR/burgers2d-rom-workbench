@@ -96,9 +96,20 @@ def _select_snap_folder(project_root):
     return candidates[0]
 
 
-def _load_basis_and_reference(total_modes=None):
-    basis_path = resolve_stage1_artifact("basis.npy")
-    uref_path = resolve_stage1_artifact("u_ref.npy")
+def _load_basis_and_reference(
+    total_modes=None,
+    basis_path_override=None,
+    uref_path_override=None,
+):
+    if basis_path_override:
+        basis_path = os.path.abspath(os.path.expanduser(str(basis_path_override)))
+    else:
+        basis_path = resolve_stage1_artifact("basis.npy")
+
+    if uref_path_override:
+        uref_path = os.path.abspath(os.path.expanduser(str(uref_path_override)))
+    else:
+        uref_path = resolve_stage1_artifact("u_ref.npy")
 
     if not os.path.exists(basis_path):
         raise FileNotFoundError(f"Missing basis file: {basis_path}")
@@ -346,6 +357,8 @@ def main(
     make_plots=True,
     compute_hdm_error=True,
     output_root_dir=None,
+    basis_path=None,
+    u_ref_path=None,
 ):
     mu_test = [float(mu_test[0]), float(mu_test[1])]
 
@@ -375,7 +388,11 @@ def main(
     if solve_backend == "prom" and use_ecsw:
         print("[Linear] use_ecsw=True ignored because solve_backend='prom'.")
 
-    Vtot, u_ref, basis_path, uref_path, total_modes, n_available = _load_basis_and_reference(total_modes)
+    Vtot, u_ref, basis_path, uref_path, total_modes, n_available = _load_basis_and_reference(
+        total_modes=total_modes,
+        basis_path_override=basis_path,
+        uref_path_override=u_ref_path,
+    )
 
     w0 = np.asarray(W0, dtype=np.float64).reshape(-1)
     if w0.size != Vtot.shape[0]:
@@ -456,7 +473,8 @@ def main(
             linear_solver=linear_solver,
             normal_eq_reg=normal_eq_reg,
         )
-        qN = Vtot.T @ (rom_snaps - u_ref[:, None])
+        # Use LS projection so qN is consistent for non-orthonormal bases.
+        qN = np.linalg.lstsq(Vtot, rom_snaps - u_ref[:, None], rcond=None)[0]
         online_solve_elapsed = time.time() - t0
     else:
         qN, rom_times = inviscid_burgers_implicit2D_LSPG_ecsw(
@@ -624,6 +642,18 @@ if __name__ == "__main__":
         default=None,
         help="Optional custom output root directory (default: Results/Runs/Linear).",
     )
+    parser.add_argument(
+        "--basis-path",
+        type=str,
+        default=None,
+        help="Optional basis override (default: Results/Stage1/basis.npy).",
+    )
+    parser.add_argument(
+        "--u-ref-path",
+        type=str,
+        default=None,
+        help="Optional reference override (default: Results/Stage1/u_ref.npy).",
+    )
     args = parser.parse_args()
 
     main(
@@ -642,4 +672,6 @@ if __name__ == "__main__":
         make_plots=not args.no_plot,
         compute_hdm_error=not args.no_hdm_error,
         output_root_dir=args.output_root,
+        basis_path=args.basis_path,
+        u_ref_path=args.u_ref_path,
     )

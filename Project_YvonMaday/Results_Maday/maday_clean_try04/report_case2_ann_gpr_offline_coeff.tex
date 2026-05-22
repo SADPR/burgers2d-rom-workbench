@@ -1,0 +1,160 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{hyperref}
+
+\title{Offline Coefficient-Space Comparison for Case-2 Maps\\ANN vs GPR, $n_s\in\{131,141,151\}$}
+\author{Sebastian Ares de Parga Regalado}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Objective}
+This report compares six previously trained Case-2 maps in pure offline reconstruction mode:
+\[
+(\mu,t)\mapsto q_s(\mu,t),
+\]
+without running online nonlinear ROM solves.
+
+The compared models include ANN and GPR maps with
+\[
+n_s\in\{131,141,151\},
+\]
+using the same linear PROM reference trajectories.
+
+Reference trajectories are the linear PROM coefficients $q_N^{lin}(t;\mu)$ with $n_{tot}=151$ at
+\[
+\mu^{(v)}=(4.875,0.0225),\quad
+\mu^{(1)}=(4.560,0.0190),\quad
+\mu^{(2)}=(5.190,0.0260).
+\]
+
+\section*{Error definitions}
+For a model with split $n_{tot}=n_p+n_s$, we compare predicted secondary coefficients against the corresponding tail of the linear reference:
+\[
+q_s^{ref}(t;\mu)=\big[q_N^{lin}(t;\mu)\big]_{n_p+1:n_{tot}},
+\qquad
+q_s^{pred}(t;\mu)=\mathcal M_{\theta}(\mu,t).
+\]
+For each predicted coefficient index $i=1,\dots,n_s$:
+\[
+E_i^{abs}(\mu)=\left\|q_{s,i}^{ref}-q_{s,i}^{pred}\right\|_2,
+\qquad
+E_i^{rel}(\mu)=100\,
+\frac{\left\|q_{s,i}^{ref}-q_{s,i}^{pred}\right\|_2}
+{\left\|q_{s,i}^{ref}\right\|_2+\varepsilon}.
+\]
+Global secondary-trajectory error:
+\[
+E_F(\mu)=100\,
+\frac{\left\|Q_s^{ref}-Q_s^{pred}\right\|_F}
+{\left\|Q_s^{ref}\right\|_F+\varepsilon}.
+\]
+
+Since models have different $n_s$, each curve starts at global index $n_p+1$ with $n_p=n_{tot}-n_s$.
+Therefore, missing lower global indices for some curves are expected.
+
+\section*{Pointwise summary}
+\begin{table}[H]
+\centering
+\caption{Offline coefficient errors per point (\%).}
+\begin{tabular}{lccccc}
+\toprule
+Model & $n_s$ & $E_F$ & mean$(E_i^{rel})$ & p95$(E_i^{rel})$ & max$(E_i^{rel})$ \\
+\midrule
+\multicolumn{6}{c}{\(\mu=(4.875,0.0225)\)} \\
+\midrule
+ANN & 131 & 11.020 & 27.578 & 64.427 & 77.394 \\
+ANN & 141 & 4.968 & 17.719 & 40.772 & 51.943 \\
+ANN & 151 & 1.791 & 30.688 & 79.297 & 87.480 \\
+GPR & 131 & 1.29e-04 & 2.95e-04 & 9.14e-04 & 1.19e-03 \\
+GPR & 141 & 7.87e-05 & 2.92e-04 & 9.77e-04 & 1.27e-03 \\
+GPR & 151 & 1.86e-05 & 2.87e-04 & 1.02e-03 & 1.36e-03 \\
+\midrule
+\multicolumn{6}{c}{\(\mu=(4.560,0.0190)\)} \\
+\midrule
+ANN & 131 & 102.964 & 142.204 & 201.576 & 272.048 \\
+ANN & 141 & 9.206 & 27.858 & 59.705 & 78.524 \\
+ANN & 151 & 3.842 & 49.200 & 101.068 & 118.742 \\
+GPR & 131 & 100.142 & 100.027 & 100.171 & 100.573 \\
+GPR & 141 & 100.170 & 100.039 & 100.265 & 100.573 \\
+GPR & 151 & 100.656 & 100.093 & 100.531 & 103.486 \\
+\midrule
+\multicolumn{6}{c}{\(\mu=(5.190,0.0260)\)} \\
+\midrule
+ANN & 131 & 69.570 & 113.381 & 170.202 & 201.128 \\
+ANN & 141 & 10.268 & 33.535 & 64.266 & 80.333 \\
+ANN & 151 & 5.474 & 53.547 & 105.780 & 138.958 \\
+GPR & 131 & 99.934 & 99.998 & 100.051 & 100.314 \\
+GPR & 141 & 99.897 & 99.989 & 100.048 & 100.314 \\
+GPR & 151 & 99.744 & 99.976 & 100.055 & 100.539 \\
+\midrule
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Average over the three points}
+\begin{table}[H]
+\centering
+\caption{Averaged offline coefficient errors over the three points (\%).}
+\begin{tabular}{lccccc}
+\toprule
+Model & $n_s$ & mean $E_F$ & mean(mean$(E_i^{rel})$) & mean(p95$(E_i^{rel})$) & mean(max$(E_i^{rel})$) \\
+\midrule
+ANN & 131 & 61.185 & 94.387 & 145.402 & 183.523 \\
+ANN & 141 & 8.147 & 26.371 & 54.914 & 70.267 \\
+ANN & 151 & 3.702 & 44.479 & 95.382 & 115.060 \\
+GPR & 131 & 66.692 & 66.675 & 66.741 & 66.963 \\
+GPR & 141 & 66.689 & 66.676 & 66.772 & 66.963 \\
+GPR & 151 & 66.800 & 66.690 & 66.862 & 68.009 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Per-coefficient curves}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{Figures/case2_ann_gpr_coeff_offline/mu1_4.875_mu2_0.0225_coeff_abs_rel_vs_global_index_ann_gpr_131_141_151.png}
+\caption{Absolute and relative coefficient errors vs global coefficient index at $\mu^{(v)}=(4.875,0.0225)$.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{Figures/case2_ann_gpr_coeff_offline/mu1_4.560_mu2_0.0190_coeff_abs_rel_vs_global_index_ann_gpr_131_141_151.png}
+\caption{Absolute and relative coefficient errors vs global coefficient index at $\mu^{(1)}=(4.560,0.0190)$.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{Figures/case2_ann_gpr_coeff_offline/mu1_5.190_mu2_0.0260_coeff_abs_rel_vs_global_index_ann_gpr_131_141_151.png}
+\caption{Absolute and relative coefficient errors vs global coefficient index at $\mu^{(2)}=(5.190,0.0260)$.}
+\end{figure}
+
+\section*{GPR zoom}
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{Figures/case2_ann_gpr_coeff_offline/mu1_4.875_mu2_0.0225_gpr_rel_zoom_ann_gpr_131_141_151.png}
+\caption{Zoomed GPR comparison at $\mu^{(v)}=(4.875,0.0225)$, including pairwise differences.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{Figures/case2_ann_gpr_coeff_offline/mu1_4.560_mu2_0.0190_gpr_rel_zoom_ann_gpr_131_141_151.png}
+\caption{Zoomed GPR comparison at $\mu^{(1)}=(4.560,0.0190)$, including pairwise differences.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{Figures/case2_ann_gpr_coeff_offline/mu1_5.190_mu2_0.0260_gpr_rel_zoom_ann_gpr_131_141_151.png}
+\caption{Zoomed GPR comparison at $\mu^{(2)}=(5.190,0.0260)$, including pairwise differences.}
+\end{figure}
+
+\section*{Remarks}
+This report is strictly an offline map-comparison diagnostic in coefficient space.
+It does not include online ROM reconstruction of state trajectories.
+
+\end{document}

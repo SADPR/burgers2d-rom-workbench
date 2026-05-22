@@ -1,0 +1,18 @@
+Saved closure-GPR comparison
+model: X=q_1..q_20, Y=q_21..q_151
+test_mu=(4.56, 0.019)
+primary_modes=20
+
+per_mode_notes:
+q_1: predicted=False (context only)
+q_2: predicted=False (context only)
+q_3: predicted=False (context only)
+q_4: predicted=False (context only)
+q_21: predicted=True, rel_error_percent=1.185573, mae=1.130616e-01, rmse=1.519080e-01
+q_22: predicted=True, rel_error_percent=1.232318, mae=1.147040e-01, rmse=1.448409e-01
+q_23: predicted=True, rel_error_percent=1.082919, mae=9.349038e-02, rmse=1.211208e-01
+q_24: predicted=True, rel_error_percent=1.430477, mae=1.127942e-01, rmse=1.495465e-01
+q_101: predicted=True, rel_error_percent=17.318341, mae=1.652840e-01, rmse=2.225676e-01
+q_102: predicted=True, rel_error_percent=13.550806, mae=1.078211e-01, rmse=1.934142e-01
+q_103: predicted=True, rel_error_percent=13.778888, mae=9.587093e-02, rmse=1.574213e-01
+q_104: predicted=True, rel_error_percent=18.455836, mae=1.829442e-01, rmse=2.227848e-01

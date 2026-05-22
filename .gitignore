@@ -38,6 +38,7 @@ Results/**
 # Numerical data / model artifacts
 # -----------------------------
 *.npy
+**/*.npy
 *.npz
 *.pt
 *.pth
@@ -55,6 +56,12 @@ Results/**
 # -----------------------------
 *.log
 *.tmp
+**/.mplcache/
+**/.mplcache/**
+**/.cache/
+**/.cache/**
+**/tex.cache/
+**/tex.cache/**
 
 # -----------------------------
 # Local backup folder (optional, usually not for git)

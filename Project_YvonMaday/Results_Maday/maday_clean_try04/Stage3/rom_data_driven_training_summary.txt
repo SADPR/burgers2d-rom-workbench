@@ -1,0 +1,13 @@
+model_name: rom_data_driven_ann_mu_t_ntot151.pt
+model_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Maday/maday_clean_try04/Stage3/models/rom_data_driven_ann_mu_t_ntot151.pt
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/250x250/Results/Stage2/prom_coeff_dataset_ntot151
+dataset_root: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/250x250/Results/Stage2/prom_coeff_dataset_ntot151/per_mu
+dataset_ntot: 151
+dataset_backend: prom
+samples_M: 4509
+in_dim: 3
+n_tot: 151
+epochs_ran: 2000
+best_val_mse: 0.3817078769207001
+seed: 42
+device: cuda

@@ -1,0 +1,43 @@
+[run]
+timestamp: 2026-05-10T14:40:16
+script: stage4_test_gplvm.py
+
+[configuration]
+model_file: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/pod_gplvm_model/gplvm_model.npz
+model_decoder_mode: sparse_dtc
+model_sparse_num_inducing: 300
+q_test_file: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/q_test.npy
+max_test_samples: 8
+infer_max_its: 10
+infer_tol: 1.00000000e-06
+inverse_method: bounded_trf
+inverse_n_starts: 5
+inverse_bound_margin_rel: 2.00000000e-01
+inverse_bound_margin_abs: 2.50000000e-01
+inverse_prior_weight: 1.00000000e-03
+inverse_loss: linear
+inverse_f_scale: 1.00000000e+00
+save_overlay_plots: True
+overlay_num_samples: 3
+overlay_indices: N/A
+overlay_max_modes: N/A
+overlay_dir: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage4_results/q_overlays
+
+[dataset]
+q_test_shape: (151, 501)
+q_eval_shape: (151, 8)
+
+[error_metrics]
+relative_error_percent: 1.62486755e+01
+mean_relative_error_percent_per_sample: 1.55773712e+01
+max_relative_error_percent_per_sample: 2.09284344e+01
+inverse_success_count: 8
+inverse_fail_count: 0
+overlay_plots_count: 3
+
+[outputs]
+latent_test_npy: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage4_results/gplvm_latent_test.npy
+q_test_reconstructed_npy: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage4_results/gplvm_q_test_reconstructed.npy
+error_plot_png: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage4_results/gplvm_q_test_relative_error.png
+overlay_manifest_txt: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage4_results/q_overlay_files.txt
+summary_txt: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage4_results/stage4_test_summary.txt

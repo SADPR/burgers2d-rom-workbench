@@ -216,6 +216,12 @@ def main(argv=None):
     )
     parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="prom")
     parser.add_argument("--dataset-ntot", type=int, default=None)
+    parser.add_argument(
+        "--dataset-dir",
+        type=str,
+        default=None,
+        help="Optional explicit dataset directory containing per_mu/ and meta.npy.",
+    )
     parser.add_argument("--model-name", type=str, default=None)
     parser.add_argument("--primary-modes", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
@@ -248,6 +254,7 @@ def main(argv=None):
         this_dir=THIS_DIR,
         requested_ntot=dataset_ntot,
         expected_backend=dataset_backend,
+        requested_dataset_dir=args.dataset_dir,
     )
     primary_modes = resolve_primary_modes(args.primary_modes, dataset_meta, dataset_ntot)
     model_name = str(args.model_name).strip() if args.model_name is not None else "case2_model_test_n20.pt"

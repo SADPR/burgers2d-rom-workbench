@@ -1,0 +1,70 @@
+[run]
+timestamp: 2026-05-10T14:40:16
+mu1: 4.75000000e+00
+mu2: 2.00000000e-02
+
+[configuration]
+model_dir: POD-GPLVM/pod_gplvm_model
+snap_folder: Results/param_snaps
+dt: 5.00000000e-02
+num_steps: 500
+relnorm_cutoff: 1.00000000e-05
+min_delta: 1.00000000e-02
+max_its: 20
+max_its_ic: 20
+tol_ic: 1.00000000e-12
+ic_inverse_method: bounded_trf
+ic_inverse_n_starts: 5
+ic_inverse_bound_margin_rel: 2.00000000e-01
+ic_inverse_bound_margin_abs: 2.50000000e-01
+ic_inverse_prior_weight: 1.00000000e-03
+ic_inverse_loss: linear
+ic_inverse_f_scale: 1.00000000e+00
+linear_solver: lstsq
+normal_eq_reg: N/A
+uref_mode: auto
+use_u_ref: True
+u_ref_source: POD-GPLVM/pod_gplvm_model/u_ref.npy
+u_ref_l2_norm: 8.17426148e+02
+decoder_mode: sparse_dtc
+sparse_num_inducing: 300
+provided_uref_file: N/A
+stage2_use_u_ref: True
+stage2_projection_metadata: POD-GPLVM/stage2_projection_metadata.npz
+
+[discretization]
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[gplvm_model]
+U_q_shape: (125000, 151)
+latent_dim: 10
+n_train_latent: 4501
+decoder_mode: sparse_dtc
+sparse_num_inducing: 300
+ell: 2.30167575e+00
+sf: 4.29495672e+00
+sn: 1.00000000e-04
+
+[prom_timing]
+total_prom_time_seconds: 1.26211035e+02
+avg_prom_time_per_step_seconds: 2.52422070e-01
+gn_iterations_total: 1507
+avg_gn_iterations_per_step: 3.01400000e+00
+jacobian_time_seconds: 4.93576612e+01
+residual_time_seconds: 3.59594822e+00
+linear_solve_time_seconds: 3.06910267e+01
+hdm_load_or_solve_time_seconds: 1.03726625e-01
+
+[error_metrics]
+relative_l2_error: 1.95522003e-01
+relative_error_percent: 1.95522003e+01
+
+[outputs]
+prom_snapshots_npy: Results/prom_gplvm_snaps_mu1_4.75_mu2_0.020.npy
+latent_trajectory_npy: Results/prom_gplvm_latent_mu1_4.75_mu2_0.020.npy
+comparison_plot_png: Results/prom_gplvm_mu1_4.75_mu2_0.020.png
+summary_txt: Results/prom_gplvm_summary_mu1_4.75_mu2_0.020.txt
+model_npz: POD-GPLVM/pod_gplvm_model/gplvm_model.npz
+U_q_npy: POD-GPLVM/pod_gplvm_model/U_q.npy

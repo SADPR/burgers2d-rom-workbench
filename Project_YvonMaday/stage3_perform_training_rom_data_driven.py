@@ -198,8 +198,14 @@ def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Train data-driven ROM surrogate from Stage-2 dataset."
     )
-    parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="hprom")
+    parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="prom")
     parser.add_argument("--dataset-ntot", type=int, default=None)
+    parser.add_argument(
+        "--dataset-dir",
+        type=str,
+        default=None,
+        help="Optional explicit dataset directory containing per_mu/ and meta.npy.",
+    )
     parser.add_argument("--model-name", type=str, default=None)
     args = parser.parse_args(argv)
 
@@ -209,6 +215,7 @@ def main(argv=None):
         this_dir=THIS_DIR,
         requested_ntot=dataset_ntot,
         expected_backend=dataset_backend,
+        requested_dataset_dir=args.dataset_dir,
     )
     model_name = str(args.model_name).strip() if args.model_name is not None else "rom_data_driven_model.pt"
     if len(model_name) == 0:

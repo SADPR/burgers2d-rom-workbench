@@ -81,14 +81,24 @@ Scripts:
 - `stage3_perform_training_case_2_ann.py`
 - `stage3_perform_training_case_2_prnn.py` (optional PRNN-style Case 2 trainer)
 - `stage3_perform_training_case_3_ann.py`
+- `stage3_perform_training_case_1_rbf.py` (RBF grid-search trainer)
+- `stage3_perform_training_case_2_rbf.py` (RBF grid-search trainer)
+- `stage3_perform_training_case_3_rbf.py` (RBF grid-search trainer)
 - `stage3_perform_training_rom_data_driven.py`
+- `stage3_perform_training_prom_pod_ae.py` (intrusive PROM-POD-AE trainer in full `qN` space)
+- `stage3_perform_training_pod_dl_data_driven.py` (non-intrusive POD-DL-ROM trainer in `qN` space)
 
 Run:
 ```bash
 python3 stage3_perform_training_case_1_ann.py --dataset-backend prom
 python3 stage3_perform_training_case_2_ann.py --dataset-backend prom
 python3 stage3_perform_training_case_3_ann.py --dataset-backend prom
+python3 stage3_perform_training_case_1_rbf.py --dataset-backend prom
+python3 stage3_perform_training_case_2_rbf.py --dataset-backend prom
+python3 stage3_perform_training_case_3_rbf.py --dataset-backend prom
 python3 stage3_perform_training_rom_data_driven.py --dataset-backend prom
+python3 stage3_perform_training_prom_pod_ae.py --dataset-backend prom
+python3 stage3_perform_training_pod_dl_data_driven.py --dataset-backend prom
 ```
 
 If your Stage-2 dataset was built with HPROM, use `--dataset-backend hprom` instead.
@@ -105,6 +115,66 @@ python3 stage3_perform_training_rom_data_driven.py --dataset-backend prom --mode
 - If `--model-name` has no `.pt`, it is appended automatically.
 - Defaults stay unchanged:
   - `case1_model.pt`, `case2_model.pt`, `case3_model.pt`, `rom_data_driven_model.pt`.
+  - RBF defaults: `case1_model_rbf.pt`, `case2_model_rbf.pt`, `case3_model_rbf.pt`.
+
+RBF grid-search example (Case 2):
+```bash
+python3 stage3_perform_training_case_2_rbf.py \
+  --dataset-backend prom \
+  --primary-modes 10 \
+  --model-name case2_model_rbf.pt \
+  --kernel-candidates imq,gaussian,matern,multiquadric,linear \
+  --epsilon-grid 0.25,0.5,1.0,2.0,4.0,8.0 \
+  --lambda-grid 1e-10,1e-8,1e-6,1e-4 \
+  --max-centers 1200
+```
+
+PROM-POD-AE example:
+```bash
+python3 stage3_perform_training_prom_pod_ae.py \
+  --dataset-backend prom \
+  --model-name prom_pod_ae_model.pt \
+  --latent-dim 5 \
+  --hidden-dims 192,96,48 \
+  --activation tanh \
+  --scaling minmax_-1_1
+```
+
+POD-DL-ROM (non-intrusive, paper-style latent+dynamics) example:
+```bash
+python3 stage3_perform_training_pod_dl_data_driven.py \
+  --dataset-backend prom \
+  --model-name pod_dl_data_driven_model.pt \
+  --latent-dim 5 \
+  --encoder-hidden-dims 256,128 \
+  --decoder-hidden-dims 128,256 \
+  --dynamics-hidden-dims 64,128,128 \
+  --omega-data 1.0 \
+  --omega-latent 0.1
+```
+POD-DL-ROM optional configuration (dynamics branch inspired by the strong POD-NN-ROM MLP):
+```bash
+python3 stage3_perform_training_pod_dl_data_driven.py \
+  --dataset-backend hprom \
+  --model-name <your_pod_dl_model_name>.pt \
+  --latent-dim 20 \
+  --encoder-hidden-dims 192,96,48 \
+  --decoder-hidden-dims 48,96,192 \
+  --dynamics-hidden-dims 32,64,128,256,256 \
+  --activation elu \
+  --x-scaling zscore \
+  --q-scaling zscore \
+  --omega-data 1.0 \
+  --omega-latent 0.02 \
+  --pretrain-epochs 150
+```
+Notes:
+- This implementation follows the POD-DL-ROM loss structure on POD coefficients (`qN`) using dense encoder/decoder + dense dynamics map.
+- Convolutional layers are not required here because inputs are already compact modal vectors (not high-dimensional image/tensor fields).
+- Suggested paper labels:
+  - `POD-NN-ROM`: direct coefficient-space map `(\mu,t) -> qN`
+  - `POD-DL-ROM`: latent map `(\mu,t) -> z -> qN`
+  - `PROM-POD-AE`: intrusive latent-manifold residual-minimization track
 
 Main outputs:
 - Models in `Results/Stage3/models/`
@@ -129,13 +199,42 @@ ANN closures (CLI):
 - `run_prom_ann_case_2.py`
 - `run_prom_ann_case_2_prnn.py` (optional PRNN-style Case 2 runner; PROM/HPROM)
 - `run_prom_ann_case_3.py`
+- `run_prom_rbf_case_1.py` (RBF closure runner; PROM/HPROM)
+- `run_prom_rbf_case_2.py` (RBF closure runner; PROM/HPROM)
+- `run_prom_rbf_case_3.py` (RBF closure runner; PROM/HPROM)
 - `run_prom_ann_case_2_petrov_galerkin.py` (experimental Case 2 variant; PROM/HPROM)
+- `run_prom_pod_ae.py` (intrusive PROM-POD-AE runner; PROM/HPROM)
+- `run_pod_dl_data_driven.py` (non-intrusive POD-DL-ROM runner)
 
 Quick runs (defaults):
 ```bash
 python3 run_prom_ann_case_1.py
 python3 run_prom_ann_case_2.py
 python3 run_prom_ann_case_3.py
+python3 run_prom_rbf_case_1.py
+python3 run_prom_rbf_case_2.py
+python3 run_prom_rbf_case_3.py
+python3 run_prom_pod_ae.py
+python3 run_pod_dl_data_driven.py
+```
+
+RBF explicit runs:
+```bash
+python3 run_prom_rbf_case_1.py --backend prom  --mu1 4.56 --mu2 0.019 --model-name case1_model_rbf.pt
+python3 run_prom_rbf_case_2.py --backend prom  --mu1 4.56 --mu2 0.019 --model-name case2_model_rbf.pt
+python3 run_prom_rbf_case_3.py --backend hprom --mu1 5.19 --mu2 0.026 --model-name case3_model_rbf.pt
+```
+
+PROM-POD-AE explicit runs:
+```bash
+python3 run_prom_pod_ae.py --backend prom  --mu1 4.56 --mu2 0.019 --model-name prom_pod_ae_model.pt
+python3 run_prom_pod_ae.py --backend hprom --mu1 4.56 --mu2 0.019 --model-name prom_pod_ae_model.pt
+```
+
+POD-DL-ROM explicit runs:
+```bash
+python3 run_pod_dl_data_driven.py --mu1 4.56 --mu2 0.019 --model-name <your_pod_dl_model_name>.pt
+python3 run_pod_dl_data_driven.py --mu1 5.19 --mu2 0.026 --model-name <your_pod_dl_model_name>.pt
 ```
 
 Experimental Case 2 with enriched residual testing (PROM or HPROM):
@@ -206,7 +305,7 @@ python3 run_prom_ann_case_3.py --backend hprom --mu1 4.56 --mu2 0.019
 python3 run_prom_ann_case_3.py --backend prom  --mu1 4.56 --mu2 0.019
 ```
 
-Optional checkpoint selection for baseline ANN/data-driven runs:
+Optional checkpoint selection for baseline ANN/POD-NN-ROM runs:
 ```bash
 python3 run_prom_ann_case_2.py --backend prom --model-name case2_model_n20.pt --mu1 4.56 --mu2 0.019
 python3 run_prom_ann_case_2.py --backend prom --model-path /abs/path/to/case2_model_custom.pt --mu1 4.56 --mu2 0.019
@@ -256,7 +355,7 @@ python3 run_prom_ann_case_2_petrov_galerkin.py --backend hprom --no-ecsw --mu1 4
 python3 run_prom_ann_case_2_petrov_galerkin_enriched.py --backend hprom --no-ecsw --mu1 4.56 --mu2 0.019
 ```
 
-Data-driven non-intrusive model:
+POD-NN-ROM non-intrusive model:
 - `run_rom_data_driven.py` (CLI)
 
 Example:
@@ -270,6 +369,8 @@ Run outputs are under:
 - `Results/Runs/Case2/`
 - `Results/Runs/Case3/`
 - `Results/Runs/DataDriven/`
+- `Results/Runs/PODAE/`
+- `Results/Runs/PODDL/`
 
 Manual 3-point comparison (baseline, hard-coded):
 ```bash
@@ -379,6 +480,8 @@ Option B (individual scripts):
 - `stage3_perform_training_case_2_ann_enriched.py`
 - `stage3_perform_training_case_3_ann_enriched.py`
 - `stage3_perform_training_rom_data_driven_enriched.py`
+- `stage3_perform_training_prom_pod_ae_enriched.py`
+- `stage3_perform_training_pod_dl_data_driven_enriched.py`
 
 Each individual enriched trainer also accepts `--model-name`.
 
@@ -434,7 +537,7 @@ python3 run_prom_ann_case_3_enriched.py --backend hprom --mu1 4.56 --mu2 0.019
 python3 run_prom_ann_case_3_enriched.py --backend prom  --mu1 4.56 --mu2 0.019
 ```
 
-Optional checkpoint selection for enriched ANN/data-driven runs:
+Optional checkpoint selection for enriched ANN/POD-NN-ROM runs:
 ```bash
 python3 run_prom_ann_case_2_enriched.py --backend prom --model-name case2_model_enriched_n20.pt --mu1 4.56 --mu2 0.019
 python3 run_prom_ann_case_2_enriched.py --backend prom --model-path /abs/path/to/case2_model_enriched_custom.pt --mu1 4.56 --mu2 0.019
@@ -452,10 +555,16 @@ Extra enriched-only flags:
 
 Data-driven enriched:
 - `run_rom_data_driven_enriched.py` (CLI)
+- `run_pod_dl_data_driven_enriched.py` (POD-DL-ROM latent, non-intrusive)
+
+PROM-POD-AE enriched:
+- `run_prom_pod_ae_enriched.py` (PROM/HPROM backend)
 
 Example:
 ```bash
 python3 run_rom_data_driven_enriched.py --mu1 4.56 --mu2 0.019
+python3 run_pod_dl_data_driven_enriched.py --mu1 4.56 --mu2 0.019
+python3 run_prom_pod_ae_enriched.py --backend hprom --mu1 4.56 --mu2 0.019
 ```
 
 Run outputs are under:
@@ -463,6 +572,8 @@ Run outputs are under:
 - `Results_Enrichment/Runs/Case2/`
 - `Results_Enrichment/Runs/Case3/`
 - `Results_Enrichment/Runs/DataDriven/`
+- `Results_Enrichment/Runs/PODAE/`
+- `Results_Enrichment/Runs/PODDL/`
 - `Results_Enrichment/Runs/ECSW/`
 
 Manual 3-point comparison (enriched):
@@ -524,6 +635,9 @@ python3 run_rom_data_driven_enriched.py --mu1 4.875 --mu2 0.0225
 - Stage-2 dataset folder names are backend-agnostic (`prom_coeff_dataset_ntot*`), so rebuilding the same `ntot` with another backend overwrites that dataset.
 - Stage-2 stores full reduced coordinates only (`qN.npy`); primary/truncated split is chosen in Stage-3 (`--primary-modes`).
 - Run scripts are CLI-driven: `run_prom.py`, `run_prom_ann_case_*`, `run_rom_data_driven.py`, and enriched counterparts.
+- PROM-POD-AE follows the same run pattern via `run_prom_pod_ae.py`.
+- POD-DL-ROM non-intrusive follows the same run pattern via `run_pod_dl_data_driven.py` (no online backend switch).
+- Enriched latent counterparts are `run_prom_pod_ae_enriched.py` and `run_pod_dl_data_driven_enriched.py`.
 - In HPROM runs (`run_prom.py` and ANN runners), summaries separate timing as `ecsw_setup_elapsed_s` (weights load/build) and `online_solve_elapsed_s` (ROM solve only). `elapsed_s` is kept for compatibility and equals `online_solve_elapsed_s`.
 
 ## 4) Minimal End-to-End Command Sequence
@@ -536,9 +650,13 @@ python3 stage3_perform_training_case_1_ann.py --dataset-backend prom
 python3 stage3_perform_training_case_2_ann.py --dataset-backend prom
 python3 stage3_perform_training_case_3_ann.py --dataset-backend prom
 python3 stage3_perform_training_rom_data_driven.py --dataset-backend prom
+python3 stage3_perform_training_prom_pod_ae.py --dataset-backend prom
+python3 stage3_perform_training_pod_dl_data_driven.py --dataset-backend prom
 python3 run_prom_ann_case_1.py
 python3 run_prom_ann_case_2.py
 python3 run_prom_ann_case_3.py
+python3 run_prom_pod_ae.py --backend prom --mu1 4.56 --mu2 0.019
+python3 run_pod_dl_data_driven.py --mu1 4.56 --mu2 0.019
 python3 run_rom_data_driven.py --mu1 4.56 --mu2 0.019
 ```
 
@@ -546,10 +664,14 @@ Enriched:
 ```bash
 python3 stage2_build_enrichment_lhs_qn_dataset.py --backend prom
 python3 stage3_train_enriched_nonintrusive_maps.py --dataset-backend prom
+python3 stage3_perform_training_prom_pod_ae_enriched.py --dataset-backend prom
+python3 stage3_perform_training_pod_dl_data_driven_enriched.py --dataset-backend prom
 python3 run_prom_ann_case_1_enriched.py
 python3 run_prom_ann_case_2_enriched.py
 python3 run_prom_ann_case_3_enriched.py
 python3 run_rom_data_driven_enriched.py --mu1 4.56 --mu2 0.019
+python3 run_prom_pod_ae_enriched.py --backend prom --mu1 4.56 --mu2 0.019
+python3 run_pod_dl_data_driven_enriched.py --mu1 4.56 --mu2 0.019
 ```
 
 ## 5) Backend Recipes
@@ -561,6 +683,8 @@ python3 stage3_perform_training_case_1_ann.py --dataset-backend prom
 python3 stage3_perform_training_case_2_ann.py --dataset-backend prom
 python3 stage3_perform_training_case_3_ann.py --dataset-backend prom
 python3 stage3_perform_training_rom_data_driven.py --dataset-backend prom
+python3 stage3_perform_training_prom_pod_ae.py --dataset-backend prom
+python3 stage3_perform_training_pod_dl_data_driven.py --dataset-backend prom
 ```
 
 Fully HPROM training data + training:
@@ -570,6 +694,8 @@ python3 stage3_perform_training_case_1_ann.py --dataset-backend hprom
 python3 stage3_perform_training_case_2_ann.py --dataset-backend hprom
 python3 stage3_perform_training_case_3_ann.py --dataset-backend hprom
 python3 stage3_perform_training_rom_data_driven.py --dataset-backend hprom
+python3 stage3_perform_training_prom_pod_ae.py --dataset-backend hprom
+python3 stage3_perform_training_pod_dl_data_driven.py --dataset-backend hprom
 ```
 
 ## 6) Coefficient-Error Analysis (No New Runs)

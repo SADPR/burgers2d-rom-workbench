@@ -1,0 +1,10 @@
+Coefficient trajectory roughness summary
+q_path=Emilien_TMP_Response/data_ref/qN_mu1_5.500_mu2_0.0150.npy
+t_path=Emilien_TMP_Response/data_ref/t_mu1_5.500_mu2_0.0150.npy
+n_modes=151
+n_samples=501
+group_q1_4=1.534115e-02
+group_q21_24=1.270859e-01
+group_q101_104=3.031256e-01
+ratio_q21_24_over_q1_4=8.283989
+ratio_q101_104_over_q1_4=19.758991

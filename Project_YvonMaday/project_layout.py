@@ -21,6 +21,8 @@ RUNS_CASE2_DIR = os.path.join(RUNS_DIR, "Case2")
 RUNS_CASE3_DIR = os.path.join(RUNS_DIR, "Case3")
 RUNS_ECSW_DIR = os.path.join(RUNS_DIR, "ECSW")
 RUNS_DATA_DRIVEN_DIR = os.path.join(RUNS_DIR, "DataDriven")
+RUNS_POD_AE_DIR = os.path.join(RUNS_DIR, "PODAE")
+RUNS_POD_DL_DIR = os.path.join(RUNS_DIR, "PODDL")
 
 
 def ensure_layout_dirs():
@@ -37,6 +39,8 @@ def ensure_layout_dirs():
         RUNS_CASE3_DIR,
         RUNS_ECSW_DIR,
         RUNS_DATA_DRIVEN_DIR,
+        RUNS_POD_AE_DIR,
+        RUNS_POD_DL_DIR,
     ):
         os.makedirs(path, exist_ok=True)
 

@@ -12,10 +12,11 @@ Reference choices:
   - stage2: uses Results/Stage2/prom_coeff_dataset_ntot*/per_mu/*/qN.npy
             (works for points present in Stage-2 dataset).
 
-Usage (from Project_YvonMaday/250x250):
+Usage (from Project_YvonMaday):
   python3 check_case2_offline_errors.py
   python3 check_case2_offline_errors.py --reference-source stage2
-  python3 check_case2_offline_errors.py --model-path ../250x250/Results/Stage3/models/case2_model_n20.pt
+  python3 check_case2_offline_errors.py --model-path Results/Stage3/models/case2_model_n20.pt
+  python3 check_case2_offline_errors.py --global-coeff 95 --model-path <m1> --model-path <m2>
 """
 
 import argparse
@@ -27,6 +28,11 @@ from typing import List, Optional, Tuple
 import numpy as np
 import torch
 import torch.nn as nn
+
+try:
+    from gpr_map_common import build_torch_case2_gpr_from_ckpt
+except ModuleNotFoundError:
+    from .gpr_map_common import build_torch_case2_gpr_from_ckpt
 
 
 class Scaler(nn.Module):
@@ -51,7 +57,26 @@ class Unscaler(nn.Module):
         return y * self.std + self.mean
 
 
-class CoreMLP(nn.Module):
+def _make_activation(name: str):
+    key = str(name).strip().lower()
+    if key == "elu":
+        return nn.ELU()
+    if key == "gelu":
+        return nn.GELU()
+    if key == "silu":
+        return nn.SiLU()
+    if key == "tanh":
+        return nn.Tanh()
+    if key == "relu":
+        return nn.ReLU()
+    if key == "leaky_relu":
+        return nn.LeakyReLU(negative_slope=0.01)
+    raise ValueError(f"Unsupported activation: {name}")
+
+
+class CoreMLPLegacy(nn.Module):
+    """Legacy fixed-width MLP with fc1..fc6 keys."""
+
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.fc1 = nn.Linear(in_dim, 32)
@@ -71,13 +96,37 @@ class CoreMLP(nn.Module):
         return self.fc6(x)
 
 
+class CoreMLP(nn.Module):
+    """Configurable MLP with Sequential net.0, net.2, ... keys."""
+
+    def __init__(self, in_dim, out_dim, hidden_dims, activation="elu", dropout=0.0):
+        super().__init__()
+        dims = [int(in_dim)] + [int(d) for d in hidden_dims] + [int(out_dim)]
+        layers = []
+        for i in range(len(dims) - 2):
+            layers.append(nn.Linear(dims[i], dims[i + 1]))
+            layers.append(_make_activation(activation))
+            if float(dropout) > 0.0:
+                layers.append(nn.Dropout(p=float(dropout)))
+        layers.append(nn.Linear(dims[-2], dims[-1]))
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.net(x)
+
+
 class Case2Model(nn.Module):
     """Input: (mu1, mu2, t), output: q_s."""
 
-    def __init__(self, n_s):
+    def __init__(self, n_s, hidden_dims=None, activation="elu", dropout=0.0, legacy=False):
         super().__init__()
         self.scaler = Scaler(np.zeros((1, 3)), np.ones((1, 3)))
-        self.core = CoreMLP(3, n_s)
+        if legacy:
+            self.core = CoreMLPLegacy(3, n_s)
+        else:
+            if hidden_dims is None:
+                hidden_dims = (32, 64, 128, 256, 256)
+            self.core = CoreMLP(3, n_s, hidden_dims=hidden_dims, activation=activation, dropout=dropout)
         self.unscaler = Unscaler(np.zeros((1, n_s)), np.ones((1, n_s)))
 
     def forward(self, x_raw):
@@ -166,16 +215,57 @@ def _find_stage2_t(base_dir: Path, ntot: int, mu1: float, mu2: float) -> Optiona
 
 def _load_case2_model(ckpt_path: Path, device: torch.device):
     ckpt = torch.load(ckpt_path, map_location=device)
-    n_s = int(ckpt["n_s"])
-    ntot = int(ckpt.get("dataset_ntot"))
+    fmt = str(ckpt.get("format", "")).strip().lower()
+
+    if fmt in ("gpr_map", "gpr_map_full"):
+        if fmt == "gpr_map_full":
+            ntot = int(ckpt.get("dataset_ntot", ckpt.get("n_tot", ckpt.get("out_dim"))))
+            n_s = int(ntot)
+        else:
+            n_s = int(ckpt.get("out_dim", ckpt.get("n_s")))
+            ntot = int(ckpt.get("dataset_ntot"))
+        in_dim = int(ckpt.get("in_dim", 3))
+        if in_dim != 3:
+            raise ValueError(f"{ckpt_path}: expected in_dim=3, got {in_dim}.")
+        if ntot < n_s:
+            raise ValueError(f"{ckpt_path}: invalid split ntot={ntot}, n_s={n_s}.")
+        model = build_torch_case2_gpr_from_ckpt(ckpt).to(device)
+        model.eval()
+        return model, ntot, n_s
+
+    # ANN Case-2 style checkpoint (predicts only q_s)
+    if "n_s" in ckpt:
+        n_s = int(ckpt["n_s"])
+        ntot = int(ckpt.get("dataset_ntot"))
+    # Full data-driven ANN checkpoint (predicts full qN)
+    elif "n_tot" in ckpt:
+        ntot = int(ckpt.get("n_tot", ckpt.get("dataset_ntot")))
+        n_s = int(ntot)
+    else:
+        raise KeyError(f"{ckpt_path}: unsupported checkpoint schema (missing n_s and n_tot).")
+
     in_dim = int(ckpt.get("in_dim", 3))
     if in_dim != 3:
         raise ValueError(f"{ckpt_path}: expected in_dim=3, got {in_dim}.")
-    if ntot <= n_s:
+    if ntot < n_s:
         raise ValueError(f"{ckpt_path}: invalid split ntot={ntot}, n_s={n_s}.")
 
-    model = Case2Model(n_s).to(device)
-    model.load_state_dict(ckpt["state_dict"], strict=True)
+    sd = ckpt["state_dict"]
+    has_legacy = any(k.startswith("core.fc1.") for k in sd.keys())
+    if has_legacy:
+        model = Case2Model(n_s, legacy=True).to(device)
+    else:
+        hidden_dims = ckpt.get("hidden_dims", (32, 64, 128, 256, 256))
+        activation = ckpt.get("activation", "elu")
+        dropout = float(ckpt.get("dropout", 0.0))
+        model = Case2Model(
+            n_s,
+            hidden_dims=hidden_dims,
+            activation=activation,
+            dropout=dropout,
+            legacy=False,
+        ).to(device)
+    model.load_state_dict(sd, strict=True)
     model.eval()
     return model, ntot, n_s
 
@@ -192,6 +282,26 @@ def _predict_qs(model: nn.Module, mu1: float, mu2: float, t: np.ndarray, device:
         y = model(torch.tensor(x, dtype=torch.float32, device=device)).cpu().numpy()
     # (nt, ns) -> (ns, nt)
     return y.T
+
+
+def _parse_global_coeffs(raw_items: Optional[List[str]]) -> List[int]:
+    if raw_items is None:
+        return []
+    out: List[int] = []
+    seen = set()
+    for item in raw_items:
+        for token in str(item).split(","):
+            txt = str(token).strip()
+            if not txt:
+                continue
+            val = int(txt)
+            if val < 1:
+                raise ValueError(f"Invalid --global-coeff '{item}'. Use 1-based positive indices.")
+            if val in seen:
+                continue
+            seen.add(val)
+            out.append(val)
+    return out
 
 
 def main():
@@ -211,7 +321,7 @@ def main():
     parser.add_argument(
         "--point",
         action="append",
-        default=["4.875,0.0225", "4.56,0.019", "5.19,0.026"],
+        default=None,
         help="Evaluation point 'mu1,mu2'. Can be passed multiple times.",
     )
     parser.add_argument(
@@ -224,6 +334,15 @@ def main():
         type=str,
         default="Figures/offline_case2",
     )
+    parser.add_argument(
+        "--global-coeff",
+        action="append",
+        default=None,
+        help=(
+            "1-based global qN coefficient index to compare consistently across models "
+            "(e.g. --global-coeff 95). Can be passed multiple times."
+        ),
+    )
     args = parser.parse_args()
 
     this_dir = Path(__file__).resolve().parent
@@ -231,7 +350,18 @@ def main():
     out_dir = (base_dir / args.output_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    points = _parse_points(args.point)
+    raw_points = args.point if args.point is not None else ["4.875,0.0225", "4.56,0.019", "5.19,0.026"]
+    # Deduplicate while preserving order.
+    seen = set()
+    raw_points_unique = []
+    for p in raw_points:
+        key = str(p).strip()
+        if key in seen:
+            continue
+        seen.add(key)
+        raw_points_unique.append(key)
+    points = _parse_points(raw_points_unique)
+    global_coeffs = _parse_global_coeffs(args.global_coeff)
     device = torch.device(args.device)
     if device.type == "cuda" and not torch.cuda.is_available():
         print("[offline-case2] CUDA requested but not available. Using CPU.")
@@ -261,6 +391,7 @@ def main():
             raise FileNotFoundError("No default Case-2 checkpoints found. Use --model-path.")
 
     rows = []
+    coeff_rows = []
     missing_refs = []
 
     for ckpt_path in model_paths:
@@ -303,9 +434,9 @@ def main():
             ref_frob = float(np.linalg.norm(q_s_ref))
             rel_frob_pct = 100.0 * abs_frob / (ref_frob + 1e-30)
 
-            abs_mode = np.linalg.norm(err, axis=1)
-            ref_mode = np.linalg.norm(q_s_ref, axis=1)
-            rel_mode_pct = 100.0 * abs_mode / (ref_mode + 1e-30)
+            abs_coeff = np.linalg.norm(err, axis=1)
+            ref_coeff = np.linalg.norm(q_s_ref, axis=1)
+            rel_coeff_pct = 100.0 * abs_coeff / (ref_coeff + 1e-30)
 
             rows.append(
                 {
@@ -319,13 +450,66 @@ def main():
                     "n_s": int(n_s),
                     "nt": int(t.size),
                     "rel_frob_percent": rel_frob_pct,
-                    "mean_mode_rel_percent": float(np.mean(rel_mode_pct)),
-                    "median_mode_rel_percent": float(np.median(rel_mode_pct)),
-                    "p95_mode_rel_percent": float(np.percentile(rel_mode_pct, 95.0)),
-                    "max_mode_rel_percent": float(np.max(rel_mode_pct)),
+                    "mean_coeff_rel_percent": float(np.mean(rel_coeff_pct)),
+                    "median_coeff_rel_percent": float(np.median(rel_coeff_pct)),
+                    "p95_coeff_rel_percent": float(np.percentile(rel_coeff_pct, 95.0)),
+                    "max_coeff_rel_percent": float(np.max(rel_coeff_pct)),
+                    # Backward-compatible aliases used by older scripts/notebooks.
+                    "mean_mode_rel_percent": float(np.mean(rel_coeff_pct)),
+                    "median_mode_rel_percent": float(np.median(rel_coeff_pct)),
+                    "p95_mode_rel_percent": float(np.percentile(rel_coeff_pct, 95.0)),
+                    "max_mode_rel_percent": float(np.max(rel_coeff_pct)),
                     "qN_ref_path": str(qn_path),
                 }
             )
+
+            # Optional direct comparison of selected global coefficients.
+            for gc in global_coeffs:
+                idx0 = int(gc) - 1  # global 0-based index in qN
+                if idx0 < n_p or idx0 >= ntot:
+                    coeff_rows.append(
+                        {
+                            "model": model_tag,
+                            "model_path": str(ckpt_path),
+                            "reference_source": args.reference_source,
+                            "mu1": float(mu1),
+                            "mu2": float(mu2),
+                            "n_tot": int(ntot),
+                            "n_p": int(n_p),
+                            "n_s": int(n_s),
+                            "global_coeff_1based": int(gc),
+                            "local_qs_coeff_1based": "",
+                            "status": "not_predicted_by_map",
+                            "rel_coeff_percent": "",
+                            "abs_coeff_l2_error": "",
+                            "ref_coeff_l2_norm": "",
+                        }
+                    )
+                    continue
+
+                loc = idx0 - n_p  # 0-based index in q_s
+                e = q_s_ref[loc, :] - q_s_pred[loc, :]
+                e_abs = float(np.linalg.norm(e))
+                r_abs = float(np.linalg.norm(q_s_ref[loc, :]))
+                rel = 100.0 * e_abs / (r_abs + 1e-30)
+                coeff_rows.append(
+                    {
+                        "model": model_tag,
+                        "model_path": str(ckpt_path),
+                        "reference_source": args.reference_source,
+                        "mu1": float(mu1),
+                        "mu2": float(mu2),
+                        "n_tot": int(ntot),
+                        "n_p": int(n_p),
+                        "n_s": int(n_s),
+                        "global_coeff_1based": int(gc),
+                        "local_qs_coeff_1based": int(loc + 1),
+                        "status": "ok",
+                        "rel_coeff_percent": float(rel),
+                        "abs_coeff_l2_error": float(e_abs),
+                        "ref_coeff_l2_norm": float(r_abs),
+                    }
+                )
 
     csv_path = out_dir / f"case2_offline_errors_{args.reference_source}.csv"
     with csv_path.open("w", newline="") as f:
@@ -342,6 +526,10 @@ def main():
                 "n_s",
                 "nt",
                 "rel_frob_percent",
+                "mean_coeff_rel_percent",
+                "median_coeff_rel_percent",
+                "p95_coeff_rel_percent",
+                "max_coeff_rel_percent",
                 "mean_mode_rel_percent",
                 "median_mode_rel_percent",
                 "p95_mode_rel_percent",
@@ -364,11 +552,72 @@ def main():
                 f"mu=({r['mu1']:.3f},{r['mu2']:.4f}) "
                 f"n_p={r['n_p']:>3d} "
                 f"relF={r['rel_frob_percent']:.3f}% "
-                f"meanMode={r['mean_mode_rel_percent']:.3f}% "
-                f"p95Mode={r['p95_mode_rel_percent']:.3f}%"
+                f"meanCoeff={r['mean_coeff_rel_percent']:.3f}% "
+                f"p95Coeff={r['p95_coeff_rel_percent']:.3f}%"
             )
     else:
         print("[offline-case2] no rows were produced.")
+
+    if global_coeffs:
+        coeff_csv_path = out_dir / f"case2_global_coeff_errors_{args.reference_source}.csv"
+        with coeff_csv_path.open("w", newline="") as f:
+            writer = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "model",
+                    "model_path",
+                    "reference_source",
+                    "mu1",
+                    "mu2",
+                    "n_tot",
+                    "n_p",
+                    "n_s",
+                    "global_coeff_1based",
+                    "local_qs_coeff_1based",
+                    "status",
+                    "rel_coeff_percent",
+                    "abs_coeff_l2_error",
+                    "ref_coeff_l2_norm",
+                ],
+            )
+            writer.writeheader()
+            for row in coeff_rows:
+                writer.writerow(row)
+
+        print(f"\n[offline-case2] wrote: {coeff_csv_path}")
+        ok_rows = [r for r in coeff_rows if r["status"] == "ok"]
+        if ok_rows:
+            print("[offline-case2] selected global coefficient summary:")
+            ok_rows_sorted = sorted(
+                ok_rows,
+                key=lambda r: (
+                    int(r["global_coeff_1based"]),
+                    str(r["model"]),
+                    float(r["mu1"]),
+                    float(r["mu2"]),
+                ),
+            )
+            for r in ok_rows_sorted:
+                print(
+                    "  "
+                    f"gCoeff={int(r['global_coeff_1based']):>3d} "
+                    f"{str(r['model']):<30s} "
+                    f"mu=({float(r['mu1']):.3f},{float(r['mu2']):.4f}) "
+                    f"n_p={int(r['n_p']):>3d} "
+                    f"local_qs={int(r['local_qs_coeff_1based']):>3d} "
+                    f"relCoeff={float(r['rel_coeff_percent']):.3f}%"
+                )
+        not_pred = [r for r in coeff_rows if r["status"] != "ok"]
+        if not_pred:
+            print("[offline-case2] selected global coefficients not predicted by some models:")
+            for r in not_pred:
+                print(
+                    "  "
+                    f"gCoeff={int(r['global_coeff_1based']):>3d} "
+                    f"{str(r['model']):<30s} "
+                    f"mu=({float(r['mu1']):.3f},{float(r['mu2']):.4f}) "
+                    f"n_p={int(r['n_p']):>3d} status={r['status']}"
+                )
 
     if missing_refs:
         print("\n[offline-case2] missing references:")
@@ -378,4 +627,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

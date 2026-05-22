@@ -1,0 +1,112 @@
+[run]
+timestamp: 2026-05-10T13:08:26
+script: stage3_train_gplvm.py
+
+[configuration]
+basis_file: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/basis.npy
+q_file: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/q.npy
+q_test_file: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/q_test.npy
+stage2_metadata_file: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage2_projection_metadata.npz
+uref_mode: auto
+use_u_ref: True
+u_ref_source: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage2_projection_metadata.npz:u_ref_used
+u_ref_l2_norm: 8.17426148e+02
+latent_dim: 10
+max_train_samples: N/A
+duplicate_tol: 1.00000000e-12
+latent_reg: 1.00000000e-04
+sparse_decoder: auto
+sparse_num_inducing: 300
+sparse_inducing_method: fps
+ell_init: 1.00000000e+00
+sf_init: 1.00000000e+00
+sn_init: 1.00000000e-02
+ell_bounds: (0.01, 20.0)
+sf_bounds: (0.001, 20.0)
+sn_bounds: (0.0001, 1.0)
+jitter: 1.00000000e-06
+maxiter: 400
+maxfun: 5000
+gtol: 1.00000000e-06
+optimizer_ftol: 1.00000000e-15
+optimizer_maxls: 100
+optimizer_maxcor: 20
+auto_restart: True
+max_restarts: 2
+restart_perturb_std: 5.00000000e-02
+objective_scale_mode: auto
+objective_scale: 6.79651000e+05
+verbose_training: True
+print_every_eval: 20
+print_every_iter: 5
+monitor_train_relerr: True
+monitor_train_relerr_samples: 300
+validation_max_samples: 200
+val_infer_max_its: 30
+val_infer_tol: 1.00000000e-06
+val_inverse_method: bounded_trf
+val_inverse_n_starts: 5
+val_inverse_bound_margin_rel: 2.00000000e-01
+val_inverse_bound_margin_abs: 2.50000000e-01
+val_inverse_prior_weight: 1.00000000e-03
+val_inverse_loss: linear
+val_inverse_f_scale: 1.00000000e+00
+random_seed: 42
+
+[dataset]
+basis_shape: (125000, 151)
+q_shape: (151, 4509)
+q_dim: 151
+n_samples_total: 4509
+n_samples_used: 4501
+duplicates_removed: 8
+monitor_train_relerr_subset_size: 300
+
+[optimization]
+success: False
+status: 1
+message: STOP: TOTAL NO. of ITERATIONS REACHED LIMIT
+nfev: 402
+njev: 402
+nit: 400
+final_objective: -8.85074586e+05
+final_objective_scaled: -1.30224863e+00
+final_grad_l2_norm: 3.49052045e+05
+final_grad_inf_norm: 6.67375379e+04
+baseline_nll_first_eval: -7.87847320e+04
+baseline_grad_inf_first_eval: 1.08567455e+06
+final_nll_relative_improvement_vs_first_eval: 1.02340877e+01
+final_grad_relative_to_first_eval: 6.14710347e-02
+final_train_relerr_knownz_subset_percent: 1.16331527e-02
+elapsed_train_seconds: 1.76818391e+03
+objective_history_length: 402
+callback_iteration_count: 400
+restart_count: 0
+
+[learned_parameters]
+ell: 2.30167575e+00
+sf: 4.29495672e+00
+sn: 1.00000000e-04
+log_ell: 8.33637444e-01
+log_sf: 1.45744148e+00
+log_sn: -9.21034037e+00
+jitter_used: 1.00000000e-06
+decoder_mode: sparse_dtc
+sparse_enabled: True
+sparse_num_inducing: 300
+sparse_inducing_method: fps
+
+[validation]
+validation_relative_error_percent: 1.37986168e+01
+validation_plot_saved: True
+validation_mean_per_sample_relative_error_percent: 1.41958983e+01
+validation_max_per_sample_relative_error_percent: 3.35516141e+01
+
+[outputs]
+model_npz: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/pod_gplvm_model/gplvm_model.npz
+U_q_npy: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/pod_gplvm_model/U_q.npy
+u_ref_npy: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/pod_gplvm_model/u_ref.npy
+q_train_used_npy: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/pod_gplvm_model/q_train_used.npy
+objective_history_png: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage3_gplvm_objective_history.png
+validation_relative_error_png: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage3_validation_relative_error.png
+summary_txt: /home/kratos/burgers2d-rom-workbench/POD-GPLVM/stage3_train_gplvm_summary.txt
