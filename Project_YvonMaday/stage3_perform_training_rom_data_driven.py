@@ -144,26 +144,66 @@ class Unscaler(nn.Module):
 
 
 # -----------------------------
-# Core MLP in normalized space (EXACT SAME as Case 2)
+# Configurable core MLP in normalized space.
 # -----------------------------
+def _parse_hidden_dims(txt: str):
+    vals = [s.strip() for s in str(txt).split(",")]
+    dims = []
+    for v in vals:
+        if not v:
+            continue
+        d = int(v)
+        if d <= 0:
+            raise ValueError(f"Hidden dimensions must be positive, got {d}.")
+        dims.append(d)
+    if not dims:
+        raise ValueError("At least one hidden layer must be provided.")
+    return tuple(dims)
+
+
+def _make_activation(name: str):
+    key = str(name).strip().lower()
+    if key == "elu":
+        return nn.ELU()
+    if key == "gelu":
+        return nn.GELU()
+    if key == "silu":
+        return nn.SiLU()
+    if key == "tanh":
+        return nn.Tanh()
+    if key == "relu":
+        return nn.ReLU()
+    if key == "leaky_relu":
+        return nn.LeakyReLU(negative_slope=0.01)
+    raise ValueError(
+        "Unsupported activation. Use one of: elu, gelu, silu, tanh, relu, leaky_relu."
+    )
+
+
 class CoreMLP(nn.Module):
-    def __init__(self, in_dim, out_dim):
+    hidden_dims = (32, 64, 128, 256, 256)
+    activation_name = "elu"
+
+    def __init__(self, in_dim, out_dim, hidden_dims=None, activation=None, dropout=0.0):
         super().__init__()
-        self.fc1 = nn.Linear(in_dim, 32)
-        self.fc2 = nn.Linear(32, 64)
-        self.fc3 = nn.Linear(64, 128)
-        self.fc4 = nn.Linear(128, 256)
-        self.fc5 = nn.Linear(256, 256)
-        self.fc6 = nn.Linear(256, out_dim)
-        self.act = nn.ELU()
+        hidden_dims = self.hidden_dims if hidden_dims is None else tuple(int(d) for d in hidden_dims)
+        activation = self.activation_name if activation is None else str(activation).strip().lower()
+        dropout = float(dropout)
+        if dropout < 0.0 or dropout >= 1.0:
+            raise ValueError(f"dropout must be in [0,1), got {dropout}.")
+
+        dims = [int(in_dim)] + list(hidden_dims) + [int(out_dim)]
+        layers = []
+        for i in range(len(dims) - 2):
+            layers.append(nn.Linear(dims[i], dims[i + 1]))
+            layers.append(_make_activation(activation))
+            if dropout > 0.0:
+                layers.append(nn.Dropout(p=dropout))
+        layers.append(nn.Linear(dims[-2], dims[-1]))
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.act(self.fc1(x))
-        x = self.act(self.fc2(x))
-        x = self.act(self.fc3(x))
-        x = self.act(self.fc4(x))
-        x = self.act(self.fc5(x))
-        return self.fc6(x)
+        return self.net(x)
 
 
 # -----------------------------
@@ -174,12 +214,18 @@ class ROMDataDrivenModel(nn.Module):
     X_raw = (mu1, mu2, t) -> qN_raw (n_tot,)
     Scaling is embedded as buffers.
     """
-    def __init__(self, x_mean, x_std, y_mean, y_std):
+    def __init__(self, x_mean, x_std, y_mean, y_std, hidden_dims=None, activation=None, dropout=0.0):
         super().__init__()
         in_dim = x_mean.shape[0]   # should be 3
         out_dim = y_mean.shape[0]  # n_tot
         self.scaler = Scaler(x_mean[None, :], x_std[None, :])
-        self.core = CoreMLP(in_dim, out_dim)
+        self.core = CoreMLP(
+            in_dim,
+            out_dim,
+            hidden_dims=hidden_dims,
+            activation=activation,
+            dropout=dropout,
+        )
         self.unscaler = Unscaler(y_mean[None, :], y_std[None, :])
 
     def forward(self, x_raw):
@@ -207,7 +253,32 @@ def main(argv=None):
         help="Optional explicit dataset directory containing per_mu/ and meta.npy.",
     )
     parser.add_argument("--model-name", type=str, default=None)
+    parser.add_argument("--summary-name", type=str, default="rom_data_driven_training_summary.txt")
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--val-frac", type=float, default=0.1)
+    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--weight-decay", type=float, default=1e-6)
+    parser.add_argument("--epochs", type=int, default=5000)
+    parser.add_argument("--patience", type=int, default=120)
+    parser.add_argument("--min-improve", type=float, default=1e-12)
+    parser.add_argument("--clip-grad", type=float, default=1.0)
+    parser.add_argument("--lr-scheduler-factor", type=float, default=0.5)
+    parser.add_argument("--lr-scheduler-patience", type=int, default=40)
+    parser.add_argument("--lr-scheduler-min-lr", type=float, default=1e-6)
+    parser.add_argument("--hidden-dims", type=str, default="32,64,128,256,256")
+    parser.add_argument(
+        "--activation",
+        type=str,
+        default="elu",
+        choices=("elu", "gelu", "silu", "tanh", "relu", "leaky_relu"),
+    )
+    parser.add_argument("--dropout", type=float, default=0.0)
     args = parser.parse_args(argv)
+
+    seed = int(args.seed)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     dataset_ntot = args.dataset_ntot
     dataset_backend = str(args.dataset_backend).strip().lower()
@@ -223,22 +294,69 @@ def main(argv=None):
     if not model_name.endswith(".pt"):
         model_name = f"{model_name}.pt"
     model_path = stage3_model_path(model_name)
-    summary_path = os.path.join(STAGE3_DIR, "rom_data_driven_training_summary.txt")
+    summary_name = str(args.summary_name).strip() or "rom_data_driven_training_summary.txt"
+    summary_path = os.path.join(STAGE3_DIR, summary_name)
 
-    VAL_FRAC = 0.1
-    batch_size = 128
-    lr = 1e-3
-    weight_decay = 1e-6
-    epochs = 2000
-    patience = 120
-    min_improve = 1e-12
-    clip_grad = 1.0
+    VAL_FRAC = float(args.val_frac)
+    batch_size = int(args.batch_size)
+    lr = float(args.lr)
+    weight_decay = float(args.weight_decay)
+    epochs = int(args.epochs)
+    patience = int(args.patience)
+    min_improve = float(args.min_improve)
+    clip_grad = float(args.clip_grad)
+    lr_scheduler_factor = float(args.lr_scheduler_factor)
+    lr_scheduler_patience = int(args.lr_scheduler_patience)
+    lr_scheduler_min_lr = float(args.lr_scheduler_min_lr)
+    hidden_dims = _parse_hidden_dims(args.hidden_dims)
+    activation = str(args.activation).strip().lower()
+    dropout = float(args.dropout)
+
+    if not (0.0 < VAL_FRAC < 0.5):
+        raise ValueError(f"--val-frac must be in (0,0.5), got {VAL_FRAC}.")
+    if batch_size <= 0:
+        raise ValueError(f"--batch-size must be positive, got {batch_size}.")
+    if lr <= 0.0:
+        raise ValueError(f"--lr must be positive, got {lr}.")
+    if weight_decay < 0.0:
+        raise ValueError(f"--weight-decay must be >= 0, got {weight_decay}.")
+    if epochs <= 0 or patience <= 0:
+        raise ValueError("--epochs and --patience must be positive.")
+    if min_improve < 0.0:
+        raise ValueError("--min-improve must be >= 0.")
+    if not (0.0 < lr_scheduler_factor < 1.0):
+        raise ValueError("--lr-scheduler-factor must be in (0,1).")
+    if lr_scheduler_patience <= 0:
+        raise ValueError("--lr-scheduler-patience must be positive.")
+    if lr_scheduler_min_lr <= 0.0:
+        raise ValueError("--lr-scheduler-min-lr must be positive.")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[ROM-DataDriven] device = {device}")
     print(f"[ROM-DataDriven] dataset_dir = {dataset_dir}")
     print(f"[ROM-DataDriven] dataset_root = {dataset_root} (ntot={dataset_ntot})")
     print(f"[ROM-DataDriven] solve_backend = {dataset_meta.get('solve_backend')}")
+    print(f"[ROM-DataDriven] mapping = qN = G(mu1, mu2, t)")
+    print(f"[ROM-DataDriven] hidden_dims = {hidden_dims}")
+    print(f"[ROM-DataDriven] activation = {activation}")
+    print(f"[ROM-DataDriven] dropout = {dropout}")
+    print(f"[ROM-DataDriven] optimizer = AdamW")
+    print(f"[ROM-DataDriven] lr = {lr:.3e}")
+    print(f"[ROM-DataDriven] weight_decay = {weight_decay:.3e}")
+    print(f"[ROM-DataDriven] batch_size = {batch_size}")
+    print(f"[ROM-DataDriven] epochs = {epochs}")
+    print(f"[ROM-DataDriven] patience = {patience}")
+    print(f"[ROM-DataDriven] min_improve = {min_improve:.3e}")
+    print(f"[ROM-DataDriven] clip_grad = {clip_grad}")
+    print(
+        "[ROM-DataDriven] lr_scheduler = ReduceLROnPlateau("
+        f"factor={lr_scheduler_factor}, patience={lr_scheduler_patience}, "
+        f"min_lr={lr_scheduler_min_lr:.3e})"
+    )
+    print(f"[ROM-DataDriven] val_split = row (train_test_split shuffle)")
+    print(f"[ROM-DataDriven] val_frac = {VAL_FRAC}")
+    print(f"[ROM-DataDriven] scaling = z-score on train split for X and Y")
+    print(f"[ROM-DataDriven] seed = {seed}")
 
     # -----------------------------
     # Load data
@@ -254,7 +372,7 @@ def main(argv=None):
     # Split
     # -----------------------------
     idx = np.arange(M, dtype=np.int64)
-    tr_idx, va_idx = train_test_split(idx, test_size=VAL_FRAC, random_state=SEED, shuffle=True)
+    tr_idx, va_idx = train_test_split(idx, test_size=VAL_FRAC, random_state=seed, shuffle=True)
 
     Xtr, Ytr = X_raw[tr_idx], Y_raw[tr_idx]
     Xva, Yva = X_raw[va_idx], Y_raw[va_idx]
@@ -270,8 +388,25 @@ def main(argv=None):
     # -----------------------------
     # Model
     # -----------------------------
-    model = ROMDataDrivenModel(x_mean, x_std, y_mean, y_std).to(device)
+    model = ROMDataDrivenModel(
+        x_mean,
+        x_std,
+        y_mean,
+        y_std,
+        hidden_dims=hidden_dims,
+        activation=activation,
+        dropout=dropout,
+    ).to(device)
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"[ROM-DataDriven] trainable_parameters = {trainable_params}")
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        opt,
+        mode="min",
+        factor=lr_scheduler_factor,
+        patience=lr_scheduler_patience,
+        min_lr=lr_scheduler_min_lr,
+    )
     loss_fn = nn.MSELoss()
 
     # DataLoaders (raw space; model scales internally)
@@ -315,8 +450,14 @@ def main(argv=None):
         with torch.no_grad():
             va_loss = float(loss_fn(model(Xva_t), Yva_t).detach().cpu().item())
 
+        scheduler.step(va_loss)
+
         if ep == 1 or ep % 25 == 0:
-            print(f"[Epoch {ep:4d}] train_mse={tr_loss:.6e} | val_mse={va_loss:.6e} | bad={bad}")
+            lr_current = opt.param_groups[0]["lr"]
+            print(
+                f"[Epoch {ep:4d}] train_mse={tr_loss:.6e} | "
+                f"val_mse={va_loss:.6e} | lr={lr_current:.3e} | bad={bad}"
+            )
 
         if va_loss < best_val - min_improve:
             best_val = va_loss
@@ -333,6 +474,15 @@ def main(argv=None):
 
     print(f"[ROM-DataDriven] Training done in {time.time() - t0:.2f}s. best_val={best_val:.6e}")
 
+    model.eval()
+    with torch.no_grad():
+        Ytr_pred = model(torch.from_numpy(Xtr).to(device)).detach().cpu().numpy()
+        Yva_pred = model(Xva_t).detach().cpu().numpy()
+    train_rel_frob_percent = 100.0 * np.linalg.norm(Ytr_pred - Ytr) / max(np.linalg.norm(Ytr), 1e-30)
+    val_rel_frob_percent = 100.0 * np.linalg.norm(Yva_pred - Yva) / max(np.linalg.norm(Yva), 1e-30)
+    print(f"[ROM-DataDriven] train_rel_frob_percent = {train_rel_frob_percent:.6f}%")
+    print(f"[ROM-DataDriven] val_rel_frob_percent = {val_rel_frob_percent:.6f}%")
+
     # -----------------------------
     # Save ONLY one file (weights + scaler buffers)
     # -----------------------------
@@ -340,11 +490,32 @@ def main(argv=None):
         "state_dict": model.state_dict(),
         "in_dim": int(in_dim),     # should be 3
         "n_tot": int(n_tot),
-        "seed": int(SEED),
+        "seed": int(seed),
         "dataset_root": dataset_root,
         "dataset_dir": dataset_dir,
         "dataset_ntot": int(dataset_ntot),
         "dataset_backend": dataset_meta.get("solve_backend"),
+        "hidden_dims": tuple(int(d) for d in hidden_dims),
+        "activation": activation,
+        "dropout": float(dropout),
+        "optimizer": "AdamW",
+        "batch_size": int(batch_size),
+        "lr": float(lr),
+        "weight_decay": float(weight_decay),
+        "epochs": int(epochs),
+        "patience": int(patience),
+        "min_improve": float(min_improve),
+        "clip_grad": float(clip_grad),
+        "lr_scheduler": "ReduceLROnPlateau",
+        "lr_scheduler_factor": float(lr_scheduler_factor),
+        "lr_scheduler_patience": int(lr_scheduler_patience),
+        "lr_scheduler_min_lr": float(lr_scheduler_min_lr),
+        "val_split": "row",
+        "val_frac": float(VAL_FRAC),
+        "scaling": "z-score train split for X and Y",
+        "trainable_parameters": int(trainable_params),
+        "train_rel_frob_percent": float(train_rel_frob_percent),
+        "val_rel_frob_percent": float(val_rel_frob_percent),
         "mapping": "qN = G(mu1, mu2, t)",
     }
     torch.save(ckpt, model_path)
@@ -361,9 +532,30 @@ def main(argv=None):
             ("samples_M", M),
             ("in_dim", in_dim),
             ("n_tot", n_tot),
+            ("hidden_dims", tuple(int(d) for d in hidden_dims)),
+            ("activation", activation),
+            ("dropout", float(dropout)),
+            ("optimizer", "AdamW"),
+            ("batch_size", batch_size),
+            ("lr", lr),
+            ("weight_decay", weight_decay),
+            ("epochs", epochs),
+            ("patience", patience),
             ("epochs_ran", ep),
             ("best_val_mse", best_val),
-            ("seed", SEED),
+            ("train_rel_frob_percent", train_rel_frob_percent),
+            ("val_rel_frob_percent", val_rel_frob_percent),
+            ("min_improve", min_improve),
+            ("clip_grad", clip_grad),
+            ("lr_scheduler", "ReduceLROnPlateau"),
+            ("lr_scheduler_factor", lr_scheduler_factor),
+            ("lr_scheduler_patience", lr_scheduler_patience),
+            ("lr_scheduler_min_lr", lr_scheduler_min_lr),
+            ("val_split", "row"),
+            ("val_frac", VAL_FRAC),
+            ("scaling", "z-score train split for X and Y"),
+            ("trainable_parameters", trainable_params),
+            ("seed", seed),
             ("device", device),
         ],
     )

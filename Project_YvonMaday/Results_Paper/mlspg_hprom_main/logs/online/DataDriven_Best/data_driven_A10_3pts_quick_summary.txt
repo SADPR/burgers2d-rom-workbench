@@ -1,0 +1,34 @@
+[quick-summary] Sat Jun  6 07:02:36 PDT 2026
+model: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/rom_data_driven_ann_mu_t_ntot151_A10_silu_wide_b128_lr5e4.pt
+basis: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+==== rom_data_driven_mu1_4.560_mu2_0.0190_ntot151
+mu_test: [4.56, 0.019]
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/rom_data_driven_ann_mu_t_ntot151_A10_silu_wide_b128_lr5e4.pt
+basis_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+total_modes_used: 151
+save_rom_snaps: True
+inference_time_s: 0.09825825691223145
+relative_error_percent: 1.9274146512077102
+output_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/DataDriven_A10/rom_data_driven_mu1_4.560_mu2_0.0190_ntot151
+==== rom_data_driven_mu1_4.875_mu2_0.0225_ntot151
+mu_test: [4.875, 0.0225]
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/rom_data_driven_ann_mu_t_ntot151_A10_silu_wide_b128_lr5e4.pt
+basis_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+total_modes_used: 151
+save_rom_snaps: True
+inference_time_s: 0.01039886474609375
+relative_error_percent: 0.47873983741120035
+output_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/DataDriven_A10/rom_data_driven_mu1_4.875_mu2_0.0225_ntot151
+==== rom_data_driven_mu1_5.190_mu2_0.0260_ntot151
+mu_test: [5.19, 0.026]
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/rom_data_driven_ann_mu_t_ntot151_A10_silu_wide_b128_lr5e4.pt
+basis_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+total_modes_used: 151
+save_rom_snaps: True
+inference_time_s: 0.009955644607543945
+relative_error_percent: 2.3961632179690033
+output_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/DataDriven_A10/rom_data_driven_mu1_5.190_mu2_0.0260_ntot151

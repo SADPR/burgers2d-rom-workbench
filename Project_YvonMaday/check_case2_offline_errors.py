@@ -33,6 +33,10 @@ try:
     from gpr_map_common import build_torch_case2_gpr_from_ckpt
 except ModuleNotFoundError:
     from .gpr_map_common import build_torch_case2_gpr_from_ckpt
+try:
+    from rbf_map_common import build_torch_rbf_from_ckpt
+except ModuleNotFoundError:
+    from .rbf_map_common import build_torch_rbf_from_ckpt
 
 
 class Scaler(nn.Module):
@@ -217,8 +221,8 @@ def _load_case2_model(ckpt_path: Path, device: torch.device):
     ckpt = torch.load(ckpt_path, map_location=device)
     fmt = str(ckpt.get("format", "")).strip().lower()
 
-    if fmt in ("gpr_map", "gpr_map_full"):
-        if fmt == "gpr_map_full":
+    if fmt in ("gpr_map", "gpr_map_full", "sparse_gpr_map", "sparse_gpr_map_full"):
+        if fmt in ("gpr_map_full", "sparse_gpr_map_full"):
             ntot = int(ckpt.get("dataset_ntot", ckpt.get("n_tot", ckpt.get("out_dim"))))
             n_s = int(ntot)
         else:
@@ -230,6 +234,18 @@ def _load_case2_model(ckpt_path: Path, device: torch.device):
         if ntot < n_s:
             raise ValueError(f"{ckpt_path}: invalid split ntot={ntot}, n_s={n_s}.")
         model = build_torch_case2_gpr_from_ckpt(ckpt).to(device)
+        model.eval()
+        return model, ntot, n_s
+
+    if fmt == "rbf_map":
+        in_dim = int(ckpt.get("in_dim", 3))
+        if in_dim != 3:
+            raise ValueError(f"{ckpt_path}: expected in_dim=3, got {in_dim}.")
+        n_s = int(ckpt.get("out_dim", ckpt.get("secondary_modes", 0)))
+        ntot = int(ckpt.get("dataset_ntot", ckpt.get("n_tot", n_s)))
+        if ntot < n_s:
+            raise ValueError(f"{ckpt_path}: invalid split ntot={ntot}, n_s={n_s}.")
+        model = build_torch_rbf_from_ckpt(ckpt).to(device)
         model.eval()
         return model, ntot, n_s
 

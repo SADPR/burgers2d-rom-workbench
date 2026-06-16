@@ -1,0 +1,29 @@
+model_name: prom_pod_ae_ntot151_best.pt
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/prom_pod_ae_ntot151_best.pt
+dataset_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/prom_coeff_dataset_ntot151
+dataset_root: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu
+dataset_ntot: 151
+dataset_backend: hprom
+samples_M: 4509
+q_dim: 151
+latent_dim: 10
+hidden_dims: (512, 256, 128)
+scaling: zscore
+activation: gelu
+batch_size: 128
+lr: 0.0005
+weight_decay: 1e-06
+lr_scheduler: ReduceLROnPlateau
+lr_scheduler_factor: 0.5
+lr_scheduler_patience: 50
+lr_scheduler_min_lr: 1e-06
+trainable_parameters: 486817
+epochs_ran: 6500
+best_val_mse: 0.0018808747408911586
+train_rel_frob_percent: 0.10820139432325959
+val_rel_frob_percent: 0.13097828486934304
+elapsed_s: 2173.794022321701
+seed: 42
+device: cpu
+
+sweep_winner_label: PAE06_l10_gelu_zscore_wide

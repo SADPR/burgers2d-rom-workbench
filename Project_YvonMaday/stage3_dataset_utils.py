@@ -5,8 +5,11 @@
 Shared dataset discovery and validation utilities for Stage 3 training scripts.
 """
 
+import importlib
+import json
 import os
 import re
+import sys
 import numpy as np
 
 try:
@@ -15,19 +18,60 @@ except ModuleNotFoundError:
     from .project_layout import STAGE2_DIR, stage2_dataset_dir
 
 
-def _read_meta(dataset_dir: str):
+def _install_numpy_pickle_compat_aliases():
+    """Allow NumPy 1.x to unpickle object arrays written by NumPy 2.x."""
+    if "numpy._core" in sys.modules:
+        return
+
+    numpy_core = importlib.import_module("numpy.core")
+    sys.modules["numpy._core"] = numpy_core
+    for name in ("multiarray", "numeric", "umath", "_multiarray_umath"):
+        try:
+            module = importlib.import_module(f"numpy.core.{name}")
+        except ModuleNotFoundError:
+            continue
+        sys.modules[f"numpy._core.{name}"] = module
+
+
+def read_dataset_meta(dataset_dir: str):
+    json_path = os.path.join(dataset_dir, "meta.json")
     meta_path = os.path.join(dataset_dir, "meta.npy")
-    if not os.path.exists(meta_path):
+    if os.path.exists(json_path):
+        with open(json_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+        source_path = json_path
+    elif os.path.exists(meta_path):
+        try:
+            meta = np.load(meta_path, allow_pickle=True).item()
+        except ModuleNotFoundError as exc:
+            missing_module = str(exc.name or "")
+            if not (
+                missing_module == "numpy._core"
+                or missing_module.startswith("numpy._core.")
+            ):
+                raise
+            _install_numpy_pickle_compat_aliases()
+            meta = np.load(meta_path, allow_pickle=True).item()
+        source_path = meta_path
+    else:
         raise FileNotFoundError(
-            f"Missing dataset metadata file: {meta_path}\n"
+            "Missing dataset metadata file. Checked:\n"
+            f"  - {json_path}\n"
+            f"  - {meta_path}\n"
             "Run stage2_build_prom_qn_dataset.py first."
         )
 
-    meta = np.load(meta_path, allow_pickle=True).item()
     if not isinstance(meta, dict):
-        raise ValueError(f"Invalid metadata format in {meta_path}: expected dict, got {type(meta)}")
+        raise ValueError(
+            f"Invalid metadata format in {source_path}: expected dict, got {type(meta)}"
+        )
 
-    return meta, meta_path
+    return meta, source_path
+
+
+def _read_meta(dataset_dir: str):
+    """Backward-compatible private alias."""
+    return read_dataset_meta(dataset_dir)
 
 
 def resolve_stage3_dataset(

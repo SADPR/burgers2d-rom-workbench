@@ -867,6 +867,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
     min_delta=0.1,
     y_init_table=None,
     wp_table=None,
+    return_red_coords=False,
 ):
     """
     POD-ANN manifold ROM with decoder
@@ -1022,7 +1023,10 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
 
         print(f"  step {k:4d}: GN iters={len(resnorms):2d} rel={resnorms[-1] / init_norm:.2e}")
 
-    return snaps, (num_its, jac_time, res_time, ls_time)
+    stats = (num_its, jac_time, res_time, ls_time)
+    if return_red_coords:
+        return snaps, red_coords, stats
+    return snaps, stats
 
 
 def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(

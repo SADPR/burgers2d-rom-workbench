@@ -19,6 +19,7 @@ import os
 import sys
 import time
 import argparse
+import json
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -88,8 +89,42 @@ def _select_snap_folder(project_root):
     return candidates[0]
 
 
-def _load_pod_artifacts(requested_total_modes=None):
+def _load_pod_artifacts(requested_total_modes=None, basis_override=None, uref_override=None):
     # Prefer Stage1 outputs under Results, then fallback to legacy root files.
+    if basis_override is not None or uref_override is not None:
+        if basis_override is None or uref_override is None:
+            raise ValueError("--basis-path and --u-ref-path must be provided together.")
+
+        basis_path = os.path.abspath(os.path.expanduser(str(basis_override)))
+        uref_path = os.path.abspath(os.path.expanduser(str(uref_override)))
+        if not os.path.exists(basis_path):
+            raise FileNotFoundError(f"Missing basis file: {basis_path}")
+        if not os.path.exists(uref_path):
+            raise FileNotFoundError(f"Missing reference-state file: {uref_path}")
+
+        basis = np.asarray(np.load(basis_path, allow_pickle=False), dtype=np.float64)
+        u_ref = np.asarray(np.load(uref_path, allow_pickle=False), dtype=np.float64).reshape(-1)
+
+        if basis.ndim != 2:
+            raise ValueError(f"basis.npy at '{basis_path}' must be 2D, got shape {basis.shape}.")
+        if u_ref.size != basis.shape[0]:
+            raise ValueError(
+                f"u_ref size mismatch: u_ref has {u_ref.size}, basis has {basis.shape[0]} rows."
+            )
+
+        n_available = int(basis.shape[1])
+        if requested_total_modes is None:
+            total_modes = n_available
+        else:
+            total_modes = int(requested_total_modes)
+            if total_modes < 1 or total_modes > n_available:
+                raise ValueError(
+                    f"basis.npy at '{basis_path}' has {n_available} modes, "
+                    f"but total_modes={total_modes} is requested."
+                )
+        pod_dir = os.path.dirname(basis_path)
+        return basis[:, :total_modes], u_ref, basis_path, uref_path, pod_dir, total_modes, n_available
+
     pod_candidates = [STAGE1_DIR, THIS_DIR]
 
     for pod_dir in pod_candidates:
@@ -255,11 +290,13 @@ def _load_or_build_ecsw_weights(
     snapshot_percent=2.0,
     snapshot_random_seed=42,
     ensure_mu_coverage=True,
+    weights_dir=None,
 ):
     expected_num_cells = (grid_x.size - 1) * (grid_y.size - 1)
 
-    os.makedirs(STAGE2_DIR, exist_ok=True)
-    preferred = os.path.join(STAGE2_DIR, f"ecsw_weights_lspg_ntot{total_modes}.npy")
+    weights_root = os.path.abspath(os.path.expanduser(str(weights_dir))) if weights_dir is not None else STAGE2_DIR
+    os.makedirs(weights_root, exist_ok=True)
+    preferred = os.path.join(weights_root, f"ecsw_weights_lspg_ntot{total_modes}.npy")
     if (not rebuild_weights) and os.path.exists(preferred):
         weights = np.asarray(np.load(preferred, allow_pickle=False), dtype=np.float64).reshape(-1)
         if weights.size != expected_num_cells:
@@ -321,6 +358,30 @@ def main(argv=None):
     )
     parser.add_argument("--backend", choices=("prom", "hprom"), default=solve_backend)
     parser.add_argument("--total-modes", type=int, default=total_modes)
+    parser.add_argument(
+        "--basis-path",
+        type=str,
+        default=None,
+        help="Optional basis override. Must be passed together with --u-ref-path.",
+    )
+    parser.add_argument(
+        "--u-ref-path",
+        type=str,
+        default=None,
+        help="Optional reference-state override. Must be passed together with --basis-path.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default=None,
+        help="Optional explicit Stage-2 dataset directory. Default: Results/Stage2/prom_coeff_dataset_ntot{n}.",
+    )
+    parser.add_argument(
+        "--ecsw-weights-dir",
+        type=str,
+        default=None,
+        help="Optional directory where ECSW weights are stored/loaded. Default: output dataset directory when --output-dir is used, otherwise Results/Stage2.",
+    )
     parser.add_argument("--no-save-rom-snaps", action="store_true")
     parser.add_argument("--no-plots", action="store_true")
     parser.add_argument("--max-its", type=int, default=max_its)
@@ -376,10 +437,18 @@ def main(argv=None):
     snap_folder = _select_snap_folder(PROJECT_ROOT)
     os.makedirs(snap_folder, exist_ok=True)
 
-    Vtot, u_ref, basis_path, uref_path, pod_dir, total_modes, n_available = _load_pod_artifacts(total_modes)
+    Vtot, u_ref, basis_path, uref_path, pod_dir, total_modes, n_available = _load_pod_artifacts(
+        total_modes,
+        basis_override=args.basis_path,
+        uref_override=args.u_ref_path,
+    )
     w0 = np.asarray(W0, dtype=np.float64).copy()
 
-    out_dir = stage2_dataset_dir(total_modes)
+    out_dir = (
+        os.path.abspath(os.path.expanduser(str(args.output_dir)))
+        if args.output_dir is not None
+        else stage2_dataset_dir(total_modes)
+    )
     per_mu_dir = os.path.join(out_dir, "per_mu")
     os.makedirs(per_mu_dir, exist_ok=True)
 
@@ -422,6 +491,11 @@ def main(argv=None):
             snapshot_percent=ecsw_snapshot_percent,
             snapshot_random_seed=ecsw_random_seed,
             ensure_mu_coverage=ecsw_ensure_mu_coverage,
+            weights_dir=(
+                args.ecsw_weights_dir
+                if args.ecsw_weights_dir is not None
+                else (out_dir if args.output_dir is not None else None)
+            ),
         )
 
     print(f"[ROM-QN] solve_backend: {solve_backend}")
@@ -464,7 +538,7 @@ def main(argv=None):
         t0 = time.time()
 
         if solve_backend == "prom":
-            rom_snaps, rom_stats = inviscid_burgers_implicit2D_LSPG(
+            rom_snaps, qN, rom_stats = inviscid_burgers_implicit2D_LSPG(
                 grid_x=GRID_X,
                 grid_y=GRID_Y,
                 w0=w0,
@@ -478,8 +552,8 @@ def main(argv=None):
                 min_delta=min_delta,
                 linear_solver=linear_solver,
                 normal_eq_reg=normal_eq_reg,
+                return_red_coords=True,
             )
-            qN = Vtot.T @ (rom_snaps - u_ref[:, None])
         else:
             qN, rom_stats = inviscid_burgers_implicit2D_LSPG_ecsw(
                 grid_x=GRID_X,
@@ -501,6 +575,17 @@ def main(argv=None):
 
         if qN.ndim != 2:
             raise RuntimeError(f"Unexpected qN shape: {qN.shape}")
+
+        reconstructed = u_ref[:, None] + Vtot @ qN
+        state_scale = max(float(np.linalg.norm(rom_snaps)), np.finfo(np.float64).eps)
+        coordinate_state_rel_error = float(
+            np.linalg.norm(reconstructed - rom_snaps) / state_scale
+        )
+        if coordinate_state_rel_error > 1e-10:
+            raise RuntimeError(
+                "Solver coordinates are inconsistent with the returned ROM state: "
+                f"relative reconstruction error={coordinate_state_rel_error:.3e}."
+            )
 
         n_dofs, n_time = rom_snaps.shape
         t_vec = t_ref if len(t_ref) == n_time else DT * np.arange(n_time, dtype=np.float64)
@@ -561,6 +646,10 @@ def main(argv=None):
 
         elapsed = time.time() - t0
         print(f"[ROM-QN] saved: {mu_dir}")
+        print(
+            "[ROM-QN] solver-coordinate state consistency = "
+            f"{coordinate_state_rel_error:.3e}"
+        )
         print(f"[ROM-QN] shape={n_dofs}x{n_time} | elapsed={elapsed:.2f} s")
 
     meta = {
@@ -568,6 +657,8 @@ def main(argv=None):
         "total_modes": int(total_modes),
         "n_available_modes": int(n_available),
         "coefficient_storage": "qN_only",
+        "coordinate_recovery": "solver_coordinates",
+        "coordinate_source": "solver_coordinates",
         "num_traj": int(len(mu_list)),
         "dt": float(DT),
         "num_steps": int(NUM_STEPS),
@@ -606,6 +697,8 @@ def main(argv=None):
         "rebuild_ecsw_weights": bool(rebuild_ecsw_weights),
     }
     np.save(os.path.join(out_dir, "meta.npy"), meta, allow_pickle=True)
+    with open(os.path.join(out_dir, "meta.json"), "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2, sort_keys=True, allow_nan=True)
 
     summary_path = os.path.join(out_dir, "stage2_summary.txt")
     write_kv_txt(
@@ -618,6 +711,11 @@ def main(argv=None):
             ("u_ref_path", uref_path),
             ("total_modes", total_modes),
             ("coefficient_storage", "qN_only"),
+            (
+                "coordinate_recovery",
+                "solver_coordinates",
+            ),
+            ("coordinate_source", "solver_coordinates"),
             ("num_traj", len(mu_list)),
             ("ecsw_num_training_mu", ecsw_num_training_mu),
             ("ecsw_snapshot_mode", "global_param_time_stratified"),

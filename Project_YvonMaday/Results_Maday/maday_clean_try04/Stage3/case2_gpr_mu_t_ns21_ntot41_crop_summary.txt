@@ -1,0 +1,24 @@
+model_name: case2_gpr_mu_t_ns21_ntot41_crop.pt
+model_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Maday/maday_clean_try04/Stage3/models/case2_gpr_mu_t_ns21_ntot41_crop.pt
+dataset_root: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Maday/maday_clean_try04/Stage2/prom_coeff_dataset_ntot41_crop_from151/per_mu
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Maday/maday_clean_try04/Stage2/prom_coeff_dataset_ntot41_crop_from151
+dataset_ntot: 41
+dataset_backend: prom
+primary_modes: 20
+secondary_modes: 21
+samples_M: 4509
+in_dim: 3
+n_s: 21
+kernel_init: 1**2 * Matern(length_scale=[1, 1, 1], nu=1.5) + WhiteKernel(noise_level=1e-06)
+kernel_learned: 6.1**2 * Matern(length_scale=[0.0001, 11.9, 0.624], nu=1.5) + WhiteKernel(noise_level=1e-10)
+alpha: 1e-06
+use_white_kernel: True
+white_noise_level: 1e-06
+white_noise_bounds: (1e-10, 1.0)
+train_rel_frob_percent: 0.0003144060428469776
+val_rel_frob_percent: 0.485519696078345
+train_mse: 8.398353313973463e-10
+val_mse: 0.001985881704884583
+train_used_after_duplicates: 2500
+val_used: 400
+elapsed_s: 557.8447892665863

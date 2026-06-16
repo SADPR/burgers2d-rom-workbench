@@ -137,7 +137,6 @@ def main(argv=None) -> None:
     parser.add_argument("--ann-seed", type=int, default=42)
 
     parser.add_argument("--gpr-seed", type=int, default=42)
-    parser.add_argument("--gpr-val-split", choices=("mu_group", "row"), default="row")
     parser.add_argument("--gpr-val-frac", type=float, default=0.1)
     parser.add_argument("--gpr-max-train-samples", type=int, default=1200)
     parser.add_argument("--gpr-max-val-samples", type=int, default=4000)
@@ -220,8 +219,6 @@ def main(argv=None) -> None:
                 [
                     "--seed",
                     str(args.gpr_seed),
-                    "--val-split",
-                    args.gpr_val_split,
                     "--val-frac",
                     str(args.gpr_val_frac),
                     "--max-train-samples",

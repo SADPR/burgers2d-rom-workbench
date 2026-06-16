@@ -31,6 +31,14 @@ try:
 except ModuleNotFoundError:
     from .stage3_qn_utils import load_qn_from_mu_dir, resolve_primary_modes, split_qn
 try:
+    from stage3_split_utils import split_indices_ecsw_param_time
+except ModuleNotFoundError:
+    from .stage3_split_utils import split_indices_ecsw_param_time
+try:
+    from stage3_split_utils import split_indices_holdout_mu_group
+except ModuleNotFoundError:
+    from .stage3_split_utils import split_indices_holdout_mu_group
+try:
     from project_layout import STAGE3_DIR, ensure_layout_dirs, stage3_model_path, write_kv_txt
 except ModuleNotFoundError:
     from .project_layout import STAGE3_DIR, ensure_layout_dirs, stage3_model_path, write_kv_txt
@@ -226,6 +234,24 @@ def main(argv=None):
     parser.add_argument("--primary-modes", type=int, default=20)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--val-frac", type=float, default=0.1)
+    parser.add_argument(
+        "--val-split-mode",
+        choices=("row", "ecsw_param_time_stratified", "mu_group_holdout"),
+        default="row",
+        help="Validation strategy used for ANN training/evaluation split.",
+    )
+    parser.add_argument(
+        "--val-snap-time-offset",
+        type=int,
+        default=1,
+        help="ECSW-like split: minimum time column considered for validation (>=1).",
+    )
+    parser.add_argument(
+        "--val-holdout-mu",
+        type=str,
+        default="",
+        help="For mu_group_holdout mode: holdout parameter pair as 'mu1,mu2'.",
+    )
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--weight-decay", type=float, default=1e-6)
@@ -233,6 +259,9 @@ def main(argv=None):
     parser.add_argument("--patience", type=int, default=120)
     parser.add_argument("--min-improve", type=float, default=1e-12)
     parser.add_argument("--clip-grad", type=float, default=1.0)
+    parser.add_argument("--lr-scheduler-factor", type=float, default=0.5)
+    parser.add_argument("--lr-scheduler-patience", type=int, default=40)
+    parser.add_argument("--lr-scheduler-min-lr", type=float, default=1e-6)
     parser.add_argument("--hidden-dims", type=str, default="32,64,128,256,256")
     parser.add_argument(
         "--activation",
@@ -274,6 +303,9 @@ def main(argv=None):
     patience = int(args.patience)
     min_improve = float(args.min_improve)
     clip_grad = float(args.clip_grad)
+    lr_scheduler_factor = float(args.lr_scheduler_factor)
+    lr_scheduler_patience = int(args.lr_scheduler_patience)
+    lr_scheduler_min_lr = float(args.lr_scheduler_min_lr)
     hidden_dims = _parse_hidden_dims(args.hidden_dims)
     activation = str(args.activation).strip().lower()
     dropout = float(args.dropout)
@@ -290,6 +322,14 @@ def main(argv=None):
         raise ValueError("--epochs and --patience must be positive.")
     if min_improve < 0.0:
         raise ValueError("--min-improve must be >= 0.")
+    if not (0.0 < lr_scheduler_factor < 1.0):
+        raise ValueError(
+            f"--lr-scheduler-factor must be in (0,1), got {lr_scheduler_factor}."
+        )
+    if lr_scheduler_patience <= 0:
+        raise ValueError("--lr-scheduler-patience must be positive.")
+    if lr_scheduler_min_lr <= 0.0:
+        raise ValueError("--lr-scheduler-min-lr must be positive.")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[Case2] device = {device}")
@@ -300,6 +340,11 @@ def main(argv=None):
     print(f"[Case2] hidden_dims = {hidden_dims}")
     print(f"[Case2] activation = {activation}")
     print(f"[Case2] dropout = {dropout}")
+    print(
+        "[Case2] lr_scheduler = ReduceLROnPlateau("
+        f"factor={lr_scheduler_factor}, patience={lr_scheduler_patience}, "
+        f"min_lr={lr_scheduler_min_lr:.3e})"
+    )
     print(f"[Case2] seed = {seed}")
 
     # -----------------------------
@@ -315,8 +360,60 @@ def main(argv=None):
     # -----------------------------
     # Split
     # -----------------------------
-    idx = np.arange(M, dtype=np.int64)
-    tr_idx, va_idx = train_test_split(idx, test_size=val_frac, random_state=seed, shuffle=True)
+    split_mode = str(args.val_split_mode).strip().lower()
+    if split_mode == "row":
+        idx = np.arange(M, dtype=np.int64)
+        tr_idx, va_idx = train_test_split(idx, test_size=val_frac, random_state=seed, shuffle=True)
+        split_info = {
+            "split_mode": "row",
+            "num_mu_groups": int(np.unique(np.round(X_raw[:, :2], decimals=12), axis=0).shape[0]),
+            "num_time_per_mu": int(0),
+            "num_candidates_total": int(M),
+            "num_selected_total": int(va_idx.size),
+            "val_frac_requested": float(val_frac),
+            "val_frac_actual": float(va_idx.size / max(1, M)),
+            "snap_time_offset": int(0),
+            "holdout_mu1": None,
+            "holdout_mu2": None,
+        }
+        print(
+            "[Case2] split = row (train_test_split shuffle) "
+            f"(val_requested={split_info['val_frac_requested']:.4f}, "
+            f"val_actual={split_info['val_frac_actual']:.4f})"
+        )
+    elif split_mode == "ecsw_param_time_stratified":
+        tr_idx, va_idx, split_info = split_indices_ecsw_param_time(
+            X_raw,
+            val_frac=float(val_frac),
+            seed=int(seed),
+            snap_time_offset=int(args.val_snap_time_offset),
+            ensure_mu_coverage=True,
+        )
+        print(
+            "[Case2] split = ecsw_param_time_stratified "
+            f"(mu_groups={split_info['num_mu_groups']}, "
+            f"time_per_mu={split_info['num_time_per_mu']}, "
+            f"val_requested={split_info['val_frac_requested']:.4f}, "
+            f"val_actual={split_info['val_frac_actual']:.4f})"
+        )
+    else:
+        holdout_mu = None
+        if str(args.val_holdout_mu).strip():
+            parts = [s.strip() for s in str(args.val_holdout_mu).split(",")]
+            if len(parts) != 2:
+                raise ValueError("--val-holdout-mu must be 'mu1,mu2'.")
+            holdout_mu = (float(parts[0]), float(parts[1]))
+        tr_idx, va_idx, split_info = split_indices_holdout_mu_group(
+            X_raw,
+            holdout_mu=holdout_mu,
+            avoid_center_and_corners=True,
+        )
+        print(
+            "[Case2] split = mu_group_holdout "
+            f"(holdout_mu=({split_info['holdout_mu1']:.3f},{split_info['holdout_mu2']:.4f}), "
+            f"mu_groups={split_info['num_mu_groups']}, "
+            f"val_samples={split_info['num_selected_total']})"
+        )
 
     Xtr, Ytr = X_raw[tr_idx], Y_raw[tr_idx]
     Xva, Yva = X_raw[va_idx], Y_raw[va_idx]
@@ -341,7 +438,16 @@ def main(argv=None):
         activation=activation,
         dropout=dropout,
     ).to(device)
+    trainable_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"[Case2] trainable_parameters = {trainable_parameters}")
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        opt,
+        mode="min",
+        factor=lr_scheduler_factor,
+        patience=lr_scheduler_patience,
+        min_lr=lr_scheduler_min_lr,
+    )
     loss_fn = nn.MSELoss()
 
     # DataLoaders (raw space; model scales internally)
@@ -385,8 +491,14 @@ def main(argv=None):
         with torch.no_grad():
             va_loss = float(loss_fn(model(Xva_t), Yva_t).detach().cpu().item())
 
+        scheduler.step(va_loss)
+
         if ep == 1 or ep % 25 == 0:
-            print(f"[Epoch {ep:4d}] train_mse={tr_loss:.6e} | val_mse={va_loss:.6e} | bad={bad}")
+            lr_current = opt.param_groups[0]["lr"]
+            print(
+                f"[Epoch {ep:4d}] train_mse={tr_loss:.6e} | "
+                f"val_mse={va_loss:.6e} | lr={lr_current:.3e} | bad={bad}"
+            )
 
         if va_loss < best_val - min_improve:
             best_val = va_loss
@@ -401,7 +513,22 @@ def main(argv=None):
     if best_state is not None:
         model.load_state_dict(best_state)
 
+    model.eval()
+    with torch.no_grad():
+        Xtr_t_eval = torch.from_numpy(Xtr).to(device)
+        Ytr_t_eval = torch.from_numpy(Ytr).to(device)
+        pred_tr = model(Xtr_t_eval)
+        pred_va = model(Xva_t)
+        train_rel_frob_percent = 100.0 * (
+            torch.linalg.norm(pred_tr - Ytr_t_eval) / torch.linalg.norm(Ytr_t_eval)
+        ).detach().cpu().item()
+        val_rel_frob_percent = 100.0 * (
+            torch.linalg.norm(pred_va - Yva_t) / torch.linalg.norm(Yva_t)
+        ).detach().cpu().item()
+
     print(f"[Case2] Training done in {time.time() - t0:.2f}s. best_val={best_val:.6e}")
+    print(f"[Case2] train_rel_frob_percent = {train_rel_frob_percent:.4f}%")
+    print(f"[Case2] val_rel_frob_percent = {val_rel_frob_percent:.4f}%")
 
     # -----------------------------
     # Save ONLY one file (weights + scaler buffers)
@@ -423,8 +550,21 @@ def main(argv=None):
         "batch_size": int(batch_size),
         "lr": float(lr),
         "weight_decay": float(weight_decay),
+        "trainable_parameters": int(trainable_parameters),
+        "best_val_mse": float(best_val),
+        "train_rel_frob_percent": float(train_rel_frob_percent),
+        "val_rel_frob_percent": float(val_rel_frob_percent),
         "epochs": int(epochs),
         "patience": int(patience),
+        "lr_scheduler": "ReduceLROnPlateau",
+        "lr_scheduler_factor": float(lr_scheduler_factor),
+        "lr_scheduler_patience": int(lr_scheduler_patience),
+        "lr_scheduler_min_lr": float(lr_scheduler_min_lr),
+        "val_split": str(split_info["split_mode"]),
+        "val_split_snap_time_offset": int(split_info["snap_time_offset"]),
+        "val_frac_actual": float(split_info["val_frac_actual"]),
+        "val_holdout_mu1": split_info.get("holdout_mu1"),
+        "val_holdout_mu2": split_info.get("holdout_mu2"),
         "mapping": "qN_s = N(mu1, mu2, t)",
     }
     torch.save(ckpt, model_path)
@@ -449,10 +589,27 @@ def main(argv=None):
             ("batch_size", int(batch_size)),
             ("lr", float(lr)),
             ("weight_decay", float(weight_decay)),
+            ("trainable_parameters", int(trainable_parameters)),
             ("epochs", int(epochs)),
             ("patience", int(patience)),
+            ("lr_scheduler", "ReduceLROnPlateau"),
+            ("lr_scheduler_factor", float(lr_scheduler_factor)),
+            ("lr_scheduler_patience", int(lr_scheduler_patience)),
+            ("lr_scheduler_min_lr", float(lr_scheduler_min_lr)),
             ("epochs_ran", ep),
             ("best_val_mse", best_val),
+            ("train_rel_frob_percent", train_rel_frob_percent),
+            ("val_rel_frob_percent", val_rel_frob_percent),
+            ("val_split", str(split_info["split_mode"])),
+            ("val_split_snap_time_offset", int(split_info["snap_time_offset"])),
+            ("val_frac_requested", float(val_frac)),
+            ("val_frac_actual", float(split_info["val_frac_actual"])),
+            ("val_holdout_mu1", split_info.get("holdout_mu1")),
+            ("val_holdout_mu2", split_info.get("holdout_mu2")),
+            ("n_unique_mu_groups", int(split_info["num_mu_groups"])),
+            ("n_time_per_mu", int(split_info["num_time_per_mu"])),
+            ("n_candidates_total", int(split_info["num_candidates_total"])),
+            ("n_selected_total", int(split_info["num_selected_total"])),
             ("seed", seed),
             ("device", device),
         ],

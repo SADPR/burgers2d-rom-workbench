@@ -104,33 +104,60 @@ class Unscaler(nn.Module):
         return y * self.std + self.mean
 
 
+def _make_activation(name: str):
+    key = str(name).strip().lower()
+    if key == "elu":
+        return nn.ELU()
+    if key == "gelu":
+        return nn.GELU()
+    if key == "silu":
+        return nn.SiLU()
+    if key == "tanh":
+        return nn.Tanh()
+    if key == "relu":
+        return nn.ReLU()
+    if key == "leaky_relu":
+        return nn.LeakyReLU(negative_slope=0.01)
+    raise ValueError(
+        "Unsupported activation. Use one of: elu, gelu, silu, tanh, relu, leaky_relu."
+    )
+
+
 class CoreMLP(nn.Module):
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_dim, out_dim, hidden_dims=(32, 64, 128, 256, 256), activation="elu", dropout=0.0):
         super().__init__()
-        self.fc1 = nn.Linear(in_dim, 32)
-        self.fc2 = nn.Linear(32, 64)
-        self.fc3 = nn.Linear(64, 128)
-        self.fc4 = nn.Linear(128, 256)
-        self.fc5 = nn.Linear(256, 256)
-        self.fc6 = nn.Linear(256, out_dim)
-        self.act = nn.ELU()
+        hidden_dims = tuple(int(d) for d in hidden_dims)
+        dropout = float(dropout)
+        if dropout < 0.0 or dropout >= 1.0:
+            raise ValueError(f"dropout must be in [0,1), got {dropout}.")
+
+        dims = [int(in_dim)] + list(hidden_dims) + [int(out_dim)]
+        layers = []
+        for i in range(len(dims) - 2):
+            layers.append(nn.Linear(dims[i], dims[i + 1]))
+            layers.append(_make_activation(activation))
+            if dropout > 0.0:
+                layers.append(nn.Dropout(p=dropout))
+        layers.append(nn.Linear(dims[-2], dims[-1]))
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.act(self.fc1(x))
-        x = self.act(self.fc2(x))
-        x = self.act(self.fc3(x))
-        x = self.act(self.fc4(x))
-        x = self.act(self.fc5(x))
-        return self.fc6(x)
+        return self.net(x)
 
 
 class Case2Model(nn.Module):
     """Input: (mu1, mu2, t), output: qN_s."""
 
-    def __init__(self, n_s):
+    def __init__(self, n_s, hidden_dims=(32, 64, 128, 256, 256), activation="elu", dropout=0.0):
         super().__init__()
         self.scaler = Scaler(np.zeros((1, 3)), np.ones((1, 3)))
-        self.core = CoreMLP(3, n_s)
+        self.core = CoreMLP(
+            3,
+            n_s,
+            hidden_dims=hidden_dims,
+            activation=activation,
+            dropout=dropout,
+        )
         self.unscaler = Unscaler(np.zeros((1, n_s)), np.ones((1, n_s)))
 
     def forward(self, x_raw):
@@ -213,12 +240,21 @@ def _load_or_build_case2_pg_ecsw_weights(
     snapshot_percent=2.0,
     snapshot_random_seed=42,
     ensure_mu_coverage=True,
+    ecsw_weights_dir=None,
+    ecsw_tag=None,
 ):
     expected_num_cells = (grid_x.size - 1) * (grid_y.size - 1)
-    os.makedirs(RUNS_ECSW_DIR, exist_ok=True)
+    if ecsw_weights_dir is None:
+        ecsw_weights_dir = RUNS_ECSW_DIR
+    ecsw_weights_dir = os.path.abspath(os.path.expanduser(str(ecsw_weights_dir)))
+    os.makedirs(ecsw_weights_dir, exist_ok=True)
+    tag_part = ""
+    if ecsw_tag:
+        safe_tag = "".join(c if c.isalnum() or c in ("_", "-", ".") else "_" for c in str(ecsw_tag))
+        tag_part = f"_{safe_tag}"
     weights_path = os.path.join(
-        RUNS_ECSW_DIR,
-        f"ecsw_weights_ann_case2_pg_n{n_primary}_ntot{total_modes}.npy",
+        ecsw_weights_dir,
+        f"ecsw_weights_ann_case2_pg{tag_part}_n{n_primary}_ntot{total_modes}.npy",
     )
 
     if (not rebuild_weights) and os.path.exists(weights_path):
@@ -337,7 +373,15 @@ def _load_case2_model(model_path, device):
     if in_dim != 3:
         raise ValueError(f"Case2 checkpoint in_dim={in_dim}, expected 3")
 
-    model = Case2Model(n_s).to(device)
+    hidden_dims = tuple(int(d) for d in ckpt.get("hidden_dims", (32, 64, 128, 256, 256)))
+    activation = str(ckpt.get("activation", "elu")).strip().lower()
+    dropout = float(ckpt.get("dropout", 0.0))
+    model = Case2Model(
+        n_s,
+        hidden_dims=hidden_dims,
+        activation=activation,
+        dropout=dropout,
+    ).to(device)
     model.load_state_dict(ckpt["state_dict"], strict=True)
     model.eval()
 
@@ -357,9 +401,16 @@ def _resolve_total_modes_from_checkpoint_or_dataset(ckpt):
     return int(ntot)
 
 
-def _load_basis_and_reference(total_modes, n_primary):
-    basis_path = resolve_stage1_artifact("basis.npy")
-    uref_path = resolve_stage1_artifact("u_ref.npy")
+def _load_basis_and_reference(total_modes, n_primary, basis_path_override=None, uref_path_override=None):
+    if basis_path_override:
+        basis_path = os.path.abspath(os.path.expanduser(str(basis_path_override)))
+    else:
+        basis_path = resolve_stage1_artifact("basis.npy")
+
+    if uref_path_override:
+        uref_path = os.path.abspath(os.path.expanduser(str(uref_path_override)))
+    else:
+        uref_path = resolve_stage1_artifact("u_ref.npy")
 
     if not os.path.exists(basis_path):
         raise FileNotFoundError(f"Missing basis file: {basis_path}")
@@ -386,20 +437,20 @@ def _load_basis_and_reference(total_modes, n_primary):
             f"u_ref size mismatch: got {u_ref.size}, expected {vtot.shape[0]} from basis rows."
         )
 
-    return v, vbar, u_ref, basis_path, uref_path
+    return vtot, v, vbar, u_ref, basis_path, uref_path
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Run Case 2 ANN with enriched residual testing and PROM/HPROM backend."
     )
-    parser.add_argument("--backend", choices=("prom", "hprom"), default="prom")
+    parser.add_argument("--backend", choices=("prom", "hprom"), default="hprom")
     parser.add_argument("--mu1", type=float, default=4.56)
     parser.add_argument("--mu2", type=float, default=0.019)
     parser.add_argument(
         "--device",
-        choices=("cpu", "cuda"),
-        default=("cuda" if torch.cuda.is_available() else "cpu"),
+        choices=("auto", "cpu", "cuda"),
+        default="auto",
     )
     parser.add_argument("--no-ecsw", action="store_true", help="Disable ECSW (HPROM falls back to PROM).")
     parser.add_argument("--rebuild-ecsw", action="store_true", help="Recompute ECSW weights.")
@@ -427,6 +478,32 @@ def main(argv=None):
         default=None,
         help="Optional override for checkpoint path (takes precedence over --model-name).",
     )
+    parser.add_argument(
+        "--basis-path",
+        type=str,
+        default=None,
+        help="Optional basis override.",
+    )
+    parser.add_argument(
+        "--u-ref-path",
+        type=str,
+        default=None,
+        help="Optional reference-state override.",
+    )
+    parser.add_argument(
+        "--output-root",
+        type=str,
+        default=None,
+        help="Optional Case-2 Petrov-Galerkin output root override.",
+    )
+    parser.add_argument(
+        "--ecsw-weights-dir",
+        type=str,
+        default=None,
+        help="Optional directory for Case-2 Petrov-Galerkin ECSW weights.",
+    )
+    parser.add_argument("--no-save-rom-snaps", action="store_true", help="Do not save full rom_snaps array.")
+    parser.add_argument("--no-plot", action="store_true", help="Skip HDM-vs-ROM plotting.")
     args = parser.parse_args(argv)
 
     mu_test = [float(args.mu1), float(args.mu2)]
@@ -443,15 +520,24 @@ def main(argv=None):
     min_delta = float(args.min_delta)
     linear_solver = str(args.linear_solver).strip().lower()
     normal_eq_reg = float(args.normal_eq_reg)
+    basis_path_override = args.basis_path
+    uref_path_override = args.u_ref_path
+    output_root = RUNS_CASE2_DIR if args.output_root is None else os.path.abspath(os.path.expanduser(str(args.output_root)))
+    ecsw_weights_dir = RUNS_ECSW_DIR if args.ecsw_weights_dir is None else os.path.abspath(os.path.expanduser(str(args.ecsw_weights_dir)))
+    save_rom_snaps = not bool(args.no_save_rom_snaps)
+    make_plot = not bool(args.no_plot)
 
     device = str(args.device).strip().lower()
+    if device == "auto":
+        device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == "cuda" and not torch.cuda.is_available():
         print("[Case2-PG] CUDA requested but not available. Falling back to CPU.")
         device = "cpu"
 
     set_latex_plot_style()
     ensure_layout_dirs()
-    os.makedirs(RUNS_CASE2_DIR, exist_ok=True)
+    os.makedirs(output_root, exist_ok=True)
+    os.makedirs(ecsw_weights_dir, exist_ok=True)
 
     solve_backend = str(solve_backend).strip().lower()
     if solve_backend not in ("prom", "hprom"):
@@ -484,12 +570,17 @@ def main(argv=None):
     if n_p < 1:
         raise ValueError(f"Invalid mode split: total_modes={total_modes}, n_s={n_s}")
 
-    v, vbar, u_ref, basis_path, uref_path = _load_basis_and_reference(total_modes, n_p)
+    vtot, v, vbar, u_ref, basis_path, uref_path = _load_basis_and_reference(
+        total_modes,
+        n_p,
+        basis_path_override=basis_path_override,
+        uref_path_override=uref_path_override,
+    )
 
     w0 = np.asarray(W0, dtype=np.float64).reshape(-1).copy()
-    if w0.size != v.shape[0]:
+    if w0.size != vtot.shape[0]:
         raise ValueError(
-            f"W0 size mismatch: got {w0.size}, expected {v.shape[0]} from basis."
+            f"W0 size mismatch: got {w0.size}, expected {vtot.shape[0]} from basis."
         )
 
     snap_folder = os.path.join(PROJECT_ROOT, "Results", "param_snaps")
@@ -547,8 +638,14 @@ def main(argv=None):
             snapshot_percent=ecsw_snapshot_percent,
             snapshot_random_seed=ecsw_snapshot_random_seed,
             ensure_mu_coverage=ecsw_ensure_mu_coverage,
+            ecsw_weights_dir=ecsw_weights_dir,
+            ecsw_tag=os.path.splitext(model_name)[0],
         )
         ecsw_setup_elapsed = time.time() - t_ecsw0
+        if not os.path.abspath(weights_path).startswith(os.path.abspath(ecsw_weights_dir) + os.sep):
+            raise RuntimeError(
+                f"ECSW weights must be under '{ecsw_weights_dir}', got: {weights_path}"
+            )
 
         t_solve0 = time.time()
         red_coords, rom_times = inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin_ecsw(
@@ -619,43 +716,48 @@ def main(argv=None):
     tag = _safe_mu_tag(mu_test)
     run_tag = f"case2_petrov_galerkin_{backend_tag}_ann_{tag}_n{n_p}_ntot{total_modes}"
 
-    out_npy = os.path.join(RUNS_CASE2_DIR, f"{run_tag}_snaps.npy")
-    np.save(out_npy, rom_snaps)
+    out_npy = os.path.join(output_root, f"{run_tag}_snaps.npy")
+    if save_rom_snaps:
+        np.save(out_npy, rom_snaps)
+    else:
+        out_npy = "not_saved"
 
     plot_steps = list(range(0, NUM_STEPS + 1, 100))
     if NUM_STEPS not in plot_steps:
         plot_steps.append(NUM_STEPS)
 
-    fig, ax1, ax2 = plot_snaps(
-        GRID_X,
-        GRID_Y,
-        hdm_snaps,
-        plot_steps,
-        label="HDM",
-        color="black",
-        linewidth=2.8,
-        linestyle="solid",
-    )
-    plot_snaps(
-        GRID_X,
-        GRID_Y,
-        rom_snaps,
-        plot_steps,
-        label="HPROM-ANN Case 2 (PG test)" if effective_backend == "hprom" else "PROM-ANN Case 2 (PG test)",
-        fig_ax=(fig, ax1, ax2),
-        color="blue",
-        linewidth=1.8,
-        linestyle="solid",
-    )
-    ax1.legend()
-    ax2.legend()
-    plt.tight_layout()
+    out_png = os.path.join(output_root, f"{run_tag}_hdm_vs_rom.png")
+    if make_plot:
+        fig, ax1, ax2 = plot_snaps(
+            GRID_X,
+            GRID_Y,
+            hdm_snaps,
+            plot_steps,
+            label="HDM",
+            color="black",
+            linewidth=2.8,
+            linestyle="solid",
+        )
+        plot_snaps(
+            GRID_X,
+            GRID_Y,
+            rom_snaps,
+            plot_steps,
+            label="HPROM-ANN Case 2 (PG test)" if effective_backend == "hprom" else "PROM-ANN Case 2 (PG test)",
+            fig_ax=(fig, ax1, ax2),
+            color="blue",
+            linewidth=1.8,
+            linestyle="solid",
+        )
+        ax1.legend()
+        ax2.legend()
+        plt.tight_layout()
+        plt.savefig(out_png, dpi=200)
+        plt.close(fig)
+    else:
+        out_png = "not_requested"
 
-    out_png = os.path.join(RUNS_CASE2_DIR, f"{run_tag}_hdm_vs_rom.png")
-    plt.savefig(out_png, dpi=200)
-    plt.close(fig)
-
-    summary_txt = os.path.join(RUNS_CASE2_DIR, f"{run_tag}_summary.txt")
+    summary_txt = os.path.join(output_root, f"{run_tag}_summary.txt")
     write_kv_txt(
         summary_txt,
         [
@@ -676,6 +778,7 @@ def main(argv=None):
             ("ecsw_snapshot_random_seed", ecsw_snapshot_random_seed),
             ("ecsw_ensure_mu_coverage", bool(ecsw_ensure_mu_coverage)),
             ("ecsw_weights_path", weights_path if effective_backend == "hprom" else "N/A"),
+            ("ecsw_weights_dir", ecsw_weights_dir),
             ("ecsw_residual", ecsw_residual),
             ("n_ecsw_elements", n_ecsw_elements),
             ("ecsw_setup_elapsed_s", ecsw_setup_elapsed),
@@ -686,6 +789,8 @@ def main(argv=None):
             ("res_time_s", res_time),
             ("ls_time_s", ls_time),
             ("relative_error_percent", rel_err),
+            ("save_rom_snaps", bool(save_rom_snaps)),
+            ("output_root", output_root),
             ("snaps_output", out_npy),
             ("plot_output", out_png),
         ],

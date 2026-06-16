@@ -1,0 +1,13 @@
+label,val_rel_frob_percent,train_rel_frob_percent,best_val_mse,best_val_total,epochs_ran,primary_modes,secondary_modes,latent_dim,hidden_dims,encoder_hidden_dims,decoder_hidden_dims,dynamics_hidden_dims,activation,scaling,x_scaling,q_scaling,batch_size,lr,weight_decay,dropout,trainable_parameters
+A10_silu_wide_b128_lr5e4,0.4736796515600708,0.4438692667334687,0.024003028869628906,,6000,,,,"(256, 512, 512, 256)",,,,silu,z-score train split for X and Y,,,128,0.0005,1e-06,0.0,565399
+A05_wide_b128_lr5e4,0.5653840386357276,0.5259700232724471,0.034196656197309494,,6000,,,,"(256, 512, 512, 256)",,,,elu,z-score train split for X and Y,,,128,0.0005,1e-06,0.0,565399
+A06_wide_b256_lr5e4,0.6748804087277785,0.6449586961340753,0.048724811524152756,,6000,,,,"(256, 512, 512, 256)",,,,elu,z-score train split for X and Y,,,256,0.0005,1e-06,0.0,565399
+A00_current_b128_lr1e3,0.7741683349991426,0.7393883963068018,0.06411614269018173,,5000,,,,"(32, 64, 128, 256, 256)",,,,elu,z-score train split for X and Y,,,128,0.001,1e-06,0.0,148183
+A07_deep_wide_b128_lr5e4,1.1972232323670151,1.202071838659857,0.1533370018005371,,6000,,,,"(128, 256, 512, 512, 256, 128)",,,,elu,z-score train split for X and Y,,,128,0.0005,1e-06,0.0,611479
+A09_silu_medium_b128_lr1e3,1.508927643744578,1.510140333034375,0.24357542395591736,,5000,,,,"(128, 256, 256, 128)",,,,silu,z-score train split for X and Y,,,128,0.001,1e-06,0.0,151703
+A04_medium_b128_lr1e3,1.5568871561320163,1.5510012630537033,0.25930503010749817,,5000,,,,"(128, 256, 256, 128)",,,,elu,z-score train split for X and Y,,,128,0.001,1e-06,0.0,151703
+A02_compact128_b64_lr1e3,1.8958430673754005,1.8988543537276281,0.384504497051239,,5000,,,,"(128, 128, 128)",,,,elu,z-score train split for X and Y,,,64,0.001,1e-06,0.0,53015
+A08_deep_wide_reg_b128_lr5e4,2.4646399302144877,2.462397142618726,0.6498357057571411,,2487,,,,"(128, 256, 512, 512, 256, 128)",,,,elu,z-score train split for X and Y,,,128,0.0005,1e-05,0.02,611479
+A11_small_b64_lr1e3,2.492431948289369,2.50200431544762,0.6645738482475281,,2745,,,,"(32, 64, 128)",,,,elu,z-score train split for X and Y,,,64,0.001,1e-06,0.0,30039
+A03_bottleneck_b64_lr1e3,3.763387561376256,3.8135122492634026,1.515146255493164,,5000,,,,"(64, 128, 256, 128, 64)",,,,elu,z-score train split for X and Y,,,64,0.001,1e-06,0.0,92567
+A01_compact64_b64_lr1e3,3.9304364717903475,3.992852529279033,1.6526398658752441,,4490,,,,"(64, 64, 64, 64)",,,,elu,z-score train split for X and Y,,,64,0.001,1e-06,0.0,22551

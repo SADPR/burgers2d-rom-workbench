@@ -52,8 +52,6 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 # Repro
 # -----------------------------
 SEED = 42
-torch.manual_seed(SEED)
-np.random.seed(SEED)
 
 
 def load_prom_dataset_case3(dataset_root: str, primary_modes: int):
@@ -152,24 +150,42 @@ class Unscaler(nn.Module):
 # -----------------------------
 # Core MLP in normalized space
 # -----------------------------
+def _parse_hidden_dims(txt: str):
+    dims = tuple(int(v.strip()) for v in str(txt).split(",") if v.strip())
+    if not dims or any(d <= 0 for d in dims):
+        raise ValueError(f"Invalid hidden dimensions: {txt!r}")
+    return dims
+
+
+def _make_activation(name: str):
+    key = str(name).strip().lower()
+    activations = {
+        "elu": nn.ELU,
+        "gelu": nn.GELU,
+        "silu": nn.SiLU,
+        "tanh": nn.Tanh,
+        "relu": nn.ReLU,
+        "leaky_relu": lambda: nn.LeakyReLU(negative_slope=0.01),
+    }
+    if key not in activations:
+        raise ValueError(f"Unsupported activation: {name}")
+    return activations[key]()
+
+
 class CoreMLP(nn.Module):
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_dim, out_dim, hidden_dims, activation="elu", dropout=0.0):
         super().__init__()
-        self.fc1 = nn.Linear(in_dim, 32)
-        self.fc2 = nn.Linear(32, 64)
-        self.fc3 = nn.Linear(64, 128)
-        self.fc4 = nn.Linear(128, 256)
-        self.fc5 = nn.Linear(256, 256)
-        self.fc6 = nn.Linear(256, out_dim)
-        self.act = nn.ELU()
+        dims = [int(in_dim), *[int(d) for d in hidden_dims], int(out_dim)]
+        layers = []
+        for i in range(len(dims) - 2):
+            layers.extend([nn.Linear(dims[i], dims[i + 1]), _make_activation(activation)])
+            if dropout > 0.0:
+                layers.append(nn.Dropout(float(dropout)))
+        layers.append(nn.Linear(dims[-2], dims[-1]))
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.act(self.fc1(x))
-        x = self.act(self.fc2(x))
-        x = self.act(self.fc3(x))
-        x = self.act(self.fc4(x))
-        x = self.act(self.fc5(x))
-        return self.fc6(x)
+        return self.net(x)
 
 
 # -----------------------------
@@ -181,12 +197,27 @@ class Case3Model(nn.Module):
     Scaling is embedded as buffers.
     """
 
-    def __init__(self, x_mean, x_std, y_mean, y_std):
+    def __init__(
+        self,
+        x_mean,
+        x_std,
+        y_mean,
+        y_std,
+        hidden_dims,
+        activation="elu",
+        dropout=0.0,
+    ):
         super().__init__()
         in_dim = x_mean.shape[0]   # n_p + 3
         out_dim = y_mean.shape[0]  # n_s
         self.scaler = Scaler(x_mean[None, :], x_std[None, :])
-        self.core = CoreMLP(in_dim, out_dim)
+        self.core = CoreMLP(
+            in_dim,
+            out_dim,
+            hidden_dims=hidden_dims,
+            activation=activation,
+            dropout=dropout,
+        )
         self.unscaler = Unscaler(y_mean[None, :], y_std[None, :])
 
     def forward(self, x_raw):
@@ -207,9 +238,39 @@ def main(argv=None):
     )
     parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="hprom")
     parser.add_argument("--dataset-ntot", type=int, default=None)
+    parser.add_argument(
+        "--dataset-dir",
+        type=str,
+        default=None,
+        help="Explicit Stage-2 dataset directory. Use this to keep paper campaigns isolated.",
+    )
     parser.add_argument("--model-name", type=str, default=None)
     parser.add_argument("--primary-modes", type=int, default=None)
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--val-frac", type=float, default=0.1)
+    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--weight-decay", type=float, default=1e-6)
+    parser.add_argument("--epochs", type=int, default=2000)
+    parser.add_argument("--patience", type=int, default=120)
+    parser.add_argument("--min-improve", type=float, default=1e-12)
+    parser.add_argument("--clip-grad", type=float, default=1.0)
+    parser.add_argument("--lr-scheduler-factor", type=float, default=0.5)
+    parser.add_argument("--lr-scheduler-patience", type=int, default=40)
+    parser.add_argument("--lr-scheduler-min-lr", type=float, default=1e-6)
+    parser.add_argument("--hidden-dims", type=str, default="32,64,128,256,256")
+    parser.add_argument(
+        "--activation",
+        choices=("elu", "gelu", "silu", "tanh", "relu", "leaky_relu"),
+        default="elu",
+    )
+    parser.add_argument("--dropout", type=float, default=0.0)
+    parser.add_argument("--summary-name", type=str, default="case3_training_summary.txt")
     args = parser.parse_args(argv)
+
+    seed = int(args.seed)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     dataset_ntot = args.dataset_ntot
     dataset_backend = str(args.dataset_backend).strip().lower()
@@ -217,6 +278,7 @@ def main(argv=None):
         this_dir=THIS_DIR,
         requested_ntot=dataset_ntot,
         expected_backend=dataset_backend,
+        requested_dataset_dir=args.dataset_dir,
     )
     primary_modes = resolve_primary_modes(args.primary_modes, dataset_meta, dataset_ntot)
     model_name = str(args.model_name).strip() if args.model_name is not None else "case3_model.pt"
@@ -225,16 +287,31 @@ def main(argv=None):
     if not model_name.endswith(".pt"):
         model_name = f"{model_name}.pt"
     model_path = stage3_model_path(model_name)
-    summary_path = os.path.join(STAGE3_DIR, "case3_training_summary.txt")
+    summary_path = os.path.join(STAGE3_DIR, str(args.summary_name).strip())
 
-    VAL_FRAC = 0.1
-    batch_size = 128
-    lr = 1e-3
-    weight_decay = 1e-6
-    epochs = 2000
-    patience = 120
-    min_improve = 1e-12
-    clip_grad = 1.0
+    val_frac = float(args.val_frac)
+    batch_size = int(args.batch_size)
+    lr = float(args.lr)
+    weight_decay = float(args.weight_decay)
+    epochs = int(args.epochs)
+    patience = int(args.patience)
+    min_improve = float(args.min_improve)
+    clip_grad = float(args.clip_grad)
+    lr_scheduler_factor = float(args.lr_scheduler_factor)
+    lr_scheduler_patience = int(args.lr_scheduler_patience)
+    lr_scheduler_min_lr = float(args.lr_scheduler_min_lr)
+    hidden_dims = _parse_hidden_dims(args.hidden_dims)
+    activation = str(args.activation).strip().lower()
+    dropout = float(args.dropout)
+
+    if not (0.0 < val_frac < 0.5):
+        raise ValueError(f"--val-frac must be in (0,0.5), got {val_frac}")
+    if batch_size <= 0 or epochs <= 0 or patience <= 0:
+        raise ValueError("batch-size, epochs and patience must be positive")
+    if lr <= 0.0 or weight_decay < 0.0:
+        raise ValueError("lr must be positive and weight-decay nonnegative")
+    if not (0.0 <= dropout < 1.0):
+        raise ValueError(f"--dropout must be in [0,1), got {dropout}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[Case3] device = {device}")
@@ -242,6 +319,15 @@ def main(argv=None):
     print(f"[Case3] dataset_root = {dataset_root} (ntot={dataset_ntot})")
     print(f"[Case3] solve_backend = {dataset_meta.get('solve_backend')}")
     print(f"[Case3] primary_modes (training split) = {primary_modes}")
+    print(f"[Case3] hidden_dims = {hidden_dims}")
+    print(f"[Case3] activation = {activation}")
+    print(f"[Case3] dropout = {dropout}")
+    print(
+        "[Case3] lr_scheduler = ReduceLROnPlateau("
+        f"factor={lr_scheduler_factor}, patience={lr_scheduler_patience}, "
+        f"min_lr={lr_scheduler_min_lr:.3e})"
+    )
+    print(f"[Case3] seed = {seed}")
 
     # -----------------------------
     # Load data
@@ -260,7 +346,12 @@ def main(argv=None):
     # Split
     # -----------------------------
     idx = np.arange(M, dtype=np.int64)
-    tr_idx, va_idx = train_test_split(idx, test_size=VAL_FRAC, random_state=SEED, shuffle=True)
+    tr_idx, va_idx = train_test_split(
+        idx,
+        test_size=val_frac,
+        random_state=seed,
+        shuffle=True,
+    )
 
     Xtr, Ytr = X_raw[tr_idx], Y_raw[tr_idx]
     Xva, Yva = X_raw[va_idx], Y_raw[va_idx]
@@ -276,9 +367,32 @@ def main(argv=None):
     # -----------------------------
     # Model
     # -----------------------------
-    model = Case3Model(x_mean, x_std, y_mean, y_std).to(device)
+    model = Case3Model(
+        x_mean,
+        x_std,
+        y_mean,
+        y_std,
+        hidden_dims=hidden_dims,
+        activation=activation,
+        dropout=dropout,
+    ).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        opt,
+        mode="min",
+        factor=lr_scheduler_factor,
+        patience=lr_scheduler_patience,
+        min_lr=lr_scheduler_min_lr,
+    )
     loss_fn = nn.MSELoss()
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(
+        f"[Case3] architecture = [q_p, mu1, mu2, t] -> "
+        f"{list(hidden_dims)} {activation.upper()} -> q_s"
+    )
+    print(f"[Case3] optimizer = AdamW(lr={lr:g}, weight_decay={weight_decay:g})")
+    print(f"[Case3] batch_size = {batch_size}")
+    print(f"[Case3] trainable_parameters = {trainable_params}")
 
     dl_tr = DataLoader(
         TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(Ytr)),
@@ -320,8 +434,14 @@ def main(argv=None):
         with torch.no_grad():
             va_loss = float(loss_fn(model(Xva_t), Yva_t).detach().cpu().item())
 
+        scheduler.step(va_loss)
+
         if ep == 1 or ep % 25 == 0:
-            print(f"[Epoch {ep:4d}] train_mse={tr_loss:.6e} | val_mse={va_loss:.6e} | bad={bad}")
+            current_lr = opt.param_groups[0]["lr"]
+            print(
+                f"[Epoch {ep:4d}] train_mse={tr_loss:.6e} | "
+                f"val_mse={va_loss:.6e} | lr={current_lr:.3e} | bad={bad}"
+            )
 
         if va_loss < best_val - min_improve:
             best_val = va_loss
@@ -336,7 +456,22 @@ def main(argv=None):
     if best_state is not None:
         model.load_state_dict(best_state)
 
+    model.eval()
+    with torch.no_grad():
+        Xtr_t = torch.from_numpy(Xtr).to(device)
+        Ytr_t = torch.from_numpy(Ytr).to(device)
+        pred_tr = model(Xtr_t)
+        pred_va = model(Xva_t)
+        train_rel_frob_percent = 100.0 * (
+            torch.linalg.norm(pred_tr - Ytr_t) / torch.linalg.norm(Ytr_t)
+        ).detach().cpu().item()
+        val_rel_frob_percent = 100.0 * (
+            torch.linalg.norm(pred_va - Yva_t) / torch.linalg.norm(Yva_t)
+        ).detach().cpu().item()
+
     print(f"[Case3] Training done in {time.time() - t0:.2f}s. best_val={best_val:.6e}")
+    print(f"[Case3] train_rel_frob_percent = {train_rel_frob_percent:.4f}%")
+    print(f"[Case3] val_rel_frob_percent = {val_rel_frob_percent:.4f}%")
 
     # -----------------------------
     # Save ONLY one file (weights + scaler buffers)
@@ -346,13 +481,27 @@ def main(argv=None):
         "in_dim": int(in_dim),      # n_p + 3
         "n_p": int(n_p),
         "n_s": int(n_s),
-        "seed": int(SEED),
+        "seed": int(seed),
         "dataset_root": dataset_root,
         "dataset_dir": dataset_dir,
         "dataset_ntot": int(dataset_ntot),
         "dataset_backend": dataset_meta.get("solve_backend"),
         "primary_modes": int(primary_modes),
         "secondary_modes": int(dataset_ntot - primary_modes),
+        "hidden_dims": tuple(int(d) for d in hidden_dims),
+        "activation": activation,
+        "dropout": float(dropout),
+        "batch_size": int(batch_size),
+        "lr": float(lr),
+        "weight_decay": float(weight_decay),
+        "trainable_parameters": int(trainable_params),
+        "best_val_mse": float(best_val),
+        "train_rel_frob_percent": float(train_rel_frob_percent),
+        "val_rel_frob_percent": float(val_rel_frob_percent),
+        "lr_scheduler": "ReduceLROnPlateau",
+        "lr_scheduler_factor": float(lr_scheduler_factor),
+        "lr_scheduler_patience": int(lr_scheduler_patience),
+        "lr_scheduler_min_lr": float(lr_scheduler_min_lr),
         "mapping": "qN_s = N(qN_p, mu1, mu2, t)",
         "x_layout": "X_raw = [qN_p..., mu1, mu2, t]",
     }
@@ -375,8 +524,26 @@ def main(argv=None):
             ("n_s", n_s),
             ("epochs_ran", ep),
             ("best_val_mse", best_val),
-            ("seed", SEED),
+            ("seed", seed),
             ("device", device),
+            ("hidden_dims", tuple(int(d) for d in hidden_dims)),
+            ("activation", activation),
+            ("dropout", dropout),
+            (
+                "architecture",
+                f"[q_p, mu1, mu2, t] -> {list(hidden_dims)} {activation.upper()} -> q_s",
+            ),
+            ("optimizer", "AdamW"),
+            ("lr", lr),
+            ("weight_decay", weight_decay),
+            ("batch_size", batch_size),
+            ("trainable_parameters", trainable_params),
+            ("lr_scheduler", "ReduceLROnPlateau"),
+            ("lr_scheduler_factor", lr_scheduler_factor),
+            ("lr_scheduler_patience", lr_scheduler_patience),
+            ("lr_scheduler_min_lr", lr_scheduler_min_lr),
+            ("train_rel_frob_percent", train_rel_frob_percent),
+            ("val_rel_frob_percent", val_rel_frob_percent),
         ],
     )
     print(f"[Case3] Summary: {summary_path}")

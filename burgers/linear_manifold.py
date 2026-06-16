@@ -188,6 +188,7 @@ def inviscid_burgers_implicit2D_LSPG(
     min_delta=1e-2,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    return_red_coords=False,
 ):
     """
     Global affine LSPG ROM for the 2D inviscid Burgers equation:
@@ -259,7 +260,10 @@ def inviscid_burgers_implicit2D_LSPG(
         wp = w.copy()
         yp = y.copy()
 
-    return snaps, (num_its, jac_time, res_time, ls_time)
+    stats = (num_its, jac_time, res_time, ls_time)
+    if return_red_coords:
+        return snaps, red_coords, stats
+    return snaps, stats
 
 
 def inviscid_burgers_implicit2D_LSPG_ecsw(

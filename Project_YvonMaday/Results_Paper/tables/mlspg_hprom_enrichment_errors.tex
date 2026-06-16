@@ -1,0 +1,16 @@
+\begin{table}[H]
+\centering
+\caption{Enriched MLSPG-sensitive campaign: relative trajectory errors (\%) with respect to HDM. The learned models are trained with the baseline 9 HPROM trajectories plus 20 LHS HPROM trajectories. Intrusive learned models use 1\% ECSW rules; the linear HPROM row is the fixed reference from the non-enriched campaign.}
+\label{tab:mlspg-hprom-enrichment-errors}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccc}
+\toprule
+Point & Linear HPROM & PROM-ANN Case 1 & PROM-ANN Case 2 ($n=10$) & PROM-ANN Case 2 ($n=20$) & PROM-ANN Case 3 & PROM-POD-AE & POD-NN-ROM & POD-DL-ROM \\
+\midrule
+$\bm\mu^{(v)}$ \textbf{(verification)} & 0.413 & 0.858 & 0.819 & 0.852 & 0.673 & 0.437 & 0.427 & 0.414 \\
+$\bm\mu^{(1)}$ (off-grid) & 0.460 & 1.009 & 1.260 & 1.039 & 0.536 & 0.548 & 0.484 & 0.462 \\
+$\bm\mu^{(2)}$ (off-grid) & 0.472 & 0.776 & 0.627 & 0.786 & 1.011 & 0.537 & 0.499 & 0.475 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

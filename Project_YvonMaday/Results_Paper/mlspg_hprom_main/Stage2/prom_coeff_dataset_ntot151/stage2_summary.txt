@@ -1,0 +1,21 @@
+solve_backend: hprom
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/prom_coeff_dataset_ntot151
+per_mu_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu
+basis_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+total_modes: 151
+coefficient_storage: qN_only
+num_traj: 9
+ecsw_num_training_mu: 9
+ecsw_snapshot_mode: global_param_time_stratified
+ecsw_snapshot_percent: 2.0
+ecsw_random_seed: 42
+ecsw_ensure_mu_coverage: True
+ecsw_snap_time_offset: 3
+ecsw_num_candidates_total: 4473
+ecsw_num_selected_total: 90
+ecsw_num_selected_per_mu: [10, 10, 10, 10, 10, 10, 10, 10, 10]
+ecsw_weights_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/ecsw/ecsw_weights_lspg_ntot151.npy
+ecsw_weights_source: computed
+ecsw_residual: 2.015664567911159e-09
+n_ecsw_elements: 5975

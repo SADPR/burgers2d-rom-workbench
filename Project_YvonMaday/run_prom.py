@@ -359,6 +359,7 @@ def main(
     output_root_dir=None,
     basis_path=None,
     u_ref_path=None,
+    ecsw_weights_path=None,
 ):
     mu_test = [float(mu_test[0]), float(mu_test[1])]
 
@@ -420,7 +421,12 @@ def main(
     online_solve_elapsed = np.nan
 
     if effective_backend == "hprom":
-        stage2_weights_path = _resolve_stage2_ecsw_weights_path(total_modes) if use_stage2_ecsw_weights else None
+        if ecsw_weights_path is not None:
+            stage2_weights_path = os.path.abspath(os.path.expanduser(str(ecsw_weights_path)))
+            if not os.path.exists(stage2_weights_path):
+                raise FileNotFoundError(f"Missing explicit ECSW weights file: {stage2_weights_path}")
+        else:
+            stage2_weights_path = _resolve_stage2_ecsw_weights_path(total_modes) if use_stage2_ecsw_weights else None
 
         mu_train_candidates = get_snapshot_params(
             mu1_range=MU1_RANGE,
@@ -458,7 +464,7 @@ def main(
 
     t0 = time.time()
     if effective_backend == "prom":
-        rom_snaps, rom_times = inviscid_burgers_implicit2D_LSPG(
+        rom_snaps, qN, rom_times = inviscid_burgers_implicit2D_LSPG(
             grid_x=GRID_X,
             grid_y=GRID_Y,
             w0=w0,
@@ -472,9 +478,8 @@ def main(
             min_delta=min_delta,
             linear_solver=linear_solver,
             normal_eq_reg=normal_eq_reg,
+            return_red_coords=True,
         )
-        # Use LS projection so qN is consistent for non-orthonormal bases.
-        qN = np.linalg.lstsq(Vtot, rom_snaps - u_ref[:, None], rcond=None)[0]
         online_solve_elapsed = time.time() - t0
     else:
         qN, rom_times = inviscid_burgers_implicit2D_LSPG_ecsw(
@@ -574,6 +579,7 @@ def main(
             ("mu_test", mu_test),
             ("solve_backend_requested", solve_backend),
             ("solve_backend_effective", effective_backend),
+            ("qN_source", "solver_coordinates"),
             ("use_ecsw", use_ecsw),
             ("use_stage2_ecsw_weights", use_stage2_ecsw_weights),
             ("basis_path", basis_path),
@@ -588,6 +594,7 @@ def main(
             ("ecsw_snapshot_random_seed", ecsw_snapshot_random_seed),
             ("ecsw_ensure_mu_coverage", bool(ecsw_ensure_mu_coverage)),
             ("ecsw_weights_path", weights_path if effective_backend == "hprom" else "N/A"),
+            ("ecsw_weights_path_explicit", ecsw_weights_path if ecsw_weights_path is not None else "N/A"),
             ("ecsw_weights_source", weights_source),
             ("ecsw_residual", ecsw_residual),
             ("n_ecsw_elements", n_ecsw_elements),
@@ -654,6 +661,12 @@ if __name__ == "__main__":
         default=None,
         help="Optional reference override (default: Results/Stage1/u_ref.npy).",
     )
+    parser.add_argument(
+        "--ecsw-weights-path",
+        type=str,
+        default=None,
+        help="Explicit ECSW weights file. Use this for isolated paper campaigns.",
+    )
     args = parser.parse_args()
 
     main(
@@ -674,4 +687,5 @@ if __name__ == "__main__":
         output_root_dir=args.output_root,
         basis_path=args.basis_path,
         u_ref_path=args.u_ref_path,
+        ecsw_weights_path=args.ecsw_weights_path,
     )

@@ -151,9 +151,16 @@ def find_hdm_snap(mu1: float, mu2: float) -> Path:
 
 
 def load_baseline_mu_points() -> np.ndarray:
-    per_mu = RESULTS_BASE / "Stage2" / "prom_coeff_dataset_ntot151" / "per_mu"
-    if not per_mu.exists():
-        raise FileNotFoundError(f"Missing baseline per-mu dataset: {per_mu}")
+    candidates = [
+        THIS_DIR / "mlspg_hprom_main" / "Stage2" / "prom_coeff_dataset_ntot151" / "per_mu",
+        RESULTS_BASE / "Stage2" / "prom_coeff_dataset_ntot151" / "per_mu",
+    ]
+    per_mu = next((p for p in candidates if p.exists()), None)
+    if per_mu is None:
+        raise FileNotFoundError(
+            "Missing baseline per-mu dataset in any expected location: "
+            + ", ".join(str(p) for p in candidates)
+        )
     mus = []
     for d in sorted(per_mu.iterdir()):
         if not d.is_dir():
@@ -184,62 +191,155 @@ def load_lhs_mu_points() -> np.ndarray:
     return arr
 
 
-def plot_parameter_domain_sampling(out_path: Path) -> None:
-    base = load_baseline_mu_points()
-    lhs = load_lhs_mu_points()
-    eval_pts = np.asarray([[4.875, 0.0225], [4.56, 0.0190], [5.19, 0.0260]], dtype=np.float64)
+def parameter_plot_limits(*point_sets: np.ndarray, pad_fraction: float = 0.20) -> tuple[tuple[float, float], tuple[float, float]]:
+    arrays = [np.asarray(points, dtype=np.float64).reshape(-1, 2) for points in point_sets if np.asarray(points).size]
+    if not arrays:
+        raise ValueError("At least one non-empty point set is required to define parameter-plot limits.")
+    pts = np.vstack(arrays)
+    xmin, ymin = np.min(pts, axis=0)
+    xmax, ymax = np.max(pts, axis=0)
+    xspan = max(xmax - xmin, 1.0e-12)
+    yspan = max(ymax - ymin, 1.0e-12)
+    xpad = pad_fraction * xspan
+    ypad = pad_fraction * yspan
+    return (xmin - xpad, xmax + xpad), (ymin - ypad, ymax + ypad)
 
-    fig, ax = plt.subplots(figsize=(9.6, 7.2))
+
+def style_parameter_axis(ax: plt.Axes, xlim: tuple[float, float], ylim: tuple[float, float]) -> None:
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax.set_box_aspect(1)
+
+
+def plot_parameter_domain_training_only(out_path: Path) -> None:
+    """Plot the baseline 3x3 grid using the manuscript figure template."""
+    plt.rcParams.update(
+        {
+            "text.usetex": True,
+            "font.family": "serif",
+            "font.serif": ["Computer Modern Roman"],
+            "mathtext.fontset": "cm",
+            "axes.titlesize": 15,
+            "axes.labelsize": 13,
+            "legend.fontsize": 11,
+            "xtick.labelsize": 11,
+            "ytick.labelsize": 11,
+            "axes.linewidth": 1.0,
+            "grid.alpha": 0.28,
+            "grid.linewidth": 0.7,
+        }
+    )
+    base = load_baseline_mu_points()
+
+    xlim, ylim = parameter_plot_limits(base)
+
+    fig, ax = plt.subplots(figsize=(6.4, 6.6))
+    ax.set_facecolor("#fbfbf7")
     ax.scatter(
         base[:, 0],
         base[:, 1],
-        s=95,
-        c="black",
+        s=78,
+        facecolors="black",
+        edgecolors="black",
+        linewidths=1.4,
         marker="o",
-        alpha=0.90,
-        label=r"Baseline training points ($3\times3$)",
+        label=r"Baseline $3\times3$ grid",
         zorder=3,
     )
-    if lhs.shape[0] > 0:
-        ax.scatter(
-            lhs[:, 0],
-            lhs[:, 1],
-            s=82,
-            c="tab:blue",
-            marker="x",
-            alpha=0.90,
-            label="Enrichment LHS points",
-            zorder=4,
-        )
 
-    eval_labels = [r"Verification $\mu^{(v)}$", r"Test $\mu^{(1)}$", r"Test $\mu^{(2)}$"]
-    eval_colors = ["tab:red", "tab:orange", "tab:green"]
-    for (mu1, mu2), lbl, c in zip(eval_pts, eval_labels, eval_colors):
-        ax.scatter(mu1, mu2, s=170, c=c, marker="*", edgecolors="black", linewidths=0.8, label=lbl, zorder=6)
-
-    mu1_lo, mu1_hi = 4.25, 5.50
-    mu2_lo, mu2_hi = 0.015, 0.03
-    pad_x = 0.06 * (mu1_hi - mu1_lo)
-    pad_y = 0.08 * (mu2_hi - mu2_lo)
-    ax.set_xlim(mu1_lo - pad_x, mu1_hi + pad_x)
-    ax.set_ylim(mu2_lo - pad_y, mu2_hi + pad_y)
-    ax.plot(
-        [mu1_lo, mu1_hi, mu1_hi, mu1_lo, mu1_lo],
-        [mu2_lo, mu2_lo, mu2_hi, mu2_hi, mu2_lo],
-        color="0.25",
-        linewidth=1.4,
-        linestyle="-",
-        alpha=0.85,
-        zorder=1,
-    )
-
+    style_parameter_axis(ax, xlim, ylim)
     ax.set_xlabel(r"$\mu_1$")
     ax.set_ylabel(r"$\mu_2$")
-    ax.set_title("Parameter domain, training points, and evaluation points")
+    ax.set_title("Baseline training set in parameter space")
     ax.grid(True)
-    ax.legend(loc="best")
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.16),
+        ncol=1,
+        frameon=True,
+        borderaxespad=0.0,
+    )
     fig.tight_layout()
-    fig.savefig(out_path, dpi=220)
+    fig.savefig(out_path, dpi=240, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_parameter_domain_sampling(out_path: Path) -> None:
+    plt.rcParams.update(
+        {
+            "text.usetex": True,
+            "font.family": "serif",
+            "font.serif": ["Computer Modern Roman"],
+            "mathtext.fontset": "cm",
+            "axes.titlesize": 15,
+            "axes.labelsize": 13,
+            "legend.fontsize": 11,
+            "xtick.labelsize": 11,
+            "ytick.labelsize": 11,
+            "axes.linewidth": 1.0,
+            "grid.alpha": 0.28,
+            "grid.linewidth": 0.7,
+        }
+    )
+    base = load_baseline_mu_points()
+    eval_pts = [(4.875, 0.0225, "v"), (4.56, 0.0190, "1"), (5.19, 0.0260, "2")]
+    label_offsets = {"v": (36, -18), "1": (30, 18), "2": (30, 18)}
+    label_va = {"v": "top", "1": "bottom", "2": "bottom"}
+
+    eval_arr = np.asarray([(mu1, mu2) for mu1, mu2, _ in eval_pts], dtype=np.float64)
+    xlim, ylim = parameter_plot_limits(base, eval_arr)
+
+    fig, ax = plt.subplots(figsize=(6.4, 6.6))
+    ax.set_facecolor("#fbfbf7")
+    ax.scatter(
+        base[:, 0],
+        base[:, 1],
+        s=78,
+        facecolors="black",
+        edgecolors="black",
+        linewidths=1.4,
+        marker="o",
+        label=r"Baseline $3\times3$ grid",
+        zorder=3,
+    )
+    for mu1, mu2, tag in eval_pts:
+        label = "Evaluation points" if tag == "v" else None
+        ax.scatter(mu1, mu2, s=170, marker="*", color="#c62828", edgecolors="white", linewidths=0.7, zorder=5, label=label)
+        suffix = "(v)" if tag == "v" else f"({tag})"
+        ax.annotate(
+            rf"$\mu^{{{suffix}}}$",
+            (mu1, mu2),
+            xytext=label_offsets[tag],
+            textcoords="offset points",
+            fontsize=12,
+            color="#7f1111",
+            ha="left",
+            va=label_va[tag],
+            arrowprops={
+                "arrowstyle": "-",
+                "color": "#7f1111",
+                "lw": 0.8,
+                "shrinkA": 2,
+                "shrinkB": 5,
+            },
+            bbox={"boxstyle": "round,pad=0.12", "fc": "#fbfbf7", "ec": "none", "alpha": 0.86},
+            zorder=6,
+        )
+
+    style_parameter_axis(ax, xlim, ylim)
+    ax.set_xlabel(r"$\mu_1$")
+    ax.set_ylabel(r"$\mu_2$")
+    ax.set_title("Baseline training set in parameter space")
+    ax.grid(True)
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.16),
+        ncol=2,
+        frameon=True,
+        borderaxespad=0.0,
+    )
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=240, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -783,6 +883,7 @@ def main() -> None:
 
     plot_hdm_vs_models("baseline", FIG_DIR / "baseline_hprom_hdm_vs_all_models.png")
     plot_hdm_vs_models("enriched", FIG_DIR / "enriched_hprom_hdm_vs_all_models.png")
+    plot_parameter_domain_training_only(FIG_DIR / "parameter_domain_training_only.png")
     plot_parameter_domain_sampling(FIG_DIR / "parameter_domain_sampling_points.png")
     plot_verification_3d_cutplanes(FIG_DIR / "verification_hdm_3d_cutplanes_t10.png", t_idx=200)
     plot_verification_3d_cutplanes(FIG_DIR / "verification_hdm_3d_cutplanes_t20.png", t_idx=400)

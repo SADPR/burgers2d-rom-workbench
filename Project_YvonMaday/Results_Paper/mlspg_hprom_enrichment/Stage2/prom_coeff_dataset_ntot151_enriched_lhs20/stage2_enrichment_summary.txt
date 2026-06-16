@@ -1,0 +1,17 @@
+dataset_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_enrichment/Stage2/prom_coeff_dataset_ntot151_enriched_lhs20
+solve_backend: hprom
+total_modes: 151
+coefficient_storage: direct_solver_qN_only
+num_base_traj_copied: 9
+num_lhs_traj: 20
+num_traj_total: 29
+lhs_seed: 42
+basis_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+ecsw_weights_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/ecsw/ecsw_weights_lspg_ntot151.npy
+ecsw_weights_sha256: 769c56aeb4f37de1c20d869d49eecd923564ebbf5de8710978daabdd9a4b94f1
+ecsw_weights_source: strict_reference_to_baseline_linear_hprom
+ecsw_weights_copied: False
+ecsw_weights_rebuilt: False
+n_ecsw_elements: 5975
+save_rom_snaps: False

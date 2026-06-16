@@ -1,362 +1,775 @@
 #!/usr/bin/env python3
-"""
-Analyze the Case-2 low/high contamination transfer operator
+r"""Compare the Case-2 low/high LSPG transfer operator across trial bases.
 
-    T_k = (J_L^T P J_L)^{-1} (J_L^T P J_H),
+For each selected state and basis split B=[V, Vbar], this script computes
 
-with
-    J_L = J(w_k) V,   J_H = J(w_k) Vbar.
+    T_LH = -(V^T J^T P J V)^\dagger V^T J^T P J Vbar.
 
-By default P = I (Euclidean residual norm). Optionally, a diagonal SPD
-weight P = diag(p_diag) can be provided.
+The raw coordinate norm of T_LH is reported, but it is not invariant under a
+change of basis scaling. The primary comparison is therefore the physical
+mass-norm gain
+
+    sup_z ||V T_LH z||_M / ||Vbar z||_M.
+
+Both bases are evaluated at the same HDM states, isolating the effect of the
+trial basis from differences between reduced trajectories.
 """
 
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
+import csv
+import json
+import math
+import re
 import sys
+import time
+from dataclasses import dataclass
+from pathlib import Path
+
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+PROJECT_DIR = Path(__file__).resolve().parent
+REPO_DIR = PROJECT_DIR.parent
+if str(REPO_DIR) not in sys.path:
+    sys.path.insert(0, str(REPO_DIR))
 
+from burgers.config import DT, GRID_X, GRID_Y
 from burgers.core import get_ops, inviscid_burgers_exact_jac2D
 
 
-def _infer_square_grid_from_state_size(n_state: int):
-    if n_state % 2 != 0:
-        raise ValueError(f"State size must be even (ux, uy stacked), got {n_state}.")
-    n_cells = n_state // 2
-    n_side = int(round(np.sqrt(n_cells)))
-    if n_side * n_side != n_cells:
-        raise ValueError(
-            f"State size {n_state} does not match a square grid with 2 components."
+DEFAULT_POINTS = (
+    (4.560, 0.0190),
+    (4.875, 0.0225),
+    (5.190, 0.0260),
+)
+
+
+@dataclass(frozen=True)
+class BasisSpec:
+    label: str
+    path: Path
+
+
+@dataclass
+class BasisData:
+    spec: BasisSpec
+    low: np.ndarray
+    high: np.ndarray
+    mass_low_sqrt: np.ndarray
+    mass_high_inv_sqrt: np.ndarray
+    low_mass_gram_cond: float
+    high_mass_gram_cond: float
+    low_high_mass_cross_fro: float
+
+
+def _parse_basis(value: str) -> BasisSpec:
+    if "=" not in value:
+        raise argparse.ArgumentTypeError(
+            f"Invalid --basis '{value}'. Expected LABEL=/path/to/basis.npy."
         )
-    grid_x = np.linspace(0.0, 100.0, n_side + 1)
-    grid_y = np.linspace(0.0, 100.0, n_side + 1)
-    return grid_x, grid_y, n_side, n_side
+    label, raw_path = value.split("=", 1)
+    label = label.strip()
+    if not label:
+        raise argparse.ArgumentTypeError("Basis label cannot be empty.")
+    return BasisSpec(label=label, path=Path(raw_path).expanduser().resolve())
 
 
-def _fmt_sci(x: float) -> str:
-    return f"{float(x):.6e}"
+def _parse_point(value: str) -> tuple[float, float]:
+    parts = [item.strip() for item in value.split(",")]
+    if len(parts) != 2:
+        raise argparse.ArgumentTypeError(
+            f"Invalid --point '{value}'. Expected MU1,MU2."
+        )
+    return float(parts[0]), float(parts[1])
 
 
-def _write_kv_txt(path: Path, pairs):
+def _slug(value: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]+", "_", value).strip("_").lower()
+
+
+def _mass_diagonal() -> np.ndarray:
+    dx = np.asarray(GRID_X[1:] - GRID_X[:-1], dtype=np.float64)
+    dy = np.asarray(GRID_Y[1:] - GRID_Y[:-1], dtype=np.float64)
+    cell_area = np.outer(dy, dx).reshape(-1)
+    return np.concatenate((cell_area, cell_area))
+
+
+def _symmetric_sqrt(matrix: np.ndarray, *, inverse: bool) -> tuple[np.ndarray, float]:
+    matrix = 0.5 * (matrix + matrix.T)
+    eigenvalues, eigenvectors = np.linalg.eigh(matrix)
+    largest = float(np.max(eigenvalues))
+    cutoff = max(largest * 1.0e-13, np.finfo(np.float64).eps)
+    if largest <= 0.0 or np.any(eigenvalues <= cutoff):
+        raise np.linalg.LinAlgError(
+            "The physical Gram matrix is numerically singular; "
+            f"min={np.min(eigenvalues):.3e}, max={largest:.3e}."
+        )
+    factors = 1.0 / np.sqrt(eigenvalues) if inverse else np.sqrt(eigenvalues)
+    root = (eigenvectors * factors[None, :]) @ eigenvectors.T
+    return root, largest / float(np.min(eigenvalues))
+
+
+def _load_basis(
+    spec: BasisSpec,
+    *,
+    n_primary: int,
+    n_tot: int,
+    mass_diag: np.ndarray,
+) -> BasisData:
+    if not spec.path.is_file():
+        raise FileNotFoundError(f"Missing basis: {spec.path}")
+    basis = np.asarray(np.load(spec.path, allow_pickle=False), dtype=np.float64)
+    if basis.ndim != 2 or basis.shape[1] < n_tot:
+        raise ValueError(
+            f"Basis '{spec.label}' has shape {basis.shape}; "
+            f"at least (*,{n_tot}) is required."
+        )
+    if basis.shape[0] != mass_diag.size:
+        raise ValueError(
+            f"Basis '{spec.label}' has {basis.shape[0]} rows, "
+            f"but the mass vector has {mass_diag.size} entries."
+        )
+
+    low = np.ascontiguousarray(basis[:, :n_primary])
+    high = np.ascontiguousarray(basis[:, n_primary:n_tot])
+    low_gram = low.T @ (mass_diag[:, None] * low)
+    high_gram = high.T @ (mass_diag[:, None] * high)
+    low_sqrt, low_cond = _symmetric_sqrt(low_gram, inverse=False)
+    high_inv_sqrt, high_cond = _symmetric_sqrt(high_gram, inverse=True)
+    cross = low.T @ (mass_diag[:, None] * high)
+
+    return BasisData(
+        spec=spec,
+        low=low,
+        high=high,
+        mass_low_sqrt=low_sqrt,
+        mass_high_inv_sqrt=high_inv_sqrt,
+        low_mass_gram_cond=low_cond,
+        high_mass_gram_cond=high_cond,
+        low_high_mass_cross_fro=float(np.linalg.norm(cross, ord="fro")),
+    )
+
+
+def _resolve_snapshot(snap_dir: Path, mu1: float, mu2: float) -> Path:
+    candidates = (
+        snap_dir / f"mu1_{mu1:g}+mu2_{mu2:g}.npy",
+        snap_dir / f"mu1_{mu1:.3f}+mu2_{mu2:.4f}.npy",
+        snap_dir / f"mu1_{mu1}+mu2_{mu2}.npy",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return candidate
+    raise FileNotFoundError(
+        f"No HDM snapshot file found for mu=({mu1:g},{mu2:g}) in {snap_dir}. "
+        f"Tried: {', '.join(str(path.name) for path in candidates)}"
+    )
+
+
+def _spectral_pseudoinverse_solve(
+    h_ll: np.ndarray,
+    h_lh: np.ndarray,
+    *,
+    rcond: float,
+) -> tuple[np.ndarray, int, float, float, float]:
+    h_ll = 0.5 * (h_ll + h_ll.T)
+    eigenvalues, eigenvectors = np.linalg.eigh(h_ll)
+    max_eigenvalue = float(np.max(eigenvalues))
+    cutoff = max(float(rcond) * max_eigenvalue, np.finfo(np.float64).eps)
+    keep = eigenvalues > cutoff
+    rank = int(np.count_nonzero(keep))
+    if rank == 0:
+        raise np.linalg.LinAlgError("H_LL has zero numerical rank.")
+
+    projected = eigenvectors[:, keep].T @ h_lh
+    transfer = -(
+        eigenvectors[:, keep]
+        @ (projected / eigenvalues[keep, None])
+    )
+    min_kept = float(np.min(eigenvalues[keep]))
+    condition = max_eigenvalue / min_kept
+    return transfer, rank, condition, min_kept, max_eigenvalue
+
+
+def _stats(values: np.ndarray) -> dict[str, float]:
+    values = np.asarray(values, dtype=np.float64)
+    return {
+        "mean": float(np.mean(values)),
+        "std": float(np.std(values)),
+        "median": float(np.median(values)),
+        "p95": float(np.percentile(values, 95.0)),
+        "max": float(np.max(values)),
+        "min": float(np.min(values)),
+    }
+
+
+def _write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
-        for k, v in pairs:
-            f.write(f"{k}: {v}\n")
+    with path.open("w", newline="", encoding="utf-8") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
 
 
-def main():
+def _write_latex_table(path: Path, aggregate_rows: list[dict]) -> None:
+    all_rows = [row for row in aggregate_rows if row["scope"] == "all_points"]
+    lines = [
+        r"\begin{tabular}{lrrrrrr}",
+        r"\toprule",
+        (
+            r"Basis & $\operatorname{mean}\sigma_{\max}(T_{LH})$"
+            r" & $\operatorname{p95}\sigma_{\max}(T_{LH})$"
+            r" & $\max\sigma_{\max}(T_{LH})$"
+            r" & $\operatorname{mean}g_M$"
+            r" & $\operatorname{p95}g_M$"
+            r" & $\max g_M$ \\"
+        ),
+        r"\midrule",
+    ]
+    for row in all_rows:
+        label = str(row["basis"]).replace("_", r"\_")
+        lines.append(
+            f"{label} & "
+            f"{row['coordinate_sigma_max_mean']:.3e} & "
+            f"{row['coordinate_sigma_max_p95']:.3e} & "
+            f"{row['coordinate_sigma_max_max']:.3e} & "
+            f"{row['mass_state_gain_mean']:.3e} & "
+            f"{row['mass_state_gain_p95']:.3e} & "
+            f"{row['mass_state_gain_max']:.3e} \\\\"
+        )
+    lines.extend((r"\bottomrule", r"\end{tabular}", ""))
+    path.write_text("\n".join(lines), encoding="utf-8")
+
+
+def _plot_time_histories(
+    path: Path,
+    rows: list[dict],
+    points: list[tuple[float, float]],
+    labels: list[str],
+) -> None:
+    plt.rcParams.update(
+        {
+            "text.usetex": False,
+            "font.family": "serif",
+            "mathtext.fontset": "cm",
+            "font.size": 10,
+            "axes.titlesize": 11,
+            "axes.labelsize": 10,
+            "legend.fontsize": 9,
+        }
+    )
+    colors = ("#1f77b4", "#d62728", "#2ca02c", "#9467bd")
+    fig, axes = plt.subplots(
+        2,
+        len(points),
+        figsize=(5.0 * len(points), 7.0),
+        sharex="col",
+        constrained_layout=True,
+    )
+    if len(points) == 1:
+        axes = np.asarray(axes).reshape(2, 1)
+
+    for col, (mu1, mu2) in enumerate(points):
+        for idx, label in enumerate(labels):
+            selected = [
+                row
+                for row in rows
+                if row["basis"] == label
+                and math.isclose(float(row["mu1"]), mu1)
+                and math.isclose(float(row["mu2"]), mu2)
+            ]
+            selected.sort(key=lambda row: int(row["step"]))
+            time_values = [float(row["time"]) for row in selected]
+            axes[0, col].plot(
+                time_values,
+                [float(row["coordinate_sigma_max"]) for row in selected],
+                color=colors[idx % len(colors)],
+                linewidth=1.4,
+                alpha=0.85,
+                label=label,
+            )
+            axes[1, col].plot(
+                time_values,
+                [float(row["mass_state_gain"]) for row in selected],
+                color=colors[idx % len(colors)],
+                linewidth=1.4,
+                alpha=0.85,
+                label=label,
+            )
+
+        axes[0, col].set_title(
+            rf"$\mathbf{{\mu}}=({mu1:.3f},{mu2:.4f})$"
+        )
+        axes[0, col].set_yscale("log")
+        axes[1, col].set_yscale("log")
+        axes[0, col].grid(True, which="both", alpha=0.25)
+        axes[1, col].grid(True, which="both", alpha=0.25)
+        axes[1, col].set_xlabel(r"Time $t$")
+
+    axes[0, 0].set_ylabel(r"Coordinate gain $\sigma_{\max}(T_{LH})$")
+    axes[1, 0].set_ylabel(r"Physical mass-norm gain $g_M$")
+    axes[0, -1].legend(frameon=True)
+    fig.suptitle("Case-2 low/high LSPG transfer diagnostic")
+    fig.savefig(path, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+
+
+def _plot_distributions(path: Path, rows: list[dict], labels: list[str]) -> None:
+    plt.rcParams["text.usetex"] = False
+    coordinate = [
+        np.asarray(
+            [float(row["coordinate_sigma_max"]) for row in rows if row["basis"] == label]
+        )
+        for label in labels
+    ]
+    physical = [
+        np.asarray(
+            [float(row["mass_state_gain"]) for row in rows if row["basis"] == label]
+        )
+        for label in labels
+    ]
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.4), constrained_layout=True)
+    axes[0].boxplot(coordinate, labels=labels, showfliers=False)
+    axes[1].boxplot(physical, labels=labels, showfliers=False)
+    axes[0].set_yscale("log")
+    axes[1].set_yscale("log")
+    axes[0].set_ylabel(r"$\sigma_{\max}(T_{LH})$")
+    axes[1].set_ylabel(r"$g_M$")
+    axes[0].set_title("Coordinate-space transfer")
+    axes[1].set_title("Physical mass-norm transfer")
+    for axis in axes:
+        axis.grid(True, which="both", axis="y", alpha=0.25)
+    fig.savefig(path, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+
+
+def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Compute ||T_k|| and SVD diagnostics for Case-2 contamination."
+        description="Compare the Case-2 low/high transfer operator across bases."
     )
     parser.add_argument(
-        "--linear-run-dir",
-        required=True,
-        help="Directory containing rom_snaps.npy, qN.npy, t.npy from linear PROM.",
+        "--basis",
+        action="append",
+        type=_parse_basis,
+        default=[],
+        metavar="LABEL=PATH",
+        help="Basis to evaluate. Repeat for multiple bases.",
     )
     parser.add_argument(
-        "--basis-path",
-        required=True,
-        help="Path to basis file used in the corresponding linear run.",
+        "--point",
+        action="append",
+        type=_parse_point,
+        default=[],
+        metavar="MU1,MU2",
+        help="HDM parameter point. Repeat for multiple points.",
     )
     parser.add_argument(
-        "--u-ref-path",
-        required=True,
-        help="Path to reference state used with basis.",
+        "--snap-dir",
+        type=Path,
+        default=REPO_DIR / "Results" / "param_snaps",
     )
     parser.add_argument("--n-primary", type=int, default=10)
     parser.add_argument("--n-tot", type=int, default=151)
+    parser.add_argument("--dt", type=float, default=DT)
+    parser.add_argument("--time-start-index", type=int, default=1)
+    parser.add_argument("--time-stop-index", type=int, default=500)
+    parser.add_argument("--stride", type=int, default=1)
     parser.add_argument(
-        "--dt",
+        "--normal-rcond",
         type=float,
-        default=None,
-        help="Optional time-step override. If omitted, inferred from t.npy when possible.",
+        default=1.0e-12,
+        help="Relative spectral cutoff for H_LL pseudoinversion.",
     )
     parser.add_argument(
         "--p-diag-path",
-        type=str,
+        type=Path,
         default=None,
-        help="Optional diagonal entries of residual metric P (identity if omitted).",
-    )
-    parser.add_argument(
-        "--time-start-index",
-        type=int,
-        default=1,
-        help="First time index used for diagnostics (default: 1).",
-    )
-    parser.add_argument(
-        "--stride",
-        type=int,
-        default=1,
-        help="Stride over time indices (default: 1).",
-    )
-    parser.add_argument(
-        "--max-samples",
-        type=int,
-        default=0,
-        help="If >0, keep only the first max-samples indices after stride.",
-    )
-    parser.add_argument(
-        "--normal-eq-reg",
-        type=float,
-        default=1e-12,
-        help="Tikhonov regularization for (J_L^T P J_L).",
+        help="Optional diagonal residual metric P. The default is P=I.",
     )
     parser.add_argument(
         "--output-dir",
-        type=str,
-        default=None,
-        help="Output directory (default: <linear-run-dir>/transfer_T).",
+        type=Path,
+        default=PROJECT_DIR / "Results_Paper" / "MetricStudy" / "low_high_transfer",
     )
-    parser.add_argument(
-        "--tag",
-        type=str,
-        default="transfer_T",
-        help="Tag prefix for output files.",
-    )
+    parser.add_argument("--progress-every", type=int, default=25)
     args = parser.parse_args()
 
-    linear_run_dir = Path(args.linear_run_dir).expanduser().resolve()
-    basis_path = Path(args.basis_path).expanduser().resolve()
-    u_ref_path = Path(args.u_ref_path).expanduser().resolve()
-
-    rom_snaps_path = linear_run_dir / "rom_snaps.npy"
-    qn_path = linear_run_dir / "qN.npy"
-    t_path = linear_run_dir / "t.npy"
-
-    for p in (rom_snaps_path, qn_path, basis_path, u_ref_path):
-        if not p.exists():
-            raise FileNotFoundError(f"Missing required file: {p}")
-
-    basis = np.asarray(np.load(basis_path, allow_pickle=False), dtype=np.float64)
-    u_ref = np.asarray(np.load(u_ref_path, allow_pickle=False), dtype=np.float64).reshape(-1)
-    rom_snaps = np.asarray(np.load(rom_snaps_path, allow_pickle=False), dtype=np.float64)
-    qn = np.asarray(np.load(qn_path, allow_pickle=False), dtype=np.float64)
-
-    if basis.ndim != 2:
-        raise ValueError(f"basis must be 2D, got shape {basis.shape}")
-    if rom_snaps.ndim != 2:
-        raise ValueError(f"rom_snaps must be 2D, got shape {rom_snaps.shape}")
-    if qn.ndim != 2:
-        raise ValueError(f"qN must be 2D, got shape {qn.shape}")
-    if basis.shape[0] != u_ref.size:
-        raise ValueError(
-            f"basis rows ({basis.shape[0]}) and u_ref size ({u_ref.size}) mismatch."
-        )
-    if rom_snaps.shape[0] != basis.shape[0]:
-        raise ValueError(
-            f"rom_snaps rows ({rom_snaps.shape[0]}) and basis rows ({basis.shape[0]}) mismatch."
-        )
-    if args.n_tot > basis.shape[1]:
-        raise ValueError(
-            f"Requested n_tot={args.n_tot}, but basis has only {basis.shape[1]} columns."
-        )
-    if qn.shape[0] < args.n_tot:
-        raise ValueError(
-            f"qN has {qn.shape[0]} rows, requested n_tot={args.n_tot}."
-        )
     if not (1 <= args.n_primary < args.n_tot):
-        raise ValueError(
-            f"Invalid split n_primary={args.n_primary}, n_tot={args.n_tot}."
+        raise ValueError("Require 1 <= n_primary < n_tot.")
+    if args.stride < 1:
+        raise ValueError("--stride must be >= 1.")
+    if args.normal_rcond <= 0.0:
+        raise ValueError("--normal-rcond must be positive.")
+
+    basis_specs = args.basis or [
+        BasisSpec(
+            "Euclidean POD",
+            PROJECT_DIR / "Results_Paper" / "MetricStudy" / "euclidean" / "Stage1" / "basis.npy",
+        ),
+        BasisSpec(
+            "LSPG-sensitive POD",
+            PROJECT_DIR
+            / "Results_Paper"
+            / "MetricStudy"
+            / "lspg_sensitive"
+            / "Stage1"
+            / "basis.npy",
+        ),
+    ]
+    points = args.point or list(DEFAULT_POINTS)
+    snap_dir = args.snap_dir.expanduser().resolve()
+    output_dir = args.output_dir.expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    mass_diag = _mass_diagonal()
+    bases = [
+        _load_basis(
+            spec,
+            n_primary=args.n_primary,
+            n_tot=args.n_tot,
+            mass_diag=mass_diag,
         )
-
-    if t_path.exists():
-        t_vec = np.asarray(np.load(t_path, allow_pickle=False), dtype=np.float64).reshape(-1)
-    else:
-        t_vec = None
-
-    n_t = min(rom_snaps.shape[1], qn.shape[1], (t_vec.size if t_vec is not None else rom_snaps.shape[1]))
-    rom_snaps = rom_snaps[:, :n_t]
-    qn = qn[: args.n_tot, :n_t]
-    if t_vec is not None:
-        t_vec = t_vec[:n_t]
-
-    if args.dt is not None:
-        dt = float(args.dt)
-    elif t_vec is not None and t_vec.size >= 2:
-        dt = float(np.median(np.diff(t_vec)))
-    else:
-        raise ValueError("Could not infer dt. Provide --dt.")
-
-    V = basis[:, : args.n_primary]
-    Vbar = basis[:, args.n_primary : args.n_tot]
+        for spec in basis_specs
+    ]
 
     p_diag = None
     if args.p_diag_path is not None:
         p_diag = np.asarray(
-            np.load(Path(args.p_diag_path).expanduser().resolve(), allow_pickle=False),
+            np.load(args.p_diag_path.expanduser().resolve(), allow_pickle=False),
             dtype=np.float64,
         ).reshape(-1)
-        if p_diag.size != basis.shape[0]:
+        if p_diag.size != mass_diag.size:
             raise ValueError(
-                f"p_diag size mismatch: got {p_diag.size}, expected {basis.shape[0]}."
+                f"P diagonal has {p_diag.size} entries; expected {mass_diag.size}."
+            )
+        if np.any(p_diag < 0.0):
+            raise ValueError("P diagonal must be nonnegative.")
+
+    _, _, jdx, jdy, identity = get_ops(GRID_X, GRID_Y)
+    total_states = 0
+    snapshots: list[tuple[float, float, Path, np.ndarray, list[int]]] = []
+    for mu1, mu2 in points:
+        path = _resolve_snapshot(snap_dir, mu1, mu2)
+        states = np.load(path, mmap_mode="r", allow_pickle=False)
+        if states.ndim != 2 or states.shape[0] != mass_diag.size:
+            raise ValueError(f"Unexpected snapshot shape in {path}: {states.shape}")
+        stop = min(int(args.time_stop_index), states.shape[1] - 1)
+        indices = list(range(max(0, args.time_start_index), stop + 1, args.stride))
+        if not indices:
+            raise ValueError(f"No time indices selected for {path}.")
+        snapshots.append((mu1, mu2, path, states, indices))
+        total_states += len(indices)
+
+    total_evaluations = total_states * len(bases)
+    print(
+        "[TRANSFER] "
+        f"bases={len(bases)}, points={len(points)}, states={total_states}, "
+        f"basis-state evaluations={total_evaluations}",
+        flush=True,
+    )
+    print(
+        f"[TRANSFER] split: n_primary={args.n_primary}, "
+        f"n_secondary={args.n_tot - args.n_primary}, n_tot={args.n_tot}",
+        flush=True,
+    )
+    print(
+        f"[TRANSFER] residual metric P={'diagonal' if p_diag is not None else 'identity'}",
+        flush=True,
+    )
+
+    rows: list[dict] = []
+    worst: dict[str, dict] = {}
+    completed = 0
+    start = time.time()
+
+    for mu1, mu2, snapshot_path, states, indices in snapshots:
+        print(
+            f"[TRANSFER] point mu=({mu1:.3f},{mu2:.4f}) | "
+            f"snapshots={snapshot_path} | selected={len(indices)}",
+            flush=True,
+        )
+        for step in indices:
+            state = np.asarray(states[:, step], dtype=np.float64)
+            jacobian = inviscid_burgers_exact_jac2D(
+                state, args.dt, jdx, jdy, identity
             )
 
-    # Sanity check: qN reconstructs rom_snaps for this basis/ref.
-    qn_recon_rel = np.linalg.norm((u_ref[:, None] + basis[:, : args.n_tot] @ qn) - rom_snaps) / (
-        np.linalg.norm(rom_snaps) + 1e-30
+            for basis in bases:
+                j_low = np.asarray(jacobian @ basis.low, dtype=np.float64)
+                j_high = np.asarray(jacobian @ basis.high, dtype=np.float64)
+                if p_diag is None:
+                    h_ll = j_low.T @ j_low
+                    h_lh = j_low.T @ j_high
+                    high_jacobian_norm = np.linalg.norm(j_high, ord="fro")
+                else:
+                    weighted_low = p_diag[:, None] * j_low
+                    weighted_high = p_diag[:, None] * j_high
+                    h_ll = j_low.T @ weighted_low
+                    h_lh = j_low.T @ weighted_high
+                    high_jacobian_norm = math.sqrt(
+                        float(np.sum(j_high * weighted_high))
+                    )
+
+                transfer, rank, condition, eig_min, eig_max = (
+                    _spectral_pseudoinverse_solve(
+                        h_ll, h_lh, rcond=args.normal_rcond
+                    )
+                )
+                singular_values = np.linalg.svd(
+                    transfer, compute_uv=False, full_matrices=False
+                )
+                coordinate_sigma_max = float(singular_values[0])
+                coordinate_fro = float(np.linalg.norm(singular_values))
+
+                physical_operator = (
+                    basis.mass_low_sqrt
+                    @ transfer
+                    @ basis.mass_high_inv_sqrt
+                )
+                physical_singular_values = np.linalg.svd(
+                    physical_operator, compute_uv=False, full_matrices=False
+                )
+                mass_state_gain = float(physical_singular_values[0])
+
+                cancellation = j_low @ transfer + j_high
+                if p_diag is None:
+                    cancellation_norm = np.linalg.norm(cancellation, ord="fro")
+                else:
+                    cancellation_norm = math.sqrt(
+                        float(np.sum(cancellation * (p_diag[:, None] * cancellation)))
+                    )
+                cancellation_rel = float(
+                    cancellation_norm / (high_jacobian_norm + 1.0e-30)
+                )
+
+                row = {
+                    "basis": basis.spec.label,
+                    "basis_path": str(basis.spec.path),
+                    "mu1": mu1,
+                    "mu2": mu2,
+                    "step": step,
+                    "time": step * args.dt,
+                    "coordinate_sigma_max": coordinate_sigma_max,
+                    "coordinate_fro": coordinate_fro,
+                    "mass_state_gain": mass_state_gain,
+                    "hll_rank": rank,
+                    "hll_condition": condition,
+                    "hll_min_kept_eigenvalue": eig_min,
+                    "hll_max_eigenvalue": eig_max,
+                    "cancellation_relative_residual": cancellation_rel,
+                }
+                for index, value in enumerate(singular_values, start=1):
+                    row[f"coordinate_sigma_{index}"] = float(value)
+                rows.append(row)
+
+                key = basis.spec.label
+                if key not in worst or mass_state_gain > worst[key]["mass_state_gain"]:
+                    worst[key] = {
+                        "mass_state_gain": mass_state_gain,
+                        "mu1": mu1,
+                        "mu2": mu2,
+                        "step": step,
+                        "time": step * args.dt,
+                        "transfer": transfer.copy(),
+                        "coordinate_singular_values": singular_values.copy(),
+                        "physical_singular_values": physical_singular_values.copy(),
+                    }
+
+                completed += 1
+                if (
+                    completed % max(1, args.progress_every) == 0
+                    or completed == total_evaluations
+                ):
+                    elapsed = max(time.time() - start, 1.0e-12)
+                    eta = (total_evaluations - completed) * elapsed / completed
+                    print(
+                        "[TRANSFER] "
+                        f"{completed}/{total_evaluations} | "
+                        f"mu=({mu1:.3f},{mu2:.4f}) step={step} "
+                        f"basis={basis.spec.label} | "
+                        f"sigma={coordinate_sigma_max:.3e} "
+                        f"g_M={mass_state_gain:.3e} | "
+                        f"elapsed={elapsed:.1f}s eta={eta:.1f}s",
+                        flush=True,
+                    )
+
+                del j_low, j_high
+            del jacobian
+
+    singular_count = min(args.n_primary, args.n_tot - args.n_primary)
+    per_sample_fields = [
+        "basis",
+        "basis_path",
+        "mu1",
+        "mu2",
+        "step",
+        "time",
+        "coordinate_sigma_max",
+        "coordinate_fro",
+        "mass_state_gain",
+        "hll_rank",
+        "hll_condition",
+        "hll_min_kept_eigenvalue",
+        "hll_max_eigenvalue",
+        "cancellation_relative_residual",
+    ] + [f"coordinate_sigma_{index}" for index in range(1, singular_count + 1)]
+    per_sample_path = output_dir / "low_high_transfer_per_sample.csv"
+    _write_csv(per_sample_path, rows, per_sample_fields)
+
+    aggregate_rows: list[dict] = []
+    metric_names = (
+        "coordinate_sigma_max",
+        "coordinate_fro",
+        "mass_state_gain",
+        "hll_condition",
+        "cancellation_relative_residual",
+    )
+    for basis in bases:
+        scopes = [("all_points", None)] + [
+            (f"mu=({mu1:.3f},{mu2:.4f})", (mu1, mu2)) for mu1, mu2 in points
+        ]
+        for scope_name, point in scopes:
+            selected = [
+                row
+                for row in rows
+                if row["basis"] == basis.spec.label
+                and (
+                    point is None
+                    or (
+                        math.isclose(float(row["mu1"]), point[0])
+                        and math.isclose(float(row["mu2"]), point[1])
+                    )
+                )
+            ]
+            aggregate = {
+                "basis": basis.spec.label,
+                "basis_path": str(basis.spec.path),
+                "scope": scope_name,
+                "n_samples": len(selected),
+                "low_mass_gram_condition": basis.low_mass_gram_cond,
+                "high_mass_gram_condition": basis.high_mass_gram_cond,
+                "low_high_mass_cross_fro": basis.low_high_mass_cross_fro,
+            }
+            for metric in metric_names:
+                values = np.asarray([float(row[metric]) for row in selected])
+                for statistic, value in _stats(values).items():
+                    aggregate[f"{metric}_{statistic}"] = value
+            aggregate_rows.append(aggregate)
+
+    aggregate_fields = list(aggregate_rows[0].keys())
+    aggregate_path = output_dir / "low_high_transfer_summary.csv"
+    _write_csv(aggregate_path, aggregate_rows, aggregate_fields)
+
+    comparison_rows: list[dict] = []
+    if len(bases) >= 2:
+        first_label = bases[0].spec.label
+        second_label = bases[1].spec.label
+        first_rows = {
+            row["scope"]: row
+            for row in aggregate_rows
+            if row["basis"] == first_label
+        }
+        second_rows = {
+            row["scope"]: row
+            for row in aggregate_rows
+            if row["basis"] == second_label
+        }
+        for scope in first_rows.keys() & second_rows.keys():
+            for metric in ("coordinate_sigma_max", "mass_state_gain"):
+                for statistic in ("mean", "p95", "max"):
+                    key = f"{metric}_{statistic}"
+                    baseline = float(first_rows[scope][key])
+                    candidate = float(second_rows[scope][key])
+                    comparison_rows.append(
+                        {
+                            "scope": scope,
+                            "metric": metric,
+                            "statistic": statistic,
+                            "baseline_basis": first_label,
+                            "candidate_basis": second_label,
+                            "baseline_value": baseline,
+                            "candidate_value": candidate,
+                            "candidate_over_baseline": candidate
+                            / (baseline + 1.0e-30),
+                            "reduction_percent": 100.0
+                            * (1.0 - candidate / (baseline + 1.0e-30)),
+                        }
+                    )
+        comparison_path = output_dir / "low_high_transfer_comparison.csv"
+        _write_csv(
+            comparison_path,
+            comparison_rows,
+            list(comparison_rows[0].keys()),
+        )
+
+    table_path = output_dir / "low_high_transfer_summary.tex"
+    _write_latex_table(table_path, aggregate_rows)
+
+    worst_payload = {}
+    worst_metadata = {}
+    for label, record in worst.items():
+        key = _slug(label)
+        worst_payload[f"{key}_transfer"] = record.pop("transfer")
+        worst_payload[f"{key}_coordinate_singular_values"] = record.pop(
+            "coordinate_singular_values"
+        )
+        worst_payload[f"{key}_physical_singular_values"] = record.pop(
+            "physical_singular_values"
+        )
+        worst_metadata[label] = record
+    np.savez(output_dir / "low_high_transfer_worst_cases.npz", **worst_payload)
+
+    metadata = {
+        "n_primary": args.n_primary,
+        "n_secondary": args.n_tot - args.n_primary,
+        "n_tot": args.n_tot,
+        "dt": args.dt,
+        "time_start_index": args.time_start_index,
+        "time_stop_index": args.time_stop_index,
+        "stride": args.stride,
+        "normal_rcond": args.normal_rcond,
+        "residual_metric": "diagonal" if p_diag is not None else "identity",
+        "basis_order": [basis.spec.label for basis in bases],
+        "points": [{"mu1": mu1, "mu2": mu2} for mu1, mu2 in points],
+        "worst_mass_state_gain": worst_metadata,
+        "elapsed_seconds": time.time() - start,
+    }
+    (output_dir / "low_high_transfer_metadata.json").write_text(
+        json.dumps(metadata, indent=2), encoding="utf-8"
     )
 
-    grid_x, grid_y, nx, ny = _infer_square_grid_from_state_size(basis.shape[0])
-    _, _, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
-
-    idx0 = max(int(args.time_start_index), 0)
-    stride = max(int(args.stride), 1)
-    sample_idx = list(range(idx0, n_t, stride))
-    if args.max_samples > 0:
-        sample_idx = sample_idx[: int(args.max_samples)]
-    if len(sample_idx) == 0:
-        raise ValueError("No time indices selected for diagnostics.")
-
-    n = V.shape[1]
-    nbar = Vbar.shape[1]
-    r = min(n, nbar)
-    ns = len(sample_idx)
-
-    sigma = np.zeros((ns, r), dtype=np.float64)
-    norm2 = np.zeros(ns, dtype=np.float64)
-    norm_fro = np.zeros(ns, dtype=np.float64)
-    cond_g = np.zeros(ns, dtype=np.float64)
-    rel_fit = np.zeros(ns, dtype=np.float64)
-    left_u1 = np.zeros((ns, n), dtype=np.float64)
-    right_v1 = np.zeros((ns, nbar), dtype=np.float64)
-    times = np.zeros(ns, dtype=np.float64)
-    steps = np.zeros(ns, dtype=np.int64)
-
-    reg = float(args.normal_eq_reg)
-
-    for j, k in enumerate(sample_idx):
-        w = rom_snaps[:, k]
-        J = inviscid_burgers_exact_jac2D(w, dt, JDxec, JDyec, Eye)
-        JL = J @ V
-        JH = J @ Vbar
-
-        if p_diag is None:
-            G = JL.T @ JL
-            C = JL.T @ JH
-        else:
-            P_JL = p_diag[:, None] * JL
-            P_JH = p_diag[:, None] * JH
-            G = JL.T @ P_JL
-            C = JL.T @ P_JH
-
-        if reg > 0.0:
-            G_eff = G + reg * np.eye(n, dtype=np.float64)
-        else:
-            G_eff = G
-
-        try:
-            T = np.linalg.solve(G_eff, C)
-        except np.linalg.LinAlgError:
-            # Fallback: least-squares solve for each RHS.
-            T, *_ = np.linalg.lstsq(G_eff, C, rcond=None)
-
-        U, S, VT = np.linalg.svd(T, full_matrices=False)
-
-        sigma[j, : S.size] = S
-        norm2[j] = S[0] if S.size > 0 else 0.0
-        norm_fro[j] = np.linalg.norm(S)
-        cond_g[j] = np.linalg.cond(G_eff)
-
-        fit_num = np.linalg.norm(JL @ T - JH)
-        fit_den = np.linalg.norm(JH) + 1e-30
-        rel_fit[j] = fit_num / fit_den
-
-        if S.size > 0:
-            left_u1[j, :] = U[:, 0]
-            right_v1[j, :] = VT[0, :]
-
-        times[j] = (t_vec[k] if t_vec is not None else k * dt)
-        steps[j] = k
-
-        if (j + 1) % max(1, ns // 10) == 0 or (j + 1) == ns:
-            print(
-                f"[T-DIAG] {j+1:4d}/{ns}: step={k:4d}, "
-                f"sigma_max={norm2[j]:.3e}, fit={rel_fit[j]:.3e}"
-            )
-
-    i_max = int(np.argmax(norm2))
-    i_mean = float(np.mean(norm2))
-    i_p95 = float(np.percentile(norm2, 95.0))
-    i_max_step = int(steps[i_max])
-    i_max_time = float(times[i_max])
-    v1_max = right_v1[i_max, :]
-    top_idx = np.argsort(np.abs(v1_max))[::-1][: min(8, v1_max.size)]
-
-    out_dir = (
-        Path(args.output_dir).expanduser().resolve()
-        if args.output_dir is not None
-        else linear_run_dir / "transfer_T"
+    _plot_time_histories(
+        output_dir / "low_high_transfer_vs_time.png",
+        rows,
+        points,
+        [basis.spec.label for basis in bases],
     )
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    tag = str(args.tag).strip()
-    out_npz = out_dir / f"{tag}_diagnostics.npz"
-    out_txt = out_dir / f"{tag}_summary.txt"
-
-    np.savez(
-        out_npz,
-        steps=steps,
-        times=times,
-        sigma=sigma,
-        norm2=norm2,
-        norm_fro=norm_fro,
-        cond_g=cond_g,
-        rel_fit=rel_fit,
-        left_u1=left_u1,
-        right_v1=right_v1,
-        top_right_indices_at_sigma_max=top_idx,
-        top_right_values_at_sigma_max=v1_max[top_idx],
-        qn_reconstruction_rel_error=qn_recon_rel,
-        n_primary=np.int64(args.n_primary),
-        n_tot=np.int64(args.n_tot),
-        nx=np.int64(nx),
-        ny=np.int64(ny),
-        dt=np.float64(dt),
-        normal_eq_reg=np.float64(reg),
-        p_diag_used=np.array(p_diag is not None, dtype=bool),
+    _plot_distributions(
+        output_dir / "low_high_transfer_distributions.png",
+        rows,
+        [basis.spec.label for basis in bases],
     )
 
-    kv = [
-        ("linear_run_dir", str(linear_run_dir)),
-        ("basis_path", str(basis_path)),
-        ("u_ref_path", str(u_ref_path)),
-        ("n_primary", int(args.n_primary)),
-        ("n_tot", int(args.n_tot)),
-        ("nbar", int(nbar)),
-        ("n_samples", int(ns)),
-        ("time_start_index", int(idx0)),
-        ("stride", int(stride)),
-        ("dt", _fmt_sci(dt)),
-        ("normal_eq_reg", _fmt_sci(reg)),
-        ("p_diag_used", bool(p_diag is not None)),
-        ("qn_reconstruction_rel_error", _fmt_sci(qn_recon_rel)),
-        ("sigma_max_max_over_time", _fmt_sci(norm2[i_max])),
-        ("sigma_max_mean_over_time", _fmt_sci(i_mean)),
-        ("sigma_max_p95_over_time", _fmt_sci(i_p95)),
-        ("sigma_max_argmax_step", int(i_max_step)),
-        ("sigma_max_argmax_time", _fmt_sci(i_max_time)),
-        ("T_fro_at_sigma_max_step", _fmt_sci(norm_fro[i_max])),
-        ("normal_matrix_cond_at_sigma_max_step", _fmt_sci(cond_g[i_max])),
-        ("relative_fit_error_at_sigma_max_step", _fmt_sci(rel_fit[i_max])),
-        ("relative_fit_error_mean", _fmt_sci(float(np.mean(rel_fit)))),
-        ("relative_fit_error_p95", _fmt_sci(float(np.percentile(rel_fit, 95.0)))),
-        ("top_right_mode_indices_at_sigma_max", ",".join(str(int(x)) for x in top_idx.tolist())),
-        (
-            "top_right_mode_values_at_sigma_max",
-            ",".join(_fmt_sci(v1_max[ii]) for ii in top_idx.tolist()),
-        ),
-        ("output_npz", str(out_npz)),
-    ]
-    _write_kv_txt(out_txt, kv)
-
-    print(f"[T-DIAG] saved summary: {out_txt}")
-    print(f"[T-DIAG] saved npz:     {out_npz}")
+    print(f"[TRANSFER] per-sample CSV: {per_sample_path}")
+    print(f"[TRANSFER] summary CSV:    {aggregate_path}")
+    if comparison_rows:
+        print(
+            "[TRANSFER] comparison CSV: "
+            f"{output_dir / 'low_high_transfer_comparison.csv'}"
+        )
+    print(f"[TRANSFER] LaTeX table:    {table_path}")
+    print(
+        "[TRANSFER] figures:        "
+        f"{output_dir / 'low_high_transfer_vs_time.png'}"
+    )
+    print(
+        "[TRANSFER]                 "
+        f"{output_dir / 'low_high_transfer_distributions.png'}"
+    )
 
 
 if __name__ == "__main__":

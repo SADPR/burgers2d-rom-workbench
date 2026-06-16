@@ -112,7 +112,7 @@ class Unscaler(nn.Module):
         return y * self.std + self.mean
 
 
-class CoreMLP(nn.Module):
+class LegacyCoreMLP(nn.Module):
     def __init__(self, in_dim, out_dim):
         super().__init__()
         self.fc1 = nn.Linear(in_dim, 32)
@@ -132,11 +132,11 @@ class CoreMLP(nn.Module):
         return self.fc6(x)
 
 
-class Case1Model(nn.Module):
+class LegacyCase1Model(nn.Module):
     def __init__(self, n_p, n_s):
         super().__init__()
         self.scaler = Scaler(np.zeros((1, n_p)), np.ones((1, n_p)))
-        self.core = CoreMLP(n_p, n_s)
+        self.core = LegacyCoreMLP(n_p, n_s)
         self.unscaler = Unscaler(np.zeros((1, n_s)), np.ones((1, n_s)))
 
     def forward(self, x_raw):
@@ -144,6 +144,54 @@ class Case1Model(nn.Module):
         y_n = self.core(x_n)
         y_raw = self.unscaler(y_n)
         return y_raw
+
+
+def _make_activation(name: str):
+    key = str(name).strip().lower()
+    activations = {
+        "elu": nn.ELU,
+        "gelu": nn.GELU,
+        "silu": nn.SiLU,
+        "tanh": nn.Tanh,
+        "relu": nn.ReLU,
+        "leaky_relu": lambda: nn.LeakyReLU(negative_slope=0.01),
+    }
+    if key not in activations:
+        raise ValueError(f"Unsupported activation: {name}")
+    return activations[key]()
+
+
+class ConfigurableCoreMLP(nn.Module):
+    def __init__(self, in_dim, out_dim, hidden_dims, activation="elu", dropout=0.0):
+        super().__init__()
+        dims = [int(in_dim), *[int(d) for d in hidden_dims], int(out_dim)]
+        layers = []
+        for i in range(len(dims) - 2):
+            layers.extend([nn.Linear(dims[i], dims[i + 1]), _make_activation(activation)])
+            if dropout > 0.0:
+                layers.append(nn.Dropout(float(dropout)))
+        layers.append(nn.Linear(dims[-2], dims[-1]))
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class ConfigurableCase1Model(nn.Module):
+    def __init__(self, n_p, n_s, hidden_dims, activation="elu", dropout=0.0):
+        super().__init__()
+        self.scaler = Scaler(np.zeros((1, n_p)), np.ones((1, n_p)))
+        self.core = ConfigurableCoreMLP(
+            n_p,
+            n_s,
+            hidden_dims=hidden_dims,
+            activation=activation,
+            dropout=dropout,
+        )
+        self.unscaler = Unscaler(np.zeros((1, n_s)), np.ones((1, n_s)))
+
+    def forward(self, x_raw):
+        return self.unscaler(self.core(self.scaler(x_raw)))
 
 
 class ANNVectorWrapper(nn.Module):
@@ -248,12 +296,25 @@ def _load_or_build_case1_ecsw_weights(
     snapshot_percent=2.0,
     snapshot_random_seed=42,
     ensure_mu_coverage=True,
+    weights_dir=None,
+    weights_label=None,
 ):
     expected_num_cells = (grid_x.size - 1) * (grid_y.size - 1)
-    os.makedirs(RUNS_ECSW_DIR, exist_ok=True)
+    weights_root = (
+        os.path.abspath(os.path.expanduser(str(weights_dir)))
+        if weights_dir is not None
+        else RUNS_ECSW_DIR
+    )
+    os.makedirs(weights_root, exist_ok=True)
+    label = ""
+    if weights_label:
+        safe_label = "".join(
+            c if c.isalnum() or c in ("-", "_") else "_" for c in str(weights_label)
+        )
+        label = f"_{safe_label}"
     weights_path = os.path.join(
-        RUNS_ECSW_DIR,
-        f"ecsw_weights_ann_case1_n{n_primary}_ntot{total_modes}.npy",
+        weights_root,
+        f"ecsw_weights_ann_case1{label}_n{n_primary}_ntot{total_modes}.npy",
     )
 
     if (not rebuild_weights) and os.path.exists(weights_path):
@@ -373,6 +434,29 @@ def _reconstruct_case1_full_snaps(red_coords, basis, basis2, u_ref, ann_model, d
     return snaps
 
 
+def _build_case1_full_coordinates(red_coords, ann_model, device="cpu"):
+    """Return [q_primary; ANN(q_primary)] for every time step."""
+    q_primary = np.asarray(red_coords, dtype=np.float64)
+    if q_primary.ndim != 2:
+        raise ValueError(f"red_coords must be 2D, got shape {q_primary.shape}")
+
+    with torch.no_grad():
+        q_primary_t = torch.tensor(
+            q_primary.T,
+            dtype=torch.float32,
+            device=device,
+        )
+        q_secondary = (
+            ann_model(q_primary_t)
+            .detach()
+            .cpu()
+            .numpy()
+            .astype(np.float64, copy=False)
+            .T
+        )
+    return np.vstack((q_primary, q_secondary))
+
+
 def _load_case1_model(model_path, device):
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Missing model checkpoint: {model_path}")
@@ -381,16 +465,38 @@ def _load_case1_model(model_path, device):
     n_p = int(ckpt["n_p"])
     n_s = int(ckpt["n_s"])
 
-    model = Case1Model(n_p, n_s).to(device)
+    if "hidden_dims" in ckpt:
+        model = ConfigurableCase1Model(
+            n_p,
+            n_s,
+            hidden_dims=tuple(int(d) for d in ckpt["hidden_dims"]),
+            activation=str(ckpt.get("activation", "elu")),
+            dropout=float(ckpt.get("dropout", 0.0)),
+        ).to(device)
+    else:
+        model = LegacyCase1Model(n_p, n_s).to(device)
     model.load_state_dict(ckpt["state_dict"], strict=True)
     model.eval()
 
     return model, n_p, n_s
 
 
-def _load_basis_and_reference(total_modes, n_primary):
-    basis_path = resolve_stage1_artifact("basis.npy")
-    uref_path = resolve_stage1_artifact("u_ref.npy")
+def _load_basis_and_reference(
+    total_modes,
+    n_primary,
+    basis_path_override=None,
+    uref_path_override=None,
+):
+    basis_path = (
+        os.path.abspath(os.path.expanduser(str(basis_path_override)))
+        if basis_path_override is not None
+        else resolve_stage1_artifact("basis.npy")
+    )
+    uref_path = (
+        os.path.abspath(os.path.expanduser(str(uref_path_override)))
+        if uref_path_override is not None
+        else resolve_stage1_artifact("u_ref.npy")
+    )
 
     if not os.path.exists(basis_path):
         raise FileNotFoundError(f"Missing basis file: {basis_path}")
@@ -437,6 +543,11 @@ def main(argv=None):
     )
     parser.add_argument("--no-ecsw", action="store_true", help="Disable ECSW (HPROM falls back to PROM).")
     parser.add_argument("--rebuild-ecsw", action="store_true", help="Recompute ECSW weights.")
+    parser.add_argument(
+        "--ecsw-only",
+        action="store_true",
+        help="Build or load the ECSW rule and exit before the online solve.",
+    )
     parser.add_argument("--ecsw-num-training-mu", type=int, default=9)
     parser.add_argument("--ecsw-snap-time-offset", type=int, default=3)
     parser.add_argument("--ecsw-snapshot-percent", type=float, default=2.0)
@@ -461,6 +572,30 @@ def main(argv=None):
         default=None,
         help="Optional explicit checkpoint path.",
     )
+    parser.add_argument(
+        "--basis-path",
+        type=str,
+        default=None,
+        help="Optional explicit basis.npy path.",
+    )
+    parser.add_argument(
+        "--u-ref-path",
+        type=str,
+        default=None,
+        help="Optional explicit u_ref.npy path.",
+    )
+    parser.add_argument(
+        "--output-root",
+        type=str,
+        default=None,
+        help="Optional output directory for states, coefficients, plots, and summaries.",
+    )
+    parser.add_argument(
+        "--ecsw-weights-dir",
+        type=str,
+        default=None,
+        help="Optional isolated directory for Case-1 ECSW weights.",
+    )
     args = parser.parse_args(argv)
 
     mu_test = [float(args.mu1), float(args.mu2)]
@@ -479,6 +614,16 @@ def main(argv=None):
     normal_eq_reg = float(args.normal_eq_reg)
     model_name = str(args.model_name).strip()
     model_path_override = args.model_path
+    output_root = (
+        os.path.abspath(os.path.expanduser(str(args.output_root)))
+        if args.output_root is not None
+        else RUNS_CASE1_DIR
+    )
+    ecsw_weights_dir = (
+        os.path.abspath(os.path.expanduser(str(args.ecsw_weights_dir)))
+        if args.ecsw_weights_dir is not None
+        else RUNS_ECSW_DIR
+    )
 
     device = str(args.device).strip().lower()
     if device == "cuda" and not torch.cuda.is_available():
@@ -486,7 +631,8 @@ def main(argv=None):
         device = "cpu"
     set_latex_plot_style()
     ensure_layout_dirs()
-    os.makedirs(RUNS_CASE1_DIR, exist_ok=True)
+    os.makedirs(output_root, exist_ok=True)
+    os.makedirs(ecsw_weights_dir, exist_ok=True)
 
     solve_backend = str(solve_backend).strip().lower()
     if solve_backend not in ("prom", "hprom"):
@@ -513,7 +659,13 @@ def main(argv=None):
     ann_model.eval()
 
     total_modes = int(n_p + n_s)
-    vtot, v, vbar, u_ref, basis_path, uref_path = _load_basis_and_reference(total_modes, n_p)
+    vtot, v, vbar, u_ref, basis_path, uref_path = _load_basis_and_reference(
+        total_modes,
+        n_p,
+        basis_path_override=args.basis_path,
+        uref_path_override=args.u_ref_path,
+    )
+    model_label = os.path.splitext(os.path.basename(model_path))[0]
 
     w0 = np.asarray(W0, dtype=np.float64).reshape(-1).copy()
     if w0.size != vtot.shape[0]:
@@ -532,20 +684,24 @@ def main(argv=None):
     print(f"[Case1] solve_backend(effective) = {effective_backend}")
     print(f"[Case1] use_ecsw = {use_ecsw}")
 
-    hdm_snaps = load_or_compute_snaps(
-        mu=mu_test,
-        grid_x=GRID_X,
-        grid_y=GRID_Y,
-        w0=w0,
-        dt=DT,
-        num_steps=NUM_STEPS,
-        snap_folder=snap_folder,
-    )
+    hdm_snaps = None
+    if not args.ecsw_only:
+        hdm_snaps = load_or_compute_snaps(
+            mu=mu_test,
+            grid_x=GRID_X,
+            grid_y=GRID_Y,
+            w0=w0,
+            dt=DT,
+            num_steps=NUM_STEPS,
+            snap_folder=snap_folder,
+        )
 
     ecsw_residual = np.nan
     n_ecsw_elements = None
     ecsw_setup_elapsed = 0.0
     online_solve_elapsed = np.nan
+    weights_path = "N/A"
+    weights_source = "N/A"
 
     if effective_backend == "hprom":
         mu_train_candidates = get_snapshot_params(
@@ -576,11 +732,13 @@ def main(argv=None):
             snapshot_percent=ecsw_snapshot_percent,
             snapshot_random_seed=ecsw_snapshot_random_seed,
             ensure_mu_coverage=ecsw_ensure_mu_coverage,
+            weights_dir=ecsw_weights_dir,
+            weights_label=model_label,
         )
         ecsw_setup_elapsed = time.time() - t_ecsw0
-        if not os.path.abspath(weights_path).startswith(os.path.abspath(RUNS_ECSW_DIR) + os.sep):
+        if not os.path.abspath(weights_path).startswith(os.path.abspath(ecsw_weights_dir) + os.sep):
             raise RuntimeError(
-                f"ECSW weights must be under '{RUNS_ECSW_DIR}', got: {weights_path}"
+                f"ECSW weights must be under '{ecsw_weights_dir}', got: {weights_path}"
             )
 
         ann_ecsw = ANNMuCompatWrapper(ann_model, n_p).to(device)
@@ -616,13 +774,25 @@ def main(argv=None):
             ann_model=ann_model,
             device=device,
         )
+        qN = _build_case1_full_coordinates(
+            red_coords=red_coords,
+            ann_model=ann_model,
+            device=device,
+        )
 
         print(f"[Case1] ECSW weights: {weights_path} ({weights_source})")
         print(f"[Case1] ECSW training trajectories used = {ecsw_num_training_mu}")
         print(f"[Case1] N_e = {n_ecsw_elements}")
         print(f"[Case1] ECSW residual = {ecsw_residual}")
+        print(f"[Case1] ecsw_setup_elapsed = {ecsw_setup_elapsed:.3e} s")
+        if args.ecsw_only:
+            print("[Case1] ECSW-only mode complete; online solve skipped.")
+            return
 
     else:
+        if args.ecsw_only:
+            raise ValueError("--ecsw-only requires --backend hprom with ECSW enabled.")
+        qN = None
         t_solve0 = time.time()
         rom_snaps, rom_times = inviscid_burgers_implicit2D_LSPG_pod_ann_2D(
             grid_x=GRID_X,
@@ -655,10 +825,14 @@ def main(argv=None):
     run_tag = f"case1_{backend_tag}_ann_{tag}_n{n_p}_ntot{total_modes}"
 
     out_npy = os.path.join(
-        RUNS_CASE1_DIR,
+        output_root,
         f"{run_tag}_snaps.npy",
     )
     np.save(out_npy, rom_snaps)
+    qn_output = "not_available_for_full_prom_solver"
+    if qN is not None:
+        qn_output = os.path.join(output_root, f"{run_tag}_qN.npy")
+        np.save(qn_output, qN)
 
     plot_steps = list(range(0, NUM_STEPS + 1, 100))
     if NUM_STEPS not in plot_steps:
@@ -690,13 +864,13 @@ def main(argv=None):
     plt.tight_layout()
 
     out_png = os.path.join(
-        RUNS_CASE1_DIR,
+        output_root,
         f"{run_tag}_hdm_vs_rom.png",
     )
     plt.savefig(out_png, dpi=200)
     plt.close(fig)
 
-    summary_txt = os.path.join(RUNS_CASE1_DIR, f"{run_tag}_summary.txt")
+    summary_txt = os.path.join(output_root, f"{run_tag}_summary.txt")
     write_kv_txt(
         summary_txt,
         [
@@ -716,6 +890,7 @@ def main(argv=None):
             ("ecsw_snapshot_random_seed", ecsw_snapshot_random_seed),
             ("ecsw_ensure_mu_coverage", bool(ecsw_ensure_mu_coverage)),
             ("ecsw_weights_path", weights_path if effective_backend == "hprom" else "N/A"),
+            ("ecsw_weights_source", weights_source),
             ("ecsw_residual", ecsw_residual),
             ("n_ecsw_elements", n_ecsw_elements),
             ("ecsw_setup_elapsed_s", ecsw_setup_elapsed),
@@ -726,8 +901,11 @@ def main(argv=None):
             ("res_time_s", res_time),
             ("ls_time_s", ls_time),
             ("relative_error_percent", rel_err),
+            ("qN_source", "solver_primary_plus_ann_secondary" if qN is not None else "not_saved"),
+            ("qN_output", qn_output),
             ("snaps_output", out_npy),
             ("plot_output", out_png),
+            ("output_root", output_root),
         ],
     )
 
@@ -736,6 +914,7 @@ def main(argv=None):
     print(f"[Case1] elapsed = {elapsed:.3e} s")
     print(f"[Case1] its={num_its} | jac={jac_time:.3e} | res={res_time:.3e} | ls={ls_time:.3e}")
     print(f"[Case1] relative error vs HDM: {rel_err:.2f}%")
+    print(f"[Case1] saved qN:    {qn_output}")
     print(f"[Case1] saved snaps: {out_npy}")
     print(f"[Case1] saved plot:  {out_png}")
     print(f"[Case1] summary:     {summary_txt}")

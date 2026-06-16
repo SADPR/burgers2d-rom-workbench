@@ -14,8 +14,6 @@
 \citation{romor2025explicable}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Naming convention used in this manuscript.}{1}{section*.2}\protected@file@percent }
-\citation{farhat2015structure}
-\citation{de2023hyper}
 \@writefile{toc}{\contentsline {section}{\numberline {2}Linear HPROM Reference and Notation}{2}{section.3}\protected@file@percent }
 \newlabel{sec:linear-rom}{{2}{2}{Linear HPROM Reference and Notation}{section.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Generic semi-discrete IVP and residual notation}{2}{subsection.4}\protected@file@percent }
@@ -26,91 +24,134 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Linear time-discrete LSPG reference form}{2}{subsection.12}\protected@file@percent }
 \newlabel{eq:linear-lspg-min}{{7}{2}{Linear time-discrete LSPG reference form}{equation.13}{}}
 \newlabel{eq:linear-gn-update}{{9}{2}{Linear time-discrete LSPG reference form}{equation.15}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Linear HPROM via ECSW}{2}{subsection.16}\protected@file@percent }
-\newlabel{eq:linear-hprom-min}{{12}{2}{Linear HPROM via ECSW}{equation.19}{}}
+\citation{farhat2015structure}
+\citation{de2023hyper}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Linear HPROM via ECSW}{3}{subsection.16}\protected@file@percent }
+\newlabel{eq:linear-hprom-min}{{12}{3}{Linear HPROM via ECSW}{equation.19}{}}
 \@writefile{toc}{\contentsline {paragraph}{ROM-consistent training targets.}{3}{section*.20}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3}Method I: PROM-ANN Closure Models}{3}{section.21}\protected@file@percent }
-\newlabel{sec:method-ann}{{3}{3}{Method I: PROM-ANN Closure Models}{section.21}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Manifold definitions}{3}{subsection.22}\protected@file@percent }
-\newlabel{eq:ann-manifold}{{17}{3}{Manifold definitions}{equation.27}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}LSPG/Gauss--Newton solve}{3}{subsection.28}\protected@file@percent }
-\newlabel{eq:ann-lspg-min}{{18}{3}{LSPG/Gauss--Newton solve}{equation.29}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}ECSW hyperreduced form}{3}{subsection.32}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Offline training targets.}{3}{section*.34}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Metric-Aware Basis Construction for Closure Robustness}{3}{section.21}\protected@file@percent }
+\newlabel{sec:metric-aware-basis}{{3}{3}{Metric-Aware Basis Construction for Closure Robustness}{section.21}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Euclidean and M-regularized LSPG-sensitive metrics}{3}{subsection.22}\protected@file@percent }
+\newlabel{eq:mlspg-metric}{{13}{3}{Euclidean and M-regularized LSPG-sensitive metrics}{equation.23}{}}
+\newlabel{eq:mlspg-correlation}{{14}{3}{Euclidean and M-regularized LSPG-sensitive metrics}{equation.24}{}}
+\newlabel{eq:weighted-pod-modes}{{15}{3}{Euclidean and M-regularized LSPG-sensitive metrics}{equation.25}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Low/high transfer diagnostic}{4}{subsection.26}\protected@file@percent }
+\newlabel{eq:low-high-transfer}{{17}{4}{Low/high transfer diagnostic}{equation.28}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}When the metric is needed}{4}{subsection.29}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Role of the basis metric in each model family.}}{4}{table.31}\protected@file@percent }
+\newlabel{tab:metric-role-by-model}{{1}{4}{Role of the basis metric in each model family}{table.31}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Method I: PROM-ANN Closure Models}{4}{section.32}\protected@file@percent }
+\newlabel{sec:method-ann}{{4}{4}{Method I: PROM-ANN Closure Models}{section.32}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Manifold definitions}{4}{subsection.33}\protected@file@percent }
 \citation{romor2025explicable}
 \citation{fresca2022pod}
+\newlabel{eq:ann-manifold}{{22}{5}{Manifold definitions}{equation.38}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}LSPG/Gauss--Newton solve}{5}{subsection.39}\protected@file@percent }
+\newlabel{eq:ann-lspg-min}{{23}{5}{LSPG/Gauss--Newton solve}{equation.40}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}ECSW hyperreduced form}{5}{subsection.43}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Offline training targets.}{5}{section*.45}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}Method II: PROM-POD-AE Latent Manifold}{5}{section.46}\protected@file@percent }
+\newlabel{sec:method-podae}{{5}{5}{Method II: PROM-POD-AE Latent Manifold}{section.46}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Autoencoder and latent manifold}{5}{subsection.47}\protected@file@percent }
+\newlabel{eq:podae-manifold}{{28}{5}{Autoencoder and latent manifold}{equation.49}{}}
 \citation{fresca2022pod}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Method II: PROM-POD-AE Latent Manifold}{4}{section.35}\protected@file@percent }
-\newlabel{sec:method-podae}{{4}{4}{Method II: PROM-POD-AE Latent Manifold}{section.35}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Autoencoder and latent manifold}{4}{subsection.36}\protected@file@percent }
-\newlabel{eq:podae-manifold}{{23}{4}{Autoencoder and latent manifold}{equation.38}{}}
-\@writefile{toc}{\contentsline {paragraph}{Offline autoencoder training.}{4}{section*.39}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}LSPG/Gauss--Newton solve in latent coordinates}{4}{subsection.41}\protected@file@percent }
-\newlabel{eq:podae-lspg-min}{{25}{4}{LSPG/Gauss--Newton solve in latent coordinates}{equation.42}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}ECSW hyperreduced form}{4}{subsection.45}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {5}Method III: POD-NN-ROM (Coefficient-Space, Non-Intrusive)}{4}{section.47}\protected@file@percent }
-\newlabel{sec:method-datadriven}{{5}{4}{Method III: POD-NN-ROM (Coefficient-Space, Non-Intrusive)}{section.47}{}}
-\@writefile{toc}{\contentsline {paragraph}{Model definition.}{4}{section*.48}\protected@file@percent }
-\newlabel{eq:data-driven-map-q}{{29}{4}{Model definition}{equation.49}{}}
+\@writefile{toc}{\contentsline {paragraph}{Offline autoencoder training.}{6}{section*.50}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}LSPG/Gauss--Newton solve in latent coordinates}{6}{subsection.52}\protected@file@percent }
+\newlabel{eq:podae-lspg-min}{{30}{6}{LSPG/Gauss--Newton solve in latent coordinates}{equation.53}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}ECSW hyperreduced form}{6}{subsection.56}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Method III: Non-Intrusive POD-NN-ROM}{6}{section.58}\protected@file@percent }
+\newlabel{sec:method-datadriven}{{6}{6}{Method III: Non-Intrusive POD-NN-ROM}{section.58}{}}
+\@writefile{toc}{\contentsline {paragraph}{Model definition.}{6}{section*.59}\protected@file@percent }
+\newlabel{eq:data-driven-map-q}{{34}{6}{Model definition}{equation.60}{}}
+\@writefile{toc}{\contentsline {paragraph}{Training objective and online cost.}{6}{section*.61}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Method IV: POD-DL-ROM (Latent, Non-Intrusive)}{6}{section.63}\protected@file@percent }
+\newlabel{sec:method-datadriven-latent}{{7}{6}{Method IV: POD-DL-ROM (Latent, Non-Intrusive)}{section.63}{}}
+\@writefile{toc}{\contentsline {paragraph}{Model definition.}{6}{section*.64}\protected@file@percent }
+\newlabel{eq:data-driven-map-z}{{36}{6}{Model definition}{equation.65}{}}
 \citation{fresca2022pod}
 \citation{chen2021physics}
 \citation{sibuet2025discrete}
 \citation{barnett2023neural}
-\@writefile{toc}{\contentsline {paragraph}{Training objective and online cost.}{5}{section*.50}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6}Method IV: POD-DL-ROM (Latent, Non-Intrusive)}{5}{section.52}\protected@file@percent }
-\newlabel{sec:method-datadriven-latent}{{6}{5}{Method IV: POD-DL-ROM (Latent, Non-Intrusive)}{section.52}{}}
-\@writefile{toc}{\contentsline {paragraph}{Model definition.}{5}{section*.53}\protected@file@percent }
-\newlabel{eq:data-driven-map-z}{{31}{5}{Model definition}{equation.54}{}}
-\@writefile{toc}{\contentsline {paragraph}{Training objective and online cost.}{5}{section*.55}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}Physics-Regularized Variant (Ancillary)}{5}{section.57}\protected@file@percent }
-\newlabel{sec:prnn-note}{{7}{5}{Physics-Regularized Variant (Ancillary)}{section.57}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Burgers Benchmark and Experimental Protocol}{5}{section.58}\protected@file@percent }
-\newlabel{sec:burgers}{{8}{5}{Burgers Benchmark and Experimental Protocol}{section.58}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Governing equations and parameter domain}{5}{subsection.59}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Numerical discretization}{6}{subsection.64}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Training and evaluation protocol}{6}{subsection.65}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Parameter domain $\mathcal  D$, baseline $3\times 3$ training points, enrichment LHS points, and evaluation points $\bm  {\mu }^{(v)}$, $\bm  {\mu }^{(1)}$, $\bm  {\mu }^{(2)}$.}}{6}{figure.68}\protected@file@percent }
-\newlabel{fig:parameter-domain-sampling}{{1}{6}{Parameter domain $\mathcal D$, baseline $3\times 3$ training points, enrichment LHS points, and evaluation points $\bm \mu ^{(v)}$, $\bm \mu ^{(1)}$, $\bm \mu ^{(2)}$}{figure.68}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}HPROM-Consistent Evaluation Pipeline}{6}{subsection.69}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Reported Metrics}{7}{subsection.70}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {9}Burgers Results in the HPROM-Consistent Setting}{7}{section.71}\protected@file@percent }
-\newlabel{sec:burgers-results}{{9}{7}{Burgers Results in the HPROM-Consistent Setting}{section.71}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}Error Definitions}{7}{subsection.72}\protected@file@percent }
-\newlabel{eq:traj-error-def}{{38}{7}{Error Definitions}{equation.73}{}}
-\newlabel{eq:coeff-error-def}{{39}{7}{Error Definitions}{equation.74}{}}
-\newlabel{eq:heatmap-error-def}{{40}{7}{Error Definitions}{equation.75}{}}
-\newlabel{eq:speedup-def}{{41}{7}{Error Definitions}{equation.76}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Trajectory Errors and Online Cost}{7}{subsection.77}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Baseline stage, HPROM online solve: relative trajectory errors (\%) vs HDM.}}{7}{table.79}\protected@file@percent }
-\newlabel{tab:burgers-baseline-errors}{{1}{7}{Baseline stage, HPROM online solve: relative trajectory errors (\%) vs HDM}{table.79}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Enriched stage, HPROM online solve: relative trajectory errors (\%) vs HDM.}}{8}{table.81}\protected@file@percent }
-\newlabel{tab:burgers-enriched-errors}{{2}{8}{Enriched stage, HPROM online solve: relative trajectory errors (\%) vs HDM}{table.81}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Average online cost over $\bm  {\mu }^{(v)}$, $\bm  {\mu }^{(1)}$, and $\bm  {\mu }^{(2)}$.}}{8}{table.83}\protected@file@percent }
-\newlabel{tab:burgers-online-cost}{{3}{8}{Average online cost over $\bm \mu ^{(v)}$, $\bm \mu ^{(1)}$, and $\bm \mu ^{(2)}$}{table.83}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}Solution Overlays}{8}{subsection.84}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Verification-point HDM snapshot at $t=10$ s (top) and extracted cut-planes (bottom).}}{8}{figure.86}\protected@file@percent }
-\newlabel{fig:verification-3d-cutplanes-t10}{{2}{8}{Verification-point HDM snapshot at $t=10$ s (top) and extracted cut-planes (bottom)}{figure.86}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Verification-point HDM snapshot at $t=20$ s (top) and extracted cut-planes (bottom).}}{9}{figure.88}\protected@file@percent }
-\newlabel{fig:verification-3d-cutplanes-t20}{{3}{9}{Verification-point HDM snapshot at $t=20$ s (top) and extracted cut-planes (bottom)}{figure.88}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Baseline models, HPROM online solve: HDM vs Linear HPROM, PROM-ANN Case~1, PROM-ANN Case~2, PROM-ANN Case~3, PROM-POD-AE, POD-NN-ROM, and POD-DL-ROM at the three evaluation points.}}{10}{figure.90}\protected@file@percent }
-\newlabel{fig:all-models-baseline-hprom}{{4}{10}{Baseline models, HPROM online solve: HDM vs Linear HPROM, PROM-ANN Case~1, PROM-ANN Case~2, PROM-ANN Case~3, PROM-POD-AE, POD-NN-ROM, and POD-DL-ROM at the three evaluation points}{figure.90}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Enriched models, HPROM online solve: HDM vs Linear HPROM, PROM-ANN Case~1, PROM-ANN Case~2, PROM-ANN Case~3, PROM-POD-AE, POD-NN-ROM, and POD-DL-ROM at the three evaluation points.}}{11}{figure.92}\protected@file@percent }
-\newlabel{fig:all-models-enriched-hprom}{{5}{11}{Enriched models, HPROM online solve: HDM vs Linear HPROM, PROM-ANN Case~1, PROM-ANN Case~2, PROM-ANN Case~3, PROM-POD-AE, POD-NN-ROM, and POD-DL-ROM at the three evaluation points}{figure.92}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {9.4}Coefficient-Space Diagnostics}{11}{subsection.93}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Baseline stage: per-index absolute and relative coefficient errors at $\bm  {\mu }^{(v)}=(4.875,0.0225)$.}}{12}{figure.95}\protected@file@percent }
-\newlabel{fig:coeff-curves-baseline-verif}{{6}{12}{Baseline stage: per-index absolute and relative coefficient errors at $\bm \mu ^{(v)}=(4.875,0.0225)$}{figure.95}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Enriched stage: per-index absolute and relative coefficient errors at $\bm  {\mu }^{(v)}=(4.875,0.0225)$.}}{13}{figure.97}\protected@file@percent }
-\newlabel{fig:coeff-curves-enriched-verif}{{7}{13}{Enriched stage: per-index absolute and relative coefficient errors at $\bm \mu ^{(v)}=(4.875,0.0225)$}{figure.97}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Baseline stage: absolute coefficient-error heatmaps at $\bm  {\mu }^{(v)}=(4.875,0.0225)$.}}{14}{figure.99}\protected@file@percent }
-\newlabel{fig:heatmap-abs-baseline-verif}{{8}{14}{Baseline stage: absolute coefficient-error heatmaps at $\bm \mu ^{(v)}=(4.875,0.0225)$}{figure.99}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Enriched stage: absolute coefficient-error heatmaps at $\bm  {\mu }^{(v)}=(4.875,0.0225)$.}}{15}{figure.101}\protected@file@percent }
-\newlabel{fig:heatmap-abs-enriched-verif}{{9}{15}{Enriched stage: absolute coefficient-error heatmaps at $\bm \mu ^{(v)}=(4.875,0.0225)$}{figure.101}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {10}Shallow-Water Benchmark and Experimental Protocol}{15}{section.102}\protected@file@percent }
-\newlabel{sec:shallowwater}{{10}{15}{Shallow-Water Benchmark and Experimental Protocol}{section.102}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {10.1}Governing equations and parameterized initial condition}{15}{subsection.103}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Training objective and online cost.}{7}{section*.66}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Physics-Regularized Variant (Ancillary)}{7}{section.68}\protected@file@percent }
+\newlabel{sec:prnn-note}{{8}{7}{Physics-Regularized Variant (Ancillary)}{section.68}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Burgers Benchmark and Experimental Protocol}{7}{section.69}\protected@file@percent }
+\newlabel{sec:burgers}{{9}{7}{Burgers Benchmark and Experimental Protocol}{section.69}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}Governing equations and parameter domain}{7}{subsection.70}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Numerical discretization}{7}{subsection.75}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.3}Training and evaluation protocol}{7}{subsection.76}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Parameter domain $\mathcal  D$, baseline $3\times 3$ training points, and evaluation points $\bm  {\mu }^{(v)}$, $\bm  {\mu }^{(1)}$, $\bm  {\mu }^{(2)}$ used in the current MLSPG-sensitive campaign.}}{8}{figure.79}\protected@file@percent }
+\newlabel{fig:parameter-domain-sampling}{{1}{8}{Parameter domain $\mathcal D$, baseline $3\times 3$ training points, and evaluation points $\bm \mu ^{(v)}$, $\bm \mu ^{(1)}$, $\bm \mu ^{(2)}$ used in the current MLSPG-sensitive campaign}{figure.79}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Enriched MLSPG-sensitive campaign: baseline $3\times 3$ grid, $20$ additional LHS points generated with the fixed linear HPROM, and the three evaluation points. The verification point $\bm  {\mu }^{(v)}$ coincides with the center of the baseline grid; $\bm  {\mu }^{(1)}$ and $\bm  {\mu }^{(2)}$ are off-grid evaluation points.}}{9}{figure.81}\protected@file@percent }
+\newlabel{fig:parameter-domain-enrichment}{{2}{9}{Enriched MLSPG-sensitive campaign: baseline $3\times 3$ grid, $20$ additional LHS points generated with the fixed linear HPROM, and the three evaluation points. The verification point $\bm \mu ^{(v)}$ coincides with the center of the baseline grid; $\bm \mu ^{(1)}$ and $\bm \mu ^{(2)}$ are off-grid evaluation points}{figure.81}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.4}HPROM-Consistent Evaluation Pipeline}{9}{subsection.82}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.5}Reported Metrics}{9}{subsection.83}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {10}Burgers Results in the HPROM-Consistent Setting}{9}{section.84}\protected@file@percent }
+\newlabel{sec:burgers-results}{{10}{9}{Burgers Results in the HPROM-Consistent Setting}{section.84}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.1}Error Definitions}{10}{subsection.85}\protected@file@percent }
+\newlabel{eq:traj-error-def}{{43}{10}{Error Definitions}{equation.86}{}}
+\newlabel{eq:coeff-error-def}{{44}{10}{Error Definitions}{equation.87}{}}
+\newlabel{eq:heatmap-error-def}{{45}{10}{Error Definitions}{equation.88}{}}
+\newlabel{eq:speedup-def}{{46}{10}{Error Definitions}{equation.89}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.2}Current MLSPG-Sensitive HPROM Campaign}{10}{subsection.90}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Stage--3 network architectures used in the non-enriched MLSPG-sensitive campaign. The table reports the learned map, hidden widths or latent dimensions, normalization/activation choices, validation relative Frobenius error on the HPROM coefficient dataset, and the number of trainable parameters.}}{10}{table.92}\protected@file@percent }
+\newlabel{tab:mlspg-hprom-current-training}{{2}{10}{Stage--3 network architectures used in the non-enriched MLSPG-sensitive campaign. The table reports the learned map, hidden widths or latent dimensions, normalization/activation choices, validation relative Frobenius error on the HPROM coefficient dataset, and the number of trainable parameters}{table.92}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Current MLSPG-sensitive campaign: relative trajectory errors (\%) with respect to HDM. Intrusive learned models use 1\% ECSW rules; POD-NN-ROM and POD-DL-ROM are non-intrusive.}}{11}{table.94}\protected@file@percent }
+\newlabel{tab:mlspg-hprom-current-errors}{{3}{11}{Current MLSPG-sensitive campaign: relative trajectory errors (\%) with respect to HDM. Intrusive learned models use 1\% ECSW rules; POD-NN-ROM and POD-DL-ROM are non-intrusive}{table.94}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Current MLSPG-sensitive campaign: online dimensions, mesh sizes, average online timings over the three evaluation points, and speedups with respect to the HDM mean time $t_{\mathrm  {HDM}}=737.44$ s. Intrusive models use selected 1\% ECSW rules, except the linear HPROM, which uses the shared Stage--2 rule. POD-NN-ROM and POD-DL-ROM are non-intrusive. $N_e=62\,500$ is the full number of finite elements.}}{11}{table.96}\protected@file@percent }
+\newlabel{tab:mlspg-hprom-current-hyperreduction}{{4}{11}{Current MLSPG-sensitive campaign: online dimensions, mesh sizes, average online timings over the three evaluation points, and speedups with respect to the HDM mean time $t_{\mathrm {HDM}}=737.44$ s. Intrusive models use selected 1\% ECSW rules, except the linear HPROM, which uses the shared Stage--2 rule. POD-NN-ROM and POD-DL-ROM are non-intrusive. $N_e=62\,500$ is the full number of finite elements}{table.96}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.3}Solution Overlays}{12}{subsection.97}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Current MLSPG-sensitive campaign: HDM, linear HPROM, selected PROM-ANN HPROMs, PROM-POD-AE with 1\% ECSW, POD-NN-ROM, and POD-DL-ROM. Columns/rows are ordered as verification point $\bm  {\mu }^{(v)}$, followed by the off-grid points $\bm  {\mu }^{(1)}$ and $\bm  {\mu }^{(2)}$.}}{12}{figure.99}\protected@file@percent }
+\newlabel{fig:mlspg-hprom-current-overlays}{{3}{12}{Current MLSPG-sensitive campaign: HDM, linear HPROM, selected PROM-ANN HPROMs, PROM-POD-AE with 1\% ECSW, POD-NN-ROM, and POD-DL-ROM. Columns/rows are ordered as verification point $\bm \mu ^{(v)}$, followed by the off-grid points $\bm \mu ^{(1)}$ and $\bm \mu ^{(2)}$}{figure.99}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.4}Coefficient-Space Diagnostics}{12}{subsection.100}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Current MLSPG-sensitive HPROM campaign: per-coefficient absolute and relative errors with respect to the MLSPG-sensitive linear HPROM coefficient trajectories. Panels are ordered as verification point $\bm  {\mu }^{(v)}$, followed by the off-grid points $\bm  {\mu }^{(1)}$ and $\bm  {\mu }^{(2)}$.}}{13}{figure.103}\protected@file@percent }
+\newlabel{fig:mlspg-hprom-current-coeff-curves}{{4}{13}{Current MLSPG-sensitive HPROM campaign: per-coefficient absolute and relative errors with respect to the MLSPG-sensitive linear HPROM coefficient trajectories. Panels are ordered as verification point $\bm \mu ^{(v)}$, followed by the off-grid points $\bm \mu ^{(1)}$ and $\bm \mu ^{(2)}$}{figure.103}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Current MLSPG-sensitive HPROM campaign: absolute coefficient-error heatmaps with respect to the MLSPG-sensitive linear HPROM coefficient trajectories. Columns are ordered as verification point $\bm  {\mu }^{(v)}$, followed by the off-grid points $\bm  {\mu }^{(1)}$ and $\bm  {\mu }^{(2)}$.}}{14}{figure.105}\protected@file@percent }
+\newlabel{fig:mlspg-hprom-current-abs-heatmaps}{{5}{14}{Current MLSPG-sensitive HPROM campaign: absolute coefficient-error heatmaps with respect to the MLSPG-sensitive linear HPROM coefficient trajectories. Columns are ordered as verification point $\bm \mu ^{(v)}$, followed by the off-grid points $\bm \mu ^{(1)}$ and $\bm \mu ^{(2)}$}{figure.105}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Current MLSPG-sensitive HPROM campaign: relative coefficient-error heatmaps with respect to the MLSPG-sensitive linear HPROM coefficient trajectories. Columns are ordered as verification point $\bm  {\mu }^{(v)}$, followed by the off-grid points $\bm  {\mu }^{(1)}$ and $\bm  {\mu }^{(2)}$.}}{15}{figure.107}\protected@file@percent }
+\newlabel{fig:mlspg-hprom-current-rel-heatmaps}{{6}{15}{Current MLSPG-sensitive HPROM campaign: relative coefficient-error heatmaps with respect to the MLSPG-sensitive linear HPROM coefficient trajectories. Columns are ordered as verification point $\bm \mu ^{(v)}$, followed by the off-grid points $\bm \mu ^{(1)}$ and $\bm \mu ^{(2)}$}{figure.107}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {10.5}Enriched MLSPG-Sensitive HPROM Campaign}{15}{subsection.108}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Stage--3 network architectures used in the enriched campaign. The table reports the learned map, hidden widths or latent dimensions, normalization/activation choices, validation relative Frobenius error on the enriched HPROM coefficient dataset, and the number of trainable parameters.}}{16}{table.110}\protected@file@percent }
+\newlabel{tab:mlspg-hprom-enrichment-training}{{5}{16}{Stage--3 network architectures used in the enriched campaign. The table reports the learned map, hidden widths or latent dimensions, normalization/activation choices, validation relative Frobenius error on the enriched HPROM coefficient dataset, and the number of trainable parameters}{table.110}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Enriched MLSPG-sensitive campaign: relative trajectory errors (\%) with respect to HDM. The learned models are trained with the baseline 9 HPROM trajectories plus 20 LHS HPROM trajectories. Intrusive learned models use 1\% ECSW rules; the linear HPROM row is the fixed reference from the non-enriched campaign.}}{16}{table.112}\protected@file@percent }
+\newlabel{tab:mlspg-hprom-enrichment-errors}{{6}{16}{Enriched MLSPG-sensitive campaign: relative trajectory errors (\%) with respect to HDM. The learned models are trained with the baseline 9 HPROM trajectories plus 20 LHS HPROM trajectories. Intrusive learned models use 1\% ECSW rules; the linear HPROM row is the fixed reference from the non-enriched campaign}{table.112}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Effect of adding 20 HPROM-generated LHS trajectories to the Stage--3 training set. Errors are relative trajectory errors (\%) versus HDM. Negative changes indicate improvement after enrichment.}}{17}{table.114}\protected@file@percent }
+\newlabel{tab:mlspg-hprom-enrichment-vs-current}{{7}{17}{Effect of adding 20 HPROM-generated LHS trajectories to the Stage--3 training set. Errors are relative trajectory errors (\%) versus HDM. Negative changes indicate improvement after enrichment}{table.114}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Enriched MLSPG-sensitive campaign: online dimensions, ECSW mesh sizes, average online timings over the three evaluation points, and speedups with respect to the HDM mean time $t_{\mathrm  {HDM}}=737.44$ s. The linear HPROM row uses the fixed Stage--2 ECSW rule from the non-enriched campaign; non-intrusive models use direct network inference and no ECSW.}}{17}{table.116}\protected@file@percent }
+\newlabel{tab:mlspg-hprom-enrichment-hyperreduction}{{8}{17}{Enriched MLSPG-sensitive campaign: online dimensions, ECSW mesh sizes, average online timings over the three evaluation points, and speedups with respect to the HDM mean time $t_{\mathrm {HDM}}=737.44$ s. The linear HPROM row uses the fixed Stage--2 ECSW rule from the non-enriched campaign; non-intrusive models use direct network inference and no ECSW}{table.116}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Enriched MLSPG-sensitive campaign: HDM, fixed linear HPROM, enriched PROM-ANN HPROMs, enriched PROM-POD-AE with 1\% ECSW, enriched POD-NN-ROM, and enriched POD-DL-ROM. ROM curves are reconstructed from saved solver-side $\mathbf  q_N$ arrays. Rows are ordered as verification point $\bm  {\mu }^{(v)}$, followed by the off-grid points $\bm  {\mu }^{(1)}$ and $\bm  {\mu }^{(2)}$.}}{18}{figure.118}\protected@file@percent }
+\newlabel{fig:mlspg-hprom-enrichment-overlays}{{7}{18}{Enriched MLSPG-sensitive campaign: HDM, fixed linear HPROM, enriched PROM-ANN HPROMs, enriched PROM-POD-AE with 1\% ECSW, enriched POD-NN-ROM, and enriched POD-DL-ROM. ROM curves are reconstructed from saved solver-side $\mathbf q_N$ arrays. Rows are ordered as verification point $\bm \mu ^{(v)}$, followed by the off-grid points $\bm \mu ^{(1)}$ and $\bm \mu ^{(2)}$}{figure.118}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Enriched MLSPG-sensitive campaign: per-coefficient absolute and relative errors with respect to the fixed MLSPG-sensitive linear HPROM coefficient trajectories. Panels are ordered as verification point $\bm  {\mu }^{(v)}$, followed by the off-grid points $\bm  {\mu }^{(1)}$ and $\bm  {\mu }^{(2)}$.}}{19}{figure.120}\protected@file@percent }
+\newlabel{fig:mlspg-hprom-enrichment-coeff-curves}{{8}{19}{Enriched MLSPG-sensitive campaign: per-coefficient absolute and relative errors with respect to the fixed MLSPG-sensitive linear HPROM coefficient trajectories. Panels are ordered as verification point $\bm \mu ^{(v)}$, followed by the off-grid points $\bm \mu ^{(1)}$ and $\bm \mu ^{(2)}$}{figure.120}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Enriched MLSPG-sensitive campaign: absolute coefficient-error heatmaps with respect to the fixed MLSPG-sensitive linear HPROM coefficient trajectories. Columns are ordered as verification point $\bm  {\mu }^{(v)}$, followed by the off-grid points $\bm  {\mu }^{(1)}$ and $\bm  {\mu }^{(2)}$.}}{20}{figure.122}\protected@file@percent }
+\newlabel{fig:mlspg-hprom-enrichment-abs-heatmaps}{{9}{20}{Enriched MLSPG-sensitive campaign: absolute coefficient-error heatmaps with respect to the fixed MLSPG-sensitive linear HPROM coefficient trajectories. Columns are ordered as verification point $\bm \mu ^{(v)}$, followed by the off-grid points $\bm \mu ^{(1)}$ and $\bm \mu ^{(2)}$}{figure.122}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Enriched MLSPG-sensitive campaign: relative coefficient-error heatmaps with respect to the fixed MLSPG-sensitive linear HPROM coefficient trajectories. Columns are ordered as verification point $\bm  {\mu }^{(v)}$, followed by the off-grid points $\bm  {\mu }^{(1)}$ and $\bm  {\mu }^{(2)}$.}}{21}{figure.124}\protected@file@percent }
+\newlabel{fig:mlspg-hprom-enrichment-rel-heatmaps}{{10}{21}{Enriched MLSPG-sensitive campaign: relative coefficient-error heatmaps with respect to the fixed MLSPG-sensitive linear HPROM coefficient trajectories. Columns are ordered as verification point $\bm \mu ^{(v)}$, followed by the off-grid points $\bm \mu ^{(1)}$ and $\bm \mu ^{(2)}$}{figure.124}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {11}Shallow-Water Benchmark and Experimental Protocol}{21}{section.125}\protected@file@percent }
+\newlabel{sec:shallowwater}{{11}{21}{Shallow-Water Benchmark and Experimental Protocol}{section.125}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {11.1}Governing equations and parameterized initial condition}{21}{subsection.126}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {11.2}Numerical setup}{22}{subsection.131}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {11.3}Sampling protocol aligned with Burgers}{22}{subsection.132}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {12}Scope of the Study}{22}{section.133}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A}Burgers Basis-Selection Diagnostics}{22}{appendix.134}\protected@file@percent }
+\newlabel{app:basis-selection-diagnostics}{{A}{22}{Burgers Basis-Selection Diagnostics}{appendix.134}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Burgers low/high transfer diagnostic for basis selection. The table reports statistics of $\sigma _{\max }(\mathbf  T_{LH})$ and of the corresponding $M$-weighted state gain $g_M$ over the three evaluation trajectories.}}{23}{table.136}\protected@file@percent }
+\newlabel{tab:low-high-transfer-summary}{{9}{23}{Burgers low/high transfer diagnostic for basis selection. The table reports statistics of $\sigma _{\max }(\mathbf T_{LH})$ and of the corresponding $M$-weighted state gain $g_M$ over the three evaluation trajectories}{table.136}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Oracle high-mode perturbation diagnostic for basis selection. Errors are averaged over $\bm  {\mu }^{(v)}$, $\bm  {\mu }^{(1)}$, $\bm  {\mu }^{(2)}$; perturbed rows also average over five random seeds.}}{23}{table.138}\protected@file@percent }
+\newlabel{tab:metric-oracle-diagnostic}{{10}{23}{Oracle high-mode perturbation diagnostic for basis selection. Errors are averaged over $\bm \mu ^{(v)}$, $\bm \mu ^{(1)}$, $\bm \mu ^{(2)}$; perturbed rows also average over five random seeds}{table.138}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}ECSW Sampling-Fraction Sensitivity}{23}{appendix.139}\protected@file@percent }
+\newlabel{app:ecsw-sensitivity}{{B}{23}{ECSW Sampling-Fraction Sensitivity}{appendix.139}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Sensitivity of the selected intrusive ANN models to the nominal ECSW sampling fraction. Errors are relative trajectory errors (\%) with respect to HDM; timings are averages over the three evaluation points.}}{23}{table.141}\protected@file@percent }
+\newlabel{tab:mlspg-hprom-ecsw-comparison}{{11}{23}{Sensitivity of the selected intrusive ANN models to the nominal ECSW sampling fraction. Errors are relative trajectory errors (\%) with respect to HDM; timings are averages over the three evaluation points}{table.141}{}}
 \bibstyle{unsrt}
 \bibdata{bibliography}
 \bibcite{antoulas2005approximation}{1}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Case 2 Trimmed-Closure Diagnostic}{24}{appendix.142}\protected@file@percent }
+\newlabel{app:case2-trimmed-diagnostic}{{C}{24}{Case 2 Trimmed-Closure Diagnostic}{appendix.142}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Case~2 diagnostic in the non-enriched MLSPG-sensitive campaign. The trimmed variant uses the trained $n=10$ Case~2 map $(\mu _1,\mu _2,t)\DOTSB \mapstochar \rightarrow (q_{11},\ldots  ,q_{151})$ and discards its first ten secondary outputs, so that the online solve uses $n=20$ primary coordinates and injects only $(q_{21},\ldots  ,q_{151})$. Errors are relative trajectory errors (\%) with respect to HDM; timings are averages over the three evaluation points.}}{24}{table.145}\protected@file@percent }
+\newlabel{tab:case2-trimmed-from-np10-diagnostic}{{12}{24}{Case~2 diagnostic in the non-enriched MLSPG-sensitive campaign. The trimmed variant uses the trained $n=10$ Case~2 map $(\mu _1,\mu _2,t)\mapsto (q_{11},\ldots ,q_{151})$ and discards its first ten secondary outputs, so that the online solve uses $n=20$ primary coordinates and injects only $(q_{21},\ldots ,q_{151})$. Errors are relative trajectory errors (\%) with respect to HDM; timings are averages over the three evaluation points}{table.145}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Case~2 trimmed-closure diagnostic in the non-enriched MLSPG-sensitive campaign. The trimmed variant uses an $n=20$ online solve but reuses the trained $n=10$ Case~2 map after discarding the first ten predicted secondary coordinates.}}{24}{figure.147}\protected@file@percent }
+\newlabel{fig:case2-trimmed-from-np10-diagnostic}{{11}{24}{Case~2 trimmed-closure diagnostic in the non-enriched MLSPG-sensitive campaign. The trimmed variant uses an $n=20$ online solve but reuses the trained $n=10$ Case~2 map after discarding the first ten predicted secondary coordinates}{figure.147}{}}
 \bibcite{quarteroni2014reduced}{2}
 \bibcite{barnett2023neural}{3}
 \bibcite{cohen2023nonlinear}{4}
@@ -119,9 +160,6 @@
 \bibcite{fresca2022pod}{7}
 \bibcite{farhat2015structure}{8}
 \bibcite{de2023hyper}{9}
-\@writefile{toc}{\contentsline {subsection}{\numberline {10.2}Numerical setup}{16}{subsection.108}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {10.3}Sampling protocol aligned with Burgers}{16}{subsection.109}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {11}Scope of the Study}{16}{section.110}\protected@file@percent }
 \bibcite{chen2021physics}{10}
 \bibcite{sibuet2025discrete}{11}
-\gdef \@abspage@last{17}
+\gdef \@abspage@last{25}

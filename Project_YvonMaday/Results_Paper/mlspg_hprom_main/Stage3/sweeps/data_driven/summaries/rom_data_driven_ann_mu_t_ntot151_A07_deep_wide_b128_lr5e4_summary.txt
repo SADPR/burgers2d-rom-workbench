@@ -1,0 +1,34 @@
+model_name: rom_data_driven_ann_mu_t_ntot151_A07_deep_wide_b128_lr5e4.pt
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/rom_data_driven_ann_mu_t_ntot151_A07_deep_wide_b128_lr5e4.pt
+dataset_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/prom_coeff_dataset_ntot151
+dataset_root: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu
+dataset_ntot: 151
+dataset_backend: hprom
+samples_M: 4509
+in_dim: 3
+n_tot: 151
+hidden_dims: (128, 256, 512, 512, 256, 128)
+activation: elu
+dropout: 0.0
+optimizer: AdamW
+batch_size: 128
+lr: 0.0005
+weight_decay: 1e-06
+epochs: 6000
+patience: 240
+epochs_ran: 6000
+best_val_mse: 0.26865342259407043
+train_rel_frob_percent: 1.4900826588164893
+val_rel_frob_percent: 1.565364797034984
+min_improve: 1e-12
+clip_grad: 1.0
+lr_scheduler: ReduceLROnPlateau
+lr_scheduler_factor: 0.5
+lr_scheduler_patience: 50
+lr_scheduler_min_lr: 1e-06
+val_split: row
+val_frac: 0.1
+scaling: z-score train split for X and Y
+trainable_parameters: 611479
+seed: 42
+device: cpu

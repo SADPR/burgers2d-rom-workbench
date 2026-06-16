@@ -98,6 +98,21 @@ def _safe_mu_tag(mu):
     return f"mu1_{mu[0]:.3f}_mu2_{mu[1]:.4f}"
 
 
+def _localize_project_path(path_like):
+    if path_like is None:
+        return None
+    path = os.path.abspath(os.path.expanduser(str(path_like)))
+    if os.path.exists(path):
+        return path
+    marker = f"{os.sep}Project_YvonMaday{os.sep}"
+    if marker in path:
+        suffix = path.split(marker, 1)[1]
+        candidate = os.path.join(THIS_DIR, suffix)
+        if os.path.exists(candidate):
+            return os.path.abspath(candidate)
+    return path
+
+
 def _decode_snapshot_from_latent(z, pod_ae_model, basis_q, u_ref, device):
     z_t = torch.tensor(np.asarray(z, dtype=np.float64), dtype=torch.float32, device=device).reshape(-1)
     with torch.no_grad():
@@ -118,6 +133,27 @@ def _reconstruct_full_snaps_from_latent(latent_coords, pod_ae_model, basis_q, u_
             device=device,
         )
     return snaps
+
+
+def _decode_qn_from_latent_trajectory(latent_coords, pod_ae_model, device):
+    latent_coords = np.asarray(latent_coords, dtype=np.float64)
+    q_cols = []
+    with torch.no_grad():
+        for k in range(latent_coords.shape[1]):
+            z_t = torch.tensor(
+                latent_coords[:, k],
+                dtype=torch.float32,
+                device=device,
+            ).reshape(1, -1)
+            q_cols.append(
+                pod_ae_model.decode_from_latent(z_t)
+                .detach()
+                .cpu()
+                .numpy()
+                .reshape(-1)
+                .astype(np.float64)
+            )
+    return np.column_stack(q_cols)
 
 
 def _load_pod_ae_checkpoint(model_path, device):
@@ -152,7 +188,7 @@ def _load_pod_ae_checkpoint(model_path, device):
 def _load_basis_and_reference(ckpt, q_dim):
     basis_candidates = []
     if ckpt.get("basis_file", None) is not None:
-        basis_candidates.append(str(ckpt["basis_file"]))
+        basis_candidates.append(_localize_project_path(ckpt["basis_file"]))
     basis_candidates.append(resolve_stage1_artifact("basis.npy"))
 
     basis_path = None
@@ -172,7 +208,7 @@ def _load_basis_and_reference(ckpt, q_dim):
 
     uref_candidates = []
     if ckpt.get("u_ref_file", None) is not None:
-        uref_candidates.append(str(ckpt["u_ref_file"]))
+        uref_candidates.append(_localize_project_path(ckpt["u_ref_file"]))
     uref_candidates.append(resolve_stage1_artifact("u_ref.npy"))
 
     u_ref = None
@@ -211,11 +247,15 @@ def _load_or_build_pod_ae_ecsw_weights(
     snapshot_percent=2.0,
     snapshot_random_seed=42,
     ensure_mu_coverage=True,
+    weights_dir=None,
 ):
     expected_num_cells = (grid_x.size - 1) * (grid_y.size - 1)
-    os.makedirs(RUNS_ECSW_DIR, exist_ok=True)
+    if weights_dir is None:
+        weights_dir = RUNS_ECSW_DIR
+    weights_dir = os.path.abspath(os.path.expanduser(str(weights_dir)))
+    os.makedirs(weights_dir, exist_ok=True)
     weights_path = os.path.join(
-        RUNS_ECSW_DIR,
+        weights_dir,
         f"ecsw_weights_pod_ae_ntot{q_dim}.npy",
     )
 
@@ -331,6 +371,9 @@ def main(argv=None):
     )
     parser.add_argument("--no-ecsw", action="store_true", help="Disable ECSW (HPROM falls back to PROM).")
     parser.add_argument("--rebuild-ecsw", action="store_true", help="Recompute ECSW weights.")
+    parser.add_argument("--ecsw-only", action="store_true", help="Only build/load ECSW weights and exit before online solve.")
+    parser.add_argument("--output-root", type=str, default=None, help="Optional output folder for run files.")
+    parser.add_argument("--ecsw-weights-dir", type=str, default=None, help="Optional folder for POD-AE ECSW weights.")
     parser.add_argument("--ecsw-num-training-mu", type=int, default=9)
     parser.add_argument("--ecsw-snap-time-offset", type=int, default=3)
     parser.add_argument("--ecsw-snapshot-percent", type=float, default=2.0)
@@ -356,6 +399,7 @@ def main(argv=None):
     solve_backend = str(args.backend).strip().lower()
     use_ecsw = not bool(args.no_ecsw)
     rebuild_ecsw_weights = bool(args.rebuild_ecsw)
+    ecsw_only = bool(args.ecsw_only)
     ecsw_snap_time_offset = int(args.ecsw_snap_time_offset)
     ecsw_snapshot_percent = float(args.ecsw_snapshot_percent)
     ecsw_snapshot_random_seed = int(args.ecsw_random_seed)
@@ -368,6 +412,8 @@ def main(argv=None):
     normal_eq_reg = float(args.normal_eq_reg)
     model_name = str(args.model_name).strip()
     model_path_override = args.model_path
+    output_root = os.path.abspath(os.path.expanduser(args.output_root)) if args.output_root else RUNS_POD_AE_DIR
+    ecsw_weights_dir = os.path.abspath(os.path.expanduser(args.ecsw_weights_dir)) if args.ecsw_weights_dir else RUNS_ECSW_DIR
 
     device = str(args.device).strip().lower()
     if device == "cuda" and not torch.cuda.is_available():
@@ -376,7 +422,7 @@ def main(argv=None):
 
     set_latex_plot_style()
     ensure_layout_dirs()
-    os.makedirs(RUNS_POD_AE_DIR, exist_ok=True)
+    os.makedirs(output_root, exist_ok=True)
 
     if solve_backend not in ("prom", "hprom"):
         raise ValueError("solve_backend must be 'prom' or 'hprom'.")
@@ -467,8 +513,17 @@ def main(argv=None):
             snapshot_percent=ecsw_snapshot_percent,
             snapshot_random_seed=ecsw_snapshot_random_seed,
             ensure_mu_coverage=ecsw_ensure_mu_coverage,
+            weights_dir=ecsw_weights_dir,
         )
         ecsw_setup_elapsed = time.time() - t_ecsw0
+
+        if ecsw_only:
+            print(f"[POD-AE] ECSW weights: {weights_path} ({weights_source})")
+            print(f"[POD-AE] ECSW training trajectories used = {ecsw_num_training_mu}")
+            print(f"[POD-AE] N_e = {n_ecsw_elements}")
+            print(f"[POD-AE] ECSW residual = {ecsw_residual}")
+            print(f"[POD-AE] ecsw_setup_elapsed = {ecsw_setup_elapsed:.3e} s")
+            return
 
         t_solve0 = time.time()
         latent_coords, rom_times = inviscid_burgers_implicit2D_LSPG_pod_dl_2D_ecsw(
@@ -529,10 +584,18 @@ def main(argv=None):
     tag = _safe_mu_tag(mu_test)
     run_tag = f"podae_{backend_tag}_{tag}_ntot{q_dim}_nz{latent_dim}"
 
-    out_snaps = os.path.join(RUNS_POD_AE_DIR, f"{run_tag}_snaps.npy")
-    out_latent = os.path.join(RUNS_POD_AE_DIR, f"{run_tag}_latent.npy")
+    qn = _decode_qn_from_latent_trajectory(
+        latent_coords=latent_coords,
+        pod_ae_model=pod_ae_model,
+        device=device,
+    )
+
+    out_snaps = os.path.join(output_root, f"{run_tag}_snaps.npy")
+    out_latent = os.path.join(output_root, f"{run_tag}_latent.npy")
+    out_qn = os.path.join(output_root, f"{run_tag}_qN.npy")
     np.save(out_snaps, rom_snaps)
     np.save(out_latent, latent_coords)
+    np.save(out_qn, qn)
 
     plot_steps = list(range(0, NUM_STEPS + 1, 100))
     if NUM_STEPS not in plot_steps:
@@ -562,11 +625,11 @@ def main(argv=None):
     ax1.legend()
     ax2.legend()
     plt.tight_layout()
-    out_plot = os.path.join(RUNS_POD_AE_DIR, f"{run_tag}_hdm_vs_rom.png")
+    out_plot = os.path.join(output_root, f"{run_tag}_hdm_vs_rom.png")
     plt.savefig(out_plot, dpi=200)
     plt.close(fig)
 
-    summary_txt = os.path.join(RUNS_POD_AE_DIR, f"{run_tag}_summary.txt")
+    summary_txt = os.path.join(output_root, f"{run_tag}_summary.txt")
     write_kv_txt(
         summary_txt,
         [
@@ -603,6 +666,7 @@ def main(argv=None):
             ("relative_error_percent", rel_err),
             ("snaps_output", out_snaps),
             ("latent_output", out_latent),
+            ("qN_output", out_qn),
             ("plot_output", out_plot),
         ],
     )
@@ -613,10 +677,10 @@ def main(argv=None):
     print(f"[POD-AE] relative error vs HDM: {rel_err:.2f}%")
     print(f"[POD-AE] saved snaps:  {out_snaps}")
     print(f"[POD-AE] saved latent: {out_latent}")
+    print(f"[POD-AE] saved qN:     {out_qn}")
     print(f"[POD-AE] saved plot:   {out_plot}")
     print(f"[POD-AE] summary:      {summary_txt}")
 
 
 if __name__ == "__main__":
     main()
-

@@ -1,0 +1,17 @@
+model_name: case2_rbf_mu_t_ns21_ntot41_crop_zscorexy_imq_eps_narrow.pt
+model_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Maday/maday_clean_try05/Stage3/models/case2_rbf_mu_t_ns21_ntot41_crop_zscorexy_imq_eps_narrow.pt
+dataset_root: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Maday/maday_clean_try05/Stage2/prom_coeff_dataset_ntot41_crop_from151/per_mu
+dataset_ntot: 41
+dataset_backend: prom
+primary_modes: 20
+secondary_modes: 21
+samples_M: 4509
+in_dim: 3
+out_dim: 21
+kernel_name: imq
+epsilon: 3.36
+lambda_reg: 1e-10
+best_val_rel_frob_percent: 0.2311799786177025
+final_fit_rel_frob_percent: 0.11988026768264759
+n_centers_final: 4509
+elapsed_s: 44.23334002494812

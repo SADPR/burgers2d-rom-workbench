@@ -1,0 +1,13 @@
+asset,purpose
+parameter_training_only.png,Baseline 3x3 HDM training grid.
+parameter_training_evaluation.png,"Baseline grid, center verification point, and two off-grid tests."
+parameter_training_evaluation_lhs.png,Baseline/evaluation points plus 20 linear-HPROM LHS trajectories.
+parameter_domain_sequence.gif,Progressive reveal of the three parameter-domain figures.
+burgers_hdm_3d.gif,HDM u_x surface evolving at off-grid point mu^(1).
+burgers_cutplane_explanation.png,Static 3D surface with the x- and y-center cuts used in comparisons.
+linear_vs_hdm.gif,HDM versus linear HPROM at all three evaluation points.
+slide61_intrusive_comparison_mu2.gif,"HDM, linear HPROM, PROM-ANN Case 1, and PROM-POD-AE at off-grid point mu=(5.19,0.026)."
+slide62_promann_comparison_mu1.gif,"HDM and PROM-ANN Cases 1--3 at off-grid point mu=(4.56,0.019)."
+intrusive_model_gallery.gif,One intrusive nonlinear model at a time versus HDM and linear HPROM.
+nonintrusive_model_gallery.gif,One non-intrusive model at a time versus HDM.
+enrichment_before_after.gif,Baseline versus enriched predictions at the two off-grid points.

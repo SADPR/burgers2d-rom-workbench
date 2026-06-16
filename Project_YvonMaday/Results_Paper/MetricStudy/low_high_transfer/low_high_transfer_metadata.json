@@ -1,0 +1,46 @@
+{
+  "n_primary": 10,
+  "n_secondary": 141,
+  "n_tot": 151,
+  "dt": 0.05,
+  "time_start_index": 1,
+  "time_stop_index": 500,
+  "stride": 1,
+  "normal_rcond": 1e-12,
+  "residual_metric": "identity",
+  "basis_order": [
+    "Euclidean POD",
+    "LSPG-sensitive POD"
+  ],
+  "points": [
+    {
+      "mu1": 4.56,
+      "mu2": 0.019
+    },
+    {
+      "mu1": 4.875,
+      "mu2": 0.0225
+    },
+    {
+      "mu1": 5.19,
+      "mu2": 0.026
+    }
+  ],
+  "worst_mass_state_gain": {
+    "Euclidean POD": {
+      "mass_state_gain": 0.040876967230041,
+      "mu1": 5.19,
+      "mu2": 0.026,
+      "step": 36,
+      "time": 1.8
+    },
+    "LSPG-sensitive POD": {
+      "mass_state_gain": 0.02559164921116548,
+      "mu1": 5.19,
+      "mu2": 0.026,
+      "step": 41,
+      "time": 2.0500000000000003
+    }
+  },
+  "elapsed_seconds": 4855.337611198425
+}

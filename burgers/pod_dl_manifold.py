@@ -38,6 +38,19 @@ def _model_device_dtype(model):
     return torch.device("cpu"), torch.float32
 
 
+def _project_reduced_coords(basis, state_offset):
+    """
+    Compute coordinates for a possibly non-orthonormal basis.
+
+    The MLSPG-sensitive basis is not assumed Euclidean-orthonormal, so using
+    V.T @ state_offset is not generally a valid coordinate map.
+    """
+    basis = np.asarray(basis, dtype=np.float64)
+    state_offset = np.asarray(state_offset, dtype=np.float64).reshape(-1)
+    q, *_ = np.linalg.lstsq(basis, state_offset, rcond=None)
+    return q
+
+
 def _build_decode_helpers(basis, pod_dl_model, u_ref):
     basis_np = np.asarray(basis, dtype=np.float64)
     u_ref_np = np.asarray(u_ref, dtype=np.float64).reshape(-1)
@@ -149,7 +162,11 @@ def compute_ECSW_training_matrix_2D_pod_dl(
         u_ref=u_ref_np,
     )
 
-    q0 = basis.T @ (snaps[:, 0] - u_ref_np)
+    # Project all ECSW training snapshots at once. Re-solving this least-squares
+    # problem per snapshot is prohibitively expensive for the full Burgers mesh.
+    q_snaps, *_ = np.linalg.lstsq(basis, snaps - u_ref_np[:, None], rcond=None)
+
+    q0 = q_snaps[:, 0]
     q0_t = torch.tensor(q0, dtype=dtype_t, device=device)
     with torch.no_grad():
         z0 = pod_dl_model.encode(q0_t).reshape(-1)
@@ -162,7 +179,7 @@ def compute_ECSW_training_matrix_2D_pod_dl(
         snap = snaps[:, isnap]
         snap_prev = prev_snaps[:, isnap]
 
-        q_init = basis.T @ (snap - u_ref_np)
+        q_init = q_snaps[:, isnap]
         q_init_t = torch.tensor(q_init, dtype=dtype_t, device=device)
         with torch.no_grad():
             z_init = pod_dl_model.encode(q_init_t).reshape(-1)
@@ -241,7 +258,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_dl_2D(
         u_ref=u_ref_np,
     )
 
-    q0 = basis_np.T @ (w0_np - u_ref_np)
+    q0 = _project_reduced_coords(basis_np, w0_np - u_ref_np)
     q0_t = torch.tensor(q0, dtype=dtype_t, device=device)
 
     with torch.no_grad():
@@ -381,7 +398,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_dl_2D_ecsw(
         u_ref=u_ref_loc,
     )
 
-    q0 = basis.T @ (w0 - u_ref_np)
+    q0 = _project_reduced_coords(basis, w0 - u_ref_np)
     q0_t = torch.tensor(q0, dtype=dtype_t, device=device)
     with torch.no_grad():
         z0 = pod_dl_model.encode(q0_t).reshape(-1)

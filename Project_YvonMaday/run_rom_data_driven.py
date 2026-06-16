@@ -89,34 +89,61 @@ class Unscaler(nn.Module):
         return y * self.std + self.mean
 
 
+def _make_activation(name: str):
+    key = str(name).strip().lower()
+    if key == "elu":
+        return nn.ELU()
+    if key == "gelu":
+        return nn.GELU()
+    if key == "silu":
+        return nn.SiLU()
+    if key == "tanh":
+        return nn.Tanh()
+    if key == "relu":
+        return nn.ReLU()
+    if key == "leaky_relu":
+        return nn.LeakyReLU(negative_slope=0.01)
+    raise ValueError(
+        "Unsupported activation. Use one of: elu, gelu, silu, tanh, relu, leaky_relu."
+    )
+
+
 class CoreMLP(nn.Module):
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_dim, out_dim, hidden_dims=(32, 64, 128, 256, 256), activation="elu", dropout=0.0):
         super().__init__()
-        self.fc1 = nn.Linear(in_dim, 32)
-        self.fc2 = nn.Linear(32, 64)
-        self.fc3 = nn.Linear(64, 128)
-        self.fc4 = nn.Linear(128, 256)
-        self.fc5 = nn.Linear(256, 256)
-        self.fc6 = nn.Linear(256, out_dim)
-        self.act = nn.ELU()
+        hidden_dims = tuple(int(d) for d in hidden_dims)
+        dropout = float(dropout)
+        if dropout < 0.0 or dropout >= 1.0:
+            raise ValueError(f"dropout must be in [0,1), got {dropout}.")
+
+        dims = [int(in_dim)] + list(hidden_dims) + [int(out_dim)]
+        layers = []
+        for i in range(len(dims) - 2):
+            layers.append(nn.Linear(dims[i], dims[i + 1]))
+            layers.append(_make_activation(activation))
+            if dropout > 0.0:
+                layers.append(nn.Dropout(p=dropout))
+        layers.append(nn.Linear(dims[-2], dims[-1]))
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.act(self.fc1(x))
-        x = self.act(self.fc2(x))
-        x = self.act(self.fc3(x))
-        x = self.act(self.fc4(x))
-        x = self.act(self.fc5(x))
-        return self.fc6(x)
+        return self.net(x)
 
 
 class ROMDataDrivenModel(nn.Module):
     """Input: (mu1, mu2, t), output: qN."""
 
-    def __init__(self, n_tot):
+    def __init__(self, n_tot, hidden_dims=(32, 64, 128, 256, 256), activation="elu", dropout=0.0):
         super().__init__()
         in_dim = 3
         self.scaler = Scaler(np.zeros((1, in_dim)), np.ones((1, in_dim)))
-        self.core = CoreMLP(in_dim, n_tot)
+        self.core = CoreMLP(
+            in_dim,
+            n_tot,
+            hidden_dims=hidden_dims,
+            activation=activation,
+            dropout=dropout,
+        )
         self.unscaler = Unscaler(np.zeros((1, n_tot)), np.ones((1, n_tot)))
 
     def forward(self, x_raw):
@@ -153,9 +180,16 @@ def _resolve_device(device):
     return dev
 
 
-def _load_basis_and_reference():
-    basis_path = resolve_stage1_artifact("basis.npy")
-    uref_path = resolve_stage1_artifact("u_ref.npy")
+def _load_basis_and_reference(basis_path_override=None, uref_path_override=None):
+    if basis_path_override:
+        basis_path = os.path.abspath(os.path.expanduser(str(basis_path_override)))
+    else:
+        basis_path = resolve_stage1_artifact("basis.npy")
+
+    if uref_path_override:
+        uref_path = os.path.abspath(os.path.expanduser(str(uref_path_override)))
+    else:
+        uref_path = resolve_stage1_artifact("u_ref.npy")
 
     if not os.path.exists(basis_path):
         raise FileNotFoundError(f"Missing basis file: {basis_path}")
@@ -190,7 +224,15 @@ def _load_rom_data_driven_model(model_path, device):
     if in_dim != 3:
         raise ValueError(f"rom_data_driven checkpoint in_dim={in_dim}, expected 3")
 
-    model = ROMDataDrivenModel(n_tot=n_tot).to(device)
+    hidden_dims = tuple(int(d) for d in ckpt.get("hidden_dims", (32, 64, 128, 256, 256)))
+    activation = str(ckpt.get("activation", "elu")).strip().lower()
+    dropout = float(ckpt.get("dropout", 0.0))
+    model = ROMDataDrivenModel(
+        n_tot=n_tot,
+        hidden_dims=hidden_dims,
+        activation=activation,
+        dropout=dropout,
+    ).to(device)
     model.load_state_dict(ckpt["state_dict"], strict=True)
     model.eval()
     return model, n_tot, ckpt
@@ -202,13 +244,21 @@ def main(
     device="auto",
     make_plots=True,
     save_hdm_reference=False,
+    save_rom_snaps=True,
     model_name="rom_data_driven_model.pt",
     model_path_override=None,
+    basis_path=None,
+    u_ref_path=None,
+    output_root_dir=None,
 ):
     mu_test = [float(mu_test[0]), float(mu_test[1])]
 
     ensure_layout_dirs()
-    os.makedirs(RUNS_DATA_DRIVEN_DIR, exist_ok=True)
+    if output_root_dir is None:
+        output_root_dir = RUNS_DATA_DRIVEN_DIR
+    else:
+        output_root_dir = os.path.abspath(os.path.expanduser(str(output_root_dir)))
+    os.makedirs(output_root_dir, exist_ok=True)
     set_latex_plot_style()
 
     runtime_device = _resolve_device(device)
@@ -224,7 +274,10 @@ def main(
         model_name = os.path.basename(model_path)
     model, model_ntot, ckpt = _load_rom_data_driven_model(model_path, device=runtime_device)
 
-    basis_all, u_ref, basis_path, uref_path = _load_basis_and_reference()
+    basis_all, u_ref, basis_path, uref_path = _load_basis_and_reference(
+        basis_path_override=basis_path,
+        uref_path_override=u_ref_path,
+    )
     basis_available = int(basis_all.shape[1])
 
     if total_modes is None:
@@ -296,13 +349,14 @@ def main(
 
     tag = _safe_mu_tag(mu_test)
     run_tag = f"rom_data_driven_{tag}_ntot{total_modes}"
-    out_dir = os.path.join(RUNS_DATA_DRIVEN_DIR, run_tag)
+    out_dir = os.path.join(output_root_dir, run_tag)
     os.makedirs(out_dir, exist_ok=True)
 
     np.save(os.path.join(out_dir, "mu.npy"), np.asarray(mu_test, dtype=np.float64))
     np.save(os.path.join(out_dir, "t.npy"), t_vec)
     np.save(os.path.join(out_dir, "qN.npy"), qn)
-    np.save(os.path.join(out_dir, "rom_snaps.npy"), rom_snaps)
+    if save_rom_snaps:
+        np.save(os.path.join(out_dir, "rom_snaps.npy"), rom_snaps)
     if save_hdm_reference:
         np.save(os.path.join(out_dir, "hdm_snaps.npy"), hdm_snaps)
 
@@ -354,6 +408,8 @@ def main(
             ("dataset_ntot", ckpt.get("dataset_ntot", "unknown")),
             ("model_ntot", model_ntot),
             ("total_modes_used", total_modes),
+            ("save_rom_snaps", bool(save_rom_snaps)),
+            ("output_root_dir", output_root_dir),
             ("inference_time_s", infer_elapsed),
             ("relative_error_percent", rel_err),
             ("output_dir", out_dir),
@@ -387,6 +443,7 @@ def _build_parser():
         help="Torch runtime device",
     )
     parser.add_argument("--no-plot", action="store_true", help="Skip HDM-vs-ROM plotting")
+    parser.add_argument("--no-save-rom-snaps", action="store_true", help="Do not save reconstructed rom_snaps.npy")
     parser.add_argument("--save-hdm-reference", action="store_true", help="Also save hdm_snaps.npy")
     parser.add_argument(
         "--model-name",
@@ -400,6 +457,24 @@ def _build_parser():
         default=None,
         help="Optional explicit checkpoint path.",
     )
+    parser.add_argument(
+        "--basis-path",
+        type=str,
+        default=None,
+        help="Optional basis override.",
+    )
+    parser.add_argument(
+        "--u-ref-path",
+        type=str,
+        default=None,
+        help="Optional reference-state override.",
+    )
+    parser.add_argument(
+        "--output-root",
+        type=str,
+        default=None,
+        help="Optional output root directory.",
+    )
     return parser
 
 
@@ -412,8 +487,12 @@ def cli(argv=None):
         device=args.device,
         make_plots=not args.no_plot,
         save_hdm_reference=args.save_hdm_reference,
+        save_rom_snaps=not args.no_save_rom_snaps,
         model_name=args.model_name,
         model_path_override=args.model_path,
+        basis_path=args.basis_path,
+        u_ref_path=args.u_ref_path,
+        output_root_dir=args.output_root,
     )
 
 

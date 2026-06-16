@@ -1,0 +1,59 @@
+[campaign] MLSPG-sensitive baseline Case 2 diagnostic: n=20 online split using trimmed n=10 checkpoint
+basis: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+model: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/case2_ann_ntot151_np10_best.pt
+target_primary_modes: 20
+drop_first_secondary: 10
+ECSW_PERCENT: 1.0
+
+==== Runs/ECSW1pct/Case2_TrimmedFromNp10/np20/case2_hprom_ann_trimmed_from_np10_mu1_4.560_mu2_0.0190_n20_ntot151_summary.txt
+mu_test: [4.56, 0.019]
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/case2_ann_ntot151_np10_best.pt
+checkpoint_primary_modes: 10
+target_primary_modes: 20
+drop_first_secondary: 10
+trimmed_from_checkpoint: True
+ecsw_snapshot_percent: 1.0
+ecsw_weights_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/ECSW/1pct/Case2_TrimmedFromNp10/np20/ecsw_weights_ann_case2_case2_ann_ntot151_np10_best_n20_ntot151.npy
+ecsw_residual: nan
+n_ecsw_elements: 901
+ecsw_setup_elapsed_s: 0.0021495819091796875
+online_solve_elapsed_s: 7.108215570449829
+relative_error_percent: 1.431238165931641
+qN_source: solver_primary_plus_trimmed_ann_secondary
+qN_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/ECSW1pct/Case2_TrimmedFromNp10/np20/case2_hprom_ann_trimmed_from_np10_mu1_4.560_mu2_0.0190_n20_ntot151_qN.npy
+snaps_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/ECSW1pct/Case2_TrimmedFromNp10/np20/case2_hprom_ann_trimmed_from_np10_mu1_4.560_mu2_0.0190_n20_ntot151_snaps.npy
+==== Runs/ECSW1pct/Case2_TrimmedFromNp10/np20/case2_hprom_ann_trimmed_from_np10_mu1_4.875_mu2_0.0225_n20_ntot151_summary.txt
+mu_test: [4.875, 0.0225]
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/case2_ann_ntot151_np10_best.pt
+checkpoint_primary_modes: 10
+target_primary_modes: 20
+drop_first_secondary: 10
+trimmed_from_checkpoint: True
+ecsw_snapshot_percent: 1.0
+ecsw_weights_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/ECSW/1pct/Case2_TrimmedFromNp10/np20/ecsw_weights_ann_case2_case2_ann_ntot151_np10_best_n20_ntot151.npy
+ecsw_residual: nan
+n_ecsw_elements: 901
+ecsw_setup_elapsed_s: 0.0019562244415283203
+online_solve_elapsed_s: 6.156224966049194
+relative_error_percent: 0.8343268453116378
+qN_source: solver_primary_plus_trimmed_ann_secondary
+qN_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/ECSW1pct/Case2_TrimmedFromNp10/np20/case2_hprom_ann_trimmed_from_np10_mu1_4.875_mu2_0.0225_n20_ntot151_qN.npy
+snaps_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/ECSW1pct/Case2_TrimmedFromNp10/np20/case2_hprom_ann_trimmed_from_np10_mu1_4.875_mu2_0.0225_n20_ntot151_snaps.npy
+==== Runs/ECSW1pct/Case2_TrimmedFromNp10/np20/case2_hprom_ann_trimmed_from_np10_mu1_5.190_mu2_0.0260_n20_ntot151_summary.txt
+mu_test: [5.19, 0.026]
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/case2_ann_ntot151_np10_best.pt
+checkpoint_primary_modes: 10
+target_primary_modes: 20
+drop_first_secondary: 10
+trimmed_from_checkpoint: True
+ecsw_snapshot_percent: 1.0
+ecsw_weights_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/ECSW/1pct/Case2_TrimmedFromNp10/np20/ecsw_weights_ann_case2_case2_ann_ntot151_np10_best_n20_ntot151.npy
+ecsw_residual: nan
+n_ecsw_elements: 901
+ecsw_setup_elapsed_s: 0.0022208690643310547
+online_solve_elapsed_s: 6.062583684921265
+relative_error_percent: 1.3861247394855003
+qN_source: solver_primary_plus_trimmed_ann_secondary
+qN_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/ECSW1pct/Case2_TrimmedFromNp10/np20/case2_hprom_ann_trimmed_from_np10_mu1_5.190_mu2_0.0260_n20_ntot151_qN.npy
+snaps_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/ECSW1pct/Case2_TrimmedFromNp10/np20/case2_hprom_ann_trimmed_from_np10_mu1_5.190_mu2_0.0260_n20_ntot151_snaps.npy

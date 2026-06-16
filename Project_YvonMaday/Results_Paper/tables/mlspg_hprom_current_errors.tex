@@ -1,0 +1,16 @@
+\begin{table}[H]
+\centering
+\caption{Current MLSPG-sensitive campaign: relative trajectory errors (\%) with respect to HDM. Intrusive learned models use 1\% ECSW rules; POD-NN-ROM and POD-DL-ROM are non-intrusive.}
+\label{tab:mlspg-hprom-current-errors}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccc}
+\toprule
+Point & Linear HPROM & PROM-ANN Case 1 & PROM-ANN Case 2 ($n=10$) & PROM-ANN Case 2 ($n=20$) & PROM-ANN Case 3 & PROM-POD-AE & POD-NN-ROM & POD-DL-ROM \\
+\midrule
+$\bm\mu^{(v)}$ \textbf{(verification)} & 0.413 & 0.688 & 0.636 & 0.958 & 0.450 & 0.442 & 0.479 & 0.439 \\
+$\bm\mu^{(1)}$ (off-grid) & 0.460 & 0.922 & 1.616 & 4.225 & 0.684 & 0.567 & 1.927 & 1.504 \\
+$\bm\mu^{(2)}$ (off-grid) & 0.472 & 0.699 & 1.422 & 5.655 & 0.699 & 0.750 & 2.396 & 1.540 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}

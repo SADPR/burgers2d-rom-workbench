@@ -9,7 +9,7 @@ Key design choices:
 - Writes everything under Results_Enrichment/*.
 - Supports both backends:
   - PROM: full LSPG solves for enrichment samples.
-  - HPROM: reuses baseline ECSW weights.
+- HPROM: references the baseline ECSW weights in place.
 - Stores only reduced outputs for new LHS points (qN, stats).
 - Does not save reconstructed full snapshots for enrichment solves.
 """
@@ -441,8 +441,6 @@ def main(argv=None):
             )
 
         expected_num_cells = (GRID_X.size - 1) * (GRID_Y.size - 1)
-        ecsw_weights_path = os.path.join(out_dir, f"ecsw_weights_lspg_ntot{total_modes}_lhs{lhs_samples}.npy")
-
         base_ecsw_weights_path = _resolve_base_ecsw_weights_path(
             base_dataset_dir=base_dataset_dir,
             base_meta=base_meta,
@@ -459,15 +457,15 @@ def main(argv=None):
             raise ValueError(
                 f"Baseline ECSW weights size mismatch: got {ecsw_weights.size}, expected {expected_num_cells}."
             )
-        np.save(ecsw_weights_path, ecsw_weights)
-        ecsw_source = f"copied_from_base:{base_ecsw_weights_path}"
+        ecsw_weights_path = base_ecsw_weights_path
+        ecsw_source = f"referenced_in_place_from_base:{base_ecsw_weights_path}"
         n_ecsw_elements = int(np.sum(ecsw_weights > 0.0))
 
         print(f"[Stage2-Enrich] ECSW path: {ecsw_weights_path}")
         print(f"[Stage2-Enrich] ECSW source: {ecsw_source}")
         print(f"[Stage2-Enrich] ECSW N_e: {n_ecsw_elements}")
         print(f"[Stage2-Enrich] ECSW residual: {ecsw_residual}")
-        print("[Stage2-Enrich] ECSW mode: reused baseline weights (no HDM run in this stage).")
+        print("[Stage2-Enrich] ECSW mode: baseline weights referenced in place (no copy or rebuild).")
     else:
         print("[Stage2-Enrich] backend=PROM -> no ECSW weights are used.")
 
@@ -482,7 +480,7 @@ def main(argv=None):
 
         print(f"[Stage2-Enrich] [{i}/{len(lhs_mu_list)}] {solve_backend.upper()} solve for {mu_tag}")
         if solve_backend == "prom":
-            rom_snaps, rom_times = inviscid_burgers_implicit2D_LSPG(
+            rom_snaps, qN, rom_times = inviscid_burgers_implicit2D_LSPG(
                 grid_x=GRID_X,
                 grid_y=GRID_Y,
                 w0=w0,
@@ -496,8 +494,8 @@ def main(argv=None):
                 min_delta=min_delta,
                 linear_solver=linear_solver,
                 normal_eq_reg=normal_eq_reg,
+                return_red_coords=True,
             )
-            qN = vtot.T @ (rom_snaps - u_ref[:, None])
         else:
             qN, rom_times = inviscid_burgers_implicit2D_LSPG_ecsw(
                 grid_x=GRID_X,

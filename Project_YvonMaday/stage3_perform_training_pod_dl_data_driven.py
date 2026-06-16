@@ -45,9 +45,23 @@ except ModuleNotFoundError:
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-SEED = 42
-torch.manual_seed(SEED)
-np.random.seed(SEED)
+DEFAULT_SEED = 42
+
+
+def _localize_project_path(path_like):
+    """Map metadata paths copied from another machine to this checkout."""
+    if path_like is None:
+        return None
+    path = os.path.abspath(os.path.expanduser(str(path_like)))
+    if os.path.exists(path):
+        return path
+    marker = f"{os.sep}Project_YvonMaday{os.sep}"
+    if marker in path:
+        suffix = path.split(marker, 1)[1]
+        candidate = os.path.join(THIS_DIR, suffix)
+        if os.path.exists(candidate):
+            return os.path.abspath(candidate)
+    return path
 
 
 def _load_dataset(dataset_root: str):
@@ -138,7 +152,12 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Train non-intrusive POD-DL model from Stage-2 qN dataset.")
     parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="prom")
     parser.add_argument("--dataset-ntot", type=int, default=None)
+    parser.add_argument("--dataset-dir", type=str, default=None)
     parser.add_argument("--model-name", type=str, default="pod_dl_data_driven_model.pt")
+    parser.add_argument("--stage3-dir", type=str, default=None)
+    parser.add_argument("--models-dir", type=str, default=None)
+    parser.add_argument("--summary-name", type=str, default="pod_dl_data_driven_training_summary.txt")
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--latent-dim", type=int, default=5)
     parser.add_argument("--encoder-hidden-dims", type=str, default="256,128")
     parser.add_argument("--decoder-hidden-dims", type=str, default="128,256")
@@ -164,15 +183,32 @@ def main(argv=None):
     parser.add_argument("--min-improve", type=float, default=1e-12)
     parser.add_argument("--clip-grad", type=float, default=1.0)
     parser.add_argument("--pretrain-epochs", type=int, default=0, help="AE-only pretraining epochs before joint training.")
+    parser.add_argument("--lr-scheduler-factor", type=float, default=0.5)
+    parser.add_argument("--lr-scheduler-patience", type=int, default=50)
+    parser.add_argument("--lr-scheduler-min-lr", type=float, default=1e-6)
     args = parser.parse_args(argv)
+
+    seed = int(args.seed)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     model_name = str(args.model_name).strip()
     if len(model_name) == 0:
         raise ValueError("--model-name cannot be empty.")
     if not model_name.endswith(".pt"):
         model_name = f"{model_name}.pt"
-    model_path = stage3_model_path(model_name)
-    summary_path = os.path.join(STAGE3_DIR, "pod_dl_data_driven_training_summary.txt")
+
+    stage3_dir = os.path.abspath(os.path.expanduser(args.stage3_dir)) if args.stage3_dir else STAGE3_DIR
+    models_dir = os.path.abspath(os.path.expanduser(args.models_dir)) if args.models_dir else os.path.join(stage3_dir, "models")
+    os.makedirs(stage3_dir, exist_ok=True)
+    os.makedirs(models_dir, exist_ok=True)
+
+    if args.stage3_dir or args.models_dir:
+        model_path = os.path.join(models_dir, model_name)
+    else:
+        model_path = stage3_model_path(model_name)
+    summary_name = str(args.summary_name).strip() or "pod_dl_data_driven_training_summary.txt"
+    summary_path = os.path.join(stage3_dir, summary_name)
 
     latent_dim = int(args.latent_dim)
     if latent_dim < 1:
@@ -192,6 +228,7 @@ def main(argv=None):
         this_dir=THIS_DIR,
         requested_ntot=args.dataset_ntot,
         expected_backend=str(args.dataset_backend).strip().lower(),
+        requested_dataset_dir=args.dataset_dir,
     )
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -203,6 +240,17 @@ def main(argv=None):
     print(f"[POD-DL] encoder_hidden_dims = {encoder_hidden_dims}")
     print(f"[POD-DL] decoder_hidden_dims = {decoder_hidden_dims}")
     print(f"[POD-DL] dynamics_hidden_dims = {dynamics_hidden_dims}")
+    print(f"[POD-DL] activation = {args.activation}")
+    print(f"[POD-DL] x_scaling = {args.x_scaling}")
+    print(f"[POD-DL] q_scaling = {args.q_scaling}")
+    print(f"[POD-DL] batch_size = {args.batch_size}")
+    print(f"[POD-DL] lr = {args.lr}")
+    print(f"[POD-DL] weight_decay = {args.weight_decay}")
+    print(
+        "[POD-DL] lr_scheduler = ReduceLROnPlateau("
+        f"factor={args.lr_scheduler_factor}, patience={args.lr_scheduler_patience}, "
+        f"min_lr={args.lr_scheduler_min_lr})"
+    )
 
     x_raw, y_raw = _load_dataset(dataset_root)
     m, in_dim = x_raw.shape
@@ -219,7 +267,7 @@ def main(argv=None):
     tr_idx, va_idx = train_test_split(
         idx,
         test_size=float(args.val_frac),
-        random_state=SEED,
+        random_state=seed,
         shuffle=True,
     )
     xtr, ytr = x_raw[tr_idx], y_raw[tr_idx]
@@ -243,6 +291,13 @@ def main(argv=None):
         model.parameters(),
         lr=float(args.lr),
         weight_decay=float(args.weight_decay),
+    )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        opt,
+        mode="min",
+        factor=float(args.lr_scheduler_factor),
+        patience=int(args.lr_scheduler_patience),
+        min_lr=float(args.lr_scheduler_min_lr),
     )
     mse = nn.MSELoss()
 
@@ -346,10 +401,13 @@ def main(argv=None):
         tr_recon /= max(1, ns)
 
         va_total, va_data, va_latent, va_recon = _eval_loss(xva_t, yva_t)
+        scheduler.step(va_total)
+        current_lr = float(opt.param_groups[0]["lr"])
         if ep == 1 or ep % 25 == 0:
             print(
                 f"[Epoch {ep:4d}] train_total={tr_total:.6e} (data={tr_data:.6e}, latent={tr_latent:.6e}, recon={tr_recon:.6e}) "
-                f"| val_total={va_total:.6e} (data={va_data:.6e}, latent={va_latent:.6e}, recon={va_recon:.6e}) | bad={bad}"
+                f"| val_total={va_total:.6e} (data={va_data:.6e}, latent={va_latent:.6e}, recon={va_recon:.6e}) "
+                f"| lr={current_lr:.3e} | bad={bad}"
             )
 
         if va_total < best_val - float(args.min_improve):
@@ -368,6 +426,17 @@ def main(argv=None):
     elapsed = time.time() - t0
     print(f"[POD-DL] Training done in {elapsed:.2f}s. best_val_total={best_val:.6e}")
 
+    model.eval()
+    with torch.no_grad():
+        ytr_pred = model.predict_q_from_x(torch.from_numpy(xtr).to(device)).detach().cpu().numpy()
+        yva_pred = model.predict_q_from_x(xva_t).detach().cpu().numpy()
+    train_rel_frob = 100.0 * float(np.linalg.norm(ytr_pred - ytr) / max(np.linalg.norm(ytr), 1e-300))
+    val_rel_frob = 100.0 * float(np.linalg.norm(yva_pred - yva) / max(np.linalg.norm(yva), 1e-300))
+    trainable_parameters = int(sum(p.numel() for p in model.parameters() if p.requires_grad))
+    print(f"[POD-DL] train_rel_frob_percent = {train_rel_frob:.6f}%")
+    print(f"[POD-DL] val_rel_frob_percent = {val_rel_frob:.6f}%")
+    print(f"[POD-DL] trainable_parameters = {trainable_parameters}")
+
     ckpt = {
         "state_dict": model.state_dict(),
         "q_dim": int(q_dim),
@@ -383,11 +452,13 @@ def main(argv=None):
         "omega_latent": omega_latent,
         "omega_recon": omega_recon,
         "detach_encoder_target": bool(args.detach_encoder_target),
-        "seed": int(SEED),
+        "seed": seed,
         "dataset_root": dataset_root,
         "dataset_dir": dataset_dir,
         "dataset_ntot": int(dataset_ntot),
         "dataset_backend": dataset_meta.get("solve_backend"),
+        "basis_file": _localize_project_path(dataset_meta.get("basis_path")),
+        "u_ref_file": _localize_project_path(dataset_meta.get("u_ref_path") or dataset_meta.get("uref_path")),
         "formula": "q_hat = D(phi(mu,t)); loss = w_data||q_hat-q||^2 + w_latent||E(q)-phi(mu,t)||^2 + w_recon||D(E(q))-q||^2",
     }
     torch.save(ckpt, model_path)
@@ -417,10 +488,20 @@ def main(argv=None):
             ("omega_recon", omega_recon),
             ("detach_encoder_target", bool(args.detach_encoder_target)),
             ("pretrain_epochs", pretrain_epochs),
+            ("batch_size", int(args.batch_size)),
+            ("lr", float(args.lr)),
+            ("weight_decay", float(args.weight_decay)),
+            ("lr_scheduler", "ReduceLROnPlateau"),
+            ("lr_scheduler_factor", float(args.lr_scheduler_factor)),
+            ("lr_scheduler_patience", int(args.lr_scheduler_patience)),
+            ("lr_scheduler_min_lr", float(args.lr_scheduler_min_lr)),
+            ("trainable_parameters", trainable_parameters),
             ("epochs_ran", ep_last),
             ("best_val_total", best_val),
+            ("train_rel_frob_percent", train_rel_frob),
+            ("val_rel_frob_percent", val_rel_frob),
             ("elapsed_s", elapsed),
-            ("seed", SEED),
+            ("seed", seed),
             ("device", device),
         ],
     )

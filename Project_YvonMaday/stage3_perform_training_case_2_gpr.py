@@ -10,7 +10,6 @@ import time
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import WhiteKernel
-from sklearn.model_selection import train_test_split
 
 try:
     from stage3_dataset_utils import resolve_stage3_dataset
@@ -24,6 +23,10 @@ try:
     from stage3_perform_training_case_2_ann import load_prom_dataset_case2
 except ModuleNotFoundError:
     from .stage3_perform_training_case_2_ann import load_prom_dataset_case2
+try:
+    from stage3_split_utils import split_indices_ecsw_param_time
+except ModuleNotFoundError:
+    from .stage3_split_utils import split_indices_ecsw_param_time
 try:
     from gpr_map_common import (
         apply_scaler,
@@ -54,50 +57,12 @@ except ModuleNotFoundError:
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def _split_indices_row(n_samples: int, val_frac: float, seed: int):
-    idx = np.arange(n_samples, dtype=np.int64)
-    tr_idx, va_idx = train_test_split(
-        idx,
-        test_size=float(val_frac),
-        random_state=int(seed),
-        shuffle=True,
-    )
-    return np.asarray(tr_idx, dtype=np.int64), np.asarray(va_idx, dtype=np.int64)
-
-
 def _subsample(idx: np.ndarray, max_count: int, rng: np.random.Generator) -> np.ndarray:
     if max_count is None or int(max_count) <= 0 or idx.size <= int(max_count):
         return np.asarray(idx, dtype=np.int64)
     choose = rng.choice(idx, size=int(max_count), replace=False)
     choose.sort()
     return choose.astype(np.int64)
-
-
-def _split_indices_by_mu(
-    x_raw: np.ndarray,
-    val_frac: float,
-    rng: np.random.Generator,
-):
-    if x_raw.ndim != 2 or x_raw.shape[1] < 2:
-        raise ValueError(f"x_raw must have shape (N,>=2), got {x_raw.shape}")
-
-    # Robust keying for grouped split by parameter pair (mu1, mu2).
-    mu_key = np.round(np.asarray(x_raw[:, :2], dtype=np.float64), decimals=12)
-    _, inv = np.unique(mu_key, axis=0, return_inverse=True)
-    n_groups = int(inv.max()) + 1
-    if n_groups < 2:
-        raise RuntimeError("Need at least 2 unique (mu1,mu2) groups for mu-group validation split.")
-
-    grp = np.arange(n_groups, dtype=np.int64)
-    rng.shuffle(grp)
-    n_val_groups = max(1, int(round(float(val_frac) * n_groups)))
-    n_val_groups = min(n_val_groups, n_groups - 1)
-    val_groups = set(int(g) for g in grp[:n_val_groups])
-
-    is_val = np.fromiter((int(g) in val_groups for g in inv), dtype=bool, count=inv.size)
-    va_idx = np.flatnonzero(is_val).astype(np.int64)
-    tr_idx = np.flatnonzero(~is_val).astype(np.int64)
-    return tr_idx, va_idx, n_groups, n_val_groups
 
 
 def main(argv=None):
@@ -121,14 +86,10 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--val-frac", type=float, default=0.1)
     parser.add_argument(
-        "--val-split",
-        choices=("mu_group", "row"),
-        default="row",
-        help=(
-            "Validation split strategy. "
-            "'row' matches ANN split (random row shuffle). "
-            "'mu_group' holds out entire (mu1,mu2) trajectories."
-        ),
+        "--val-snap-time-offset",
+        type=int,
+        default=1,
+        help="ECSW-like split: minimum time column considered for validation (>=1).",
     )
     parser.add_argument(
         "--max-train-samples",
@@ -234,29 +195,20 @@ def main(argv=None):
 
     print(f"[Case2-GPR] Loaded: M={n_samples}, in_dim={in_dim}, out_dim={out_dim}")
 
-    val_split = str(args.val_split).strip().lower()
-    if val_split == "mu_group":
-        tr_idx, va_idx, n_mu_groups, n_mu_groups_val = _split_indices_by_mu(x_raw, float(args.val_frac), rng)
-        print(
-            "[Case2-GPR] split = mu_group "
-            f"(unique_mu={n_mu_groups}, val_mu_groups={n_mu_groups_val})"
-        )
-    elif val_split == "row":
-        tr_idx, va_idx = _split_indices_row(n_samples, float(args.val_frac), seed)
-        n_mu_groups = None
-        n_mu_groups_val = None
-        print("[Case2-GPR] split = row (ANN-style train_test_split shuffle)")
-        tr_mu = set(map(tuple, np.round(x_raw[tr_idx, :2], decimals=12)))
-        va_mu = set(map(tuple, np.round(x_raw[va_idx, :2], decimals=12)))
-        overlap = len(tr_mu.intersection(va_mu))
-        if overlap > 0:
-            print(
-                "[Case2-GPR] warning: row split leaks mu groups across train/val "
-                f"(overlap_mu_groups={overlap}/{len(va_mu)}). "
-                "Use --val-split mu_group to measure off-grid generalization."
-            )
-    else:
-        raise ValueError(f"Unsupported --val-split '{args.val_split}'.")
+    tr_idx, va_idx, split_info = split_indices_ecsw_param_time(
+        x_raw,
+        val_frac=float(args.val_frac),
+        seed=seed,
+        snap_time_offset=int(args.val_snap_time_offset),
+        ensure_mu_coverage=True,
+    )
+    print(
+        "[Case2-GPR] split = ecsw_param_time_stratified "
+        f"(mu_groups={split_info['num_mu_groups']}, "
+        f"time_per_mu={split_info['num_time_per_mu']}, "
+        f"val_requested={split_info['val_frac_requested']:.4f}, "
+        f"val_actual={split_info['val_frac_actual']:.4f})"
+    )
 
     tr_idx_fit = _subsample(tr_idx, int(args.max_train_samples), rng)
     va_idx_eval = _subsample(va_idx, int(args.max_val_samples), rng)
@@ -371,7 +323,8 @@ def main(argv=None):
         "n_restarts_optimizer": int(args.n_restarts_optimizer),
         "normalize_y": bool(args.normalize_y),
         "val_frac": float(args.val_frac),
-        "val_split": val_split,
+        "val_split": str(split_info["split_mode"]),
+        "val_split_snap_time_offset": int(split_info["snap_time_offset"]),
         "max_train_samples": int(args.max_train_samples),
         "max_val_samples": int(args.max_val_samples),
         "duplicate_tol": float(args.duplicate_tol),
@@ -381,8 +334,12 @@ def main(argv=None):
         "n_samples_train_after_duplicates": int(x_tr.shape[0]),
         "n_samples_val_split": int(va_idx.size),
         "n_samples_val_eval": int(va_idx_eval.size),
-        "n_unique_mu_groups": (int(n_mu_groups) if n_mu_groups is not None else None),
-        "n_val_mu_groups": (int(n_mu_groups_val) if n_mu_groups_val is not None else None),
+        "n_unique_mu_groups": int(split_info["num_mu_groups"]),
+        "n_val_mu_groups": None,
+        "n_time_per_mu": int(split_info["num_time_per_mu"]),
+        "n_candidates_total": int(split_info["num_candidates_total"]),
+        "n_selected_total": int(split_info["num_selected_total"]),
+        "val_frac_actual": float(split_info["val_frac_actual"]),
         "train_rel_frob_percent_scaled": float(tr_rel_scaled),
         "val_rel_frob_percent_scaled": float(va_rel_scaled),
         "train_mse_scaled": float(tr_mse_scaled),

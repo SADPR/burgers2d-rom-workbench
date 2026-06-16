@@ -1,0 +1,51 @@
+[quick-summary] Sun Jun  7 04:27:17 PDT 2026
+model: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/case1_ann_ntot151_best.pt
+basis: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+output_root: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/Case1_Best
+ecsw_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/ECSW_Case1_Best
+==== case1_hprom_ann_mu1_4.560_mu2_0.0190_n10_ntot151_summary.txt
+mu_test: [4.56, 0.019]
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/case1_ann_ntot151_best.pt
+basis_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+solve_backend_effective: hprom
+ecsw_weights_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/ECSW_Case1_Best/ecsw_weights_ann_case1_case1_ann_ntot151_best_n10_ntot151.npy
+ecsw_weights_source: computed
+n_ecsw_elements: 901
+ecsw_setup_elapsed_s: 527.5678205490112
+online_solve_elapsed_s: 18.075063943862915
+relative_error_percent: 1.2136425785432228
+qN_source: solver_primary_plus_ann_secondary
+qN_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/Case1_Best/case1_hprom_ann_mu1_4.560_mu2_0.0190_n10_ntot151_qN.npy
+snaps_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/Case1_Best/case1_hprom_ann_mu1_4.560_mu2_0.0190_n10_ntot151_snaps.npy
+plot_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/Case1_Best/case1_hprom_ann_mu1_4.560_mu2_0.0190_n10_ntot151_hdm_vs_rom.png
+==== case1_hprom_ann_mu1_4.875_mu2_0.0225_n10_ntot151_summary.txt
+mu_test: [4.875, 0.0225]
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/case1_ann_ntot151_best.pt
+basis_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+solve_backend_effective: hprom
+ecsw_weights_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/ECSW_Case1_Best/ecsw_weights_ann_case1_case1_ann_ntot151_best_n10_ntot151.npy
+ecsw_weights_source: loaded_local
+n_ecsw_elements: 901
+ecsw_setup_elapsed_s: 0.004404544830322266
+online_solve_elapsed_s: 19.77694535255432
+relative_error_percent: 0.8532525757763612
+qN_source: solver_primary_plus_ann_secondary
+qN_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/Case1_Best/case1_hprom_ann_mu1_4.875_mu2_0.0225_n10_ntot151_qN.npy
+snaps_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/Case1_Best/case1_hprom_ann_mu1_4.875_mu2_0.0225_n10_ntot151_snaps.npy
+plot_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/Case1_Best/case1_hprom_ann_mu1_4.875_mu2_0.0225_n10_ntot151_hdm_vs_rom.png
+==== case1_hprom_ann_mu1_5.190_mu2_0.0260_n10_ntot151_summary.txt
+mu_test: [5.19, 0.026]
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage3/models/case1_ann_ntot151_best.pt
+basis_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+solve_backend_effective: hprom
+ecsw_weights_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/ECSW_Case1_Best/ecsw_weights_ann_case1_case1_ann_ntot151_best_n10_ntot151.npy
+ecsw_weights_source: loaded_local
+n_ecsw_elements: 901
+ecsw_setup_elapsed_s: 0.0018551349639892578
+online_solve_elapsed_s: 17.671086311340332
+relative_error_percent: 0.6948461449242065
+qN_source: solver_primary_plus_ann_secondary
+qN_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/Case1_Best/case1_hprom_ann_mu1_5.190_mu2_0.0260_n10_ntot151_qN.npy
+snaps_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/Case1_Best/case1_hprom_ann_mu1_5.190_mu2_0.0260_n10_ntot151_snaps.npy
+plot_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Runs/Case1_Best/case1_hprom_ann_mu1_5.190_mu2_0.0260_n10_ntot151_hdm_vs_rom.png

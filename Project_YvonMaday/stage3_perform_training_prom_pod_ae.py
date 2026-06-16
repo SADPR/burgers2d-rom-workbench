@@ -51,9 +51,23 @@ except ModuleNotFoundError:
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-SEED = 42
-torch.manual_seed(SEED)
-np.random.seed(SEED)
+DEFAULT_SEED = 42
+
+
+def _localize_project_path(path_like):
+    """Map metadata paths copied from another machine to this checkout."""
+    if path_like is None:
+        return None
+    path = os.path.abspath(os.path.expanduser(str(path_like)))
+    if os.path.exists(path):
+        return path
+    marker = f"{os.sep}Project_YvonMaday{os.sep}"
+    if marker in path:
+        suffix = path.split(marker, 1)[1]
+        candidate = os.path.join(THIS_DIR, suffix)
+        if os.path.exists(candidate):
+            return os.path.abspath(candidate)
+    return path
 
 
 def _load_qn_samples(dataset_root: str):
@@ -117,7 +131,12 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Train PROM-POD-AE autoencoder from Stage-2 qN dataset.")
     parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="prom")
     parser.add_argument("--dataset-ntot", type=int, default=None)
+    parser.add_argument("--dataset-dir", type=str, default=None)
     parser.add_argument("--model-name", type=str, default="prom_pod_ae_model.pt")
+    parser.add_argument("--stage3-dir", type=str, default=None)
+    parser.add_argument("--models-dir", type=str, default=None)
+    parser.add_argument("--summary-name", type=str, default="prom_pod_ae_training_summary.txt")
+    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--latent-dim", type=int, default=5)
     parser.add_argument("--hidden-dims", type=str, default="192,96,48")
     parser.add_argument("--activation", choices=("tanh", "silu", "elu", "gelu"), default="tanh")
@@ -130,15 +149,32 @@ def main(argv=None):
     parser.add_argument("--patience", type=int, default=150)
     parser.add_argument("--min-improve", type=float, default=1e-12)
     parser.add_argument("--clip-grad", type=float, default=1.0)
+    parser.add_argument("--lr-scheduler-factor", type=float, default=0.5)
+    parser.add_argument("--lr-scheduler-patience", type=int, default=50)
+    parser.add_argument("--lr-scheduler-min-lr", type=float, default=1e-6)
     args = parser.parse_args(argv)
+
+    seed = int(args.seed)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
     model_name = str(args.model_name).strip()
     if len(model_name) == 0:
         raise ValueError("--model-name cannot be empty.")
     if not model_name.endswith(".pt"):
         model_name = f"{model_name}.pt"
-    model_path = stage3_model_path(model_name)
-    summary_path = os.path.join(STAGE3_DIR, "prom_pod_ae_training_summary.txt")
+
+    stage3_dir = os.path.abspath(os.path.expanduser(args.stage3_dir)) if args.stage3_dir else STAGE3_DIR
+    models_dir = os.path.abspath(os.path.expanduser(args.models_dir)) if args.models_dir else os.path.join(stage3_dir, "models")
+    os.makedirs(models_dir, exist_ok=True)
+    os.makedirs(stage3_dir, exist_ok=True)
+
+    if args.stage3_dir or args.models_dir:
+        model_path = os.path.join(models_dir, model_name)
+    else:
+        model_path = stage3_model_path(model_name)
+    summary_name = str(args.summary_name).strip() or "prom_pod_ae_training_summary.txt"
+    summary_path = os.path.join(stage3_dir, summary_name)
 
     hidden_dims = parse_hidden_dims(args.hidden_dims)
     latent_dim = int(args.latent_dim)
@@ -149,6 +185,7 @@ def main(argv=None):
         this_dir=THIS_DIR,
         requested_ntot=args.dataset_ntot,
         expected_backend=str(args.dataset_backend).strip().lower(),
+        requested_dataset_dir=args.dataset_dir,
     )
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -160,6 +197,14 @@ def main(argv=None):
     print(f"[POD-AE] latent_dim = {latent_dim}")
     print(f"[POD-AE] scaling = {args.scaling}")
     print(f"[POD-AE] activation = {args.activation}")
+    print(f"[POD-AE] batch_size = {args.batch_size}")
+    print(f"[POD-AE] lr = {args.lr}")
+    print(f"[POD-AE] weight_decay = {args.weight_decay}")
+    print(
+        "[POD-AE] lr_scheduler = ReduceLROnPlateau("
+        f"factor={args.lr_scheduler_factor}, patience={args.lr_scheduler_patience}, "
+        f"min_lr={args.lr_scheduler_min_lr})"
+    )
 
     y_raw = _load_qn_samples(dataset_root)
     m, q_dim = y_raw.shape
@@ -174,7 +219,7 @@ def main(argv=None):
     tr_idx, va_idx = train_test_split(
         idx,
         test_size=float(args.val_frac),
-        random_state=SEED,
+        random_state=seed,
         shuffle=True,
     )
     ytr = y_raw[tr_idx]
@@ -194,6 +239,13 @@ def main(argv=None):
         model.parameters(),
         lr=float(args.lr),
         weight_decay=float(args.weight_decay),
+    )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        opt,
+        mode="min",
+        factor=float(args.lr_scheduler_factor),
+        patience=int(args.lr_scheduler_patience),
+        min_lr=float(args.lr_scheduler_min_lr),
     )
     loss_fn = nn.MSELoss()
 
@@ -230,9 +282,11 @@ def main(argv=None):
         model.eval()
         with torch.no_grad():
             va_loss = float(loss_fn(model(yva_t), yva_t).detach().cpu().item())
+        scheduler.step(va_loss)
+        current_lr = float(opt.param_groups[0]["lr"])
 
         if ep == 1 or ep % 25 == 0:
-            print(f"[Epoch {ep:4d}] train_mse={tr_loss:.6e} | val_mse={va_loss:.6e} | bad={bad}")
+            print(f"[Epoch {ep:4d}] train_mse={tr_loss:.6e} | val_mse={va_loss:.6e} | lr={current_lr:.3e} | bad={bad}")
 
         if va_loss < best_val - float(args.min_improve):
             best_val = va_loss
@@ -250,8 +304,19 @@ def main(argv=None):
     elapsed = time.time() - t0
     print(f"[POD-AE] Training done in {elapsed:.2f}s. best_val={best_val:.6e}")
 
-    basis_path = resolve_stage1_artifact("basis.npy")
-    uref_path = resolve_stage1_artifact("u_ref.npy")
+    model.eval()
+    with torch.no_grad():
+        ytr_pred = model(torch.from_numpy(ytr).to(device)).detach().cpu().numpy()
+        yva_pred = model(yva_t).detach().cpu().numpy()
+    train_rel_frob = 100.0 * float(np.linalg.norm(ytr_pred - ytr) / max(np.linalg.norm(ytr), 1e-300))
+    val_rel_frob = 100.0 * float(np.linalg.norm(yva_pred - yva) / max(np.linalg.norm(yva), 1e-300))
+    trainable_parameters = int(sum(p.numel() for p in model.parameters() if p.requires_grad))
+    print(f"[POD-AE] train_rel_frob_percent = {train_rel_frob:.6f}%")
+    print(f"[POD-AE] val_rel_frob_percent = {val_rel_frob:.6f}%")
+    print(f"[POD-AE] trainable_parameters = {trainable_parameters}")
+
+    basis_path = _localize_project_path(dataset_meta.get("basis_path")) or resolve_stage1_artifact("basis.npy")
+    uref_path = _localize_project_path(dataset_meta.get("u_ref_path") or dataset_meta.get("uref_path")) or resolve_stage1_artifact("u_ref.npy")
     ckpt = {
         "state_dict": model.state_dict(),
         "q_dim": int(q_dim),
@@ -259,7 +324,7 @@ def main(argv=None):
         "hidden_dims": tuple(int(v) for v in hidden_dims),
         "scaling": str(args.scaling),
         "activation": str(args.activation),
-        "seed": int(SEED),
+        "seed": seed,
         "dataset_root": dataset_root,
         "dataset_dir": dataset_dir,
         "dataset_ntot": int(dataset_ntot),
@@ -286,10 +351,20 @@ def main(argv=None):
             ("hidden_dims", hidden_dims),
             ("scaling", args.scaling),
             ("activation", args.activation),
+            ("batch_size", int(args.batch_size)),
+            ("lr", float(args.lr)),
+            ("weight_decay", float(args.weight_decay)),
+            ("lr_scheduler", "ReduceLROnPlateau"),
+            ("lr_scheduler_factor", float(args.lr_scheduler_factor)),
+            ("lr_scheduler_patience", int(args.lr_scheduler_patience)),
+            ("lr_scheduler_min_lr", float(args.lr_scheduler_min_lr)),
+            ("trainable_parameters", trainable_parameters),
             ("epochs_ran", ep_last),
             ("best_val_mse", best_val),
+            ("train_rel_frob_percent", train_rel_frob),
+            ("val_rel_frob_percent", val_rel_frob),
             ("elapsed_s", elapsed),
-            ("seed", SEED),
+            ("seed", seed),
             ("device", device),
         ],
     )

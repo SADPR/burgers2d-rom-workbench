@@ -1,0 +1,65 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% WE KINDLY ASK AUTHORS NOT TO MODIFY THE PART BELOW
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[a4paper,11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[latin1]{inputenc}
+\usepackage{amsmath,amsfonts,amssymb,epsfig,graphicx,url}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\geometry{a4paper,textwidth=17cm,textheight=26cm}
+
+\usepackage{filecontents}
+\usepackage{authblk}
+\renewcommand*{\Affilfont}{\it}
+\renewcommand*{\Authfont}{\bfseries}
+
+\thispagestyle{empty}
+\renewcommand{\bfdefault}{b}
+\setlength\parindent{24pt}
+\setlength\itemsep{-10pt}
+\baselineskip 0pt
+\date{}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DO NOT MODIFY THE PART ABOVE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\title{Robust nonlinear projection-based reduced-order models: comparative assessment of closure and manifold strategies}
+
+\author[1]{S. Ares de Parga}
+\author[2]{Y. Maday}
+
+\affil[1]{Centre Internacional de M\`{e}todes Num\`{e}rics en Enginyeria (CIMNE), Building C1, Campus Nord, Jordi Girona 1--3, Barcelona 08034, Spain}
+\affil[2]{Laboratoire Jacques-Louis Lions (LJLL), Sorbonne Universit\'e and Universit\'e de Paris Cit\'e, CNRS, F-75005 Paris, France}
+
+\maketitle
+\thispagestyle{empty}
+\vspace{-0.6cm}
+
+Recent advances in nonlinear model reduction indicate that overcoming linear Kolmogorov limitations requires principled combinations of projection-based approximation and data-driven modeling \cite{aghili2026nonlinear}. In intrusive PROM settings, PROM--ANN introduced latent-space closure reconstruction of truncated modal coordinates \cite{barnett2023neural}, while PROM--RBF and PROM--GPR generalized this mechanism through alternative regression operators for the same closure channel \cite{aresdeparga2026regression}. In parallel, projection-compatible nonlinear latent-manifold formulations based on POD-autoencoders (POD-AE), in the spirit of POD-DL-ROM \cite{fresca2022pod}, provide an additional pathway to nonlinear approximation while preserving Galerkin/LSPG online dynamics.
+
+The objective of this talk is to establish a coherent comparative framework for robust nonlinear PROM construction across these two families: closure-based reduced representations and manifold-based reduced representations. The analysis addresses central practical questions, including the selection of closure variables, sensitivity to high-mode reconstruction errors, interaction with intrusive residual minimization, and compatibility with hyper-reduction. To this end, we investigate metric-aware basis and closure variants together with computationally scalable intrusive formulations using ECSW hyper-reduction \cite{grimberg2021mesh}.
+
+Numerical investigations are performed on a parametric two-component Burgers benchmark under both in-sample and held-out-parameter evaluations. The comparison is organized around three performance axes---approximation accuracy, computational cost, and achieved speed-up---with the goal of extracting practical guidance on how each strategy can be strengthened and in which operational settings it is most appropriate.
+
+\begin{thebibliography}{9}
+\bibitem{barnett2023neural}
+J.~L. Barnett, C.~Farhat, and Y.~Maday, \emph{J. Comput. Phys.}, 492:112420, 2023.
+
+\bibitem{aresdeparga2026regression}
+S.~Ares de~Parga, R.~Tezaur, C.~G. Hern\'{a}ndez, and C.~Farhat, \emph{Comput. Methods Appl. Mech. Eng.}, 2026.
+
+\bibitem{aghili2026nonlinear}
+J.~Aghili, H.~Ballout, Y.~Maday, and C.~Prud'Homme, \emph{arXiv preprint}, arXiv:2601.13712, 2026.
+
+\bibitem{fresca2022pod}
+S.~Fresca and A.~Manzoni, \emph{Comput. Methods Appl. Mech. Eng.}, 388:114181, 2022.
+
+\bibitem{grimberg2021mesh}
+S.~Grimberg, C.~Farhat, R.~Tezaur, and C.~Bou-Mosleh, \emph{Int. J. Numer. Meth. Eng.}, 122:1846--1874, 2021.
+\end{thebibliography}
+
+\end{document}

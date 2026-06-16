@@ -71,6 +71,21 @@ def _safe_mu_tag(mu):
     return f"mu1_{mu[0]:.3f}_mu2_{mu[1]:.4f}"
 
 
+def _localize_project_path(path_like):
+    if path_like is None:
+        return None
+    path = os.path.abspath(os.path.expanduser(str(path_like)))
+    if os.path.exists(path):
+        return path
+    marker = f"{os.sep}Project_YvonMaday{os.sep}"
+    if marker in path:
+        suffix = path.split(marker, 1)[1]
+        candidate = os.path.join(THIS_DIR, suffix)
+        if os.path.exists(candidate):
+            return os.path.abspath(candidate)
+    return path
+
+
 def _select_snap_folder(project_root):
     candidates = [
         os.path.join(project_root, "Results", "param_snaps"),
@@ -94,21 +109,41 @@ def _resolve_device(device):
     return dev
 
 
-def _load_basis_and_reference():
-    basis_path = resolve_stage1_artifact("basis.npy")
-    uref_path = resolve_stage1_artifact("u_ref.npy")
+def _load_basis_and_reference(ckpt=None):
+    ckpt = {} if ckpt is None else ckpt
+    basis_candidates = []
+    if ckpt.get("basis_file", None):
+        basis_candidates.append(_localize_project_path(ckpt["basis_file"]))
+    basis_candidates.append(resolve_stage1_artifact("basis.npy"))
 
-    if not os.path.exists(basis_path):
-        raise FileNotFoundError(f"Missing basis file: {basis_path}")
+    basis_path = None
+    for candidate in basis_candidates:
+        if os.path.exists(candidate):
+            basis_path = candidate
+            break
+    if basis_path is None:
+        raise FileNotFoundError(f"Missing basis file. Checked: {basis_candidates}")
 
     basis = np.asarray(np.load(basis_path, allow_pickle=False), dtype=np.float64)
     if basis.ndim != 2:
         raise ValueError(f"basis.npy must be 2D, got shape {basis.shape}")
 
-    if os.path.exists(uref_path):
+    uref_candidates = []
+    if ckpt.get("u_ref_file", None):
+        uref_candidates.append(_localize_project_path(ckpt["u_ref_file"]))
+    uref_candidates.append(resolve_stage1_artifact("u_ref.npy"))
+
+    uref_path = None
+    for candidate in uref_candidates:
+        if os.path.exists(candidate):
+            uref_path = candidate
+            break
+
+    if uref_path is not None:
         u_ref = np.asarray(np.load(uref_path, allow_pickle=False), dtype=np.float64).reshape(-1)
     else:
         u_ref = np.zeros(basis.shape[0], dtype=np.float64)
+        uref_path = "zeros"
 
     if u_ref.size != basis.shape[0]:
         raise ValueError(
@@ -156,11 +191,15 @@ def main(
     save_hdm_reference=False,
     model_name="pod_dl_data_driven_model.pt",
     model_path_override=None,
+    output_root=None,
 ):
     mu_test = [float(mu_test[0]), float(mu_test[1])]
 
     ensure_layout_dirs()
-    os.makedirs(RUNS_POD_DL_DIR, exist_ok=True)
+    if output_root is None:
+        output_root = RUNS_POD_DL_DIR
+    output_root = os.path.abspath(os.path.expanduser(str(output_root)))
+    os.makedirs(output_root, exist_ok=True)
     set_latex_plot_style()
 
     runtime_device = _resolve_device(device)
@@ -176,7 +215,7 @@ def main(
         model_name = os.path.basename(model_path)
     model, model_ntot, ckpt = _load_pod_dl_model(model_path, device=runtime_device)
 
-    basis_all, u_ref, basis_path, uref_path = _load_basis_and_reference()
+    basis_all, u_ref, basis_path, uref_path = _load_basis_and_reference(ckpt)
     basis_available = int(basis_all.shape[1])
 
     if total_modes is None:
@@ -208,7 +247,7 @@ def main(
     print(f"[POD-DL] device = {runtime_device}")
     print(f"[POD-DL] model = {model_path}")
     print(f"[POD-DL] basis = {basis_path} (available={basis_available}, using={total_modes})")
-    print(f"[POD-DL] u_ref = {uref_path if os.path.exists(uref_path) else 'zeros'}")
+    print(f"[POD-DL] u_ref = {uref_path}")
     print(f"[POD-DL] model_ntot = {model_ntot}")
     print(f"[POD-DL] snap_folder = {snap_folder}")
 
@@ -249,7 +288,7 @@ def main(
 
     tag = _safe_mu_tag(mu_test)
     run_tag = f"pod_dl_data_driven_{tag}_ntot{total_modes}_nz{z_pred.shape[0]}"
-    out_dir = os.path.join(RUNS_POD_DL_DIR, run_tag)
+    out_dir = os.path.join(output_root, run_tag)
     os.makedirs(out_dir, exist_ok=True)
 
     np.save(os.path.join(out_dir, "mu.npy"), np.asarray(mu_test, dtype=np.float64))
@@ -303,7 +342,7 @@ def main(
             ("model_name", model_name),
             ("model_path", model_path),
             ("basis_path", basis_path),
-            ("u_ref_path", uref_path if os.path.exists(uref_path) else "zeros"),
+            ("u_ref_path", uref_path),
             ("dataset_backend", ckpt.get("dataset_backend", "unknown")),
             ("dataset_ntot", ckpt.get("dataset_ntot", "unknown")),
             ("model_ntot", model_ntot),
@@ -341,6 +380,7 @@ if __name__ == "__main__":
         default=None,
         help="Optional explicit checkpoint path.",
     )
+    parser.add_argument("--output-root", type=str, default=None, help="Optional output root for run folders.")
     args = parser.parse_args()
 
     main(
@@ -351,5 +391,5 @@ if __name__ == "__main__":
         save_hdm_reference=bool(args.save_hdm_reference),
         model_name=args.model_name,
         model_path_override=args.model_path,
+        output_root=args.output_root,
     )
-

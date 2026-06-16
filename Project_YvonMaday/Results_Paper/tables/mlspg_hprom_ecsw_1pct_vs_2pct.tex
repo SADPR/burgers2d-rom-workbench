@@ -1,0 +1,21 @@
+\begin{table}[H]
+\centering
+\caption{Sensitivity of the selected intrusive ANN models to the nominal ECSW sampling fraction. Errors are relative trajectory errors (\%) with respect to HDM; timings are averages over the three evaluation points.}
+\label{tab:mlspg-hprom-ecsw-comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lccccccc}
+\toprule
+Method & Sampling fraction & $n_e$ & $E_{\mu^{(v)}}$ (verification) & $E_{\mu^{(1)}}$ & $E_{\mu^{(2)}}$ & Mean $E$ & Mean time (s) \\
+\midrule
+PROM-ANN Case 1 & 1.0\% & 451 & 0.688 & 0.922 & 0.699 & 0.769 & 18.960 \\
+PROM-ANN Case 1 & 2.0\% & 901 & 0.853 & 1.214 & 0.695 & 0.921 & 18.508 \\
+PROM-ANN Case 2 ($n=10$) & 1.0\% & 451 & 0.636 & 1.616 & 1.422 & 1.225 & 5.177 \\
+PROM-ANN Case 2 ($n=10$) & 2.0\% & 901 & 0.646 & 1.630 & 1.426 & 1.234 & 6.226 \\
+PROM-ANN Case 2 ($n=20$) & 1.0\% & 901 & 0.958 & 4.225 & 5.655 & 3.613 & 6.751 \\
+PROM-ANN Case 2 ($n=20$) & 2.0\% & 1801 & 0.664 & 4.510 & 4.336 & 3.170 & 8.736 \\
+PROM-ANN Case 3 & 1.0\% & 451 & 0.450 & 0.684 & 0.699 & 0.611 & 17.292 \\
+PROM-ANN Case 3 & 2.0\% & 901 & 0.922 & 1.017 & 0.909 & 0.949 & 19.988 \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
