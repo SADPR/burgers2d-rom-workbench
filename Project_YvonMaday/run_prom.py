@@ -39,8 +39,7 @@ from burgers.linear_manifold import (
     inviscid_burgers_implicit2D_LSPG,
     inviscid_burgers_implicit2D_LSPG_ecsw,
 )
-from burgers.randomized_singular_value_decomposition import RandomizedSingularValueDecomposition
-from burgers.ecsw_utils import build_ecsw_snapshot_plan
+from burgers.ecsw_utils import build_ecsw_snapshot_plan, direct_left_singular_vectors
 
 try:
     from project_layout import (
@@ -190,6 +189,7 @@ def _compute_ecsw_weights(
     snapshot_percent=2.0,
     snapshot_random_seed=42,
     ensure_mu_coverage=True,
+    svd_relative_tolerance=1e-8,
 ):
     if snap_time_offset < 1:
         raise ValueError("snap_time_offset must be >= 1.")
@@ -262,8 +262,12 @@ def _compute_ecsw_weights(
     C_ecm = np.ascontiguousarray(C, dtype=np.float64)
     b = np.ascontiguousarray(C_ecm.sum(axis=1), dtype=np.float64)
 
-    rsvd = RandomizedSingularValueDecomposition()
-    u, _, _, _ = rsvd.Calculate(C_ecm.T, 1e-8)
+    u = direct_left_singular_vectors(
+        C_ecm.T,
+        relative_tolerance=float(svd_relative_tolerance),
+    )
+    if u.shape[1] == 0:
+        raise RuntimeError("Direct SVD produced an empty ECSW basis.")
 
     selector = EmpiricalCubatureMethod()
     selector.SetUp(
@@ -300,6 +304,7 @@ def _load_or_build_ecsw_weights(
     snapshot_percent=2.0,
     snapshot_random_seed=42,
     ensure_mu_coverage=True,
+    svd_relative_tolerance=1e-8,
 ):
     os.makedirs(RUNS_ECSW_DIR, exist_ok=True)
     expected_num_cells = (grid_x.size - 1) * (grid_y.size - 1)
@@ -335,6 +340,7 @@ def _load_or_build_ecsw_weights(
         snapshot_percent=snapshot_percent,
         snapshot_random_seed=snapshot_random_seed,
         ensure_mu_coverage=ensure_mu_coverage,
+        svd_relative_tolerance=svd_relative_tolerance,
     )
 
     np.save(local_weights_path, weights)
@@ -351,6 +357,7 @@ def main(
     ecsw_snapshot_percent=2.0,
     ecsw_snapshot_random_seed=42,
     ecsw_ensure_mu_coverage=True,
+    ecsw_svd_rel_tol=1e-8,
     ecsw_num_training_mu=9,
     use_stage2_ecsw_weights=True,
     save_rom_snaps=True,
@@ -453,6 +460,7 @@ def main(
             snapshot_percent=ecsw_snapshot_percent,
             snapshot_random_seed=ecsw_snapshot_random_seed,
             ensure_mu_coverage=ecsw_ensure_mu_coverage,
+            svd_relative_tolerance=ecsw_svd_rel_tol,
         )
         ecsw_setup_elapsed = time.time() - t_ecsw0
 
@@ -461,6 +469,8 @@ def main(
         print(f"[Linear] ECSW training trajectories used = {ecsw_num_training_mu}")
         print(f"[Linear] N_e = {n_ecsw_elements}")
         print(f"[Linear] ECSW residual = {ecsw_residual}")
+        print("[Linear] ECSW SVD method = direct_dense_svd")
+        print(f"[Linear] ECSW SVD relative tolerance = {ecsw_svd_rel_tol:.3e}")
 
     t0 = time.time()
     if effective_backend == "prom":
@@ -593,6 +603,8 @@ def main(
             ("ecsw_snapshot_percent", ecsw_snapshot_percent),
             ("ecsw_snapshot_random_seed", ecsw_snapshot_random_seed),
             ("ecsw_ensure_mu_coverage", bool(ecsw_ensure_mu_coverage)),
+            ("ecsw_svd_method", "direct_dense_svd" if effective_backend == "hprom" else "N/A"),
+            ("ecsw_svd_relative_tolerance", ecsw_svd_rel_tol if effective_backend == "hprom" else "N/A"),
             ("ecsw_weights_path", weights_path if effective_backend == "hprom" else "N/A"),
             ("ecsw_weights_path_explicit", ecsw_weights_path if ecsw_weights_path is not None else "N/A"),
             ("ecsw_weights_source", weights_source),
@@ -635,6 +647,12 @@ if __name__ == "__main__":
     parser.add_argument("--ecsw-snap-time-offset", type=int, default=3, help="Snapshot start offset for ECSW training")
     parser.add_argument("--ecsw-snapshot-percent", type=float, default=2.0, help="Global percentage of ECSW snapshot pairs.")
     parser.add_argument("--ecsw-random-seed", type=int, default=42, help="RNG seed for ECSW global param-time stratified sampling.")
+    parser.add_argument(
+        "--ecsw-svd-rel-tol",
+        type=float,
+        default=1e-8,
+        help="Relative truncation tolerance for the deterministic direct SVD used before ECM.",
+    )
     parser.add_argument("--ecsw-ensure-mu-coverage", dest="ecsw_ensure_mu_coverage", action="store_true", help="Force at least one ECSW sample per mu (if budget allows).")
     parser.add_argument("--ecsw-no-ensure-mu-coverage", dest="ecsw_ensure_mu_coverage", action="store_false", help="Disable forced per-mu ECSW coverage.")
     parser.set_defaults(ecsw_ensure_mu_coverage=True)
@@ -679,6 +697,7 @@ if __name__ == "__main__":
         ecsw_snapshot_percent=args.ecsw_snapshot_percent,
         ecsw_snapshot_random_seed=args.ecsw_random_seed,
         ecsw_ensure_mu_coverage=args.ecsw_ensure_mu_coverage,
+        ecsw_svd_rel_tol=args.ecsw_svd_rel_tol,
         ecsw_num_training_mu=args.ecsw_num_training_mu,
         use_stage2_ecsw_weights=not args.no_stage2_ecsw,
         save_rom_snaps=not args.no_save_rom_snaps,

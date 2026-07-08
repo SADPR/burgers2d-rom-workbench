@@ -72,8 +72,27 @@ def load_row_metrics() -> dict[str, tuple[float, float]]:
 
 def display_label(model: str) -> str:
     if model.startswith("PROM-ANN Case "):
-        return model.replace("PROM-ANN ", "PROM-ANN\n")
+        return model.replace("PROM-ANN ", "HPROM-ANN\n")
     return model
+
+
+def legend_label(model: str) -> str:
+    return display_label(model).replace("\n", " ")
+
+
+def formula_label(model: str) -> str:
+    formulas = {
+        "PROM-ANN Case 1": (
+            r"$\tilde{\mathbf u}=\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal N(\mathbf q)$"
+        ),
+        "PROM-ANN Case 2": (
+            r"$\tilde{\mathbf u}=\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal M(\mu,t)$"
+        ),
+        "PROM-ANN Case 3": (
+            r"$\tilde{\mathbf u}=\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal H(\mathbf q,\mu,t)$"
+        ),
+    }
+    return formulas[model]
 
 
 def load_comparison_data() -> dict[str, tuple[np.ndarray, np.ndarray]]:
@@ -109,7 +128,7 @@ def create_figure(
         squeeze=False,
     )
     fig.subplots_adjust(
-        left=0.175,
+        left=0.225,
         right=0.985,
         bottom=0.16,
         top=0.86,
@@ -200,16 +219,25 @@ def create_figure(
         )
         fig.text(
             0.018,
-            row_box.y0 + 0.40 * row_box.height,
+            row_box.y0 + 0.42 * row_box.height,
             f"error: {error:.3f}\\%\nspeedup: {speedup:.1f}x",
             ha="left",
             va="center",
-            fontsize=12.8,
-            linespacing=1.32,
+            fontsize=13.2,
+            linespacing=1.18,
+        )
+        fig.text(
+            0.018,
+            row_box.y0 + 0.15 * row_box.height,
+            formula_label(model),
+            ha="left",
+            va="center",
+            fontsize=11.6,
+            linespacing=1.08,
         )
 
     legend_handles = [
-        Line2D([0], [0], label=label, **styles[label])
+        Line2D([0], [0], label=legend_label(label), **styles[label])
         for label in ("HDM", *comparisons)
     ]
     fig.legend(

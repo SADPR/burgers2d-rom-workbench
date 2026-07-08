@@ -1,5 +1,0 @@
-label,val_rel_frob_percent,train_rel_frob_percent,best_val_mse,best_val_total,epochs_ran,primary_modes,secondary_modes,latent_dim,hidden_dims,encoder_hidden_dims,decoder_hidden_dims,dynamics_hidden_dims,activation,scaling,x_scaling,q_scaling,batch_size,lr,weight_decay,dropout,trainable_parameters
-C02_wide_silu,0.48802485689520836,0.44770585373044014,0.001216734410263598,,6000,10,141,,"(256, 512, 512, 256)",,,,silu,,,,128,0.0005,1e-06,0.0,564621
-C03_wide_elu,0.8395095355808735,0.757400318980217,0.0036005040165036917,,6000,10,141,,"(256, 512, 512, 256)",,,,elu,,,,128,0.0005,1e-06,0.0,564621
-C00_legacy_elu,1.4437034726142883,1.3594310730695724,0.010647991672158241,,5000,10,141,,"(32, 64, 128, 256, 256)",,,,elu,,,,64,0.001,1e-06,0.0,145837
-C01_medium_silu,5.234655737876892,5.232074111700058,0.1399880051612854,,6000,10,141,,"(128, 256, 256, 128)",,,,silu,,,,128,0.0005,1e-06,0.0,151309

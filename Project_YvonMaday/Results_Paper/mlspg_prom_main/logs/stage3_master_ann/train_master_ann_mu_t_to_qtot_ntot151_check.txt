@@ -1,0 +1,13 @@
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage2/prom_coeff_dataset_ntot151
+validation_dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2
+samples_M: 5511
+train_samples: 4509
+val_samples: 1002
+n_tot: 151
+hidden_dims: (32, 64, 128, 256, 256)
+activation: elu
+best_val_mse: 2.1444783210754395
+train_rel_frob_percent: 2.2499303817749023
+val_rel_frob_percent: 4.5851616859436035
+val_split: external_dataset
+trainable_parameters: 148183

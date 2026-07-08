@@ -180,6 +180,17 @@ def _make_activation(name: str):
     )
 
 
+def _make_loss(name: str):
+    key = str(name).strip().lower()
+    if key == "mse":
+        return nn.MSELoss()
+    if key == "smooth_l1":
+        return nn.SmoothL1Loss()
+    if key == "l1":
+        return nn.L1Loss()
+    raise ValueError("Unsupported loss. Use one of: mse, smooth_l1, l1.")
+
+
 class CoreMLP(nn.Module):
     hidden_dims = (32, 64, 128, 256, 256)
     activation_name = "elu"
@@ -252,6 +263,15 @@ def main(argv=None):
         default=None,
         help="Optional explicit dataset directory containing per_mu/ and meta.npy.",
     )
+    parser.add_argument(
+        "--validation-dataset-dir",
+        type=str,
+        default=None,
+        help=(
+            "Optional explicit validation dataset directory containing per_mu/ and meta.npy. "
+            "When provided, no random row split is used."
+        ),
+    )
     parser.add_argument("--model-name", type=str, default=None)
     parser.add_argument("--summary-name", type=str, default="rom_data_driven_training_summary.txt")
     parser.add_argument("--seed", type=int, default=42)
@@ -274,6 +294,23 @@ def main(argv=None):
         choices=("elu", "gelu", "silu", "tanh", "relu", "leaky_relu"),
     )
     parser.add_argument("--dropout", type=float, default=0.0)
+    parser.add_argument(
+        "--loss-function",
+        type=str,
+        default="mse",
+        choices=("mse", "smooth_l1", "l1"),
+        help="Training loss applied either in raw or normalized output space.",
+    )
+    parser.add_argument(
+        "--loss-space",
+        type=str,
+        default="raw",
+        choices=("raw", "normalized"),
+        help=(
+            "raw: loss on physical qN coefficients; normalized: loss after "
+            "z-score normalization of qN using training statistics."
+        ),
+    )
     args = parser.parse_args(argv)
 
     seed = int(args.seed)
@@ -311,8 +348,11 @@ def main(argv=None):
     hidden_dims = _parse_hidden_dims(args.hidden_dims)
     activation = str(args.activation).strip().lower()
     dropout = float(args.dropout)
+    loss_function = str(args.loss_function).strip().lower()
+    loss_space = str(args.loss_space).strip().lower()
 
-    if not (0.0 < VAL_FRAC < 0.5):
+    external_validation = args.validation_dataset_dir is not None
+    if (not external_validation) and not (0.0 < VAL_FRAC < 0.5):
         raise ValueError(f"--val-frac must be in (0,0.5), got {VAL_FRAC}.")
     if batch_size <= 0:
         raise ValueError(f"--batch-size must be positive, got {batch_size}.")
@@ -340,6 +380,8 @@ def main(argv=None):
     print(f"[ROM-DataDriven] hidden_dims = {hidden_dims}")
     print(f"[ROM-DataDriven] activation = {activation}")
     print(f"[ROM-DataDriven] dropout = {dropout}")
+    print(f"[ROM-DataDriven] loss_function = {loss_function}")
+    print(f"[ROM-DataDriven] loss_space = {loss_space}")
     print(f"[ROM-DataDriven] optimizer = AdamW")
     print(f"[ROM-DataDriven] lr = {lr:.3e}")
     print(f"[ROM-DataDriven] weight_decay = {weight_decay:.3e}")
@@ -353,8 +395,12 @@ def main(argv=None):
         f"factor={lr_scheduler_factor}, patience={lr_scheduler_patience}, "
         f"min_lr={lr_scheduler_min_lr:.3e})"
     )
-    print(f"[ROM-DataDriven] val_split = row (train_test_split shuffle)")
-    print(f"[ROM-DataDriven] val_frac = {VAL_FRAC}")
+    if external_validation:
+        print("[ROM-DataDriven] val_split = external validation dataset")
+        print(f"[ROM-DataDriven] validation_dataset_dir = {args.validation_dataset_dir}")
+    else:
+        print("[ROM-DataDriven] val_split = row (train_test_split shuffle)")
+        print(f"[ROM-DataDriven] val_frac = {VAL_FRAC}")
     print(f"[ROM-DataDriven] scaling = z-score on train split for X and Y")
     print(f"[ROM-DataDriven] seed = {seed}")
 
@@ -366,16 +412,48 @@ def main(argv=None):
     _, n_tot = Y_raw.shape
     if in_dim != 3:
         raise ValueError(f"[ROM-DataDriven] Expected X dim=3 (mu1,mu2,t), got {in_dim}")
-    print(f"[ROM-DataDriven] Loaded: M={M}, in_dim={in_dim}, n_tot={n_tot}")
+    print(f"[ROM-DataDriven] Loaded training candidate data: M={M}, in_dim={in_dim}, n_tot={n_tot}")
 
     # -----------------------------
     # Split
     # -----------------------------
-    idx = np.arange(M, dtype=np.int64)
-    tr_idx, va_idx = train_test_split(idx, test_size=VAL_FRAC, random_state=seed, shuffle=True)
+    validation_dataset_dir = None
+    validation_dataset_root = None
+    validation_dataset_meta = None
+    if external_validation:
+        (
+            validation_dataset_root,
+            validation_dataset_ntot,
+            validation_dataset_dir,
+            validation_dataset_meta,
+            _,
+        ) = resolve_stage3_dataset(
+            this_dir=THIS_DIR,
+            requested_ntot=dataset_ntot,
+            expected_backend=dataset_backend,
+            requested_dataset_dir=args.validation_dataset_dir,
+        )
+        if int(validation_dataset_ntot) != int(dataset_ntot):
+            raise ValueError(
+                f"Validation dataset ntot={validation_dataset_ntot}, expected {dataset_ntot}."
+            )
+        Xva, Yva = load_prom_dataset_rom_data_driven(validation_dataset_root)
+        if Xva.shape[1] != in_dim or Yva.shape[1] != n_tot:
+            raise ValueError(
+                "Validation data dimensions do not match training data: "
+                f"Xva={Xva.shape}, Yva={Yva.shape}, expected (*,{in_dim}) and (*,{n_tot})."
+            )
+        Xtr, Ytr = X_raw, Y_raw
+        tr_idx = np.arange(Xtr.shape[0], dtype=np.int64)
+        va_idx = np.arange(Xva.shape[0], dtype=np.int64)
+    else:
+        idx = np.arange(M, dtype=np.int64)
+        tr_idx, va_idx = train_test_split(idx, test_size=VAL_FRAC, random_state=seed, shuffle=True)
 
-    Xtr, Ytr = X_raw[tr_idx], Y_raw[tr_idx]
-    Xva, Yva = X_raw[va_idx], Y_raw[va_idx]
+        Xtr, Ytr = X_raw[tr_idx], Y_raw[tr_idx]
+        Xva, Yva = X_raw[va_idx], Y_raw[va_idx]
+    print(f"[ROM-DataDriven] train_samples = {Xtr.shape[0]}")
+    print(f"[ROM-DataDriven] val_samples = {Xva.shape[0]}")
 
     # -----------------------------
     # Compute scaling stats on TRAIN only
@@ -407,7 +485,16 @@ def main(argv=None):
         patience=lr_scheduler_patience,
         min_lr=lr_scheduler_min_lr,
     )
-    loss_fn = nn.MSELoss()
+    loss_fn = _make_loss(loss_function)
+
+    def loss_inputs(pred_raw, target_raw):
+        if loss_space == "raw":
+            return pred_raw, target_raw
+        if loss_space == "normalized":
+            y_mean_t = model.unscaler.mean
+            y_std_t = model.unscaler.std
+            return (pred_raw - y_mean_t) / y_std_t, (target_raw - y_mean_t) / y_std_t
+        raise RuntimeError(f"Unhandled loss_space={loss_space!r}")
 
     # DataLoaders (raw space; model scales internally)
     dl_tr = DataLoader(
@@ -435,7 +522,8 @@ def main(argv=None):
 
             opt.zero_grad(set_to_none=True)
             pred = model(xb)
-            loss = loss_fn(pred, yb)
+            pred_loss, yb_loss = loss_inputs(pred, yb)
+            loss = loss_fn(pred_loss, yb_loss)
             loss.backward()
 
             if clip_grad is not None:
@@ -448,15 +536,17 @@ def main(argv=None):
 
         model.eval()
         with torch.no_grad():
-            va_loss = float(loss_fn(model(Xva_t), Yva_t).detach().cpu().item())
+            va_pred = model(Xva_t)
+            va_pred_loss, Yva_loss = loss_inputs(va_pred, Yva_t)
+            va_loss = float(loss_fn(va_pred_loss, Yva_loss).detach().cpu().item())
 
         scheduler.step(va_loss)
 
         if ep == 1 or ep % 25 == 0:
             lr_current = opt.param_groups[0]["lr"]
             print(
-                f"[Epoch {ep:4d}] train_mse={tr_loss:.6e} | "
-                f"val_mse={va_loss:.6e} | lr={lr_current:.3e} | bad={bad}"
+                f"[Epoch {ep:4d}] train_loss={tr_loss:.6e} | "
+                f"val_loss={va_loss:.6e} | lr={lr_current:.3e} | bad={bad}"
             )
 
         if va_loss < best_val - min_improve:
@@ -495,9 +585,16 @@ def main(argv=None):
         "dataset_dir": dataset_dir,
         "dataset_ntot": int(dataset_ntot),
         "dataset_backend": dataset_meta.get("solve_backend"),
+        "validation_dataset_root": validation_dataset_root,
+        "validation_dataset_dir": validation_dataset_dir,
+        "validation_dataset_backend": (
+            None if validation_dataset_meta is None else validation_dataset_meta.get("solve_backend")
+        ),
         "hidden_dims": tuple(int(d) for d in hidden_dims),
         "activation": activation,
         "dropout": float(dropout),
+        "loss_function": loss_function,
+        "loss_space": loss_space,
         "optimizer": "AdamW",
         "batch_size": int(batch_size),
         "lr": float(lr),
@@ -510,8 +607,11 @@ def main(argv=None):
         "lr_scheduler_factor": float(lr_scheduler_factor),
         "lr_scheduler_patience": int(lr_scheduler_patience),
         "lr_scheduler_min_lr": float(lr_scheduler_min_lr),
-        "val_split": "row",
-        "val_frac": float(VAL_FRAC),
+        "best_val_loss": float(best_val),
+        "val_split": "external_dataset" if external_validation else "row",
+        "val_frac": None if external_validation else float(VAL_FRAC),
+        "train_samples": int(Xtr.shape[0]),
+        "val_samples": int(Xva.shape[0]),
         "scaling": "z-score train split for X and Y",
         "trainable_parameters": int(trainable_params),
         "train_rel_frob_percent": float(train_rel_frob_percent),
@@ -529,12 +629,22 @@ def main(argv=None):
             ("dataset_root", dataset_root),
             ("dataset_ntot", dataset_ntot),
             ("dataset_backend", dataset_meta.get("solve_backend")),
-            ("samples_M", M),
+            ("validation_dataset_dir", validation_dataset_dir),
+            ("validation_dataset_root", validation_dataset_root),
+            (
+                "validation_dataset_backend",
+                None if validation_dataset_meta is None else validation_dataset_meta.get("solve_backend"),
+            ),
+            ("samples_M", int(Xtr.shape[0] + Xva.shape[0])),
+            ("train_samples", int(Xtr.shape[0])),
+            ("val_samples", int(Xva.shape[0])),
             ("in_dim", in_dim),
             ("n_tot", n_tot),
             ("hidden_dims", tuple(int(d) for d in hidden_dims)),
             ("activation", activation),
             ("dropout", float(dropout)),
+            ("loss_function", loss_function),
+            ("loss_space", loss_space),
             ("optimizer", "AdamW"),
             ("batch_size", batch_size),
             ("lr", lr),
@@ -542,6 +652,7 @@ def main(argv=None):
             ("epochs", epochs),
             ("patience", patience),
             ("epochs_ran", ep),
+            ("best_val_loss", best_val),
             ("best_val_mse", best_val),
             ("train_rel_frob_percent", train_rel_frob_percent),
             ("val_rel_frob_percent", val_rel_frob_percent),
@@ -551,8 +662,8 @@ def main(argv=None):
             ("lr_scheduler_factor", lr_scheduler_factor),
             ("lr_scheduler_patience", lr_scheduler_patience),
             ("lr_scheduler_min_lr", lr_scheduler_min_lr),
-            ("val_split", "row"),
-            ("val_frac", VAL_FRAC),
+            ("val_split", "external_dataset" if external_validation else "row"),
+            ("val_frac", None if external_validation else VAL_FRAC),
             ("scaling", "z-score train split for X and Y"),
             ("trainable_parameters", trainable_params),
             ("seed", seed),

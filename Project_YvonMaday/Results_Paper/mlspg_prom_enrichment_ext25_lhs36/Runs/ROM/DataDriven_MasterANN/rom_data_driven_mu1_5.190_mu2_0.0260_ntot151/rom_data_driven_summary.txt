@@ -1,0 +1,19 @@
+mu_test: [5.19, 0.026]
+method: nonintrusive_data_driven
+device: cpu
+model_name: master_ann_mu_t_to_qtot_ntot151_best.pt
+model_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs36/Stage3/models/master_ann_mu_t_to_qtot_ntot151_best.pt
+checkpoint_format: ann
+basis_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+dataset_backend: prom
+dataset_ntot: 151
+model_ntot: 151
+total_modes_used: 151
+save_rom_snaps: True
+output_root_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs36/Runs/ROM/DataDriven_MasterANN
+inference_time_s: 0.003063678741455078
+relative_error_percent: 0.5004485549658524
+output_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs36/Runs/ROM/DataDriven_MasterANN/rom_data_driven_mu1_5.190_mu2_0.0260_ntot151
+snap_folder: /home/kratos/burgers2d-rom-workbench/Results/param_snaps
+plot_output: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs36/Runs/ROM/DataDriven_MasterANN/rom_data_driven_mu1_5.190_mu2_0.0260_ntot151/hdm_vs_rom.png

@@ -37,8 +37,7 @@ from burgers.pod_ann_manifold import (
 from burgers.config import DT, NUM_STEPS, GRID_X, GRID_Y, W0, MU1_RANGE, MU2_RANGE, SAMPLES_PER_MU
 
 from burgers.empirical_cubature_method import EmpiricalCubatureMethod
-from burgers.randomized_singular_value_decomposition import RandomizedSingularValueDecomposition
-from burgers.ecsw_utils import build_ecsw_snapshot_plan
+from burgers.ecsw_utils import build_ecsw_snapshot_plan, direct_left_singular_vectors
 try:
     from stage3_dataset_utils import resolve_stage3_dataset
 except ModuleNotFoundError:
@@ -61,6 +60,11 @@ except ModuleNotFoundError:
         resolve_stage3_model,
         write_kv_txt,
     )
+
+try:
+    from gpr_map_common import build_torch_case2_gpr_from_ckpt
+except ModuleNotFoundError:
+    from .gpr_map_common import build_torch_case2_gpr_from_ckpt
 
 
 def set_latex_plot_style():
@@ -310,6 +314,7 @@ def _load_or_build_case2_ecsw_weights(
     snap_time_offset=3,
     snapshot_percent=2.0,
     snapshot_random_seed=42,
+    snapshot_mode="global_param_time_stratified",
     ensure_mu_coverage=True,
     ecsw_weights_dir=None,
     ecsw_tag=None,
@@ -343,7 +348,7 @@ def _load_or_build_case2_ecsw_weights(
         num_steps=num_steps,
         snap_time_offset=snap_time_offset,
         num_mu=len(mu_samples),
-        mode="global_param_time_stratified",
+        mode=snapshot_mode,
         total_snapshots=None,
         total_snapshots_percent=snapshot_percent,
         mu_points=mu_samples,
@@ -412,8 +417,7 @@ def _load_or_build_case2_ecsw_weights(
     C_ecm = np.ascontiguousarray(C, dtype=np.float64)
     b = np.ascontiguousarray(C_ecm.sum(axis=1), dtype=np.float64)
 
-    rsvd = RandomizedSingularValueDecomposition()
-    u, _, _, _ = rsvd.Calculate(C_ecm.T, 1e-8)
+    u = direct_left_singular_vectors(C_ecm.T, relative_tolerance=1e-8)
 
     selector = EmpiricalCubatureMethod()
     selector.SetUp(
@@ -439,16 +443,40 @@ def _load_case2_model(model_path, device):
         raise FileNotFoundError(f"Missing model checkpoint: {model_path}")
 
     ckpt = torch.load(model_path, map_location=device)
-    n_s = int(ckpt["n_s"])
     in_dim = int(ckpt.get("in_dim", 3))
     if in_dim != 3:
         raise ValueError(f"Case2 checkpoint in_dim={in_dim}, expected 3")
+
+    checkpoint_format = str(ckpt.get("format", "")).strip().lower()
+    is_gpr_checkpoint = checkpoint_format in (
+        "gpr_map",
+        "gpr_map_full",
+        "sparse_gpr_map",
+        "sparse_gpr_map_full",
+    ) or ("gpr_payload" in ckpt) or ("sparse_gp_payload" in ckpt)
+
+    if "n_s" in ckpt:
+        out_dim = int(ckpt["n_s"])
+        output_kind = "secondary"
+    elif "n_tot" in ckpt:
+        out_dim = int(ckpt["n_tot"])
+        output_kind = "q_tot"
+    else:
+        raise KeyError(
+            "Checkpoint must contain either 'n_s' for a Case-2 secondary model "
+            "or 'n_tot' for a full q_tot master model."
+        )
+
+    if is_gpr_checkpoint:
+        model = build_torch_case2_gpr_from_ckpt(ckpt).to(device)
+        model.eval()
+        return model, out_dim, output_kind, ckpt
 
     hidden_dims = tuple(int(d) for d in ckpt.get("hidden_dims", (32, 64, 128, 256, 256)))
     activation = str(ckpt.get("activation", "elu")).strip().lower()
     dropout = float(ckpt.get("dropout", 0.0))
     model = Case2Model(
-        n_s,
+        out_dim,
         hidden_dims=hidden_dims,
         activation=activation,
         dropout=dropout,
@@ -456,10 +484,14 @@ def _load_case2_model(model_path, device):
     model.load_state_dict(ckpt["state_dict"], strict=True)
     model.eval()
 
-    return model, n_s, ckpt
+    return model, out_dim, output_kind, ckpt
 
 
 def _resolve_total_modes_from_checkpoint_or_dataset(ckpt):
+    ntot = ckpt.get("n_tot", None)
+    if ntot is not None:
+        return int(ntot)
+
     ntot = ckpt.get("dataset_ntot", None)
     if ntot is not None:
         return int(ntot)
@@ -536,6 +568,12 @@ def main(argv=None):
     parser.add_argument("--ecsw-num-training-mu", type=int, default=9)
     parser.add_argument("--ecsw-snap-time-offset", type=int, default=3)
     parser.add_argument("--ecsw-snapshot-percent", type=float, default=2.0)
+    parser.add_argument(
+        "--ecsw-snapshot-mode",
+        choices=("strided_per_mu", "global_stratified_random", "global_param_time_stratified"),
+        default="global_param_time_stratified",
+        help="Snapshot-column selection mode used to build ANN ECSW training matrices.",
+    )
     parser.add_argument("--ecsw-random-seed", type=int, default=42)
     parser.add_argument("--ecsw-ensure-mu-coverage", dest="ecsw_ensure_mu_coverage", action="store_true")
     parser.add_argument("--ecsw-no-ensure-mu-coverage", dest="ecsw_ensure_mu_coverage", action="store_false")
@@ -616,6 +654,7 @@ def main(argv=None):
     rebuild_ecsw_weights = bool(args.rebuild_ecsw)
     ecsw_snap_time_offset = int(args.ecsw_snap_time_offset)
     ecsw_snapshot_percent = float(args.ecsw_snapshot_percent)
+    ecsw_snapshot_mode = str(args.ecsw_snapshot_mode).strip().lower()
     ecsw_snapshot_random_seed = int(args.ecsw_random_seed)
     ecsw_ensure_mu_coverage = bool(args.ecsw_ensure_mu_coverage)
     ecsw_num_training_mu = int(args.ecsw_num_training_mu)
@@ -667,28 +706,51 @@ def main(argv=None):
     else:
         model_path = os.path.abspath(model_path_override)
         model_name = os.path.basename(model_path)
-    base_model, n_s_checkpoint, ckpt = _load_case2_model(model_path, device=device)
+    base_model, checkpoint_output_dim, model_output_kind, ckpt = _load_case2_model(
+        model_path,
+        device=device,
+    )
     total_modes = _resolve_total_modes_from_checkpoint_or_dataset(ckpt)
-    n_p_checkpoint = int(total_modes - n_s_checkpoint)
-    if n_p_checkpoint < 1:
-        raise ValueError(
-            f"Invalid checkpoint mode split: total_modes={total_modes}, n_s={n_s_checkpoint}"
-        )
+
+    if model_output_kind == "secondary":
+        n_s_checkpoint = int(checkpoint_output_dim)
+        n_p_checkpoint = int(total_modes - n_s_checkpoint)
+        if n_p_checkpoint < 1:
+            raise ValueError(
+                f"Invalid checkpoint mode split: total_modes={total_modes}, n_s={n_s_checkpoint}"
+            )
+    elif model_output_kind == "q_tot":
+        if int(checkpoint_output_dim) != int(total_modes):
+            raise ValueError(
+                "Full q_tot checkpoint dimension mismatch: "
+                f"output_dim={checkpoint_output_dim}, total_modes={total_modes}."
+            )
+        n_s_checkpoint = int(total_modes)
+        n_p_checkpoint = 0
+    else:
+        raise ValueError(f"Unsupported model_output_kind={model_output_kind!r}.")
 
     if target_primary_modes is None:
+        if model_output_kind == "q_tot":
+            raise ValueError(
+                "--target-primary-modes is required when using a full q_tot master model."
+            )
         n_p = n_p_checkpoint
     else:
         n_p = int(target_primary_modes)
     if n_p < 1 or n_p >= total_modes:
         raise ValueError(f"Invalid target primary modes n_p={n_p} for total_modes={total_modes}.")
-    if n_p < n_p_checkpoint:
+    if model_output_kind == "secondary" and n_p < n_p_checkpoint:
         raise ValueError(
             "This runner only supports trimming secondary outputs by increasing "
             f"the primary dimension. checkpoint n_p={n_p_checkpoint}, target n_p={n_p}."
         )
 
     if drop_first_secondary_arg is None:
-        drop_first_secondary = n_p - n_p_checkpoint
+        if model_output_kind == "q_tot":
+            drop_first_secondary = n_p
+        else:
+            drop_first_secondary = n_p - n_p_checkpoint
     else:
         drop_first_secondary = int(drop_first_secondary_arg)
     if drop_first_secondary < 0:
@@ -742,6 +804,7 @@ def main(argv=None):
     print(f"[Case2] target primary modes = {n_p}")
     print(f"[Case2] secondary modes used = {n_s}")
     print(f"[Case2] drop_first_secondary = {drop_first_secondary}")
+    print(f"[Case2] ecsw_snapshot_mode = {ecsw_snapshot_mode}")
 
     hdm_snaps = None
     if not args.ecsw_only:
@@ -788,6 +851,7 @@ def main(argv=None):
             snap_time_offset=ecsw_snap_time_offset,
             snapshot_percent=ecsw_snapshot_percent,
             snapshot_random_seed=ecsw_snapshot_random_seed,
+            snapshot_mode=ecsw_snapshot_mode,
             ensure_mu_coverage=ecsw_ensure_mu_coverage,
             ecsw_weights_dir=ecsw_weights_dir,
             ecsw_tag=os.path.splitext(model_name)[0],
@@ -941,6 +1005,8 @@ def main(argv=None):
             ("device", device),
             ("model_name", model_name),
             ("model_path", model_path),
+            ("model_output_kind", model_output_kind),
+            ("checkpoint_output_dim", checkpoint_output_dim),
             ("run_tag_extra", run_tag_extra if run_tag_extra else "none"),
             ("basis_path", basis_path),
             ("u_ref_path", uref_path if os.path.exists(uref_path) else "zeros"),
@@ -957,6 +1023,7 @@ def main(argv=None):
             ("ecsw_num_training_mu", ecsw_num_training_mu),
             ("ecsw_snap_time_offset", ecsw_snap_time_offset),
             ("ecsw_snapshot_percent", ecsw_snapshot_percent),
+            ("ecsw_snapshot_mode", ecsw_snapshot_mode),
             ("ecsw_snapshot_random_seed", ecsw_snapshot_random_seed),
             ("ecsw_ensure_mu_coverage", bool(ecsw_ensure_mu_coverage)),
             ("ecsw_weights_path", weights_path if effective_backend == "hprom" else "N/A"),
@@ -973,7 +1040,9 @@ def main(argv=None):
             ("relative_error_percent", rel_err),
             (
                 "qN_source",
-                "solver_primary_plus_trimmed_ann_secondary"
+                "solver_primary_plus_master_ann_secondary"
+                if model_output_kind == "q_tot"
+                else "solver_primary_plus_trimmed_ann_secondary"
                 if drop_first_secondary > 0
                 else "solver_primary_plus_ann_secondary",
             ),

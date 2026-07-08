@@ -1,0 +1,16 @@
+mu_test: [4.875, 0.0225]
+method: pod_dl_data_driven_nonintrusive
+device: cpu
+model_name: pod_dl_data_driven_ntot151_best.pt
+model_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs36/Stage3/models/pod_dl_data_driven_ntot151_best.pt
+basis_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+dataset_backend: prom
+dataset_ntot: 151
+model_ntot: 151
+total_modes_used: 151
+latent_dim: 10
+inference_time_s: 0.005831003189086914
+relative_error_percent: 0.4144438995265221
+output_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs36/Runs/ROM/PODDL_Best/pod_dl_data_driven_mu1_4.875_mu2_0.0225_ntot151_nz10
+snap_folder: /home/kratos/burgers2d-rom-workbench/Results/param_snaps

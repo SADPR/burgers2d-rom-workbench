@@ -41,9 +41,8 @@ from burgers.linear_manifold import (
     inviscid_burgers_implicit2D_LSPG_ecsw,
     compute_ECSW_training_matrix_2D,
 )
-from burgers.ecsw_utils import build_ecsw_snapshot_plan
+from burgers.ecsw_utils import build_ecsw_snapshot_plan, direct_left_singular_vectors
 from burgers.empirical_cubature_method import EmpiricalCubatureMethod
-from burgers.randomized_singular_value_decomposition import RandomizedSingularValueDecomposition
 from burgers.config import DT, NUM_STEPS, GRID_X, GRID_Y, W0, MU1_RANGE, MU2_RANGE, SAMPLES_PER_MU
 try:
     from project_layout import STAGE1_DIR, STAGE2_DIR, ensure_layout_dirs, stage2_dataset_dir, write_kv_txt
@@ -178,6 +177,7 @@ def _compute_ecsw_weights(
     snapshot_percent=2.0,
     snapshot_random_seed=42,
     ensure_mu_coverage=True,
+    svd_relative_tolerance=1e-8,
 ):
     if snap_time_offset < 1:
         raise ValueError("snap_time_offset must be >= 1.")
@@ -252,8 +252,12 @@ def _compute_ecsw_weights(
     C_ecm = np.ascontiguousarray(C, dtype=np.float64)
     b = np.ascontiguousarray(C_ecm.sum(axis=1), dtype=np.float64)
 
-    rsvd = RandomizedSingularValueDecomposition()
-    u, _, _, _ = rsvd.Calculate(C_ecm.T, 1e-8)
+    u = direct_left_singular_vectors(
+        C_ecm.T,
+        relative_tolerance=float(svd_relative_tolerance),
+    )
+    if u.shape[1] == 0:
+        raise RuntimeError("Direct SVD produced an empty ECSW basis.")
 
     selector = EmpiricalCubatureMethod()
     selector.SetUp(
@@ -290,6 +294,7 @@ def _load_or_build_ecsw_weights(
     snapshot_percent=2.0,
     snapshot_random_seed=42,
     ensure_mu_coverage=True,
+    svd_relative_tolerance=1e-8,
     weights_dir=None,
 ):
     expected_num_cells = (grid_x.size - 1) * (grid_y.size - 1)
@@ -326,6 +331,7 @@ def _load_or_build_ecsw_weights(
         snapshot_percent=snapshot_percent,
         snapshot_random_seed=snapshot_random_seed,
         ensure_mu_coverage=ensure_mu_coverage,
+        svd_relative_tolerance=svd_relative_tolerance,
     )
 
     np.save(preferred, weights)
@@ -352,6 +358,7 @@ def main(argv=None):
     ecsw_ensure_mu_coverage = True
     ecsw_snap_time_offset = 3
     ecsw_num_training_mu = 9
+    ecsw_svd_rel_tol = 1e-8
 
     parser = argparse.ArgumentParser(
         description="Build Stage-2 qN dataset with selectable PROM/HPROM backend."
@@ -382,6 +389,18 @@ def main(argv=None):
         default=None,
         help="Optional directory where ECSW weights are stored/loaded. Default: output dataset directory when --output-dir is used, otherwise Results/Stage2.",
     )
+    parser.add_argument(
+        "--mu-pair",
+        nargs=2,
+        type=float,
+        action="append",
+        metavar=("MU1", "MU2"),
+        default=None,
+        help=(
+            "Optional parameter pair to solve. Can be passed multiple times. "
+            "If omitted, the full configured training grid is used."
+        ),
+    )
     parser.add_argument("--no-save-rom-snaps", action="store_true")
     parser.add_argument("--no-plots", action="store_true")
     parser.add_argument("--max-its", type=int, default=max_its)
@@ -393,6 +412,12 @@ def main(argv=None):
     parser.add_argument("--ecsw-random-seed", type=int, default=ecsw_random_seed)
     parser.add_argument("--ecsw-snap-time-offset", type=int, default=ecsw_snap_time_offset)
     parser.add_argument("--ecsw-num-training-mu", type=int, default=ecsw_num_training_mu)
+    parser.add_argument(
+        "--ecsw-svd-rel-tol",
+        type=float,
+        default=ecsw_svd_rel_tol,
+        help="Relative truncation tolerance for the deterministic direct SVD used before ECM.",
+    )
     parser.add_argument(
         "--ecsw-ensure-mu-coverage",
         dest="ecsw_ensure_mu_coverage",
@@ -427,6 +452,7 @@ def main(argv=None):
     ecsw_ensure_mu_coverage = bool(args.ecsw_ensure_mu_coverage)
     ecsw_snap_time_offset = int(args.ecsw_snap_time_offset)
     ecsw_num_training_mu = int(args.ecsw_num_training_mu)
+    ecsw_svd_rel_tol = float(args.ecsw_svd_rel_tol)
 
     set_latex_plot_style()
     ensure_layout_dirs()
@@ -458,13 +484,18 @@ def main(argv=None):
             f"but W0 has size {w0.size}. Check grid/config consistency."
         )
 
-    mu_list = get_snapshot_params(
-        mu1_range=MU1_RANGE,
-        mu2_range=MU2_RANGE,
-        samples_per_mu=SAMPLES_PER_MU,
-    )
+    if args.mu_pair:
+        mu_list = [np.asarray(pair, dtype=np.float64) for pair in args.mu_pair]
+        mu_source = "custom_mu_pair"
+    else:
+        mu_list = get_snapshot_params(
+            mu1_range=MU1_RANGE,
+            mu2_range=MU2_RANGE,
+            samples_per_mu=SAMPLES_PER_MU,
+        )
+        mu_source = "configured_training_grid"
     if len(mu_list) == 0:
-        raise RuntimeError("get_snapshot_params() returned an empty parameter set.")
+        raise RuntimeError("No parameter points were provided or generated.")
 
     ecsw_weights = None
     ecsw_weights_path = None
@@ -491,6 +522,7 @@ def main(argv=None):
             snapshot_percent=ecsw_snapshot_percent,
             snapshot_random_seed=ecsw_random_seed,
             ensure_mu_coverage=ecsw_ensure_mu_coverage,
+            svd_relative_tolerance=ecsw_svd_rel_tol,
             weights_dir=(
                 args.ecsw_weights_dir
                 if args.ecsw_weights_dir is not None
@@ -513,6 +545,8 @@ def main(argv=None):
         print(f"[ROM-QN] ECSW snapshot percent = {ecsw_snapshot_percent:.3f}")
         print(f"[ROM-QN] ECSW random seed = {ecsw_random_seed}")
         print(f"[ROM-QN] ECSW ensure mu coverage = {ecsw_ensure_mu_coverage}")
+        print("[ROM-QN] ECSW SVD method = direct_dense_svd")
+        print(f"[ROM-QN] ECSW SVD relative tolerance = {ecsw_svd_rel_tol:.3e}")
         if ecsw_plan is not None:
             print(
                 f"[ROM-QN] ECSW selected {ecsw_plan['num_selected_total']} / "
@@ -660,6 +694,8 @@ def main(argv=None):
         "coordinate_recovery": "solver_coordinates",
         "coordinate_source": "solver_coordinates",
         "num_traj": int(len(mu_list)),
+        "mu_source": mu_source,
+        "mu_list": [[float(mu[0]), float(mu[1])] for mu in mu_list],
         "dt": float(DT),
         "num_steps": int(NUM_STEPS),
         "basis_path": basis_path,
@@ -685,6 +721,8 @@ def main(argv=None):
         "ecsw_snapshot_percent": float(ecsw_snapshot_percent),
         "ecsw_random_seed": int(ecsw_random_seed),
         "ecsw_ensure_mu_coverage": bool(ecsw_ensure_mu_coverage),
+        "ecsw_svd_method": "direct_dense_svd",
+        "ecsw_svd_relative_tolerance": float(ecsw_svd_rel_tol),
         "ecsw_num_candidates_total": (
             None if ecsw_plan is None else int(ecsw_plan["num_candidates_total"])
         ),
@@ -717,11 +755,15 @@ def main(argv=None):
             ),
             ("coordinate_source", "solver_coordinates"),
             ("num_traj", len(mu_list)),
+            ("mu_source", mu_source),
+            ("mu_list", [[float(mu[0]), float(mu[1])] for mu in mu_list]),
             ("ecsw_num_training_mu", ecsw_num_training_mu),
             ("ecsw_snapshot_mode", "global_param_time_stratified"),
             ("ecsw_snapshot_percent", ecsw_snapshot_percent),
             ("ecsw_random_seed", ecsw_random_seed),
             ("ecsw_ensure_mu_coverage", ecsw_ensure_mu_coverage),
+            ("ecsw_svd_method", "direct_dense_svd"),
+            ("ecsw_svd_relative_tolerance", ecsw_svd_rel_tol),
             ("ecsw_snap_time_offset", ecsw_snap_time_offset),
             (
                 "ecsw_num_candidates_total",

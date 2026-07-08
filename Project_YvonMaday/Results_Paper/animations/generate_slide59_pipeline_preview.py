@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a presentation preview for the ROM-consistent training pipeline."""
+"""Generate a presentation preview for the PROM-consistent training pipeline."""
 
 from __future__ import annotations
 
@@ -88,7 +88,7 @@ def main() -> None:
     ax.text(
         0.5,
         0.94,
-        r"\textit{One common coefficient dataset is used to train all learned models.}",
+        r"\textit{One common PROM-consistent coefficient dataset is used to train all learned models.}",
         ha="center",
         va="center",
         fontsize=16,
@@ -128,10 +128,10 @@ def main() -> None:
             "\n"
             r"$\Downarrow$"
             "\n"
-            r"$\mathbf q_{\mathrm{tot}}^{\mathrm{ref}}"
+            r"$\mathbf q_{\mathrm{tot}}^{\mathrm{HPROM}}"
             r"(\boldsymbol\mu,t)$"
         ),
-        r"ROM-consistent trajectories",
+        r"PROM-consistent trajectories",
     )
     add_stage(
         ax,
@@ -140,18 +140,21 @@ def main() -> None:
         "#f7eef8",
         r"\textbf{Stage 3}",
         (
-            r"\textbf{Learned models}"
+            r"\textbf{Learned maps}"
             "\n"
-            r"$\mathrm{PROM\!-\!ANN\ closures}$"
+            r"$\bar{\mathbf q}=\mathcal N(\mathbf q),\ "
+            r"\mathcal M(\boldsymbol\mu,t),\ "
+            r"\mathcal H(\mathbf q,\boldsymbol\mu,t)$"
             "\n"
-            r"$\mathrm{PROM\!-\!POD\!-\!AE}$"
+            r"$\widehat{\mathbf q}_{\mathrm{tot}}="
+            r"\mathcal D(\mathcal E(\mathbf q_{\mathrm{tot}}))$"
             "\n"
-            r"$\mathrm{POD\!-\!NN\!-\!ROM}^{*}$"
+            r"$\mathbf q_{\mathrm{tot}}=\mathcal G_q(\boldsymbol\mu,t)$"
             "\n"
-            r"$\mathrm{POD\!-\!DL\!-\!ROM}^{*}$"
+            r"$\mathbf z=\mathcal G_z(\boldsymbol\mu,t)$"
         ),
-        r"Common coefficient targets",
-        body_fontsize=13.5,
+        r"PROM-consistent training targets",
+        body_fontsize=12.0,
     )
 
     for start, end in ((positions[0] + width, positions[1]), (positions[1] + width, positions[2])):
@@ -186,19 +189,20 @@ def main() -> None:
     )
     ax.text(
         0.5,
-        0.125,
+        0.112,
         (
             r"$^{*}$The non-intrusive ROMs could also be trained from directly projected coefficients."
             "\n"
             r"However, the linear HPROM remains very close to the projection-only reconstruction,"
             "\n"
-            r"so its $\mathbf q_{\mathrm{tot}}^{\mathrm{ref}}$ trajectories are used as common targets,"
-            r" preserving consistency with the intrusive PROM online solves."
+            r"so its $\mathbf q_{\mathrm{tot}}^{\mathrm{HPROM}}$ trajectories are used as PROM-consistent targets,"
+            "\n"
+            r"preserving consistency with the intrusive PROM online solves."
         ),
         ha="center",
         va="center",
-        fontsize=12.5,
-        linespacing=1.30,
+        fontsize=11.8,
+        linespacing=1.08,
     )
 
     fig.savefig(OUTPUT, dpi=180, facecolor="white", bbox_inches="tight", pad_inches=0.10)

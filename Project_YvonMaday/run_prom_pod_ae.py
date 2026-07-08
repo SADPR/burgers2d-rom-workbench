@@ -335,7 +335,7 @@ def _load_or_build_pod_ae_ecsw_weights(
     c_ecm = np.ascontiguousarray(c, dtype=np.float64)
     b = np.ascontiguousarray(c_ecm.sum(axis=1), dtype=np.float64)
 
-    rsvd = RandomizedSingularValueDecomposition()
+    rsvd = RandomizedSingularValueDecomposition(USE_RANDOMIZATION=False)
     u, _, _, _ = rsvd.Calculate(c_ecm.T, 1e-8)
 
     selector = EmpiricalCubatureMethod()

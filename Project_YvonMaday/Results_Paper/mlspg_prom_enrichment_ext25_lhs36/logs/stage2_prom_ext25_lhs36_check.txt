@@ -1,0 +1,8 @@
+[check] dataset: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs36/Stage2/prom_coeff_dataset_ntot151_enriched_lhs36
+[check] trajectories: 45
+[check] baseline trajectories: 9
+[check] interior LHS trajectories: 18
+[check] exterior LHS trajectories: 18
+[check] direct qN: direct_solver_qN_only
+[check] reused design source: False
+[check] design source: 

@@ -1,0 +1,28 @@
+model_name: master_dense_gpr_mu_t_to_qtot_ntot151_matern15_ard_all_alpha1e10_nowhite_opt0.pt
+model_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage3/models/master_dense_gpr_mu_t_to_qtot_ntot151_matern15_ard_all_alpha1e10_nowhite_opt0.pt
+dataset_root: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage2/prom_coeff_dataset_ntot151/per_mu
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage2/prom_coeff_dataset_ntot151
+validation_dataset_root: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2/per_mu
+validation_dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2
+dataset_ntot: 151
+dataset_backend: prom
+in_dim: 3
+n_tot: 151
+kernel_init: 1**2 * Matern(length_scale=[1, 1, 1], nu=1.5)
+kernel_learned: 8.82**2 * Matern(length_scale=[4.93, 10, 0.352], nu=1.5)
+alpha: 1e-10
+use_white_kernel: False
+white_noise_level: 1e-08
+white_noise_bounds: (1e-12, 0.001)
+optimize_hyperparameters: True
+n_restarts_optimizer: 0
+max_train_samples: 1000000
+max_val_samples: 1000000
+val_split: external_dataset
+train_rel_frob_percent: 1.2922934472388709e-09
+val_rel_frob_percent: 17.019947007192467
+train_mse: 1.8479392726643071e-19
+val_mse: 29.54812392798304
+train_used_after_duplicates: 4509
+val_used: 1002
+elapsed_s: 4307.660488367081

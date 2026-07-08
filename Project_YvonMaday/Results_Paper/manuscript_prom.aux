@@ -1,0 +1,55 @@
+\relax 
+\@writefile{toc}{\contentsline {section}{\numberline {1}Objective and Scope}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}PROM Reference Problem}{1}{}\protected@file@percent }
+\newlabel{eq:prom-affine-space}{{1}{1}{}{}{}}
+\newlabel{eq:linear-prom-lspg}{{2}{2}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Learned Model Families}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{PROM--ANN Case 1.}{2}{}\protected@file@percent }
+\newlabel{eq:case1}{{5}{2}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{PROM--ANN Case 2 and POD--NN--ROM.}{2}{}\protected@file@percent }
+\newlabel{eq:master-map}{{6}{2}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{PROM--ANN Case 3.}{2}{}\protected@file@percent }
+\newlabel{eq:case3}{{7}{2}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{PROM--POD--AE.}{2}{}\protected@file@percent }
+\newlabel{eq:podae}{{8}{2}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{POD--DL--ROM.}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}Data Sets and Evaluation Points}{3}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces PROM coefficient data used for the enriched training campaign.}}{3}{}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:prom-enrichment-dataset}{{1}{3}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Parameter locations for the enriched PROM coefficient data set. The 36 additional trajectories are used only for training the learned maps; the four reported evaluation points remain unchanged.}}{4}{}\protected@file@percent }
+\newlabel{fig:prom-enrichment-sampling}{{1}{4}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Baseline PROM-Only Results}{4}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Baseline PROM-only Stage--3 selected networks. Errors are relative Frobenius percentages in coefficient space.}}{4}{}\protected@file@percent }
+\newlabel{tab:prom-training}{{2}{4}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Baseline PROM-only online errors \(100\left \lVert \mathbf  u_{\mathrm  {HDM}}-\mathbf  u_{\mathrm  {ROM}} \right \rVert _F/\left \lVert \mathbf  u_{\mathrm  {HDM}} \right \rVert _F\). The mean column averages \(\bm  {\mu }^{(v)},\bm  {\mu }^{(1)},\bm  {\mu }^{(2)}\).}}{5}{}\protected@file@percent }
+\newlabel{tab:prom-online}{{3}{5}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Baseline PROM-only final-time midline comparison against the HDM at the four evaluation points. All curves are computed from saved solver-side snapshots.}}{5}{}\protected@file@percent }
+\newlabel{fig:prom-solution-overlays}{{2}{5}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Case 2 Mechanism: From POD--NN--ROM to Linear PROM}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Baseline Case 2 state error as a function of the number of solved primary coordinates. The left endpoint is the direct POD--NN--ROM map and the right endpoint is the linear PROM.}}{6}{}\protected@file@percent }
+\newlabel{fig:prom-case2-n-sweep-state}{{3}{6}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Baseline Case 2 coefficient errors with respect to the linear PROM coefficient trajectories for the same \(n\)-sweep. The vertical line marks coefficient 10, the primary dimension used in the main Case 2 runs.}}{6}{}\protected@file@percent }
+\newlabel{fig:prom-case2-n-sweep-coeff}{{4}{6}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Baseline Case 2 secondary-coordinate perturbation diagnostic for \(n=10\). The imposed secondary-coordinate error is measured relative to the linear PROM tail; the output curves report the induced state and primary-coordinate errors.}}{7}{}\protected@file@percent }
+\newlabel{fig:prom-case2-secondary-sensitivity}{{5}{7}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Baseline Online Coefficient Diagnostics}{7}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Baseline online coefficient error against the linear PROM with \(n_{\mathrm  {tot}}=151\). Values are relative Frobenius percentages over all 151 coefficients and all time steps.}}{7}{}\protected@file@percent }
+\newlabel{tab:prom-online-coeff}{{4}{7}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Baseline online per-coefficient relative errors against the \(n_{\mathrm  {tot}}=151\) linear PROM coefficient trajectory. The vertical line marks coefficient 10. The linear PROM itself is the reference and is not plotted.}}{8}{}\protected@file@percent }
+\newlabel{fig:prom-coeff-rel-errors}{{6}{8}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Effect of PROM Data Enrichment}{8}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Training and validation coefficient errors before and after PROM data enrichment. The validation set is kept fixed when available, so the reduction measures generalization improvement rather than a change in evaluation criterion.}}{8}{}\protected@file@percent }
+\newlabel{tab:prom-enrichment-training}{{5}{8}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Online state errors before and after PROM data enrichment. The linear PROM row is unchanged and is shown as the fixed reference accuracy level.}}{9}{}\protected@file@percent }
+\newlabel{tab:prom-enrichment-online}{{6}{9}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Effect of PROM data enrichment on online state errors. Left: mean error over the verification and two off-grid in-domain points. Right: extrapolatory point.}}{9}{}\protected@file@percent }
+\newlabel{fig:prom-enrichment-state}{{7}{9}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Online coefficient errors against the linear PROM teacher before and after PROM data enrichment. Values are relative Frobenius percentages in coefficient space.}}{10}{}\protected@file@percent }
+\newlabel{tab:prom-enrichment-coeff}{{7}{10}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Effect of PROM data enrichment on online coefficient errors. The coefficient metric is stricter than the state metric because it measures the entire \(151\)-coordinate trajectory against the linear PROM teacher.}}{10}{}\protected@file@percent }
+\newlabel{fig:prom-enrichment-coeff}{{8}{10}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Per-coefficient relative error of the direct POD--NN--ROM coefficient prediction before and after PROM data enrichment. The vertical line marks coefficient 10. The plot uses the linear PROM coefficient trajectory as the reference.}}{11}{}\protected@file@percent }
+\newlabel{fig:prom-enrichment-podnn-coeff}{{9}{11}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusions}{11}{}\protected@file@percent }
+\gdef \@abspage@last{12}

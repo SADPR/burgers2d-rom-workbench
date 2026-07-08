@@ -38,7 +38,7 @@ The post-slide-41 section outline is:
    summary.
 4. **2D Burgers: Problem and protocol**
    Governing equations, numerical discretization, centerline cuts, parameter
-   domain, LSPG-sensitive basis, and ROM-consistent coordinate generation.
+   domain, LSPG-sensitive basis, and PROM-consistent coordinate generation.
 5. **2D Burgers: Comparative results**
    Linear reference, intrusive and non-intrusive model galleries, global
    accuracy/runtime summaries, and coefficient-data enrichment.
@@ -115,7 +115,7 @@ q_2(t)
 ```
 
 Visual suggestion: use
-`harmonics_quadratic_gpr/outputs/linear_manifold.gif`. Put the formula image on
+`harmonic_manifold_closure_animations/outputs/linear_manifold.gif`. Put the formula image on
 the left and the unchanged GIF on the right. The formula introduces the
 trajectory and identifies the second and third harmonics; no separate harmonic
 plot is needed. Let the reported reconstruction error quantify the limitation.
@@ -168,7 +168,7 @@ t\in\mathcal I_i,
 ```
 
 Visual suggestion: use
-`harmonics_quadratic_gpr/outputs/piecewise_linear_manifold.gif`. The animation
+`harmonic_manifold_closure_animations/outputs/piecewise_linear_manifold.gif`. The animation
 already uses `K=4` local affine manifolds and reports the resulting
 reconstruction error. Keep the same formula-left/GIF-right layout as slide 42.
 
@@ -210,7 +210,7 @@ q_1(t)^2-q_2(t)^2
 ```
 
 Visual suggestion: use
-`harmonics_quadratic_gpr/outputs/quadratic_manifold.gif`. Keep the same layout
+`harmonic_manifold_closure_animations/outputs/quadratic_manifold.gif`. Keep the same layout
 and visual scale as slide 42. The audience should see the improvement directly
 from the reconstructed trajectory and the lower reported error.
 
@@ -262,7 +262,7 @@ from the reconstructed trajectory and the lower reported error.
 ```
 
 Visual suggestion: use
-`harmonics_quadratic_gpr/outputs/general_ann_rbf_gpr_closure.gif`. Keep the same
+`harmonic_manifold_closure_animations/outputs/general_ann_rbf_gpr_closure.gif`. Keep the same
 layout and visual scale as slides 42 and 43. The intended visual progression is
 
 `linear misses -> quadratic improves -> learned closure captures`.
@@ -288,7 +288,7 @@ layout and visual scale as slides 42 and 43. The intended visual progression is
 =
 \mathcal E_{\mathrm{AE}}(\mathbf q_{\mathrm{tot}}),
 \qquad
-\widetilde{\mathbf q}_{\mathrm{tot}}
+\widehat{\mathbf q}_{\mathrm{tot}}
 =
 \mathcal D_{\mathrm{AE}}(\mathbf z)
 \\[1.3em]
@@ -311,7 +311,7 @@ layout and visual scale as slides 42 and 43. The intended visual progression is
 ```
 
 Visual suggestion: use
-`harmonics_quadratic_gpr/outputs/pod_ae_manifold.gif`. Put the formula image on
+`harmonic_manifold_closure_animations/outputs/pod_ae_manifold.gif`. Put the formula image on
 the left and the GIF on the right, following the same layout as slides 42--44.
 The animation directly shows the decoded latent manifold and the POD--AE
 reconstruction. Do not draw a correction from the rank-two linear
@@ -364,7 +364,7 @@ encoder--decoder training diagram for slide 58.
 ```
 
 Visual suggestion: use
-`harmonics_quadratic_gpr/outputs/generic_decoder_tangent.gif`. It reuses the
+`harmonic_manifold_closure_animations/outputs/generic_decoder_tangent.gif`. It reuses the
 same controlled trajectory and shows a moving point
 \(\widetilde{\mathbf u}=\mathcal D(\mathbf q)\), the local tangent plane, and
 the two tangent directions
@@ -697,7 +697,7 @@ entering the closure map.
 \mathcal G_z(\boldsymbol\mu,t)
 \\[0.8em]
 &\hspace{2.0em}
-\widetilde{\mathbf q}_{\mathrm{tot}}
+\widehat{\mathbf q}_{\mathrm{tot}}
 =
 \mathcal D_{\mathrm{AE}}(\mathbf z),
 \qquad
@@ -706,7 +706,7 @@ entering the closure map.
 \mathbf u_{\mathrm{ref}}
 +
 \mathbf V_{\mathrm{tot}}
-\widetilde{\mathbf q}_{\mathrm{tot}}
+\widehat{\mathbf q}_{\mathrm{tot}}
 \\[1.3em]
 &\text{\bfseries Shared non-intrusive principle}\\[0.6em]
 &\hspace{1.0em}
@@ -862,24 +862,34 @@ N_{\mathrm{snap}}
 (5.19,0.026)
 \qquad
 \text{\itshape off-grid test}
+\\[0.5em]
+&\hspace{1.0em}
+\boldsymbol\mu^{(3)}
+=
+(4.00,0.0330)
+\qquad
+\text{\itshape outside-domain stress test}
 \\[1.1em]
 &\text{\bfseries Important distinction}\\[0.6em]
 &\hspace{1.0em}
-\text{\itshape The verification point is the center training parameter;}
+\text{\itshape The verification point is the center training parameter,}
 \\[0.2em]
-&\hspace{2.4em}
+&\hspace{1.5em}
 \text{\itshape only }\boldsymbol\mu^{(1)}
 \text{\itshape\ and }\boldsymbol\mu^{(2)}
-\text{\itshape\ are off-grid.}
+\text{\itshape\ are off-grid inside }\mathcal D,
+\\[0.2em]
+&\hspace{1.5em}
+\text{\itshape and }\boldsymbol\mu^{(3)}
+\text{\itshape\ probes extrapolation outside the training box.}
 \end{aligned}
 ```
 
 Visual suggestion: first show
-`animations/outputs/parameter_training_only.png`, then replace it with
-`animations/outputs/parameter_training_evaluation.png`. This can be done with
-two PowerPoint appear/disappear animations. The standalone images are
-preferred here over the three-stage GIF because enrichment has not yet been
-introduced.
+`Figures/parameter_domain_training_only.png`, then replace it with
+`Figures/parameter_domain_sampling_points_with_mu3.png`. This can be done with
+two PowerPoint appear/disappear animations. The standalone images are preferred
+here over the enrichment figure because enrichment has not yet been introduced.
 
 ### Slide 57 -- 2D Burgers: LSPG-sensitive basis
 
@@ -972,7 +982,7 @@ introduced.
 \end{aligned}
 ```
 
-### Slide 58 -- 2D Burgers: ROM-consistent training pipeline
+### Slide 58 -- 2D Burgers: PROM-consistent training pipeline
 
 Use only
 `animations/previews/slide59_rom_consistent_pipeline.png`. Do not add a
@@ -983,7 +993,7 @@ The asterisks identify POD--NN--ROM and POD--DL--ROM: these two non-intrusive
 ROMs could also be trained from directly projected
 \(\mathbf q_{\mathrm{tot}}\) coefficients. However, the linear HPROM remains
 close to the projection-only reconstruction, so its residual-generated
-\(\mathbf q_{\mathrm{tot}}^{\mathrm{ref}}\) trajectories are retained as
+\(\mathbf q_{\mathrm{tot}}^{\mathrm{HPROM}}\) trajectories are retained as
 common targets, primarily to preserve consistency with the intrusive PROM
 online solves.
 
@@ -1016,7 +1026,7 @@ online solves.
 &
 \text{LSPG + ECM}
 \\
-\text{PROM--ANN Case 1}
+\text{HPROM--ANN Case 1}
 &
 \mathbf q\in\mathbb R^{10}
 &
@@ -1030,7 +1040,7 @@ online solves.
 &
 \text{LSPG + ECM}
 \\
-\text{PROM--ANN Case 2}
+\text{HPROM--ANN Case 2}
 &
 \mathbf q\in\mathbb R^{10}
 &
@@ -1042,7 +1052,7 @@ online solves.
 &
 \text{LSPG + ECM}
 \\
-\text{PROM--ANN Case 3}
+\text{HPROM--ANN Case 3}
 &
 \mathbf q\in\mathbb R^{10}
 &
@@ -1056,7 +1066,7 @@ online solves.
 &
 \text{LSPG + ECM}
 \\
-\text{PROM--POD--AE}
+\text{HPROM--POD--AE}
 &
 \mathbf z\in\mathbb R^{10}
 &
@@ -1072,7 +1082,7 @@ online solves.
 &
 (\boldsymbol\mu,t)
 \mapsto
-\widetilde{\mathbf q}_{\mathrm{tot}}\in\mathbb R^{151}
+\widehat{\mathbf q}_{\mathrm{tot}}\in\mathbb R^{151}
 &
 \mathbf u_{\mathrm{ref}}
 +\mathbf V_{\mathrm{tot}}\mathcal G_q(\boldsymbol\mu,t)
@@ -1149,7 +1159,7 @@ closure, reconstruction, and direct-prediction objectives.
 \\[1.2em]
 &\text{\bfseries General intrusive formulation}\\[0.6em]
 &\hspace{0.8em}
-\text{\itshape Linear HPROM, PROM--ANN, and PROM--POD--AE differ through}
+\text{\itshape Linear HPROM, HPROM--ANN, and HPROM--POD--AE differ through}
 \\[0.2em]
 &\hspace{2.0em}
 \text{\itshape the decoder tangent }\mathbf T\text{\itshape\ and therefore the test basis }\mathbf W.
@@ -1168,18 +1178,18 @@ samples selected for ECM training.
 
 Use only
 `animations/outputs/slide61_intrusive_comparison_mu2.gif`, enlarged across the
-available slide width. It compares the HDM, linear HPROM, PROM--ANN Case~1,
-and PROM--POD--AE at the off-grid point
+available slide width. It compares the HDM, linear HPROM, HPROM--ANN Case~1,
+and HPROM--POD--AE at the off-grid point
 \(\boldsymbol\mu^{(2)}=(5.19,0.026)\).
 
 Each horizontal row compares one reduced model against the HDM. The left and
 right columns show the horizontal and vertical centerline cuts, respectively.
 
-### Slide 62 -- 2D Burgers: PROM--ANN qualitative comparison
+### Slide 62 -- 2D Burgers: HPROM--ANN qualitative comparison
 
 Use only
 `animations/outputs/slide62_promann_comparison_mu1.gif`, enlarged across the
-available slide width. It compares the HDM and PROM--ANN Cases~1--3 at the
+available slide width. It compares the HDM and HPROM--ANN Cases~1--3 at the
 off-grid point
 \(\boldsymbol\mu^{(1)}=(4.56,0.019)\).
 
@@ -1208,7 +1218,7 @@ The curves use the same colors as in the manuscript.
 &\hspace{1.3em}
 (\boldsymbol\mu,t)
 \ \xrightarrow{\ \mathrm{POD\text{-}NN}\ }\
-\widetilde{\mathbf q}_{\mathrm{tot}}
+\widehat{\mathbf q}_{\mathrm{tot}}
 \ \longrightarrow\
 \widetilde{\mathbf u}
 \\[0.9em]
@@ -1217,13 +1227,13 @@ The curves use the same colors as in the manuscript.
 \ \xrightarrow{\ \mathrm{POD\text{-}DL}\ }\
 \mathbf z
 \ \xrightarrow{\ \mathcal D_{\mathrm{AE}}\ }\
-\widetilde{\mathbf q}_{\mathrm{tot}}
+\widehat{\mathbf q}_{\mathrm{tot}}
 \ \longrightarrow\
 \widetilde{\mathbf u}
 \\[1.2em]
 &\text{\bfseries Comparison message}\\[0.6em]
 &\hspace{1.0em}
-\text{\itshape On the off-grid trajectory, PROM--POD--AE stays closer}
+\text{\itshape On the off-grid trajectory, HPROM--POD--AE stays closer}
 \\[0.2em]
 &\hspace{1.7em}
 \text{\itshape to the HDM than the non-intrusive baselines.}
@@ -1232,20 +1242,22 @@ The curves use the same colors as in the manuscript.
 
 Visual suggestion: use
 `animations/outputs/slide63_intrusive_vs_nonintrusive_mu2.gif`. It compares
-HDM, PROM--POD--AE, POD--NN--ROM, and POD--DL--ROM at the off-grid point
+HDM, HPROM--POD--AE, POD--NN--ROM, and POD--DL--ROM at the off-grid point
 \(\boldsymbol\mu^{(2)}=(5.19,0.026)\). Each horizontal row compares one model
 against the HDM; the row annotations report the displayed trajectory error and
 the campaign speedup reported in the manuscript.
 
-### Slide 64 -- 2D Burgers: Baseline accuracy--cost summary
+### Slide 64 -- 2D Burgers: Baseline in-domain accuracy--cost summary
 
 ```latex
 \begin{aligned}
-&\text{\bfseries Baseline accuracy--cost summary}\\[0.6em]
+&\text{\bfseries Baseline in-domain accuracy--cost summary}\\[0.6em]
 &\hspace{0.2em}
 \renewcommand{\arraystretch}{1.18}
-\begin{array}{l|r|r|r|r|r|r}
+\begin{array}{l|c|r|r|r|r|r|r}
 \text{\bfseries Computational model}
+&
+\widetilde{\mathbf u}
 &
 \text{\bfseries }n\ \text{\bfseries (}N\text{\bfseries\ for HDM)}
 &
@@ -1261,6 +1273,8 @@ N_e
 \\ \hline
 \text{HDM}
 &
+\mathbf u_{\mathrm{HDM}}
+&
 125\,000
 &
 \text{--}
@@ -1275,6 +1289,8 @@ N_e
 \\
 \text{Linear HPROM}
 &
+\mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathbf q_{\mathrm{tot}}
+&
 151
 &
 \text{--}
@@ -1287,7 +1303,9 @@ N_e
 &
 8.5
 \\
-\text{PROM--ANN Case 1}
+\text{HPROM--ANN Case 1}
+&
+\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal N(\mathbf q)
 &
 10
 &
@@ -1301,7 +1319,9 @@ N_e
 &
 38.9
 \\
-\text{PROM--ANN Case 2}
+\text{HPROM--ANN Case 2}
+&
+\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal M(\boldsymbol\mu,t)
 &
 10
 &
@@ -1315,7 +1335,9 @@ N_e
 &
 142.4
 \\
-\text{PROM--ANN Case 3}
+\text{HPROM--ANN Case 3}
+&
+\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal H(\mathbf q,\boldsymbol\mu,t)
 &
 10
 &
@@ -1329,7 +1351,9 @@ N_e
 &
 42.6
 \\
-\text{PROM--POD--AE}
+\text{HPROM--POD--AE}
+&
+\mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\mathbf z)
 &
 10
 &
@@ -1346,6 +1370,8 @@ N_e
 \hline
 \text{POD--NN--ROM}
 &
+\mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal G_q(\boldsymbol\mu,t)
+&
 151
 &
 \text{--}
@@ -1359,6 +1385,8 @@ N_e
 1.87\times10^4
 \\
 \text{POD--DL--ROM}
+&
+\mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\mathcal G_z(\boldsymbol\mu,t))
 &
 10
 &
@@ -1377,6 +1405,9 @@ N_e
 \text{\itshape Mean error over }\boldsymbol\mu^{(v)},\ \boldsymbol\mu^{(1)},\ \text{\itshape and }\boldsymbol\mu^{(2)}.
 \\[0.2em]
 &\hspace{0.8em}
+\text{\itshape The extrapolatory point }\boldsymbol\mu^{(3)}
+\text{\itshape\ is reported separately.}
+\\[0.2em]
 \text{\itshape Speedup uses }t_{\mathrm{HDM}}=737.44\text{\itshape\ s.}
 \\[0.2em]
 &\hspace{0.8em}
@@ -1390,37 +1421,117 @@ galleries. The layout follows the template in `Results/main.tex`, but the
 values come from the manuscript tables
 `tables/mlspg_hprom_current_errors.tex` and
 `tables/mlspg_hprom_current_hyperreduction.tex`, with the error column taken
-as the arithmetic mean over the verification point and the two off-grid
-points. Do not add another solution animation here.
+as the arithmetic mean over the original three in-domain evaluation points.
+Do not add another solution animation here.
 
-### Slide 65 -- 2D Burgers: Linear-HPROM coefficient enrichment
+### Slide 65 -- 2D Burgers: Baseline extrapolation stress test
+
+```latex
+\begin{aligned}
+&\text{\bfseries Extrapolatory evaluation point}\\[0.6em]
+&\hspace{2.3em}
+\boldsymbol\mu^{(3)}
+=
+(4.00,0.0330),
+\qquad
+\boldsymbol\mu^{(3)}\notin\mathcal D
+\\[1.1em]
+&\text{\bfseries Baseline models only}\\[0.6em]
+&\hspace{1.0em}
+\text{\itshape No retraining, no additional coefficient trajectories,}
+\\[0.2em]
+&\hspace{2.0em}
+\text{\itshape and no new nonlinear ECM rules are introduced here.}
+\\[1.1em]
+&\text{\bfseries Purpose of the test}\\[0.6em]
+&\hspace{1.0em}
+\text{\itshape Separate in-domain interpolation performance from}
+\\[0.2em]
+&\hspace{2.1em}
+\text{\itshape outside-domain predictive robustness.}
+\\[1.1em]
+&\text{\bfseries Practical observation}\\[0.6em]
+&\hspace{1.0em}
+\text{\itshape The largest baseline failures occur in the models that}
+\\[0.2em]
+&\hspace{1.8em}
+\text{\itshape rely most directly on parameter--time regression.}
+\end{aligned}
+```
+
+Visual suggestion: use
+`animations/outputs/slide65_mu3_baseline_horizontal_six_models.gif`. This is the
+same six-panel horizontal-cut layout as the enriched comparison, but every ROM
+or surrogate is the baseline-trained one.
+
+### Slide 66 -- 2D Burgers: Why enrich the coefficient data?
+
+```latex
+\begin{aligned}
+&\text{\bfseries Baseline error increase at }\boldsymbol\mu^{(3)}\\[0.6em]
+&\hspace{0.7em}
+\renewcommand{\arraystretch}{1.25}
+\begin{array}{l|c|c|c}
+\text{\bfseries Model}
+&
+\widetilde{\mathbf u}
+&
+\text{\bfseries Base mean (3 pts.)}
+&
+\text{\bfseries Base }\mu^{(3)}
+\\[0.2em]\hline
+\text{Linear HPROM} & \mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathbf q_{\mathrm{tot}} & 0.45 & 0.87 \\
+\text{HPROM--ANN Case 1} & \mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal N(\mathbf q) & 0.77 & 1.82 \\
+\text{HPROM--ANN Case 2} & \mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal M(\boldsymbol\mu,t) & 1.23 & 4.18 \\
+\text{HPROM--ANN Case 3} & \mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal H(\mathbf q,\boldsymbol\mu,t) & 0.61 & 1.75 \\
+\text{HPROM--POD--AE} & \mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\mathbf z) & 0.59 & 2.18 \\
+\hline
+\text{POD--NN--ROM} & \mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal G_q(\boldsymbol\mu,t) & 1.60 & 9.19 \\
+\text{POD--DL--ROM} & \mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\mathcal G_z(\boldsymbol\mu,t)) & 1.16 & 4.98
+\end{array}
+\\[1.1em]
+&\text{\bfseries Consequence}\\[0.6em]
+&\hspace{1.0em}
+\text{\itshape The in-domain mean should not absorb }\boldsymbol\mu^{(3)};
+\\[0.2em]
+&\hspace{1.6em}
+\text{\itshape it is a separate extrapolation stress test.}
+\end{aligned}
+```
+
+Visual suggestion: use this compact table to motivate the enrichment stage.
+The table is baseline-only: no enriched model has appeared yet on this slide.
+
+### Slide 67 -- 2D Burgers: Expanded linear-HPROM coefficient enrichment
 
 ```latex
 \begin{aligned}
 &\text{\bfseries Additional parameter trajectories}\\[0.6em]
-&\hspace{2.0em}
-20\text{ Latin-hypercube points in }\mathcal D
+&\hspace{1.1em}
+18\text{ LHS points in }\mathcal D
+\quad+\quad
+18\text{ LHS points in a }25\%\text{ margin}
 \\[1.1em]
 &\text{\bfseries No additional HDM simulations}\\[0.6em]
 &\hspace{1.2em}
 \text{fixed linear HPROM}
-\ \longrightarrow\
-\mathbf q_{\mathrm{tot}}^{\mathrm{ref}}(\boldsymbol\mu,t)
+\ \longrightarrow
+\mathbf q_{\mathrm{tot}}^{\mathrm{HPROM}}(\boldsymbol\mu,t)
 \\[1.1em]
 &\text{\bfseries Enriched coefficient dataset}\\[0.6em]
 &\hspace{2.0em}
 N_{\mathrm{traj}}
 =
-9+20
+9+36
 =
-29
+45
 \\[0.4em]
 &\hspace{2.0em}
 N_{\mathrm{samp}}
 =
-29\times501
+45\times501
 =
-14{,}529
+22{,}545
 \\[1.1em]
 &\text{\bfseries What remains fixed}\\[0.6em]
 &\hspace{1.0em}
@@ -1432,114 +1543,152 @@ N_{\mathrm{samp}}
 ```
 
 Visual suggestion: use
-`animations/outputs/parameter_training_evaluation_lhs.png`. The blue diamonds
-are coefficient-data trajectories generated by the linear HPROM, not new HDM
-training points. The optional
-`animations/outputs/parameter_domain_sequence.gif` provides a progressive
-three-stage reveal if desired.
+`Figures/mlspg_hprom_enrichment_ext25_lhs36/parameter_domain_extended_enrichment_points.png`.
+The blue and green points are coefficient-data trajectories generated by the
+fixed linear HPROM, not new HDM training simulations. The green points lie in
+the expanded margin and are included to test extrapolatory robustness.
 
-### Slide 66 -- 2D Burgers: Effect of coefficient enrichment
+### Slide 68 -- 2D Burgers: Before/after enrichment at the extrapolation point
 
 ```latex
 \begin{aligned}
-&\text{\bfseries Comparison shown at the two off-grid points}\\[0.6em]
-&\hspace{2.2em}
-\boldsymbol\mu^{(1)}
-\qquad
-\text{and}
-\qquad
-\boldsymbol\mu^{(2)}
-\\[1.2em]
-&\text{\bfseries Curves in the animation}\\[0.6em]
-&\hspace{1.2em}
-\text{HDM}
-\qquad
-\text{baseline training}
-\qquad
-\text{enriched training}
-\\[1.2em]
-&\text{\bfseries Models emphasized}\\[0.6em]
+&\text{\bfseries Same stress-test point}\\[0.6em]
+&\hspace{2.6em}
+\boldsymbol\mu^{(3)}=(4.00,0.0330)
+\\[1.1em]
+&\text{\bfseries Four models with the clearest enrichment gains}\\[0.6em]
 &\hspace{1.0em}
 \left\{
-\text{Case 2},
+\text{HPROM--POD--AE},
 \quad
-\text{PROM--POD--AE},
+\text{HPROM--ANN Case 2},
 \quad
 \text{POD--NN},
 \quad
 \text{POD--DL}
 \right\}
-\\[1.2em]
-&\text{\bfseries Main observation}\\[0.6em]
+\\[1.1em]
+&\text{\bfseries Before/after comparison}\\[0.6em]
 &\hspace{1.0em}
-\text{\itshape The largest gains occur for Case 2, POD--NN, and POD--DL;}
+\text{\itshape Each row shows the same model before and after the}
 \\[0.2em]
 &\hspace{1.6em}
-\text{\itshape PROM--POD--AE improves more modestly.}
+\text{\itshape expanded HPROM coefficient-data enrichment.}
 \end{aligned}
 ```
 
 Visual suggestion: use
-`animations/outputs/enrichment_before_after.gif`. The dashed curve is the
-baseline model and the solid curve is the retrained enriched model. The active
-model name changes inside the animation.
+`animations/outputs/slide68_mu3_before_after_best4.gif`.  This is a four-row
+before/after GIF at \(\boldsymbol\mu^{(3)}\).  Rows are HPROM--POD--AE,
+HPROM--ANN Case~2, POD--NN--ROM, and POD--DL--ROM.  The middle column is the
+baseline-trained model; the right column is the expanded-enriched model.  The
+green number in the left label column is the reduction in trajectory error.
 
-### Slide 67 -- 2D Burgers: Off-grid enrichment summary
+### Slide 69 -- 2D Burgers: What changed after enrichment?
 
 ```latex
 \begin{aligned}
-&\text{\bfseries Mean trajectory error over the two off-grid points}\\[0.6em]
-&\hspace{1.4em}
-\renewcommand{\arraystretch}{1.65}
-\begin{array}{c|c|c}
+&\text{\bfseries Extrapolation error at }\boldsymbol\mu^{(3)}
+\text{\bfseries\ before/after enrichment}\\[0.6em]
+&\hspace{0.4em}
+\renewcommand{\arraystretch}{1.28}
+\begin{array}{l|c|c|c|c}
 \text{\bfseries Model}
 &
-\text{\bfseries Baseline}
+\widetilde{\mathbf u}
 &
-\text{\bfseries Enriched}
+\text{\bfseries Before}
+&
+\text{\bfseries After}
+&
+\text{\bfseries Reduction}
 \\[0.2em]\hline
-\text{Linear HPROM}
-&
-0.47\%
-&
-0.47\%
-\\
-\text{PROM--ANN Case 2}
-&
-1.52\%
-&
-0.94\%
-\\
-\text{PROM--POD--AE}
-&
-0.66\%
-&
-0.54\%
-\\
-\text{POD--NN--ROM}
-&
-2.16\%
-&
-0.49\%
-\\
-\text{POD--DL--ROM}
-&
-1.52\%
-&
-0.47\%
+\text{Linear HPROM} & \mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathbf q_{\mathrm{tot}} & 0.87\% & 0.87\% & \text{fixed} \\
+\hline
+\text{HPROM--ANN Case 1} & \mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal N(\mathbf q) & 1.82\% & 0.99\% & \downarrow\,46\% \\
+\text{HPROM--ANN Case 2} & \mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal M(\boldsymbol\mu,t) & 4.18\% & 1.49\% & \downarrow\,64\% \\
+\text{HPROM--ANN Case 3} & \mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal H(\mathbf q,\boldsymbol\mu,t) & 1.75\% & 0.99\% & \downarrow\,43\% \\
+\text{HPROM--POD--AE} & \mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\mathbf z) & 2.18\% & 0.88\% & \downarrow\,60\% \\
+\hline
+\text{POD--NN--ROM} & \mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal G_q(\boldsymbol\mu,t) & 9.19\% & 0.90\% & \downarrow\,90\% \\
+\text{POD--DL--ROM} & \mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\mathcal G_z(\boldsymbol\mu,t)) & 4.98\% & 0.87\% & \downarrow\,83\%
 \end{array}
-\\[1.2em]
-&\text{\bfseries Interpretation}\\[0.6em]
+\\[1.0em]
+&\text{\bfseries Main message}\\[0.6em]
 &\hspace{1.0em}
-\text{\itshape Linear-HPROM trajectories provide inexpensive coverage}
+\text{\itshape Linear HPROM is unchanged; every learned model improves}
 \\[0.2em]
 &\hspace{1.5em}
-\text{\itshape of the parameter domain and improve off-grid prediction.}
+\text{\itshape at the extrapolatory point }\boldsymbol\mu^{(3)}.
 \end{aligned}
 ```
 
-Visual suggestion: use only this compact table. The detailed per-point error
-and runtime tables remain in the manuscript or appendix.
+Visual suggestion: keep this as a clean all-model table.  The horizontal lines
+separate the fixed linear reference, intrusive PROM-family models, and
+non-intrusive ROM surrogates.  Avoid adding the in-domain means here; the goal
+is to show the extrapolation improvement without making the audience parse the
+full manuscript table.  Speedup is better discussed separately in the main
+accuracy--cost summary slide.
+
+### Slide 70 -- Conclusions and next steps
+
+```latex
+\begin{aligned}
+&\text{\bfseries What this benchmark shows}\\[0.6em]
+&\hspace{0.8em}
+\text{\itshape A fixed, accurate linear HPROM can act as a low-cost}
+\\[-0.1em]
+&\hspace{1.4em}
+\text{\itshape teacher for learned nonlinear reduced models.}
+\\[0.6em]
+&\hspace{0.8em}
+\text{\itshape Enriching only the coefficient data improves }\boldsymbol\mu^{(3)}
+\\[-0.1em]
+&\hspace{1.4em}
+\text{\itshape without new HDM snapshots or new linear ECM rules.}
+\\[1.0em]
+&\text{\bfseries Model-level lessons}\\[0.6em]
+&\hspace{0.8em}
+\text{Case 1: }\overline{\mathbf q}=\mathcal N(\mathbf q)
+\text{ is state-only; accurate, but feedback-sensitive.}
+\\[0.3em]
+&\hspace{0.8em}
+\text{Case 2: }\overline{\mathbf q}=\mathcal M(\boldsymbol\mu,t)
+\text{ is fastest, but behaves like injected regression.}
+\\[0.3em]
+&\hspace{0.8em}
+\text{Case 3: }\overline{\mathbf q}=\mathcal H(\mathbf q,\boldsymbol\mu,t)
+\text{ is the best closure compromise here.}
+\\[0.3em]
+&\hspace{0.8em}
+\text{HPROM--POD--AE: }\mathbf q_{\mathrm{tot}}\approx\mathcal D(\mathbf z)
+\text{ gives a robust latent intrusive manifold.}
+\\[1.0em]
+&\text{\bfseries What remains open}\\[0.6em]
+&\hspace{0.8em}
+\text{\itshape This Burgers test is useful, but not decisive enough:}
+\\[-0.1em]
+&\hspace{1.4em}
+\text{\itshape non-intrusive surrogates also perform well here.}
+\\[0.5em]
+&\hspace{0.8em}
+\text{\itshape Next directions: harder benchmarks, better regression coordinates,}
+\\[-0.1em]
+&\hspace{1.4em}
+\text{\itshape and local nonlinear-manifold PROMs with multiple charts.}
+\end{aligned}
+```
+
+Visual suggestion: use
+`harmonic_manifold_closure_animations/outputs/local_prom_ann_two_bases.gif` on the right.
+It is a conceptual future-work sketch: two local PROM--ANN charts, each with
+its own local basis and learned closure, are switched along one trajectory.
+Do not overclaim that intrusive models dominate here.  The honest conclusion is
+that the strongest methodological result is the multilevel workflow: an
+accurate linear HPROM supplies many low-cost coefficient trajectories, which
+then stabilize nonlinear PROMs and non-intrusive ROMs away from the original
+training grid.  The harder scientific question is how to choose the right
+coordinates and local nonlinear manifolds for more challenging benchmarks.
 
 ---
 
@@ -1646,19 +1795,22 @@ retained/discarded coordinate split.
 14. `2D Burgers: How the solution is compared`
 15. `2D Burgers: Baseline training and evaluation`
 16. `2D Burgers: LSPG-sensitive basis`
-17. `2D Burgers: ROM-consistent training pipeline`
+17. `2D Burgers: PROM-consistent training pipeline`
 18. `2D Burgers: Model configuration summary`
 19. `2D Burgers: ECM hyper-reduction`
 20. `2D Burgers: Intrusive qualitative comparison`
 21. `2D Burgers: Intrusive nonlinear HPROMs`
 22. `2D Burgers: Non-intrusive baselines`
-23. `2D Burgers: Baseline accuracy--cost summary`
-24. `2D Burgers: Linear-HPROM coefficient enrichment`
-25. `2D Burgers: Effect of coefficient enrichment`
-26. `2D Burgers: Off-grid enrichment summary`
+23. `2D Burgers: Baseline in-domain accuracy--cost summary`
+24. `2D Burgers: Baseline extrapolation stress test`
+25. `2D Burgers: Why enrich the coefficient data?`
+26. `2D Burgers: Expanded linear-HPROM coefficient enrichment`
+27. `2D Burgers: Before/after enrichment at the extrapolation point`
+28. `2D Burgers: What changed after enrichment?`
+29. `Conclusions and next steps`
 
 Appendix/detail slide: `Appendix A: LSPG low--high transfer diagnostic`.
 
 This order avoids six repetitive HDM-versus-model slides. The GIF galleries
-show one active model at a time, while the two tables summarize the global
-accuracy/runtime conclusions.
+show one active model at a time, while the compact tables separate in-domain
+accuracy, extrapolation behavior, and enrichment effects.

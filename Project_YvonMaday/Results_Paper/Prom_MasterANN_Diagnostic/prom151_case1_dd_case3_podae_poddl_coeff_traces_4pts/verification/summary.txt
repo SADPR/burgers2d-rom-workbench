@@ -1,0 +1,21 @@
+label: verification
+case1_global_rel_q_percent: 0.223378804871
+case1_primary_rel_q_percent: 0
+case1_secondary_rel_q_percent: 1.05314456364
+dd_case2_global_rel_q_percent: 2.49892117815
+dd_case2_primary_rel_q_percent: 0.624113790521
+dd_case2_secondary_rel_q_percent: 11.4251450601
+case3_global_rel_q_percent: 0.0834359260966
+case3_primary_rel_q_percent: 0
+case3_secondary_rel_q_percent: 0.393368081772
+pod_ae_global_rel_q_percent: 0.106079291782
+pod_ae_primary_rel_q_percent: 0.0291972968907
+pod_ae_secondary_rel_q_percent: 0.481691467896
+pod_dl_global_rel_q_percent: 0.814332384544
+pod_dl_primary_rel_q_percent: 0.0879027081276
+pod_dl_secondary_rel_q_percent: 3.81784081848
+reference: linear PROM qN.npy
+case1_case3_inputs: q_1..q_10 from linear PROM
+dd_case2_input: mu1, mu2, t only
+pod_ae_input: linear PROM q_1..q_151 through autoencoder
+pod_dl_input: mu1, mu2, t only

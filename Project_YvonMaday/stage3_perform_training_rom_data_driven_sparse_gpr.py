@@ -54,9 +54,9 @@ except ModuleNotFoundError:
         resolve_device,
     )
 try:
-    from project_layout import STAGE3_DIR, ensure_layout_dirs, stage3_model_path, write_kv_txt
+    from project_layout import STAGE3_DIR, ensure_layout_dirs, write_kv_txt
 except ModuleNotFoundError:
-    from .project_layout import STAGE3_DIR, ensure_layout_dirs, stage3_model_path, write_kv_txt
+    from .project_layout import STAGE3_DIR, ensure_layout_dirs, write_kv_txt
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -82,6 +82,22 @@ def main(argv=None):
         type=str,
         default=None,
         help="Optional explicit dataset directory containing per_mu/ and meta.npy.",
+    )
+    parser.add_argument(
+        "--validation-dataset-dir",
+        type=str,
+        default=None,
+        help=(
+            "Optional external validation dataset directory. If provided, the "
+            "training dataset is used only for fitting and this dataset is used "
+            "only for validation."
+        ),
+    )
+    parser.add_argument(
+        "--stage3-dir",
+        type=str,
+        default=None,
+        help="Optional Stage3 output directory. Default: project_layout.STAGE3_DIR.",
     )
     parser.add_argument("--model-name", type=str, default="rom_data_driven_sparse_gpr_model.pt")
     parser.add_argument("--summary-name", type=str, default="rom_data_driven_sparse_gpr_training_summary.txt")
@@ -114,6 +130,18 @@ def main(argv=None):
     parser.add_argument("--lr", type=float, default=0.05)
     parser.add_argument("--weight-decay", type=float, default=0.0)
     parser.add_argument("--min-noise", type=float, default=1e-6)
+    parser.add_argument(
+        "--max-noise",
+        type=float,
+        default=None,
+        help="Optional upper bound for the learned Gaussian noise variance.",
+    )
+    parser.add_argument(
+        "--elbo-beta",
+        type=float,
+        default=1.0,
+        help="Weight applied to the KL term in the sparse-GP variational objective.",
+    )
     parser.add_argument("--fixed-inducing", action="store_true")
     parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument("--log-every", type=int, default=10)
@@ -122,7 +150,9 @@ def main(argv=None):
     seed = int(args.seed)
     rng = np.random.default_rng(seed)
 
-    if not (0.0 < float(args.val_frac) < 0.5):
+    external_validation = args.validation_dataset_dir is not None
+
+    if (not external_validation) and not (0.0 < float(args.val_frac) < 0.5):
         raise ValueError("--val-frac must be in (0, 0.5).")
     if int(args.max_train_samples) < 2:
         raise ValueError("--max-train-samples must be >= 2.")
@@ -138,6 +168,10 @@ def main(argv=None):
         raise ValueError("--lr must be > 0.")
     if float(args.min_noise) <= 0.0:
         raise ValueError("--min-noise must be > 0.")
+    if args.max_noise is not None and float(args.max_noise) <= float(args.min_noise):
+        raise ValueError("--max-noise must be larger than --min-noise.")
+    if float(args.elbo_beta) <= 0.0:
+        raise ValueError("--elbo-beta must be > 0.")
 
     dataset_backend = str(args.dataset_backend).strip().lower()
     dataset_root, dataset_ntot, dataset_dir, dataset_meta, _ = resolve_stage3_dataset(
@@ -147,15 +181,23 @@ def main(argv=None):
         requested_dataset_dir=args.dataset_dir,
     )
 
+    stage3_dir = (
+        os.path.abspath(os.path.expanduser(str(args.stage3_dir)))
+        if args.stage3_dir is not None
+        else STAGE3_DIR
+    )
+    stage3_models_dir = os.path.join(stage3_dir, "models")
+    os.makedirs(stage3_models_dir, exist_ok=True)
+
     model_name = str(args.model_name).strip()
     if not model_name:
         raise ValueError("--model-name cannot be empty.")
     if not model_name.endswith(".pt"):
         model_name = f"{model_name}.pt"
-    model_path = stage3_model_path(model_name)
+    model_path = os.path.join(stage3_models_dir, model_name)
 
     summary_name = str(args.summary_name).strip() or "rom_data_driven_sparse_gpr_training_summary.txt"
-    summary_path = os.path.join(STAGE3_DIR, summary_name)
+    summary_path = os.path.join(stage3_dir, summary_name)
 
     print(f"[ROM-DataDriven-SparseGPR] dataset_dir = {dataset_dir}")
     print(f"[ROM-DataDriven-SparseGPR] dataset_root = {dataset_root} (ntot={dataset_ntot})")
@@ -173,28 +215,86 @@ def main(argv=None):
         raise RuntimeError(f"Output dim mismatch: out_dim={out_dim}, dataset_ntot={dataset_ntot}.")
     print(f"[ROM-DataDriven-SparseGPR] Loaded: M={n_samples}, in_dim={in_dim}, out_dim={out_dim}")
 
-    tr_idx, va_idx, split_info = split_indices_ecsw_param_time(
-        x_raw,
-        val_frac=float(args.val_frac),
-        seed=seed,
-        snap_time_offset=int(args.val_snap_time_offset),
-        ensure_mu_coverage=True,
-    )
-    print(
-        "[ROM-DataDriven-SparseGPR] split = ecsw_param_time_stratified "
-        f"(mu_groups={split_info['num_mu_groups']}, "
-        f"time_per_mu={split_info['num_time_per_mu']}, "
-        f"val_requested={split_info['val_frac_requested']:.4f}, "
-        f"val_actual={split_info['val_frac_actual']:.4f})"
-    )
+    validation_dataset_root = None
+    validation_dataset_dir = None
+    validation_dataset_meta = None
 
-    tr_idx_fit = _subsample(tr_idx, int(args.max_train_samples), rng)
-    va_idx_eval = _subsample(va_idx, int(args.max_val_samples), rng)
+    if external_validation:
+        validation_dataset_root, validation_dataset_ntot, validation_dataset_dir, validation_dataset_meta, _ = resolve_stage3_dataset(
+            this_dir=THIS_DIR,
+            requested_ntot=args.dataset_ntot,
+            expected_backend=dataset_backend,
+            requested_dataset_dir=args.validation_dataset_dir,
+        )
+        if int(validation_dataset_ntot) != int(dataset_ntot):
+            raise RuntimeError(
+                "External validation ntot mismatch: "
+                f"train={dataset_ntot}, val={validation_dataset_ntot}."
+            )
+        x_val_raw_all, y_val_raw_all = load_prom_dataset_rom_data_driven(validation_dataset_root)
+        x_val_raw_all = np.asarray(x_val_raw_all, dtype=np.float64)
+        y_val_raw_all = np.asarray(y_val_raw_all, dtype=np.float64)
+        if x_val_raw_all.ndim != 2 or x_val_raw_all.shape[1] != in_dim:
+            raise RuntimeError(
+                f"External validation input shape mismatch: {x_val_raw_all.shape}; expected (*,{in_dim})."
+            )
+        if y_val_raw_all.ndim != 2 or y_val_raw_all.shape[1] != out_dim:
+            raise RuntimeError(
+                f"External validation output shape mismatch: {y_val_raw_all.shape}; expected (*,{out_dim})."
+            )
 
-    x_tr_raw = x_raw[tr_idx_fit]
-    y_tr_raw = y_raw[tr_idx_fit]
-    x_va_raw = x_raw[va_idx_eval]
-    y_va_raw = y_raw[va_idx_eval]
+        tr_idx = np.arange(n_samples, dtype=np.int64)
+        va_idx = np.arange(x_val_raw_all.shape[0], dtype=np.int64)
+        tr_idx_fit = _subsample(tr_idx, int(args.max_train_samples), rng)
+        va_idx_eval = _subsample(va_idx, int(args.max_val_samples), rng)
+
+        x_tr_raw = x_raw[tr_idx_fit]
+        y_tr_raw = y_raw[tr_idx_fit]
+        x_va_raw = x_val_raw_all[va_idx_eval]
+        y_va_raw = y_val_raw_all[va_idx_eval]
+
+        train_mu_groups = np.unique(np.round(x_raw[:, :2], decimals=12), axis=0)
+        val_mu_groups = np.unique(np.round(x_val_raw_all[:, :2], decimals=12), axis=0)
+        split_info = {
+            "split_mode": "external_dataset",
+            "snap_time_offset": -1,
+            "num_mu_groups": int(train_mu_groups.shape[0]),
+            "num_val_mu_groups": int(val_mu_groups.shape[0]),
+            "num_time_per_mu": int(n_samples // max(train_mu_groups.shape[0], 1)),
+            "num_candidates_total": int(x_val_raw_all.shape[0]),
+            "num_selected_total": int(va_idx_eval.size),
+            "val_frac_requested": float("nan"),
+            "val_frac_actual": float(x_va_raw.shape[0] / max(x_va_raw.shape[0] + x_tr_raw.shape[0], 1)),
+        }
+        print(
+            "[ROM-DataDriven-SparseGPR] split = external_dataset "
+            f"(train_mu_groups={split_info['num_mu_groups']}, "
+            f"val_mu_groups={split_info['num_val_mu_groups']}, "
+            f"val_used={x_va_raw.shape[0]})"
+        )
+    else:
+        tr_idx, va_idx, split_info = split_indices_ecsw_param_time(
+            x_raw,
+            val_frac=float(args.val_frac),
+            seed=seed,
+            snap_time_offset=int(args.val_snap_time_offset),
+            ensure_mu_coverage=True,
+        )
+        print(
+            "[ROM-DataDriven-SparseGPR] split = ecsw_param_time_stratified "
+            f"(mu_groups={split_info['num_mu_groups']}, "
+            f"time_per_mu={split_info['num_time_per_mu']}, "
+            f"val_requested={split_info['val_frac_requested']:.4f}, "
+            f"val_actual={split_info['val_frac_actual']:.4f})"
+        )
+
+        tr_idx_fit = _subsample(tr_idx, int(args.max_train_samples), rng)
+        va_idx_eval = _subsample(va_idx, int(args.max_val_samples), rng)
+
+        x_tr_raw = x_raw[tr_idx_fit]
+        y_tr_raw = y_raw[tr_idx_fit]
+        x_va_raw = x_raw[va_idx_eval]
+        y_va_raw = y_raw[va_idx_eval]
 
     x_stats = fit_scaler_stats(x_tr_raw, args.x_scaling)
     y_stats = fit_scaler_stats(y_tr_raw, args.y_scaling)
@@ -258,6 +358,8 @@ def main(argv=None):
             lr=float(args.lr),
             weight_decay=float(args.weight_decay),
             min_noise=float(args.min_noise),
+            max_noise=None if args.max_noise is None else float(args.max_noise),
+            elbo_beta=float(args.elbo_beta),
             learn_inducing=(not bool(args.fixed_inducing)),
             device=dev,
             seed=int(seed + 997 * (j + 1)),
@@ -307,6 +409,9 @@ def main(argv=None):
         "mapping": "qN = G_sparse_gpr(mu1, mu2, t)",
         "dataset_root": dataset_root,
         "dataset_dir": dataset_dir,
+        "validation_dataset_root": validation_dataset_root,
+        "validation_dataset_dir": validation_dataset_dir,
+        "validation_dataset_backend": None if validation_dataset_meta is None else validation_dataset_meta.get("solve_backend"),
         "dataset_ntot": int(dataset_ntot),
         "dataset_backend": dataset_meta.get("solve_backend"),
         "in_dim": int(in_dim),
@@ -331,6 +436,8 @@ def main(argv=None):
         "lr": float(args.lr),
         "weight_decay": float(args.weight_decay),
         "min_noise": float(args.min_noise),
+        "max_noise": None if args.max_noise is None else float(args.max_noise),
+        "elbo_beta": float(args.elbo_beta),
         "fixed_inducing": bool(args.fixed_inducing),
         "device": str(dev),
         "val_frac": float(args.val_frac),
@@ -346,7 +453,7 @@ def main(argv=None):
         "n_samples_val_split": int(va_idx.size),
         "n_samples_val_eval": int(va_idx_eval.size),
         "n_unique_mu_groups": int(split_info["num_mu_groups"]),
-        "n_val_mu_groups": None,
+        "n_val_mu_groups": split_info.get("num_val_mu_groups", None),
         "n_time_per_mu": int(split_info["num_time_per_mu"]),
         "n_candidates_total": int(split_info["num_candidates_total"]),
         "n_selected_total": int(split_info["num_selected_total"]),
@@ -373,6 +480,8 @@ def main(argv=None):
             ("model_path", model_path),
             ("dataset_root", dataset_root),
             ("dataset_dir", dataset_dir),
+            ("validation_dataset_root", validation_dataset_root if validation_dataset_root is not None else "internal_split"),
+            ("validation_dataset_dir", validation_dataset_dir if validation_dataset_dir is not None else "internal_split"),
             ("dataset_ntot", int(dataset_ntot)),
             ("dataset_backend", dataset_meta.get("solve_backend")),
             ("samples_M", int(n_samples)),
@@ -385,6 +494,10 @@ def main(argv=None):
             ("batch_size", int(args.batch_size)),
             ("lr", float(args.lr)),
             ("min_noise", float(args.min_noise)),
+            ("max_noise", "none" if args.max_noise is None else float(args.max_noise)),
+            ("elbo_beta", float(args.elbo_beta)),
+            ("fixed_inducing", bool(args.fixed_inducing)),
+            ("val_split", str(split_info["split_mode"])),
             ("train_rel_frob_percent", float(tr_rel_raw)),
             ("val_rel_frob_percent", float(va_rel_raw)),
             ("train_mse", float(tr_mse_raw)),

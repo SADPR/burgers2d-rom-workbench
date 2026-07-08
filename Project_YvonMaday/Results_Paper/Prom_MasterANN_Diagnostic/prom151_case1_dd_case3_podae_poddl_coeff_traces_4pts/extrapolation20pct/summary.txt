@@ -1,0 +1,21 @@
+label: extrapolation20pct
+case1_global_rel_q_percent: 1.97495212492
+case1_primary_rel_q_percent: 0
+case1_secondary_rel_q_percent: 10.5375248515
+dd_case2_global_rel_q_percent: 7.4437673831
+dd_case2_primary_rel_q_percent: 6.55090935649
+dd_case2_secondary_rel_q_percent: 19.9658531752
+case3_global_rel_q_percent: 1.73573735571
+case3_primary_rel_q_percent: 0
+case3_secondary_rel_q_percent: 9.26117412697
+pod_ae_global_rel_q_percent: 9.30260525486
+pod_ae_primary_rel_q_percent: 9.18706839097
+pod_ae_secondary_rel_q_percent: 12.0506295328
+pod_dl_global_rel_q_percent: 8.63895662137
+pod_dl_primary_rel_q_percent: 8.48010820794
+pod_dl_secondary_rel_q_percent: 12.2199660462
+reference: linear PROM qN.npy
+case1_case3_inputs: q_1..q_10 from linear PROM
+dd_case2_input: mu1, mu2, t only
+pod_ae_input: linear PROM q_1..q_151 through autoencoder
+pod_dl_input: mu1, mu2, t only

@@ -1,8 +1,0 @@
-method,learned_map,architecture,normalization_activation,val_rel,trainable_parameters
-PROM-ANN Case 1,$\mathbf q\in\mathbb R^{10}\mapsto\bar{\mathbf q}\in\mathbb R^{141}$,"MLP hidden widths (256, 512, 512, 256)",z-score; SiLU,0.48802485689520836,564621
-PROM-ANN Case 2 ($n=10$),"$(\mu_1,\mu_2,t)\in\mathbb R^3\mapsto\bar{\mathbf q}\in\mathbb R^{141}$","MLP hidden widths (256, 512, 512, 256)",z-score; SiLU,0.9880887344479561,562829
-PROM-ANN Case 2 ($n=20$),"$(\mu_1,\mu_2,t)\in\mathbb R^3\mapsto\bar{\mathbf q}\in\mathbb R^{131}$","MLP hidden widths (256, 512, 512, 256)",z-score; SiLU,1.291669625788927,560259
-PROM-ANN Case 3,"$(\mathbf q,\mu_1,\mu_2,t)\in\mathbb R^{13}\mapsto\bar{\mathbf q}\in\mathbb R^{141}$","MLP hidden widths (256, 512, 512, 256)",z-score; SiLU,0.23041332606226206,565389
-PROM-POD-AE,$\mathbf q_N\in\mathbb R^{151}\mapsto\mathbf z\in\mathbb R^{10}\mapsto\widehat{\mathbf q}_N$,"Encoder (512, 256, 128); decoder reverse; $n_z=10$",z-score; GELU,0.0637038960121572,486817
-POD-NN-ROM,"$(\mu_1,\mu_2,t)\in\mathbb R^3\mapsto\mathbf q_N\in\mathbb R^{151}$","MLP hidden widths (256, 512, 512, 256)",z-score; SiLU,0.4736796515600708,565399
-POD-DL-ROM,"$(\mu_1,\mu_2,t)\in\mathbb R^3\mapsto\mathbf z\in\mathbb R^{10}\mapsto\widehat{\mathbf q}_N$","Encoder (512, 256); decoder (256, 512); dynamics (256, 512, 512, 256); $n_z=10$",z-score; SiLU,0.183274841401726,952747

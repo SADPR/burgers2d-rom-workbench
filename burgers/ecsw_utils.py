@@ -6,6 +6,40 @@ import os
 import numpy as np
 
 
+def direct_left_singular_vectors(A, relative_tolerance=1e-8):
+    """
+    Deterministic left singular vectors with the same relative truncation
+    convention used by the legacy randomized-SVD wrapper.
+    """
+    A = np.ascontiguousarray(A, dtype=np.float64)
+    if A.ndim != 2:
+        raise ValueError(f"Expected a 2D matrix, got shape {A.shape}.")
+    if A.size == 0:
+        return np.zeros((A.shape[0], 0), dtype=np.float64)
+
+    u, s, _ = np.linalg.svd(A, full_matrices=False)
+    if s.size == 0:
+        return np.zeros((A.shape[0], 0), dtype=np.float64)
+
+    rank_tol = max(A.shape) * np.finfo(float).eps * float(np.max(s)) / 2.0
+    numerical_rank = int(np.sum(s > rank_tol))
+    if numerical_rank <= 0:
+        return np.zeros((A.shape[0], 0), dtype=np.float64)
+
+    rel_tol = float(relative_tolerance)
+    if rel_tol <= 0.0 or not np.isfinite(rel_tol):
+        k = numerical_rank
+    else:
+        tail_norms = np.sqrt(np.cumsum(np.sort(s * s)))
+        threshold = rel_tol * float(tail_norms[-1])
+        n_discard = int(np.sum(tail_norms < threshold))
+        k = int(s.size - n_discard)
+        k = min(k, numerical_rank)
+        k = max(k, 1)
+
+    return np.ascontiguousarray(u[:, :k], dtype=np.float64)
+
+
 def generate_augmented_mesh(grid_x, grid_y, sample_inds):
     """
     Augment sampled cell indices with the immediate stencil neighbors
@@ -62,6 +96,20 @@ def _stratified_random_time_indices(candidates, n_pick, rng):
             j = int(rng.integers(i0, i1))
         picks[i] = candidates[j]
     return np.sort(np.unique(picks))
+
+
+def _stratified_deterministic_time_indices(candidates, n_pick):
+    """
+    Deterministically pick `n_pick` indices with approximately uniform time coverage.
+    """
+    candidates = np.asarray(candidates, dtype=int).reshape(-1)
+    if n_pick <= 0 or candidates.size == 0:
+        return np.zeros((0,), dtype=int)
+    if n_pick >= candidates.size:
+        return np.sort(candidates.copy())
+    pos = np.linspace(0, candidates.size - 1, int(n_pick))
+    idx = np.rint(pos).astype(int)
+    return np.sort(np.unique(candidates[idx]))
 
 
 def _normalize_points(points):
@@ -553,8 +601,33 @@ def build_ecsw_snapshot_plan(
         )
 
     if mode == "strided_per_mu":
-        selected = np.arange(snap_time_offset, num_steps, snap_sample_factor, dtype=int)
-        selected_by_mu = [selected.copy() for _ in range(num_mu)]
+        if total_snapshots_percent is None and total_snapshots is None:
+            selected = np.arange(snap_time_offset, num_steps, snap_sample_factor, dtype=int)
+            selected_by_mu = [selected.copy() for _ in range(num_mu)]
+        else:
+            n_select = _resolve_total_snapshot_count(
+                n_candidates_total=n_candidates_total,
+                total_snapshots=total_snapshots,
+                total_snapshots_percent=total_snapshots_percent,
+                snap_time_offset=snap_time_offset,
+                num_steps=num_steps,
+                snap_sample_factor=snap_sample_factor,
+                num_mu=num_mu,
+            )
+            counts = np.zeros((num_mu,), dtype=int)
+            remaining = int(n_select)
+            if bool(ensure_mu_coverage) and n_select >= num_mu:
+                counts += 1
+                remaining -= num_mu
+            imu = 0
+            while remaining > 0:
+                counts[imu % num_mu] += 1
+                remaining -= 1
+                imu += 1
+            selected_by_mu = [
+                _stratified_deterministic_time_indices(candidate_now_cols, int(counts[imu]))
+                for imu in range(num_mu)
+            ]
     else:
         n_select = _resolve_total_snapshot_count(
             n_candidates_total=n_candidates_total,

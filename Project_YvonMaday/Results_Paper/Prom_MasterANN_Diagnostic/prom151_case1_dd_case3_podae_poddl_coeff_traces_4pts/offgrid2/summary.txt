@@ -1,0 +1,21 @@
+label: offgrid2
+case1_global_rel_q_percent: 0.855108679453
+case1_primary_rel_q_percent: 0
+case1_secondary_rel_q_percent: 4.14882145579
+dd_case2_global_rel_q_percent: 4.2488920397
+dd_case2_primary_rel_q_percent: 2.35149624135
+dd_case2_secondary_rel_q_percent: 17.3301515133
+case3_global_rel_q_percent: 0.743922610488
+case3_primary_rel_q_percent: 0
+case3_secondary_rel_q_percent: 3.60936821482
+pod_ae_global_rel_q_percent: 3.87020091624
+pod_ae_primary_rel_q_percent: 3.66549879048
+pod_ae_secondary_rel_q_percent: 7.05323338191
+pod_dl_global_rel_q_percent: 3.22496766762
+pod_dl_primary_rel_q_percent: 2.27583477362
+pod_dl_secondary_rel_q_percent: 11.3173186927
+reference: linear PROM qN.npy
+case1_case3_inputs: q_1..q_10 from linear PROM
+dd_case2_input: mu1, mu2, t only
+pod_ae_input: linear PROM q_1..q_151 through autoencoder
+pod_dl_input: mu1, mu2, t only

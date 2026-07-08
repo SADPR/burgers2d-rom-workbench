@@ -100,6 +100,82 @@ def _build_ann_decoder_jacobian(basis, basis2, ann_eval):
     return jacfwdfunc
 
 
+def _initialize_ann_manifold_coords(
+    *,
+    target_state,
+    u_ref,
+    basis,
+    basis2,
+    ann_eval,
+    max_its=15,
+    rel_tol=1e-12,
+):
+    """
+    Compute a manifold-consistent initial coordinate for
+
+        u_ref + basis @ y + basis2 @ ann_eval(y) ~= target_state.
+
+    The initial guess is the least-squares projection on `basis`; Gauss-Newton
+    then accounts for the learned secondary-coordinate map.
+    """
+    target_np = np.asarray(target_state, dtype=np.float64).reshape(-1)
+    u_ref_np = np.asarray(u_ref, dtype=np.float64).reshape(-1)
+
+    if target_np.size != u_ref_np.size:
+        raise ValueError(
+            f"target/u_ref size mismatch: target={target_np.size}, u_ref={u_ref_np.size}"
+        )
+
+    basis_np = np.asarray(
+        basis.detach().cpu().numpy() if hasattr(basis, "detach") else basis,
+        dtype=np.float64,
+    )
+    basis2_np = np.asarray(
+        basis2.detach().cpu().numpy() if hasattr(basis2, "detach") else basis2,
+        dtype=np.float64,
+    )
+
+    y_np = _project_reduced_coords(basis_np, target_np - u_ref_np)
+
+    if torch.is_tensor(basis):
+        device = basis.device
+        dtype_t = basis.dtype
+        basis_t = basis
+    else:
+        device = torch.device("cpu")
+        dtype_t = torch.float32
+        basis_t = _to_torch_matrix(basis_np, dtype=dtype_t, device=device)
+
+    if torch.is_tensor(basis2):
+        basis2_t = basis2.to(device=device, dtype=dtype_t)
+    else:
+        basis2_t = _to_torch_matrix(basis2_np, dtype=dtype_t, device=device)
+
+    u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
+    target_t = _to_torch_vector(target_np, dtype=dtype_t, device=device)
+    denom = np.linalg.norm(target_np) + 1e-30
+    ann_jac = torch_jacfwd(ann_eval)
+
+    for _ in range(int(max_its)):
+        y_t = _to_torch_vector(y_np, dtype=dtype_t, device=device)
+        with torch.no_grad():
+            w_t = u_ref_t + basis_t @ y_t + basis2_t @ ann_eval(y_t)
+            r_t = w_t - target_t
+        r_np = r_t.detach().cpu().numpy().astype(np.float64, copy=False).reshape(-1)
+        if np.linalg.norm(r_np) / denom < rel_tol:
+            break
+
+        J_t = basis_t + basis2_t @ ann_jac(y_t)
+        J_np = J_t.detach().cpu().numpy().astype(np.float64, copy=False)
+        dy, *_ = np.linalg.lstsq(J_np, -r_np, rcond=None)
+        y_np = y_np + dy
+
+        if np.linalg.norm(dy) / (np.linalg.norm(y_np) + 1e-30) < rel_tol:
+            break
+
+    return _to_torch_vector(y_np, dtype=dtype_t, device=device)
+
+
 def _align_module_device(module, target_device):
     """
     Ensure `module` lives on `target_device`.
@@ -578,7 +654,13 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D(
         ann_device_after = device
 
     u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
-    y0 = basis.T @ _to_torch_vector(w0_np - u_ref_np, dtype=dtype_t, device=device)
+    y0 = _initialize_ann_manifold_coords(
+        target_state=w0_np,
+        u_ref=u_ref_np,
+        basis=basis,
+        basis2=basis2,
+        ann_eval=ann_model,
+    )
 
     with torch.no_grad():
         w0_t = u_ref_t + basis @ y0 + basis2 @ ann_model(y0)
@@ -738,7 +820,16 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_ecsw(
     Vbar = basis2[idx, :]
     tmu = _to_torch_vector(np.asarray(mu, dtype=np.float64), dtype=dtype_t, device=device)
 
-    y0 = basis.T @ _to_torch_vector(w0 - u_ref_np, dtype=dtype_t, device=device)
+    def _ann_eval_init(y):
+        return ann_model(torch.cat((y, tmu)))
+
+    y0 = _initialize_ann_manifold_coords(
+        target_state=w0,
+        u_ref=u_ref_np,
+        basis=basis,
+        basis2=basis2,
+        ann_eval=_ann_eval_init,
+    )
 
     with torch.no_grad():
         w0_loc = u_ref_loc_t + V @ y0 + Vbar @ ann_model(torch.cat((y0, tmu)))
@@ -890,7 +981,31 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
     ann_model = _align_module_device(ann_model, torch.device("cpu"))
 
     nred = V.shape[1]
-    y_default = _project_reduced_coords(V, w0 - u_ref_np).astype(np.float64, copy=False)
+    tgrid = dt * np.arange(num_steps + 1, dtype=np.float64)
+
+    if hasattr(ann_model, "parameters"):
+        try:
+            device = next(ann_model.parameters()).device
+        except StopIteration:
+            device = torch.device("cpu")
+    else:
+        device = torch.device("cpu")
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
+    def qbar_np(tval):
+        inp = torch.tensor([mu1, mu2, float(tval)], dtype=torch.float32, device=device).unsqueeze(0)
+        with torch.no_grad():
+            qbar = ann_model(inp).squeeze(0)
+        return qbar.detach().cpu().numpy()
+
+    def offset_np(tval):
+        return u_ref_np + Vbar @ qbar_np(tval)
+
+    y_default = _project_reduced_coords(
+        V,
+        w0 - u_ref_np - Vbar @ qbar_np(tgrid[0]),
+    ).astype(np.float64, copy=False)
     y = y_default
     if y_init_table is not None:
         y_init_table = np.asarray(y_init_table, dtype=np.float64)
@@ -921,25 +1036,6 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
 
     snaps = np.zeros((N, num_steps + 1), dtype=np.float64)
     red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
-
-    tgrid = dt * np.arange(num_steps + 1, dtype=np.float64)
-
-    if hasattr(ann_model, "parameters"):
-        try:
-            device = next(ann_model.parameters()).device
-        except StopIteration:
-            device = torch.device("cpu")
-    else:
-        device = torch.device("cpu")
-    mu1 = float(mu[0])
-    mu2 = float(mu[1])
-
-    def offset_np(tval):
-        inp = torch.tensor([mu1, mu2, float(tval)], dtype=torch.float32, device=device).unsqueeze(0)
-        with torch.no_grad():
-            qbar = ann_model(inp).squeeze(0)
-        qbar_np = qbar.detach().cpu().numpy()
-        return u_ref_np + Vbar @ qbar_np
 
     w = offset_np(tgrid[0]) + V @ y
 
@@ -1089,7 +1185,24 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
         device = torch.device("cpu")
 
     nred = V.shape[1]
-    y_default = _project_reduced_coords(V, w0 - u_ref_np).astype(np.float64, copy=False)
+    tgrid = dt * np.arange(num_steps + 1, dtype=np.float64)
+
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
+    def qbar_np(tval):
+        inp = torch.tensor([mu1, mu2, float(tval)], dtype=torch.float32, device=device).unsqueeze(0)
+        with torch.no_grad():
+            qbar = ann_model(inp).squeeze(0)
+        return qbar.detach().cpu().numpy()
+
+    def offset_np(tval):
+        return u_ref_np + Vbar @ qbar_np(tval)
+
+    y_default = _project_reduced_coords(
+        V,
+        w0 - u_ref_np - Vbar @ qbar_np(tgrid[0]),
+    ).astype(np.float64, copy=False)
     y = y_default
     if y_init_table is not None:
         y_init_table = np.asarray(y_init_table, dtype=np.float64)
@@ -1120,18 +1233,6 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
 
     snaps = np.zeros((n_full, num_steps + 1), dtype=np.float64)
     red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
-
-    tgrid = dt * np.arange(num_steps + 1, dtype=np.float64)
-
-    mu1 = float(mu[0])
-    mu2 = float(mu[1])
-
-    def offset_np(tval):
-        inp = torch.tensor([mu1, mu2, float(tval)], dtype=torch.float32, device=device).unsqueeze(0)
-        with torch.no_grad():
-            qbar = ann_model(inp).squeeze(0)
-        qbar_np = qbar.detach().cpu().numpy()
-        return u_ref_np + Vbar @ qbar_np
 
     w = offset_np(tgrid[0]) + V @ y
     wp = w.copy()
@@ -1265,7 +1366,6 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3(
         raise ValueError(f"mu must have length 2, got {mu_np.shape}")
 
     tmu = _to_torch_vector(mu_np, dtype=dtype_t, device=device)
-    y0 = basis.T @ _to_torch_vector(w0_np - u_ref_np, dtype=dtype_t, device=device)
 
     def _ann_eval(y_vec, t_scalar):
         x = torch.cat([y_vec.reshape(-1), tmu, t_scalar.reshape(1)], dim=0)
@@ -1273,6 +1373,17 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3(
         return out.reshape(-1)
 
     t0_scalar = torch.tensor(0.0, dtype=dtype_t, device=device)
+
+    def _ann_eval_t0(y_vec):
+        return _ann_eval(y_vec, t0_scalar)
+
+    y0 = _initialize_ann_manifold_coords(
+        target_state=w0_np,
+        u_ref=u_ref_np,
+        basis=basis,
+        basis2=basis2,
+        ann_eval=_ann_eval_t0,
+    )
 
     with torch.no_grad():
         w0_t = u_ref_t + basis @ y0 + basis2 @ _ann_eval(y0, t0_scalar)
@@ -1432,14 +1543,26 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_ecsw(
     u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
     u_ref_loc_t = u_ref_t[idx]
 
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
     V = basis[idx, :]
     Vbar = basis2[idx, :]
 
-    y0 = basis.T @ _to_torch_vector(w0 - u_ref_np, dtype=dtype_t, device=device)
-    nred = int(y0.numel())
+    def _qbar_np(t_value):
+        x = torch.tensor([mu1, mu2, float(t_value)], dtype=dtype_t, device=device)
+        with torch.no_grad():
+            qbar = ann_model(x).reshape(-1)
+        return qbar.detach().cpu().numpy()
 
-    mu1 = float(mu[0])
-    mu2 = float(mu[1])
+    y0_np = _project_reduced_coords(
+        basis.detach().cpu().numpy().astype(np.float64, copy=False),
+        w0
+        - u_ref_np
+        - basis2.detach().cpu().numpy().astype(np.float64, copy=False) @ _qbar_np(0.0),
+    )
+    y0 = _to_torch_vector(y0_np, dtype=dtype_t, device=device)
+    nred = int(y0.numel())
 
     def _offset_loc(t_value):
         x = torch.tensor([mu1, mu2, float(t_value)], dtype=dtype_t, device=device)
@@ -1606,20 +1729,27 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin_ecsw(
         device = torch.device("cpu")
 
     u_ref_loc = u_ref_np[idx]
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
     V_loc = V_global[idx, :]
     Vbar_loc = Vbar_global[idx, :]
     Vtot_loc = np.concatenate((V_loc, Vbar_loc), axis=1)
 
-    y0 = _project_reduced_coords(V_global, w0 - u_ref_np)
-    nred = int(y0.size)
-
-    mu1 = float(mu[0])
-    mu2 = float(mu[1])
-
-    def _offset_loc(t_value):
+    def _qbar_np(t_value):
         x = torch.tensor([mu1, mu2, float(t_value)], dtype=torch.float32, device=device)
         with torch.no_grad():
             qbar = ann_model(x).reshape(-1).detach().cpu().numpy()
+        return qbar
+
+    y0 = _project_reduced_coords(
+        V_global,
+        w0 - u_ref_np - Vbar_global @ _qbar_np(0.0),
+    )
+    nred = int(y0.size)
+
+    def _offset_loc(t_value):
+        qbar = _qbar_np(t_value)
         return u_ref_loc + Vbar_loc @ qbar
 
     wp = V_loc @ y0 + _offset_loc(0.0)
@@ -1790,17 +1920,14 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3_ecsw(
     u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
     u_ref_loc_t = u_ref_t[idx]
 
-    V = basis[idx, :]
-    Vbar = basis2[idx, :]
-
-    y0 = basis.T @ _to_torch_vector(w0 - u_ref_np, dtype=dtype_t, device=device)
-    nred = int(y0.numel())
-
     mu_np = np.asarray(mu, dtype=np.float64).reshape(-1)
     if mu_np.size != 2:
         raise ValueError(f"mu must have length 2, got {mu_np.shape}")
 
     tmu = _to_torch_vector(mu_np, dtype=dtype_t, device=device)
+
+    V = basis[idx, :]
+    Vbar = basis2[idx, :]
 
     t0_now = torch.tensor(0.0, dtype=dtype_t, device=device)
 
@@ -1808,6 +1935,18 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3_ecsw(
         x = torch.cat([y_vec.reshape(-1), tmu, t_scalar.reshape(1)], dim=0)
         out = ann_model(x)
         return out.reshape(-1)
+
+    def _ann_eval_t0(y_vec):
+        return _ann_eval(y_vec, t0_now)
+
+    y0 = _initialize_ann_manifold_coords(
+        target_state=w0,
+        u_ref=u_ref_np,
+        basis=basis,
+        basis2=basis2,
+        ann_eval=_ann_eval_t0,
+    )
+    nred = int(y0.numel())
 
     with torch.no_grad():
         wp = (u_ref_loc_t + V @ y0 + Vbar @ _ann_eval(y0, t0_now)).detach().clone()

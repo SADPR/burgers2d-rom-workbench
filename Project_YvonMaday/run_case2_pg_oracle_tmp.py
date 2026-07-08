@@ -48,10 +48,9 @@ def _looks_like_work_dir(path):
 def _resolve_work_dir(work_dir_arg):
     if work_dir_arg:
         wd = Path(work_dir_arg).expanduser().resolve()
-        if not _looks_like_work_dir(wd):
+        if not wd.exists():
             raise FileNotFoundError(
-                f"--work-dir does not look valid: {wd}\n"
-                "Expected at least: Results/Stage1/basis.npy and Results/Runs/Linear"
+                f"--work-dir does not exist: {wd}"
             )
         return wd
 
@@ -188,8 +187,8 @@ class OracleCase2FromLinearQNTmp(nn.Module):
 
     def __init__(self, qbar_table, dt, t0=0.0):
         super().__init__()
-        # Keep oracle coefficients in float64 so the strict 0% oracle check
-        # is not polluted by float32 roundoff when comparing against linear qN.
+        # Keep oracle coefficients in float64 so the 0% oracle check is not
+        # polluted by float32 roundoff when comparing against linear qN.
         qb = np.asarray(qbar_table, dtype=np.float64)
         if qb.ndim != 2:
             raise ValueError(f"qbar_table must be 2D, got shape {qb.shape}")
@@ -354,19 +353,15 @@ def _cross_coupling_fro_norm(v, vbar):
     return float(np.linalg.norm(v.T @ vbar, ord="fro"))
 
 
-def _should_use_strict_oracle(mode, v, vbar, *, threshold=1e-10):
+def _validate_oracle_mode(mode):
     m = str(mode).strip().lower()
-    if m == "strict":
-        return True, "forced"
     if m == "legacy":
-        return False, "forced"
-    if m != "auto":
-        raise ValueError(f"Unsupported oracle mode: {mode}")
-
-    cross = _cross_coupling_fro_norm(v, vbar)
-    if cross > float(threshold):
-        return True, f"auto_cross_gt_{threshold:g}"
-    return False, f"auto_cross_le_{threshold:g}"
+        return "secondary_oracle_only"
+    raise ValueError(
+        f"Unsupported oracle mode: {mode}. This diagnostic intentionally only "
+        "supports 'legacy': prescribe oracle secondary coefficients and let "
+        "Gauss-Newton recover the primary coordinates."
+    )
 
 
 def main(argv=None):
@@ -443,18 +438,12 @@ def main(argv=None):
     )
     parser.add_argument(
         "--oracle-mode",
-        choices=("legacy", "strict", "auto"),
-        default="auto",
+        choices=("legacy",),
+        default="legacy",
         help=(
-            "legacy: keep previous behavior; strict: enforce linear-consistent per-step "
-            "initialization/previous-state in 0%% oracle; auto: activate strict when ||V^T Vbar||_F is non-negligible."
+            "Only supported mode for this diagnostic: prescribe oracle secondary "
+            "coefficients and let the solver recover the primary coordinates."
         ),
-    )
-    parser.add_argument(
-        "--strict-cross-threshold",
-        type=float,
-        default=1e-10,
-        help="Threshold on ||V^T Vbar||_F used by --oracle-mode=auto.",
     )
     args = parser.parse_args(argv)
 
@@ -529,13 +518,11 @@ def main(argv=None):
     grid_x, grid_y, nx, ny = _infer_square_grid_tmp(w0.size)
 
     cross_vt_vbar_fro = _cross_coupling_fro_norm(v, vbar)
-    use_strict_oracle, strict_reason = _should_use_strict_oracle(
-        args.oracle_mode, v, vbar, threshold=float(args.strict_cross_threshold)
-    )
+    oracle_mode_reason = _validate_oracle_mode(args.oracle_mode)
     print(
         "[TMP-Case2-PG-Oracle] oracle_mode="
-        f"{args.oracle_mode} -> {'strict' if use_strict_oracle else 'legacy'} "
-        f"(reason={strict_reason}, ||V^T Vbar||_F={cross_vt_vbar_fro:.6e})"
+        f"{args.oracle_mode} (reason={oracle_mode_reason}, "
+        f"||V^T Vbar||_F={cross_vt_vbar_fro:.6e})"
     )
 
     snap_folder, snap_folder_source = _resolve_snap_folder_tmp(work_dir)
@@ -548,9 +535,6 @@ def main(argv=None):
         num_steps=num_steps,
         snap_folder=snap_folder,
     )
-
-    strict_y_table = qn_linear[:n_p, :] if use_strict_oracle else None
-    strict_wp_table = lin_snaps if use_strict_oracle else None
 
     pg_oracle_snaps, rom_times, online_solve_elapsed = _solve_case2_pg_oracle(
         solver_variant=args.solver_variant,
@@ -569,8 +553,8 @@ def main(argv=None):
         min_delta=args.min_delta,
         linear_solver=args.linear_solver,
         normal_eq_reg=args.normal_eq_reg,
-        y_init_table=strict_y_table,
-        wp_table=strict_wp_table,
+        y_init_table=None,
+        wp_table=None,
     )
 
     # Align references and ROM trajectory to a common time window.
@@ -659,7 +643,7 @@ def main(argv=None):
             min_delta=args.min_delta,
             linear_solver=args.linear_solver,
             normal_eq_reg=args.normal_eq_reg,
-            y_init_table=strict_y_table if use_strict_oracle else None,
+            y_init_table=None,
             wp_table=None,
         )
         pert_its, pert_jac, pert_res, pert_ls = pert_times
@@ -757,10 +741,9 @@ def main(argv=None):
             ("linear_qn_source", qn_source),
             ("linear_qn_reconstruction_rel_error", lin_qn_recon_rel_err),
             ("oracle_mode_requested", str(args.oracle_mode)),
-            ("oracle_mode_effective", "strict" if use_strict_oracle else "legacy"),
-            ("oracle_mode_reason", strict_reason),
+            ("oracle_mode_effective", "legacy"),
+            ("oracle_mode_reason", oracle_mode_reason),
             ("cross_vt_vbar_fro", cross_vt_vbar_fro),
-            ("strict_cross_threshold", float(args.strict_cross_threshold)),
             ("qbar_perturb_percent_requested", pert_pct),
             ("qbar_perturb_seed", int(args.qbar_perturb_seed)),
             ("qbar_perturb_rel_percent_actual", delta_qbar_rel_percent),

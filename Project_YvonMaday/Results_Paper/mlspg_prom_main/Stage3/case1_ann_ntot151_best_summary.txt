@@ -1,0 +1,30 @@
+model_name: case1_ann_ntot151_best.pt
+model_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage3/models/case1_ann_ntot151_best.pt
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage2/prom_coeff_dataset_ntot151
+dataset_root: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage2/prom_coeff_dataset_ntot151/per_mu
+dataset_ntot: 151
+dataset_backend: prom
+primary_modes: 10
+secondary_modes: 141
+samples_M: 4509
+n_p: 10
+n_s: 141
+epochs_ran: 3519
+best_val_mse: 0.008458280935883522
+seed: 42
+device: cuda
+hidden_dims: (256, 512, 512, 256)
+activation: silu
+dropout: 0.0
+architecture: q_p -> [256, 512, 512, 256] SILU -> q_s
+optimizer: AdamW
+lr: 0.0005
+weight_decay: 1e-06
+batch_size: 128
+trainable_parameters: 564621
+lr_scheduler: ReduceLROnPlateau
+lr_scheduler_factor: 0.5
+lr_scheduler_patience: 50
+lr_scheduler_min_lr: 1e-06
+train_rel_frob_percent: 1.1302162893116474
+val_rel_frob_percent: 1.2506894767284393

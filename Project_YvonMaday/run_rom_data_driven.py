@@ -47,6 +47,11 @@ except ModuleNotFoundError:
         write_kv_txt,
     )
 
+try:
+    from gpr_map_common import build_torch_case2_gpr_from_ckpt
+except ModuleNotFoundError:
+    from .gpr_map_common import build_torch_case2_gpr_from_ckpt
+
 
 def set_latex_plot_style():
     plt.rcParams.update({
@@ -223,6 +228,14 @@ def _load_rom_data_driven_model(model_path, device):
     in_dim = int(ckpt.get("in_dim", 3))
     if in_dim != 3:
         raise ValueError(f"rom_data_driven checkpoint in_dim={in_dim}, expected 3")
+
+    checkpoint_format = str(ckpt.get("format", "")).strip().lower()
+    if checkpoint_format in ("gpr_map_full", "sparse_gpr_map_full") or (
+        "sparse_gp_payload" in ckpt and int(ckpt.get("out_dim", n_tot)) == n_tot
+    ):
+        model = build_torch_case2_gpr_from_ckpt(ckpt).to(device)
+        model.eval()
+        return model, n_tot, ckpt
 
     hidden_dims = tuple(int(d) for d in ckpt.get("hidden_dims", (32, 64, 128, 256, 256)))
     activation = str(ckpt.get("activation", "elu")).strip().lower()
@@ -402,6 +415,7 @@ def main(
             ("device", runtime_device),
             ("model_name", model_name),
             ("model_path", model_path),
+            ("checkpoint_format", ckpt.get("format", "ann")),
             ("basis_path", basis_path),
             ("u_ref_path", uref_path if os.path.exists(uref_path) else "zeros"),
             ("dataset_backend", ckpt.get("dataset_backend", "unknown")),

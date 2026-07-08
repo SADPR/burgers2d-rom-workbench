@@ -71,8 +71,29 @@ def load_row_metrics() -> dict[str, tuple[float, float]]:
 
 def display_label(model: str) -> str:
     if model.startswith("PROM-ANN Case "):
-        return model.replace("PROM-ANN ", "PROM-ANN\n")
+        return model.replace("PROM-ANN ", "HPROM-ANN\n")
+    if model == "PROM-POD-AE":
+        return "HPROM-POD-AE"
     return model
+
+
+def legend_label(model: str) -> str:
+    return display_label(model).replace("\n", " ")
+
+
+def formula_label(model: str) -> str:
+    formulas = {
+        "Linear HPROM": (
+            r"$\tilde{\mathbf u}=\mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathbf q_{\mathrm{tot}}$"
+        ),
+        "PROM-ANN Case 1": (
+            r"$\tilde{\mathbf u}=\mathbf u_{\mathrm{ref}}+\mathbf V\mathbf q+\overline{\mathbf V}\mathcal N(\mathbf q)$"
+        ),
+        "PROM-POD-AE": (
+            r"$\tilde{\mathbf u}=\mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\mathbf z)$"
+        ),
+    }
+    return formulas[model]
 
 
 def load_comparison_data() -> dict[str, tuple[np.ndarray, np.ndarray]]:
@@ -111,12 +132,12 @@ def create_figure(
     fig, axes = plt.subplots(
         len(comparisons),
         2,
-        figsize=(12.8, 7.2),
+        figsize=(12.8, 7.8),
         sharex="col",
         squeeze=False,
     )
     fig.subplots_adjust(
-        left=0.175,
+        left=0.225,
         right=0.985,
         bottom=0.16,
         top=0.86,
@@ -180,7 +201,7 @@ def create_figure(
             )
 
             ax.set_xlim(0.0, 100.0)
-            ax.set_ylim(0.0, 6.6)
+            ax.set_ylim(0.0, 6.2)
             if row == len(comparisons) - 1:
                 ax.set_xlabel(axis_labels[col])
             else:
@@ -207,16 +228,25 @@ def create_figure(
         )
         fig.text(
             0.018,
-            row_box.y0 + 0.40 * row_box.height,
+            row_box.y0 + 0.42 * row_box.height,
             f"error: {error:.3f}\\%\nspeedup: {speedup:.1f}x",
             ha="left",
             va="center",
-            fontsize=12.8,
-            linespacing=1.32,
+            fontsize=13.2,
+            linespacing=1.18,
+        )
+        fig.text(
+            0.018,
+            row_box.y0 + 0.15 * row_box.height,
+            formula_label(model),
+            ha="left",
+            va="center",
+            fontsize=11.6,
+            linespacing=1.08,
         )
 
     legend_handles = [
-        Line2D([0], [0], label=label, **styles[label])
+        Line2D([0], [0], label=legend_label(label), **styles[label])
         for label in ("HDM", *comparisons)
     ]
     fig.legend(

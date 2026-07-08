@@ -1,0 +1,190 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=0.8in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage[hypertexnames=false]{hyperref}
+
+\title{Corrected PROM Case 2 Oracle Diagnostic}
+\author{S. Ares de Parga}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section*{Purpose}
+This diagnostic isolates the online structure of PROM--ANN Case~2.  All results
+are PROM-only; no HPROM or ECSW online data are used.  The corresponding
+linear PROM trajectory is used as the coefficient reference for each basis.  The
+Case~2 manifold has the form
+\begin{equation*}
+\widetilde{\mathbf u}
+=
+\mathbf u_{\mathrm{ref}}
++
+\mathbf V\mathbf q
++
+\overline{\mathbf V}\overline{\mathbf q}(t),
+\end{equation*}
+where the online solve determines only $\mathbf q$.  The oracle variants set
+$\overline{\mathbf q}(t)=\overline{\mathbf q}^{\mathrm{lin}}(t)$ from the
+linear PROM trajectory and therefore remove secondary-coordinate regression
+error.  Any remaining discrepancy with the linear PROM measures the online
+reduced problem itself.
+
+\paragraph{Status of the test.}
+The corrected diagnostic has been run for the four evaluation parameters
+$\boldsymbol\mu^{(v)}$, $\boldsymbol\mu^{(1)}$,
+$\boldsymbol\mu^{(2)}$, and $\boldsymbol\mu^{(3)}$, using both the
+MLSPG-sensitive basis and the Euclidean POD basis.  The tables and figures
+below summarize the completed PROM-only checks.
+
+\paragraph{Initialization used in this corrected diagnostic.}
+For Case~2, the initial primary coordinate must account for the prescribed
+secondary block.  The diagnostic therefore initializes
+\begin{equation*}
+\mathbf q(0)
+=
+\arg\min_{\mathbf y}
+\left\|
+\mathbf V\mathbf y
+-
+\left(
+\mathbf u_0-\mathbf u_{\mathrm{ref}}
+-
+\overline{\mathbf V}\,\overline{\mathbf q}(0)
+\right)
+\right\|_2 .
+\end{equation*}
+This is essential for non-Euclidean or metric-weighted bases, where
+$\mathbf V^T\overline{\mathbf V}$ need not vanish in the Euclidean inner
+product.
+
+\paragraph{PG-oracle variant.}
+The PG-oracle variant uses the same oracle secondary coordinates, but tests the
+residual with the full linear PROM tangent before solving the overdetermined
+least-squares problem for the ten primary unknowns.  This diagnostic is intended
+to distinguish secondary-coordinate regression error from low/high coupling and
+projection effects.
+
+
+\section*{MLSPG-sensitive basis}
+This section compares ANN Case~2 PROM, oracle Case~2 PROM, and PG-oracle Case~2 PROM
+against the corresponding linear PROM reference for the mlspg-sensitive basis.
+In the oracle cases, only the secondary coordinates are prescribed from the
+linear PROM trajectory; the primary coordinates remain online unknowns.
+
+\begin{table}[H]
+\centering
+\caption{PROM Case~2 oracle comparison for the mlspg-sensitive basis.}
+\label{tab:mlspg-case2-state}
+\resizebox{\textwidth}{!}{\input{tables/mlspg_case2_prom_oracle_state_table.tex}}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Mean PROM Case~2 oracle metrics over the four evaluation points for the mlspg-sensitive basis.}
+\label{tab:mlspg-case2-mean}
+\resizebox{\textwidth}{!}{\input{tables/mlspg_case2_prom_oracle_mean_table.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figures/mlspg_case2_state_error_bars.png}
+\caption{State-space trajectory error versus HDM for the mlspg-sensitive basis.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/mlspg_case2_final_midline_overlays.png}
+\caption{Final-time horizontal midline cuts of $u_x$ for HDM, linear PROM, and the Case~2 diagnostic variants for the mlspg-sensitive basis.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/mlspg_case2_coeff_abs_rel_curves.png}
+\caption{Per-coefficient absolute and relative errors with respect to the linear PROM coefficient trajectory.  The dotted line marks the primary/secondary split at $n=10$.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/mlspg_case2_coeff_abs_heatmaps.png}
+\caption{Absolute coefficient-error heatmaps versus the linear PROM coefficient trajectory.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/mlspg_case2_coeff_rel_heatmaps.png}
+\caption{Relative coefficient-error heatmaps versus the linear PROM coefficient trajectory.}
+\end{figure}
+
+\paragraph{Interpretation.}
+For the MLSPG-sensitive basis, the completed corrected test shows that the offset-aware initialization makes both oracle variants recover the corresponding linear PROM to approximately $10^{-4}$ percent in trajectory norm.  The earlier measurable oracle discrepancy was therefore an initialization inconsistency, not evidence that the MLSPG metric makes Case~2 structurally unable to reproduce the linear PROM when the secondary coordinates are exact.  The remaining ANN Case~2 error is therefore attributable to regression and online coupling errors, not to the oracle reduced problem.
+
+\section*{Euclidean POD basis}
+This section compares oracle Case~2 PROM, and PG-oracle Case~2 PROM
+against the corresponding linear PROM reference for the euclidean pod basis.
+In the oracle cases, only the secondary coordinates are prescribed from the
+linear PROM trajectory; the primary coordinates remain online unknowns.
+
+\begin{table}[H]
+\centering
+\caption{PROM Case~2 oracle comparison for the euclidean pod basis.}
+\label{tab:euclidean-case2-state}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_case2_prom_oracle_state_table.tex}}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Mean PROM Case~2 oracle metrics over the four evaluation points for the euclidean pod basis.}
+\label{tab:euclidean-case2-mean}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_case2_prom_oracle_mean_table.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{figures/euclidean_case2_state_error_bars.png}
+\caption{State-space trajectory error versus HDM for the euclidean pod basis.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/euclidean_case2_final_midline_overlays.png}
+\caption{Final-time horizontal midline cuts of $u_x$ for HDM, linear PROM, and the Case~2 diagnostic variants for the euclidean pod basis.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/euclidean_case2_coeff_abs_rel_curves.png}
+\caption{Per-coefficient absolute and relative errors with respect to the linear PROM coefficient trajectory.  The dotted line marks the primary/secondary split at $n=10$.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/euclidean_case2_coeff_abs_heatmaps.png}
+\caption{Absolute coefficient-error heatmaps versus the linear PROM coefficient trajectory.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/euclidean_case2_coeff_rel_heatmaps.png}
+\caption{Relative coefficient-error heatmaps versus the linear PROM coefficient trajectory.}
+\end{figure}
+
+\paragraph{Interpretation.}
+For the Euclidean POD basis, the completed corrected test gives the same limiting behavior: both oracle variants nearly coincide with the corresponding linear PROM at all four points.  This is expected because the Euclidean split is essentially orthogonal and the corrected initialization is consistent with the injected secondary block.
+
+
+\section*{Overall conclusion}
+After correcting the Case~2 initialization, the completed MLSPG-sensitive and
+Euclidean oracle-only PROM tests both recover their corresponding linear PROM
+trajectories to essentially zero error relative to the linear PROM.  The
+diagnostic therefore confirms that prescribing the exact secondary coordinates
+is sufficient to recover the linear PROM trajectory.  The previously observed
+MLSPG oracle discrepancy was caused by an inconsistent initial primary
+coordinate, not by a structural failure of the Case~2 reduced problem.
+Consequently, Case~2 production errors should be interpreted as neural-network
+secondary-coordinate regression error and its online feedback.
+
+\end{document}

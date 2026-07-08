@@ -1,0 +1,17 @@
+model_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage3/models/master_sparse_gpr_mu_t_to_qtot_ntot151_matern15_ard_m451_fixed.pt
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage2/prom_coeff_dataset_ntot151
+validation_dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2
+n_tot: 151
+kernel_learned: sparse_matern15_ard=True (num_inducing=451, per-output hyperparameters)
+num_inducing: 451
+epochs: 160
+batch_size: 2048
+lr: 0.03
+min_noise: 1e-06
+max_noise: 1.0
+elbo_beta: 1.0
+fixed_inducing: True
+val_split: external_dataset
+train_rel_frob_percent: 10.217449683688343
+val_rel_frob_percent: 15.373489344180838
+elapsed_s: 8517.00195980072

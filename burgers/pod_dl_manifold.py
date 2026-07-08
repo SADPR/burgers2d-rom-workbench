@@ -94,6 +94,9 @@ def _fit_latent_to_snapshot(
     if init_res <= 0.0:
         return z, w_rec
 
+    best_z = z.detach().clone()
+    best_w = w_rec.copy()
+    best_res = float(init_res)
     curr_res = init_res
     it = 0
     while curr_res / init_res > rel_tol and it < max_its:
@@ -112,9 +115,13 @@ def _fit_latent_to_snapshot(
             w_rec = decode_u(z, with_grad=False).detach().cpu().numpy().reshape(-1)
 
         curr_res = np.linalg.norm(w_rec - target_snapshot)
+        if curr_res < best_res:
+            best_res = float(curr_res)
+            best_z = z.detach().clone()
+            best_w = w_rec.copy()
         it += 1
 
-    return z, w_rec
+    return best_z, best_w
 
 
 def compute_ECSW_training_matrix_2D_pod_dl(
@@ -263,6 +270,15 @@ def inviscid_burgers_implicit2D_LSPG_pod_dl_2D(
 
     with torch.no_grad():
         z0 = pod_dl_model.encode(q0_t).reshape(-1)
+    z0, _ = _fit_latent_to_snapshot(
+        z_init=z0,
+        target_snapshot=w0_np,
+        decode_u=decode_u,
+        jac_u_z=jac_u_z,
+        max_its=20,
+        rel_tol=1e-6,
+    )
+    with torch.no_grad():
         w0_t = decode_u(z0, with_grad=False)
 
     n_dofs = int(w0_t.numel())
@@ -402,6 +418,15 @@ def inviscid_burgers_implicit2D_LSPG_pod_dl_2D_ecsw(
     q0_t = torch.tensor(q0, dtype=dtype_t, device=device)
     with torch.no_grad():
         z0 = pod_dl_model.encode(q0_t).reshape(-1)
+    z0, _ = _fit_latent_to_snapshot(
+        z_init=z0,
+        target_snapshot=w0[idx],
+        decode_u=decode_u,
+        jac_u_z=jac_u_z,
+        max_its=20,
+        rel_tol=1e-6,
+    )
+    with torch.no_grad():
         w0_loc = decode_u(z0, with_grad=False)
 
     n_latent = int(z0.numel())

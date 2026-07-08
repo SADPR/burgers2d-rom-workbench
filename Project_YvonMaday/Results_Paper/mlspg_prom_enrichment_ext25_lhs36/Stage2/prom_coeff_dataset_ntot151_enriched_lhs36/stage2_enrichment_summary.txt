@@ -1,0 +1,18 @@
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs36/Stage2/prom_coeff_dataset_ntot151_enriched_lhs36
+solve_backend: prom
+total_modes: 151
+coefficient_storage: direct_solver_qN_only
+num_base_traj_copied: 9
+num_interior_lhs_traj: 18
+num_exterior_lhs_traj: 18
+num_lhs_traj: 36
+num_traj_total: 45
+lhs_seed: 42
+margin_fraction: 0.25
+design_source_dir: 
+reused_design_source: False
+expanded_mu1_range: (3.9375, 5.8125)
+expanded_mu2_range: (0.01125, 0.03375)
+basis_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+save_rom_snaps: False

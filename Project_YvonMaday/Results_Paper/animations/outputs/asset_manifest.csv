@@ -1,13 +1,16 @@
 asset,purpose
 parameter_training_only.png,Baseline 3x3 HDM training grid.
 parameter_training_evaluation.png,"Baseline grid, center verification point, and two off-grid tests."
-parameter_training_evaluation_lhs.png,Baseline/evaluation points plus 20 linear-HPROM LHS trajectories.
+parameter_training_evaluation_lhs.png,Legacy 20-LHS parameter figure; current ext25-lhs36 slides use Figures/mlspg_hprom_enrichment_ext25_lhs36/parameter_domain_extended_enrichment_points.png.
 parameter_domain_sequence.gif,Progressive reveal of the three parameter-domain figures.
 burgers_hdm_3d.gif,HDM u_x surface evolving at off-grid point mu^(1).
 burgers_cutplane_explanation.png,Static 3D surface with the x- and y-center cuts used in comparisons.
 linear_vs_hdm.gif,HDM versus linear HPROM at all three evaluation points.
-slide61_intrusive_comparison_mu2.gif,"HDM, linear HPROM, PROM-ANN Case 1, and PROM-POD-AE at off-grid point mu=(5.19,0.026)."
-slide62_promann_comparison_mu1.gif,"HDM and PROM-ANN Cases 1--3 at off-grid point mu=(4.56,0.019)."
+slide61_intrusive_comparison_mu2.gif,"HDM, linear HPROM, HPROM-ANN Case 1, and HPROM-POD-AE at off-grid point mu=(5.19,0.026)."
+slide62_promann_comparison_mu1.gif,"HDM and HPROM-ANN Cases 1--3 at off-grid point mu=(4.56,0.019)."
+slide65_mu3_baseline_horizontal_six_models.gif,"HDM versus six baseline-trained models at extrapolatory point mu^(3), horizontal centerline cut only."
+slide66_mu3_horizontal_six_models.gif,"HDM versus six ext25-lhs36 models at extrapolatory point mu^(3), horizontal centerline cut only."
+slide68_mu3_before_after_best4.gif,"Before/after ext25-lhs36 comparison at mu^(3) for HPROM-POD-AE, HPROM-ANN Case 2, POD-NN-ROM, and POD-DL-ROM."
 intrusive_model_gallery.gif,One intrusive nonlinear model at a time versus HDM and linear HPROM.
 nonintrusive_model_gallery.gif,One non-intrusive model at a time versus HDM.
-enrichment_before_after.gif,Baseline versus enriched predictions at the two off-grid points.
+enrichment_before_after.gif,Legacy 20-LHS before/after animation; current ext25-lhs36 slides use slide68_mu3_before_after_best4.gif.

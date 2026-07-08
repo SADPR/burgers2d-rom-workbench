@@ -1,0 +1,8 @@
+solve_backend: prom
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_enrichment_ext25_lhs36/Stage2/prom_coeff_dataset_ntot151_enriched_lhs36
+basis_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+total_modes: 151
+num_traj: 2
+mu_source: custom_mu_pair
+mu_list: [[4.5625, 0.02625], [5.1875, 0.01875]]

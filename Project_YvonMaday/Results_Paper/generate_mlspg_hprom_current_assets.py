@@ -30,6 +30,7 @@ FIG_DIR = ROOT / "Figures" / "mlspg_hprom_current"
 COEFF_DIR = FIG_DIR / "coeff_errors"
 CACHE_DIR = FIG_DIR / "_coeff_cache"
 DIAG_DIR = FIG_DIR / "case2_trimmed_diagnostic"
+EXTRAP_DIR = FIG_DIR / "extrapolation20"
 TABLE_DIR = ROOT / "tables"
 
 NX = 250
@@ -62,14 +63,40 @@ POINTS = [
     ("$\\bm\\mu^{(v)}$ \\textbf{(verification)}", 4.875, 0.0225, "mu1_4.875_mu2_0.0225", "mu1_4.875+mu2_0.0225.npy"),
     ("$\\bm\\mu^{(1)}$ (off-grid)", 4.560, 0.0190, "mu1_4.560_mu2_0.0190", "mu1_4.56+mu2_0.019.npy"),
     ("$\\bm\\mu^{(2)}$ (off-grid)", 5.190, 0.0260, "mu1_5.190_mu2_0.0260", "mu1_5.19+mu2_0.026.npy"),
+    ("$\\bm\\mu^{(3)}$ \\textbf{(20\\% extrapolation)}", 4.000, 0.0330, "mu1_4.000_mu2_0.0330", "mu1_4.0+mu2_0.033.npy"),
 ]
+PRIMARY_POINTS = POINTS[:3]
+
+EXTRAP_POINT = (
+    "$\\bm\\mu^{(3)}$ \\textbf{(20\\% extrapolation)}",
+    4.000,
+    0.0330,
+    "mu1_4.000_mu2_0.0330",
+)
+EXTRAP_ROOT = MLSPG / "Runs" / "Extrapolation20pct"
+
+
+def is_extrap_point(mu1: float, mu2: float) -> bool:
+    return abs(mu1 - EXTRAP_POINT[1]) < 1.0e-12 and abs(mu2 - EXTRAP_POINT[2]) < 1.0e-12
 
 
 def point_plot_title(tag: str, mu1: float, mu2: float) -> str:
     if tag == "mu1_4.875_mu2_0.0225":
         return rf"$\mu^{{(v)}}=({mu1:.3f},{mu2:.4f})$\quad\textbf{{verification}}"
+    if tag == "mu1_4.000_mu2_0.0330":
+        return rf"$\mu^{{(3)}}=({mu1:.3f},{mu2:.4f})$\quad\textbf{{extrapolation}}"
     index = "1" if tag == "mu1_4.560_mu2_0.0190" else "2"
     return rf"$\mu^{{({index})}}=({mu1:.3f},{mu2:.4f})$\quad\textit{{off-grid}}"
+
+
+def point_plot_title_compact(tag: str, mu1: float, mu2: float) -> str:
+    if tag == "mu1_4.875_mu2_0.0225":
+        index = "v"
+    elif tag == "mu1_4.000_mu2_0.0330":
+        index = "3"
+    else:
+        index = "1" if tag == "mu1_4.560_mu2_0.0190" else "2"
+    return rf"$\mu^{{({index})}}$" + "\n" + rf"$({mu1:.3f},{mu2:.4f})$"
 
 
 @dataclass(frozen=True)
@@ -94,8 +121,7 @@ class ModelSpec:
     is_pod_dl: bool = False
 
 
-MAIN_ECSW_TAG = "ECSW1pct"
-COMPARISON_ECSW_TAGS = ("ECSW1pct", "ECSW2pct")
+MAIN_ECSW_TAG = "ECSW2pct"
 
 
 MODELS = [
@@ -224,8 +250,29 @@ CASE2_TRIMMED_FROM_NP10_SPEC = ModelSpec(
 
 
 def ensure_dirs() -> None:
-    for d in (FIG_DIR, COEFF_DIR, CACHE_DIR, DIAG_DIR, TABLE_DIR):
+    for d in (FIG_DIR, COEFF_DIR, CACHE_DIR, DIAG_DIR, EXTRAP_DIR, TABLE_DIR):
         d.mkdir(parents=True, exist_ok=True)
+
+
+def parameter_plot_limits(*point_sets: np.ndarray, pad_fraction: float = 0.18) -> tuple[tuple[float, float], tuple[float, float]]:
+    arrays = [np.asarray(points, dtype=np.float64).reshape(-1, 2) for points in point_sets if np.asarray(points).size]
+    if not arrays:
+        raise ValueError("At least one non-empty point set is required.")
+    pts = np.vstack(arrays)
+    xmin, ymin = np.min(pts, axis=0)
+    xmax, ymax = np.max(pts, axis=0)
+    xspan = max(xmax - xmin, 1.0e-12)
+    yspan = max(ymax - ymin, 1.0e-12)
+    return (xmin - pad_fraction * xspan, xmax + pad_fraction * xspan), (
+        ymin - pad_fraction * yspan,
+        ymax + pad_fraction * yspan,
+    )
+
+
+def style_parameter_axis(ax: plt.Axes, xlim: tuple[float, float], ylim: tuple[float, float]) -> None:
+    ax.set_xlim(*xlim)
+    ax.set_ylim(*ylim)
+    ax.set_box_aspect(1)
 
 
 def load_array(path: Path, mmap: bool = True) -> np.ndarray | None:
@@ -256,6 +303,8 @@ def ffloat(d: dict[str, str], key: str) -> float | None:
 
 
 def linear_dir(mu1: float, mu2: float) -> Path:
+    if is_extrap_point(mu1, mu2):
+        return extrap_linear_dir(mu1, mu2)
     return MLSPG / "Runs" / "Linear" / f"linear_hprom_mu1_{mu1:.3f}_mu2_{mu2:.4f}_ntot151"
 
 
@@ -265,25 +314,34 @@ def run_stem(spec: ModelSpec, mu1: float, mu2: float) -> str:
     return f"{spec.file_prefix}_mu1_{mu1:.3f}_mu2_{mu2:.4f}_n{spec.n_primary_for_file}_ntot151"
 
 
-def model_run_dir(spec: ModelSpec, ecsw_tag: str = MAIN_ECSW_TAG) -> Path:
+def model_ecsw_tag(spec: ModelSpec) -> str:
+    return MAIN_ECSW_TAG
+
+
+def model_run_dir(spec: ModelSpec, ecsw_tag: str | None = None, mu1: float | None = None, mu2: float | None = None) -> Path:
     if spec.family_path is None:
         raise ValueError(f"ModelSpec {spec.key} has no run family path.")
-    return MLSPG / "Runs" / ecsw_tag / spec.family_path
+    tag = model_ecsw_tag(spec) if ecsw_tag is None else ecsw_tag
+    if mu1 is not None and mu2 is not None and is_extrap_point(float(mu1), float(mu2)):
+        return EXTRAP_ROOT / tag / spec.family_path
+    return MLSPG / "Runs" / tag / spec.family_path
 
 
-def model_summary_path(spec: ModelSpec, mu1: float, mu2: float, ecsw_tag: str = MAIN_ECSW_TAG) -> Path:
-    return model_run_dir(spec, ecsw_tag) / f"{run_stem(spec, mu1, mu2)}_summary.txt"
+def model_summary_path(spec: ModelSpec, mu1: float, mu2: float, ecsw_tag: str | None = None) -> Path:
+    return model_run_dir(spec, ecsw_tag, mu1, mu2) / f"{run_stem(spec, mu1, mu2)}_summary.txt"
 
 
-def model_snaps_path(spec: ModelSpec, mu1: float, mu2: float, ecsw_tag: str = MAIN_ECSW_TAG) -> Path:
-    return model_run_dir(spec, ecsw_tag) / f"{run_stem(spec, mu1, mu2)}_snaps.npy"
+def model_snaps_path(spec: ModelSpec, mu1: float, mu2: float, ecsw_tag: str | None = None) -> Path:
+    return model_run_dir(spec, ecsw_tag, mu1, mu2) / f"{run_stem(spec, mu1, mu2)}_snaps.npy"
 
 
-def model_qn_path(spec: ModelSpec, mu1: float, mu2: float, ecsw_tag: str = MAIN_ECSW_TAG) -> Path:
-    return model_run_dir(spec, ecsw_tag) / f"{run_stem(spec, mu1, mu2)}_qN.npy"
+def model_qn_path(spec: ModelSpec, mu1: float, mu2: float, ecsw_tag: str | None = None) -> Path:
+    return model_run_dir(spec, ecsw_tag, mu1, mu2) / f"{run_stem(spec, mu1, mu2)}_qN.npy"
 
 
 def data_driven_dir(mu1: float, mu2: float) -> Path:
+    if is_extrap_point(mu1, mu2):
+        return extrap_data_driven_dir(mu1, mu2)
     return MLSPG / "Runs" / "DataDriven_Best" / f"rom_data_driven_mu1_{mu1:.3f}_mu2_{mu2:.4f}_ntot151"
 
 
@@ -296,6 +354,8 @@ def pod_ae_dir() -> Path:
 
 
 def pod_dl_dir(mu1: float, mu2: float) -> Path:
+    if is_extrap_point(mu1, mu2):
+        return extrap_pod_dl_dir(mu1, mu2)
     expected = (
         MLSPG
         / "Runs"
@@ -314,6 +374,79 @@ def pod_dl_dir(mu1: float, mu2: float) -> Path:
             f"Expected one POD-DL run for ({mu1:.3f},{mu2:.4f}), found {candidates}"
         )
     return candidates[0]
+
+
+def extrap_linear_dir(mu1: float, mu2: float) -> Path:
+    return EXTRAP_ROOT / "Linear" / f"linear_hprom_mu1_{mu1:.3f}_mu2_{mu2:.4f}_ntot151"
+
+
+def extrap_model_run_dir(spec: ModelSpec) -> Path:
+    if spec.family_path is None:
+        raise ValueError(f"ModelSpec {spec.key} has no run family path.")
+    return EXTRAP_ROOT / model_ecsw_tag(spec) / spec.family_path
+
+
+def extrap_model_summary_path(spec: ModelSpec, mu1: float, mu2: float) -> Path:
+    return extrap_model_run_dir(spec) / f"{run_stem(spec, mu1, mu2)}_summary.txt"
+
+
+def extrap_data_driven_dir(mu1: float, mu2: float) -> Path:
+    return EXTRAP_ROOT / "DataDriven_Best" / f"rom_data_driven_mu1_{mu1:.3f}_mu2_{mu2:.4f}_ntot151"
+
+
+def extrap_pod_ae_dir() -> Path:
+    return EXTRAP_ROOT / MAIN_ECSW_TAG / "PODAE_Best"
+
+
+def extrap_pod_dl_dir(mu1: float, mu2: float) -> Path:
+    return (
+        EXTRAP_ROOT
+        / "PODDL_Best"
+        / f"pod_dl_data_driven_mu1_{mu1:.3f}_mu2_{mu2:.4f}_ntot151_nz10"
+    )
+
+
+def extrap_summary_path(spec: ModelSpec, mu1: float, mu2: float) -> Path:
+    if spec.is_linear:
+        return extrap_linear_dir(mu1, mu2) / "summary.txt"
+    if spec.is_data_driven:
+        return extrap_data_driven_dir(mu1, mu2) / "rom_data_driven_summary.txt"
+    if spec.is_pod_ae:
+        return extrap_pod_ae_dir() / f"{pod_ae_stem(mu1, mu2)}_summary.txt"
+    if spec.is_pod_dl:
+        return extrap_pod_dl_dir(mu1, mu2) / "pod_dl_data_driven_summary.txt"
+    return extrap_model_summary_path(spec, mu1, mu2)
+
+
+def extrap_hdm_vs_rom_path(spec: ModelSpec, mu1: float, mu2: float) -> Path:
+    if spec.is_linear:
+        return extrap_linear_dir(mu1, mu2) / "hdm_vs_rom.png"
+    if spec.is_data_driven:
+        return extrap_data_driven_dir(mu1, mu2) / "hdm_vs_rom.png"
+    if spec.is_pod_ae:
+        return extrap_pod_ae_dir() / f"{pod_ae_stem(mu1, mu2)}_hdm_vs_rom.png"
+    if spec.is_pod_dl:
+        return extrap_pod_dl_dir(mu1, mu2) / "hdm_vs_rom.png"
+    return extrap_model_run_dir(spec) / f"{run_stem(spec, mu1, mu2)}_hdm_vs_rom.png"
+
+
+def extrap_spec_error(spec: ModelSpec, mu1: float, mu2: float) -> float | None:
+    return ffloat(read_summary(extrap_summary_path(spec, mu1, mu2)), "relative_error_percent")
+
+
+def extrap_spec_time(spec: ModelSpec, mu1: float, mu2: float) -> float | None:
+    summary = read_summary(extrap_summary_path(spec, mu1, mu2))
+    return ffloat(summary, "inference_time_s" if (spec.is_data_driven or spec.is_pod_dl) else "online_solve_elapsed_s")
+
+
+def extrap_spec_ne(spec: ModelSpec, mu1: float, mu2: float) -> int | None:
+    if spec.is_data_driven or spec.is_pod_dl:
+        return None
+    summary = read_summary(extrap_summary_path(spec, mu1, mu2))
+    try:
+        return int(summary["n_ecsw_elements"])
+    except Exception:
+        return spec_ne(spec, MAIN_ECSW_TAG)
 
 
 def hdm_path(hdm_file: str) -> Path:
@@ -338,7 +471,8 @@ def model_snaps(spec: ModelSpec, mu1: float, mu2: float) -> np.ndarray | None:
     if spec.is_data_driven:
         return load_array(data_driven_dir(mu1, mu2) / "rom_snaps.npy")
     if spec.is_pod_ae:
-        return load_array(pod_ae_dir() / f"{pod_ae_stem(mu1, mu2)}_snaps.npy")
+        base = extrap_pod_ae_dir() if is_extrap_point(mu1, mu2) else pod_ae_dir()
+        return load_array(base / f"{pod_ae_stem(mu1, mu2)}_snaps.npy")
     if spec.is_pod_dl:
         return load_array(pod_dl_dir(mu1, mu2) / "rom_snaps.npy")
     return load_array(model_snaps_path(spec, mu1, mu2))
@@ -351,7 +485,8 @@ def model_q(spec: ModelSpec, mu1: float, mu2: float, V: np.ndarray, u_ref: np.nd
         q = load_array(data_driven_dir(mu1, mu2) / "qN.npy", mmap=False)
         return None if q is None else np.asarray(q, dtype=np.float64)
     if spec.is_pod_ae:
-        q = load_array(pod_ae_dir() / f"{pod_ae_stem(mu1, mu2)}_qN.npy", mmap=False)
+        base = extrap_pod_ae_dir() if is_extrap_point(mu1, mu2) else pod_ae_dir()
+        q = load_array(base / f"{pod_ae_stem(mu1, mu2)}_qN.npy", mmap=False)
         return None if q is None else np.asarray(q, dtype=np.float64)
     if spec.is_pod_dl:
         q = load_array(pod_dl_dir(mu1, mu2) / "qN.npy", mmap=False)
@@ -411,7 +546,7 @@ def make_solution_overlay(V: np.ndarray, u_ref: np.ndarray) -> Path:
     ygrid = np.linspace(0.0, 100.0, NY)
     time_ids = [120, 300, 500]
 
-    fig, axes = plt.subplots(len(POINTS), 2, figsize=(16.0, 10.8), sharex=False)
+    fig, axes = plt.subplots(len(POINTS), 2, figsize=(16.0, 3.55 * len(POINTS)), sharex=False)
     for r, (_, mu1, mu2, tag, hfile) in enumerate(POINTS):
         hdm = load_array(hdm_path(hfile))
         if hdm is None:
@@ -506,7 +641,7 @@ def compute_coeff_errors(V: np.ndarray, u_ref: np.ndarray) -> dict[tuple[str, st
 
 def make_coeff_curve_figure(errors: dict[tuple[str, str], dict[str, np.ndarray]]) -> Path:
     x = np.arange(1, NTOT + 1)
-    fig, axes = plt.subplots(2, len(POINTS), figsize=(16.0, 8.2), sharex=True)
+    fig, axes = plt.subplots(2, len(POINTS), figsize=(18.0, 8.2), sharex=True)
     for c, (_, mu1, mu2, tag, _) in enumerate(POINTS):
         ax_abs, ax_rel = axes[0, c], axes[1, c]
         for spec in MODELS:
@@ -544,7 +679,7 @@ def make_heatmap_grid(errors: dict[tuple[str, str], dict[str, np.ndarray]], kind
     fig, axes = plt.subplots(
         len(plot_specs),
         len(POINTS),
-        figsize=(16.0, 2.35 * len(plot_specs) + 1.2),
+        figsize=(20.0, 2.35 * len(plot_specs) + 1.4),
         sharex=True,
         sharey=True,
     )
@@ -587,7 +722,7 @@ def make_heatmap_grid(errors: dict[tuple[str, str], dict[str, np.ndarray]], kind
             if spec.coeff_split:
                 ax.axhline(spec.coeff_split + 0.5, color="white", linestyle="--", linewidth=0.8, alpha=0.8)
             if r == 0:
-                ax.set_title(point_plot_title(tag, mu1, mu2))
+                ax.set_title(point_plot_title_compact(tag, mu1, mu2), fontsize=11, pad=5)
             if c == 0:
                 ax.annotate(
                     spec.label,
@@ -602,7 +737,7 @@ def make_heatmap_grid(errors: dict[tuple[str, str], dict[str, np.ndarray]], kind
                 ax.set_xlabel(r"Time $t$")
             ax.grid(False)
     if im is not None:
-        fig.subplots_adjust(left=0.22, right=0.89, bottom=0.055, top=0.93, wspace=0.08, hspace=0.24)
+        fig.subplots_adjust(left=0.22, right=0.89, bottom=0.055, top=0.895, wspace=0.16, hspace=0.26)
         fig.supylabel(r"Coefficient index $i$", x=0.035, fontsize=14)
         cax = fig.add_axes([0.91, 0.14, 0.022, 0.72])
         cbar = fig.colorbar(im, cax=cax)
@@ -615,7 +750,7 @@ def make_heatmap_grid(errors: dict[tuple[str, str], dict[str, np.ndarray]], kind
         "MLSPG-sensitive absolute coefficient error heatmaps"
         if kind == "abs_heat"
         else "MLSPG-sensitive relative coefficient error heatmaps",
-        y=0.965,
+        y=0.975,
     )
     out = COEFF_DIR / ("mlspg_hprom_coeff_abs_heatmaps.png" if kind == "abs_heat" else "mlspg_hprom_coeff_rel_heatmaps.png")
     fig.savefig(out, dpi=220, bbox_inches="tight")
@@ -639,11 +774,21 @@ def fmt(x: float | None, nd: int = 3) -> str:
     return f"{x:.{nd}f}"
 
 
+def fmt_speedup_tex(x: float | None) -> str:
+    if x is None or not np.isfinite(x):
+        return "--"
+    if x >= 1.0e4:
+        return f"${x / 1.0e4:.2f}\\times10^4$"
+    return f"{x:.1f}"
+
+
 def intrusive_specs() -> list[ModelSpec]:
     return [s for s in MODELS if s.key in {"case1", "case2_n10", "case2_n20", "case3"}]
 
 
 def spec_error(spec: ModelSpec, mu1: float, mu2: float, ecsw_tag: str = MAIN_ECSW_TAG) -> float | None:
+    if ecsw_tag == MAIN_ECSW_TAG and is_extrap_point(mu1, mu2):
+        return extrap_spec_error(spec, mu1, mu2)
     if spec.is_linear:
         return ffloat(read_summary(linear_dir(mu1, mu2) / "summary.txt"), "relative_error_percent")
     if spec.is_data_driven:
@@ -656,6 +801,8 @@ def spec_error(spec: ModelSpec, mu1: float, mu2: float, ecsw_tag: str = MAIN_ECS
 
 
 def spec_time(spec: ModelSpec, mu1: float, mu2: float, ecsw_tag: str = MAIN_ECSW_TAG) -> float | None:
+    if ecsw_tag == MAIN_ECSW_TAG and is_extrap_point(mu1, mu2):
+        return extrap_spec_time(spec, mu1, mu2)
     if spec.is_linear:
         return ffloat(read_summary(linear_dir(mu1, mu2) / "summary.txt"), "online_solve_elapsed_s")
     if spec.is_data_driven:
@@ -708,6 +855,201 @@ def mean_existing(vals: list[float | None]) -> float | None:
     return float(np.nanmean(xs)) if xs else None
 
 
+def extrapolation_rows() -> list[dict[str, object]]:
+    _, mu1, mu2, _ = EXTRAP_POINT
+    rows: list[dict[str, object]] = []
+    for spec in MODELS:
+        time_s = extrap_spec_time(spec, mu1, mu2)
+        if spec.is_linear or spec.is_data_driven:
+            online_dim = 151
+        elif spec.is_pod_ae or spec.is_pod_dl:
+            online_dim = 10
+        else:
+            online_dim = spec.n_primary
+        rows.append(
+            {
+                "method": spec.table_label,
+                "key": spec.key,
+                "online_dim": online_dim,
+                "n_s": None if (spec.is_linear or spec.is_data_driven or spec.is_pod_ae or spec.is_pod_dl) else spec.n_secondary,
+                "n_e": extrap_spec_ne(spec, mu1, mu2),
+                "error_percent": extrap_spec_error(spec, mu1, mu2),
+                "time_s": time_s,
+                "speedup": None if time_s is None else HDM_REFERENCE_TIME_S / time_s,
+            }
+        )
+    return rows
+
+
+def make_extrapolation_table() -> tuple[Path, Path]:
+    rows = extrapolation_rows()
+    fields = ["method", "key", "online_dim", "n_s", "n_e", "error_percent", "time_s", "speedup"]
+    csv_path = TABLE_DIR / "mlspg_hprom_extrapolation20_mu3.csv"
+    write_csv(csv_path, rows, fields)
+
+    tex_path = TABLE_DIR / "mlspg_hprom_extrapolation20_mu3.tex"
+    with tex_path.open("w") as f:
+        f.write("\\begin{table}[H]\n")
+        f.write("\\centering\n")
+        f.write("\\caption{Baseline MLSPG-sensitive extrapolation diagnostic at $\\bm\\mu^{(3)}=(4.000,0.0330)$, located 20\\% beyond the upper-left corner of the $3\\times3$ training box. All rows use the non-enriched trained models and the already-selected ECSW rules; no ECSW rule is rebuilt for this diagnostic. Errors are relative trajectory errors (\\%) with respect to HDM, and speedups use $t_{\\mathrm{HDM}}=737.44$ s.}\n")
+        f.write("\\label{tab:mlspg-hprom-extrapolation20-mu3}\n")
+        f.write("\\resizebox{\\textwidth}{!}{%\n")
+        f.write("\\begin{tabular}{lcccccc}\n")
+        f.write("\\toprule\n")
+        f.write("Method & Online/latent dim. & $n_s$ & $n_e$ & $E_{\\mu^{(3)}}$ (\\%) & Online/inference time (s) & Speedup vs HDM \\\\\n")
+        f.write("\\midrule\n")
+        for row in rows:
+            n_s = "--" if row["n_s"] is None else str(row["n_s"])
+            n_e = "--" if row["n_e"] is None else str(row["n_e"])
+            f.write(
+                f"{row['method']} & {row['online_dim']} & {n_s} & {n_e} & "
+                f"{fmt(row['error_percent'])} & {fmt(row['time_s'], 4)} & {fmt_speedup_tex(row['speedup'])} \\\\\n"
+            )
+        f.write("\\bottomrule\n")
+        f.write("\\end{tabular}%\n")
+        f.write("}\n")
+        f.write("\\end{table}\n")
+    print(f"[tex] {tex_path}")
+    return csv_path, tex_path
+
+
+def make_extrapolation_parameter_figure() -> Path:
+    train_mu1 = np.array([4.25, 4.875, 5.50], dtype=float)
+    train_mu2 = np.array([0.015, 0.0225, 0.030], dtype=float)
+    baseline = np.array([(x, y) for x in train_mu1 for y in train_mu2], dtype=float)
+    eval_pts = np.array([(mu1, mu2) for _, mu1, mu2, _, _ in PRIMARY_POINTS], dtype=float)
+    _, mu3_1, mu3_2, _ = EXTRAP_POINT
+    mu3 = np.array([[mu3_1, mu3_2]], dtype=float)
+    xlim, ylim = parameter_plot_limits(baseline, eval_pts, mu3, pad_fraction=0.12)
+
+    fig, ax = plt.subplots(figsize=(6.6, 6.4))
+    ax.set_facecolor("#fbfbf7")
+    ax.add_patch(
+        plt.Rectangle(
+            (train_mu1.min(), train_mu2.min()),
+            train_mu1.max() - train_mu1.min(),
+            train_mu2.max() - train_mu2.min(),
+            fill=False,
+            linestyle="--",
+            linewidth=1.2,
+            edgecolor="0.25",
+            alpha=0.85,
+            label="Training box",
+        )
+    )
+    ax.scatter(baseline[:, 0], baseline[:, 1], s=78, facecolors="black", edgecolors="black", linewidths=1.3, label="Baseline $3\\times3$ grid")
+    for _, mu1, mu2, tag, _ in PRIMARY_POINTS:
+        if tag == "mu1_4.875_mu2_0.0225":
+            suffix = "(v)"
+            offset = (34, -20)
+            va = "top"
+        elif tag == "mu1_4.560_mu2_0.0190":
+            suffix = "(1)"
+            offset = (32, 18)
+            va = "bottom"
+        else:
+            suffix = "(2)"
+            offset = (32, 18)
+            va = "bottom"
+        ax.scatter(mu1, mu2, s=155, marker="*", color="#c62828", edgecolors="white", linewidths=0.7, zorder=5, label="In-domain evaluation points" if suffix == "(v)" else None)
+        ax.annotate(
+            rf"$\mu^{{{suffix}}}$",
+            (mu1, mu2),
+            xytext=offset,
+            textcoords="offset points",
+            fontsize=12,
+            color="#7f1111",
+            ha="left",
+            va=va,
+            arrowprops={"arrowstyle": "-", "color": "#7f1111", "lw": 0.8, "shrinkA": 2, "shrinkB": 5},
+            bbox={"boxstyle": "round,pad=0.12", "fc": "#fbfbf7", "ec": "none", "alpha": 0.88},
+            zorder=6,
+        )
+    ax.scatter(mu3_1, mu3_2, s=210, marker="*", color="#6a1b9a", edgecolors="white", linewidths=0.8, zorder=6, label="Extrapolation point")
+    ax.annotate(
+        r"$\mu^{(3)}$",
+        (mu3_1, mu3_2),
+        xytext=(-54, -28),
+        textcoords="offset points",
+        fontsize=12,
+        color="#4a116b",
+        ha="right",
+        va="top",
+        arrowprops={"arrowstyle": "-", "color": "#4a116b", "lw": 0.8, "shrinkA": 2, "shrinkB": 5},
+        bbox={"boxstyle": "round,pad=0.12", "fc": "#fbfbf7", "ec": "none", "alpha": 0.88},
+        zorder=7,
+    )
+    style_parameter_axis(ax, xlim, ylim)
+    ax.set_xlabel(r"$\mu_1$")
+    ax.set_ylabel(r"$\mu_2$")
+    ax.set_title(r"Baseline training box and upper-left 20\% extrapolation point")
+    ax.grid(True)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=2, frameon=True, borderaxespad=0.0)
+    fig.tight_layout()
+    out = EXTRAP_DIR / "parameter_domain_extrapolation20_mu3.png"
+    fig.savefig(out, dpi=240, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[figure] {out}")
+    return out
+
+
+def make_extrapolation_error_time_figure() -> Path:
+    rows = extrapolation_rows()
+    labels = [str(row["method"]) for row in rows]
+    errors = np.array([np.nan if row["error_percent"] is None else float(row["error_percent"]) for row in rows])
+    times = np.array([np.nan if row["time_s"] is None else float(row["time_s"]) for row in rows])
+    colors = [next(spec.color for spec in MODELS if spec.key == row["key"]) for row in rows]
+    x = np.arange(len(rows))
+
+    fig, axes = plt.subplots(1, 2, figsize=(14.4, 4.8))
+    ax = axes[0]
+    ax.bar(x, errors, color=colors, alpha=0.88)
+    ax.set_ylabel(r"Trajectory error at $\mu^{(3)}$ (\%)")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=36, ha="right")
+    ax.set_title(r"Extrapolation accuracy")
+    ax.grid(True, axis="y")
+
+    ax = axes[1]
+    ax.bar(x, times, color=colors, alpha=0.88)
+    ax.set_yscale("log")
+    ax.set_ylabel(r"Online/inference time (s)")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=36, ha="right")
+    ax.set_title(r"Extrapolation online cost")
+    ax.grid(True, axis="y", which="both")
+
+    fig.suptitle(r"Baseline models at $\mu^{(3)}=(4.000,0.0330)$", y=1.03)
+    fig.tight_layout()
+    out = EXTRAP_DIR / "mlspg_hprom_extrapolation20_error_time_bars.png"
+    fig.savefig(out, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[figure] {out}")
+    return out
+
+
+def make_extrapolation_hdm_vs_rom_montage() -> Path:
+    _, mu1, mu2, _ = EXTRAP_POINT
+    fig, axes = plt.subplots(4, 2, figsize=(13.2, 17.0))
+    for ax, spec in zip(axes.ravel(), MODELS):
+        image_path = extrap_hdm_vs_rom_path(spec, mu1, mu2)
+        if not image_path.exists():
+            ax.text(0.5, 0.5, f"Missing\n{spec.table_label}", ha="center", va="center", transform=ax.transAxes)
+            ax.set_axis_off()
+            continue
+        image = plt.imread(image_path)
+        ax.imshow(image)
+        ax.set_title(spec.table_label, pad=6)
+        ax.set_axis_off()
+    fig.suptitle(r"Saved HDM--ROM line-cut diagnostics at $\mu^{(3)}=(4.000,0.0330)$", y=0.992)
+    fig.tight_layout(rect=(0, 0, 1, 0.982))
+    out = EXTRAP_DIR / "mlspg_hprom_extrapolation20_hdm_vs_rom_montage.png"
+    fig.savefig(out, dpi=180, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[figure] {out}")
+    return out
+
+
 def make_error_tables() -> tuple[Path, Path]:
     fields = [
         "point",
@@ -747,7 +1089,7 @@ def make_error_tables() -> tuple[Path, Path]:
     with tex_path.open("w") as f:
         f.write("\\begin{table}[H]\n")
         f.write("\\centering\n")
-        f.write("\\caption{Current MLSPG-sensitive campaign: relative trajectory errors (\\%) with respect to HDM. Intrusive learned models use 1\\% ECSW rules; POD-NN-ROM and POD-DL-ROM are non-intrusive.}\n")
+        f.write("\\caption{Current MLSPG-sensitive campaign: relative trajectory errors (\\%) with respect to HDM. The first three rows are the original verification/off-grid evaluation points; the final row is the extrapolatory stress-test point. Intrusive learned models use 2\\% ECSW rules; POD-NN-ROM and POD-DL-ROM are non-intrusive.}\n")
         f.write("\\label{tab:mlspg-hprom-current-errors}\n")
         f.write("\\resizebox{\\textwidth}{!}{%\n")
         f.write("\\begin{tabular}{lcccccccc}\n")
@@ -775,7 +1117,7 @@ def case2_trimmed_diagnostic_rows() -> list[dict[str, object]]:
     trimmed = CASE2_TRIMMED_FROM_NP10_SPEC
     rows: list[dict[str, object]] = []
     for point_label, mu1, mu2, _, _ in POINTS:
-        summary = read_summary(model_summary_path(trimmed, mu1, mu2, MAIN_ECSW_TAG))
+        summary = read_summary(trimmed_case2_summary_path(mu1, mu2))
         try:
             n_e = int(summary["n_ecsw_elements"])
         except Exception:
@@ -809,13 +1151,41 @@ def case2_trimmed_diagnostic_rows() -> list[dict[str, object]]:
     return rows
 
 
+def trimmed_case2_summary_path(mu1: float, mu2: float) -> Path:
+    return (
+        model_run_dir(CASE2_TRIMMED_FROM_NP10_SPEC, MAIN_ECSW_TAG)
+        / f"{run_stem(CASE2_TRIMMED_FROM_NP10_SPEC, mu1, mu2)}_summary.txt"
+    )
+
+
+def trimmed_case2_error(mu1: float, mu2: float) -> float | None:
+    return ffloat(read_summary(trimmed_case2_summary_path(mu1, mu2)), "relative_error_percent")
+
+
+def trimmed_case2_time(mu1: float, mu2: float) -> float | None:
+    return ffloat(read_summary(trimmed_case2_summary_path(mu1, mu2)), "online_solve_elapsed_s")
+
+
+def diagnostic_spec_error(spec: ModelSpec, mu1: float, mu2: float) -> float | None:
+    if spec.key == CASE2_TRIMMED_FROM_NP10_SPEC.key:
+        return trimmed_case2_error(mu1, mu2)
+    return spec_error(spec, mu1, mu2)
+
+
+def diagnostic_spec_time(spec: ModelSpec, mu1: float, mu2: float) -> float | None:
+    if spec.key == CASE2_TRIMMED_FROM_NP10_SPEC.key:
+        return trimmed_case2_time(mu1, mu2)
+    return spec_time(spec, mu1, mu2)
+
+
 def make_case2_trimmed_diagnostic_table() -> tuple[Path, Path]:
     fields = [
         "method",
         "muv_error",
         "mu1_error",
         "mu2_error",
-        "mean_error_percent",
+        "in_domain_mean_error_percent",
+        "mu3_error",
         "mean_online_time_s",
         "n_e",
     ]
@@ -827,10 +1197,11 @@ def make_case2_trimmed_diagnostic_table() -> tuple[Path, Path]:
     ]
     rows: list[dict[str, object]] = []
     for method, spec in variants:
-        errors = [spec_error(spec, mu1, mu2) for _, mu1, mu2, _, _ in POINTS]
-        times = [spec_time(spec, mu1, mu2) for _, mu1, mu2, _, _ in POINTS]
+        errors = [diagnostic_spec_error(spec, mu1, mu2) for _, mu1, mu2, _, _ in PRIMARY_POINTS]
+        mu3_error = diagnostic_spec_error(spec, EXTRAP_POINT[1], EXTRAP_POINT[2])
+        times = [diagnostic_spec_time(spec, mu1, mu2) for _, mu1, mu2, _, _ in POINTS]
         if spec.key == CASE2_TRIMMED_FROM_NP10_SPEC.key:
-            summary = read_summary(model_summary_path(spec, POINTS[0][1], POINTS[0][2], MAIN_ECSW_TAG))
+            summary = read_summary(trimmed_case2_summary_path(PRIMARY_POINTS[0][1], PRIMARY_POINTS[0][2]))
             try:
                 n_e = int(summary["n_ecsw_elements"])
             except Exception:
@@ -843,7 +1214,8 @@ def make_case2_trimmed_diagnostic_table() -> tuple[Path, Path]:
                 "muv_error": errors[0],
                 "mu1_error": errors[1],
                 "mu2_error": errors[2],
-                "mean_error_percent": mean_existing(errors),
+                "in_domain_mean_error_percent": mean_existing(errors),
+                "mu3_error": mu3_error,
                 "mean_online_time_s": mean_existing(times),
                 "n_e": n_e,
             }
@@ -856,18 +1228,19 @@ def make_case2_trimmed_diagnostic_table() -> tuple[Path, Path]:
     with tex_path.open("w") as f:
         f.write("\\begin{table}[H]\n")
         f.write("\\centering\n")
-        f.write("\\caption{Case~2 diagnostic in the non-enriched MLSPG-sensitive campaign. The trimmed variant uses the trained $n=10$ Case~2 map $(\\mu_1,\\mu_2,t)\\mapsto(q_{11},\\ldots,q_{151})$ and discards its first ten secondary outputs, so that the online solve uses $n=20$ primary coordinates and injects only $(q_{21},\\ldots,q_{151})$. Errors are relative trajectory errors (\\%) with respect to HDM; timings are averages over the three evaluation points.}\n")
+        f.write("\\caption{Case~2 diagnostic in the non-enriched MLSPG-sensitive campaign. The trimmed variant uses the trained $n=10$ Case~2 map $(\\mu_1,\\mu_2,t)\\mapsto(q_{11},\\ldots,q_{151})$ and discards its first ten secondary outputs, so that the online solve uses $n=20$ primary coordinates and injects only $(q_{21},\\ldots,q_{151})$. Errors are relative trajectory errors (\\%) with respect to HDM. The in-domain mean averages $\\bm\\mu^{(v)}$, $\\bm\\mu^{(1)}$, and $\\bm\\mu^{(2)}$; the extrapolatory point $\\bm\\mu^{(3)}$ is reported separately. Timings are averages over all four displayed points.}\n")
         f.write("\\label{tab:case2-trimmed-from-np10-diagnostic}\n")
         f.write("\\resizebox{\\textwidth}{!}{%\n")
-        f.write("\\begin{tabular}{lcccccc}\n")
+        f.write("\\begin{tabular}{lccccccc}\n")
         f.write("\\toprule\n")
-        f.write("Method & $E_{\\mu^{(v)}}$ (verification) & $E_{\\mu^{(1)}}$ & $E_{\\mu^{(2)}}$ & Mean $E$ & Mean online time (s) & $n_e$ \\\\\n")
+        f.write("Method & $E_{\\mu^{(v)}}$ & $E_{\\mu^{(1)}}$ & $E_{\\mu^{(2)}}$ & In-domain mean $E$ & $E_{\\mu^{(3)}}$ & Mean online time (s) & $n_e$ \\\\\n")
         f.write("\\midrule\n")
         for row in rows:
             n_e = "--" if row["n_e"] is None else str(row["n_e"])
             f.write(
                 f"{row['method']} & {fmt(row['muv_error'])} & {fmt(row['mu1_error'])} & "
-                f"{fmt(row['mu2_error'])} & {fmt(row['mean_error_percent'])} & "
+                f"{fmt(row['mu2_error'])} & {fmt(row['in_domain_mean_error_percent'])} & "
+                f"{fmt(row['mu3_error'])} & "
                 f"{fmt(row['mean_online_time_s'], 4)} & {n_e} \\\\\n"
             )
         f.write("\\bottomrule\n")
@@ -884,13 +1257,13 @@ def make_case2_trimmed_diagnostic_figure() -> Path:
     native_n20 = spec_by_key["case2_n20"]
     trimmed = CASE2_TRIMMED_FROM_NP10_SPEC
 
-    point_labels = [r"$\mu^{(v)}$", r"$\mu^{(1)}$", r"$\mu^{(2)}$", "Mean"]
-    errors_n10 = [spec_error(native_n10, mu1, mu2) for _, mu1, mu2, _, _ in POINTS]
-    errors_n20 = [spec_error(native_n20, mu1, mu2) for _, mu1, mu2, _, _ in POINTS]
-    errors_trimmed = [spec_error(trimmed, mu1, mu2) for _, mu1, mu2, _, _ in POINTS]
-    times_n10 = [spec_time(native_n10, mu1, mu2) for _, mu1, mu2, _, _ in POINTS]
-    times_n20 = [spec_time(native_n20, mu1, mu2) for _, mu1, mu2, _, _ in POINTS]
-    times_trimmed = [spec_time(trimmed, mu1, mu2) for _, mu1, mu2, _, _ in POINTS]
+    point_labels = [r"$\mu^{(v)}$", r"$\mu^{(1)}$", r"$\mu^{(2)}$", "In-domain\nmean", r"$\mu^{(3)}$"]
+    errors_n10 = [diagnostic_spec_error(native_n10, mu1, mu2) for _, mu1, mu2, _, _ in PRIMARY_POINTS]
+    errors_n20 = [diagnostic_spec_error(native_n20, mu1, mu2) for _, mu1, mu2, _, _ in PRIMARY_POINTS]
+    errors_trimmed = [diagnostic_spec_error(trimmed, mu1, mu2) for _, mu1, mu2, _, _ in PRIMARY_POINTS]
+    times_n10 = [diagnostic_spec_time(native_n10, mu1, mu2) for _, mu1, mu2, _, _ in PRIMARY_POINTS]
+    times_n20 = [diagnostic_spec_time(native_n20, mu1, mu2) for _, mu1, mu2, _, _ in PRIMARY_POINTS]
+    times_trimmed = [diagnostic_spec_time(trimmed, mu1, mu2) for _, mu1, mu2, _, _ in PRIMARY_POINTS]
 
     errors_n10.append(mean_existing(errors_n10))
     errors_n20.append(mean_existing(errors_n20))
@@ -898,6 +1271,12 @@ def make_case2_trimmed_diagnostic_figure() -> Path:
     times_n10.append(mean_existing(times_n10))
     times_n20.append(mean_existing(times_n20))
     times_trimmed.append(mean_existing(times_trimmed))
+    errors_n10.append(diagnostic_spec_error(native_n10, EXTRAP_POINT[1], EXTRAP_POINT[2]))
+    errors_n20.append(diagnostic_spec_error(native_n20, EXTRAP_POINT[1], EXTRAP_POINT[2]))
+    errors_trimmed.append(diagnostic_spec_error(trimmed, EXTRAP_POINT[1], EXTRAP_POINT[2]))
+    times_n10.append(diagnostic_spec_time(native_n10, EXTRAP_POINT[1], EXTRAP_POINT[2]))
+    times_n20.append(diagnostic_spec_time(native_n20, EXTRAP_POINT[1], EXTRAP_POINT[2]))
+    times_trimmed.append(diagnostic_spec_time(trimmed, EXTRAP_POINT[1], EXTRAP_POINT[2]))
 
     def arr(values: list[float | None]) -> np.ndarray:
         return np.array([np.nan if v is None else float(v) for v in values], dtype=float)
@@ -910,7 +1289,7 @@ def make_case2_trimmed_diagnostic_figure() -> Path:
         "trimmed": "#748b22",
     }
 
-    fig, axes = plt.subplots(1, 2, figsize=(12.4, 4.6))
+    fig, axes = plt.subplots(1, 2, figsize=(13.8, 4.8))
     ax = axes[0]
     ax.bar(x - width, arr(errors_n10), width, label=r"Native Case 2 ($n=10$)", color=colors["n10"])
     ax.bar(x, arr(errors_n20), width, label=r"Native Case 2 ($n=20$)", color=colors["n20"])
@@ -970,7 +1349,7 @@ def make_hyperreduction_table() -> tuple[Path, Path]:
                 "method": spec.table_label,
                 "n": online_dim,
                 "n_s": None if (spec.is_linear or is_nonintrusive or spec.is_pod_ae) else spec.n_secondary,
-                "ecsw_percent": None if is_nonintrusive else (2.0 if spec.is_linear else 1.0),
+                "ecsw_percent": None if is_nonintrusive else 2.0,
                 "n_e": spec_ne(spec, MAIN_ECSW_TAG),
                 "time_s": tmean,
                 "speedup": None if tmean is None else HDM_REFERENCE_TIME_S / tmean,
@@ -993,7 +1372,7 @@ def make_hyperreduction_table() -> tuple[Path, Path]:
     with tex_path.open("w") as f:
         f.write("\\begin{table}[H]\n")
         f.write("\\centering\n")
-        f.write("\\caption{Current MLSPG-sensitive campaign: online dimensions, mesh sizes, average online timings over the three evaluation points, and speedups with respect to the HDM mean time $t_{\\mathrm{HDM}}=737.44$ s. Intrusive models use selected 1\\% ECSW rules, except the linear HPROM, which uses the shared Stage--2 rule. POD-NN-ROM and POD-DL-ROM are non-intrusive. $N_e=62\\,500$ is the full number of finite elements.}\n")
+        f.write("\\caption{Current MLSPG-sensitive campaign: online dimensions, mesh sizes, average online timings over the four reported evaluation points, and speedups with respect to the HDM mean time $t_{\\mathrm{HDM}}=737.44$ s. Learned intrusive models use selected 2\\% ECSW rules, while the linear HPROM uses the shared Stage--2 rule. POD-NN-ROM and POD-DL-ROM are non-intrusive. $N_e=62\\,500$ is the full number of finite elements.}\n")
         f.write("\\label{tab:mlspg-hprom-current-hyperreduction}\n")
         f.write("\\resizebox{\\textwidth}{!}{%\n")
         f.write("\\begin{tabular}{lccccc}\n")
@@ -1116,78 +1495,19 @@ def make_training_table() -> tuple[Path, Path]:
     return csv_path, tex_path
 
 
-def make_ecsw_comparison_table() -> tuple[Path, Path]:
-    fields = [
-        "method",
-        "ecsw_tag",
-        "ecsw_percent",
-        "n_e",
-        "mean_error_percent",
-        "mean_time_s",
-        "speedup_vs_hdm",
-        "muv_error",
-        "mu1_error",
-        "mu2_error",
-    ]
-    rows: list[dict[str, object]] = []
-    for spec in intrusive_specs():
-        for tag in COMPARISON_ECSW_TAGS:
-            errs = [spec_error(spec, mu1, mu2, tag) for _, mu1, mu2, _, _ in POINTS]
-            times = [spec_time(spec, mu1, mu2, tag) for _, mu1, mu2, _, _ in POINTS]
-            tmean = mean_existing(times)
-            rows.append(
-                {
-                    "method": spec.table_label,
-                    "ecsw_tag": tag,
-                    "ecsw_percent": 1.0 if tag == "ECSW1pct" else 2.0,
-                    "n_e": spec_ne(spec, tag),
-                    "mean_error_percent": mean_existing(errs),
-                    "mean_time_s": tmean,
-                    "speedup_vs_hdm": None if tmean is None else HDM_REFERENCE_TIME_S / tmean,
-                    "muv_error": errs[0],
-                    "mu1_error": errs[1],
-                    "mu2_error": errs[2],
-                }
-            )
-
-    csv_path = TABLE_DIR / "mlspg_hprom_ecsw_1pct_vs_2pct.csv"
-    write_csv(csv_path, rows, fields)
-
-    tex_path = TABLE_DIR / "mlspg_hprom_ecsw_1pct_vs_2pct.tex"
-    with tex_path.open("w") as f:
-        f.write("\\begin{table}[H]\n")
-        f.write("\\centering\n")
-        f.write("\\caption{Sensitivity of the selected intrusive ANN models to the nominal ECSW sampling fraction. Errors are relative trajectory errors (\\%) with respect to HDM; timings are averages over the three evaluation points.}\n")
-        f.write("\\label{tab:mlspg-hprom-ecsw-comparison}\n")
-        f.write("\\resizebox{\\textwidth}{!}{%\n")
-        f.write("\\begin{tabular}{lccccccc}\n")
-        f.write("\\toprule\n")
-        f.write("Method & Sampling fraction & $n_e$ & $E_{\\mu^{(v)}}$ (verification) & $E_{\\mu^{(1)}}$ & $E_{\\mu^{(2)}}$ & Mean $E$ & Mean time (s) \\\\\n")
-        f.write("\\midrule\n")
-        for row in rows:
-            f.write(
-                f"{row['method']} & {fmt(row['ecsw_percent'], 1)}\\% & {row['n_e']} & "
-                f"{fmt(row['muv_error'])} & {fmt(row['mu1_error'])} & {fmt(row['mu2_error'])} & "
-                f"{fmt(row['mean_error_percent'])} & {fmt(row['mean_time_s'], 3)} \\\\\n"
-            )
-        f.write("\\bottomrule\n")
-        f.write("\\end{tabular}%\n")
-        f.write("}\n")
-        f.write("\\end{table}\n")
-    print(f"[tex] {tex_path}")
-    return csv_path, tex_path
-
-
 def main() -> None:
     ensure_dirs()
     V = np.load(METRIC / "basis.npy", mmap_mode="r", allow_pickle=False)
     u_ref = np.load(METRIC / "u_ref.npy", mmap_mode="r", allow_pickle=False)
     make_training_table()
     make_error_tables()
+    make_extrapolation_table()
+    make_extrapolation_parameter_figure()
+    make_extrapolation_error_time_figure()
+    make_extrapolation_hdm_vs_rom_montage()
     make_case2_trimmed_diagnostic_table()
     make_case2_trimmed_diagnostic_figure()
     make_hyperreduction_table()
-    make_ecsw_comparison_table()
     make_solution_overlay(V, u_ref)
     errors = compute_coeff_errors(V, u_ref)
     make_coeff_curve_figure(errors)

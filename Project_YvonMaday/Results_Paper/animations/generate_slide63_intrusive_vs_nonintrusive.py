@@ -35,6 +35,12 @@ MEAN_SPEEDUPS = {
 }
 
 
+def display_label(model: str) -> str:
+    if model == "PROM-POD-AE":
+        return "HPROM-POD-AE"
+    return model
+
+
 def read_summary_value(path: Path, key: str) -> float:
     match = re.search(rf"^{re.escape(key)}:\s*([0-9.]+)", path.read_text(), re.MULTILINE)
     if match is None:
@@ -73,6 +79,21 @@ def load_row_metrics() -> dict[str, tuple[float, str]]:
     return metrics
 
 
+def formula_label(model: str) -> str:
+    formulas = {
+        "PROM-POD-AE": (
+            r"$\tilde{\mathbf u}=\mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\mathbf z)$"
+        ),
+        "POD-NN-ROM": (
+            r"$\tilde{\mathbf u}=\mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal G_q(\mu,t)$"
+        ),
+        "POD-DL-ROM": (
+            r"$\tilde{\mathbf u}=\mathbf u_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\mathcal G_z(\mu,t))$"
+        ),
+    }
+    return formulas[model]
+
+
 def load_comparison_data() -> dict[str, tuple[np.ndarray, np.ndarray]]:
     return {
         "HDM": assets.snapshot_cut_data(assets.hdm_path(POINT)),
@@ -106,7 +127,7 @@ def create_figure(
         squeeze=False,
     )
     fig.subplots_adjust(
-        left=0.175,
+        left=0.225,
         right=0.985,
         bottom=0.16,
         top=0.86,
@@ -191,7 +212,7 @@ def create_figure(
         fig.text(
             0.018,
             row_box.y0 + 0.68 * row_box.height,
-            model,
+            display_label(model),
             ha="left",
             va="center",
             fontsize=14.8,
@@ -201,16 +222,25 @@ def create_figure(
         )
         fig.text(
             0.018,
-            row_box.y0 + 0.40 * row_box.height,
+            row_box.y0 + 0.42 * row_box.height,
             f"error: {error:.3f}\\%\nspeedup: {speedup}",
             ha="left",
             va="center",
-            fontsize=12.8,
-            linespacing=1.32,
+            fontsize=13.2,
+            linespacing=1.18,
+        )
+        fig.text(
+            0.018,
+            row_box.y0 + 0.15 * row_box.height,
+            formula_label(model),
+            ha="left",
+            va="center",
+            fontsize=11.6,
+            linespacing=1.08,
         )
 
     legend_handles = [
-        Line2D([0], [0], label=label, **styles[label])
+        Line2D([0], [0], label=display_label(label), **styles[label])
         for label in ("HDM", *comparisons)
     ]
     fig.legend(

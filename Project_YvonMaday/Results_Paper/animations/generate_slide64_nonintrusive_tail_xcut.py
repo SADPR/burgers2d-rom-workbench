@@ -40,6 +40,12 @@ def load_xcut_data() -> dict[str, np.ndarray]:
     return {key: np.asarray(value, dtype=float) for key, value in data.items()}
 
 
+def display_label(label: str) -> str:
+    if label == "PROM-POD-AE":
+        return "HPROM-POD-AE"
+    return label
+
+
 def main() -> None:
     assets.configure_style()
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
@@ -64,7 +70,7 @@ def main() -> None:
     }
 
     for label in ("HDM", "PROM-POD-AE", "POD-NN-ROM", "POD-DL-ROM"):
-        ax.plot(assets.X, data[label], label=label, **styles[label])
+        ax.plot(assets.X, data[label], label=display_label(label), **styles[label])
 
     ax.set_xlim(0.0, 100.0)
     ax.set_ylim(ymin - ypad, ymax + ypad)

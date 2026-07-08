@@ -37,8 +37,7 @@ from burgers.pod_ann_manifold import (
 from burgers.config import DT, NUM_STEPS, GRID_X, GRID_Y, W0, MU1_RANGE, MU2_RANGE, SAMPLES_PER_MU
 
 from burgers.empirical_cubature_method import EmpiricalCubatureMethod
-from burgers.randomized_singular_value_decomposition import RandomizedSingularValueDecomposition
-from burgers.ecsw_utils import build_ecsw_snapshot_plan
+from burgers.ecsw_utils import build_ecsw_snapshot_plan, direct_left_singular_vectors
 try:
     from project_layout import (
         RUNS_CASE3_DIR,
@@ -292,7 +291,9 @@ def _load_or_build_case3_ecsw_weights(
     snap_time_offset=3,
     snapshot_percent=2.0,
     snapshot_random_seed=42,
+    snapshot_mode="global_param_time_stratified",
     ensure_mu_coverage=True,
+    svd_relative_tolerance=1e-8,
     weights_dir=None,
     weights_label=None,
 ):
@@ -329,7 +330,7 @@ def _load_or_build_case3_ecsw_weights(
         num_steps=num_steps,
         snap_time_offset=snap_time_offset,
         num_mu=len(mu_samples),
-        mode="global_param_time_stratified",
+        mode=snapshot_mode,
         total_snapshots=None,
         total_snapshots_percent=snapshot_percent,
         mu_points=mu_samples,
@@ -398,8 +399,10 @@ def _load_or_build_case3_ecsw_weights(
     C_ecm = np.ascontiguousarray(C, dtype=np.float64)
     b = np.ascontiguousarray(C_ecm.sum(axis=1), dtype=np.float64)
 
-    rsvd = RandomizedSingularValueDecomposition()
-    u, _, _, _ = rsvd.Calculate(C_ecm.T, 1e-8)
+    u = direct_left_singular_vectors(
+        C_ecm.T,
+        relative_tolerance=float(svd_relative_tolerance),
+    )
 
     selector = EmpiricalCubatureMethod()
     selector.SetUp(
@@ -520,7 +523,22 @@ def main(argv=None):
     parser.add_argument("--ecsw-num-training-mu", type=int, default=9)
     parser.add_argument("--ecsw-snap-time-offset", type=int, default=3)
     parser.add_argument("--ecsw-snapshot-percent", type=float, default=2.0)
+    parser.add_argument(
+        "--ecsw-snapshot-mode",
+        choices=("strided_per_mu", "global_stratified_random", "global_param_time_stratified"),
+        default="global_param_time_stratified",
+        help="Snapshot-column selection mode used to build ANN ECSW training matrices.",
+    )
     parser.add_argument("--ecsw-random-seed", type=int, default=42)
+    parser.add_argument(
+        "--ecsw-svd-rel-tol",
+        type=float,
+        default=1e-8,
+        help=(
+            "Relative tolerance used to truncate the deterministic SVD basis "
+            "before ECM. Use 0.0 to keep full numerical rank."
+        ),
+    )
     parser.add_argument("--ecsw-ensure-mu-coverage", dest="ecsw_ensure_mu_coverage", action="store_true")
     parser.add_argument("--ecsw-no-ensure-mu-coverage", dest="ecsw_ensure_mu_coverage", action="store_false")
     parser.set_defaults(ecsw_ensure_mu_coverage=True)
@@ -573,7 +591,9 @@ def main(argv=None):
     rebuild_ecsw_weights = bool(args.rebuild_ecsw)
     ecsw_snap_time_offset = int(args.ecsw_snap_time_offset)
     ecsw_snapshot_percent = float(args.ecsw_snapshot_percent)
+    ecsw_snapshot_mode = str(args.ecsw_snapshot_mode).strip().lower()
     ecsw_snapshot_random_seed = int(args.ecsw_random_seed)
+    ecsw_svd_rel_tol = float(args.ecsw_svd_rel_tol)
     ecsw_ensure_mu_coverage = bool(args.ecsw_ensure_mu_coverage)
     ecsw_num_training_mu = int(args.ecsw_num_training_mu)
     max_its = int(args.max_its)
@@ -658,6 +678,8 @@ def main(argv=None):
     print(f"[Case3] solve_backend(requested) = {solve_backend}")
     print(f"[Case3] solve_backend(effective) = {effective_backend}")
     print(f"[Case3] use_ecsw = {use_ecsw}")
+    print(f"[Case3] ecsw_snapshot_mode = {ecsw_snapshot_mode}")
+    print(f"[Case3] ecsw_svd_rel_tol = {ecsw_svd_rel_tol:.3e}")
 
     hdm_snaps = None
     if not args.ecsw_only:
@@ -706,7 +728,9 @@ def main(argv=None):
             snap_time_offset=ecsw_snap_time_offset,
             snapshot_percent=ecsw_snapshot_percent,
             snapshot_random_seed=ecsw_snapshot_random_seed,
+            snapshot_mode=ecsw_snapshot_mode,
             ensure_mu_coverage=ecsw_ensure_mu_coverage,
+            svd_relative_tolerance=ecsw_svd_rel_tol,
             weights_dir=ecsw_weights_dir,
             weights_label=model_label,
         )
@@ -863,7 +887,9 @@ def main(argv=None):
             ("ecsw_num_training_mu", ecsw_num_training_mu),
             ("ecsw_snap_time_offset", ecsw_snap_time_offset),
             ("ecsw_snapshot_percent", ecsw_snapshot_percent),
+            ("ecsw_snapshot_mode", ecsw_snapshot_mode),
             ("ecsw_snapshot_random_seed", ecsw_snapshot_random_seed),
+            ("ecsw_svd_rel_tol", ecsw_svd_rel_tol),
             ("ecsw_ensure_mu_coverage", bool(ecsw_ensure_mu_coverage)),
             ("ecsw_weights_path", weights_path if effective_backend == "hprom" else "N/A"),
             ("ecsw_weights_source", weights_source),
