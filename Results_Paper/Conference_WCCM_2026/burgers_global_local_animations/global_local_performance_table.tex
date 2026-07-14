@@ -1,0 +1,41 @@
+\documentclass{beamer}
+
+% Match the Results_Paper/main.tex table typography and layout.
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usetheme{Dresden}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}{}
+
+\begin{document}
+\begin{frame}[plain]
+\scriptsize
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\hline
+\textbf{Computational model} & $n$ ($N$ for HDM) & $\bar{n}$ & $N_e$ & avg $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & max $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & Wall-clock time (min) & Speedup \\
+\hline
+HDM & 125\,000 & -- & 62\,500 & -- & -- & 12.512 & -- \\
+\addlinespace[0.35em]
+HPROM & 96 & -- & 4\,824 & 1.030 & 1.096 & 0.743 & 16.841 \\
+HQPROM & 39 & -- & 3\,505 & 0.871 & 0.933 & 0.888 & 14.084 \\
+HPROM-GPR & 20 & 131 & 1\,801 & 0.691 & 0.845 & 0.371 & 33.698 \\
+\addlinespace[0.35em]
+Local HPROM ($N_c=3$) & 35--48 & -- & 3\,649 & 0.827 & 0.854 & 0.377 & 33.168 \\
+Local HQPROM ($N_c=3$) & 11--15 & -- & 1\,164 & 0.716 & 0.844 & 0.311 & 40.259 \\
+Local HPROM-GPR ($N_c=3$) & 10 & 60--97 & 901 & 0.510 & 0.640 & 0.306 & 40.841 \\
+\hline
+\end{tabular}}
+\vspace{0.2em}
+
+{\tiny Speedup is computed with respect to the HDM runtime, $t_{\mathrm{HDM}}=750.702$ s.}
+
+{\tiny $N_e$ denotes the number of sampled ECSW elements ($N_e=62{,}500$ for HDM/full mesh).}
+
+{\tiny Local ROM results shown here use $N_c=3$ clusters.}
+\end{frame}
+\end{document}

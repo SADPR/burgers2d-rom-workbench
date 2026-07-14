@@ -286,6 +286,10 @@ def main(
 
     os.makedirs(script_dir, exist_ok=True)
     os.makedirs(snap_folder, exist_ok=True)
+    for _path in (output_file, summary_file, cluster_plot_file):
+        _dir = os.path.dirname(_path)
+        if _dir:
+            os.makedirs(_dir, exist_ok=True)
 
     print("\n====================================================")
     print("     STAGE 1: LOCAL POD-GPR CLUSTERING IN [u;v]")

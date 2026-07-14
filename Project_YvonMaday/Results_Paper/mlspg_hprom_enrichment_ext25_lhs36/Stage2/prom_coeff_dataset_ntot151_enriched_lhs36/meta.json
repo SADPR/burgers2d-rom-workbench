@@ -1,0 +1,91 @@
+{
+  "solve_backend": "hprom",
+  "is_enrichment_dataset": true,
+  "enrichment_protocol": "baseline_9_plus_lhs36_ext25_fixed_linear_hprom",
+  "total_modes": 151,
+  "n_available_modes": 151,
+  "coefficient_storage": "direct_solver_qN_only",
+  "dt": 0.05,
+  "num_steps": 500,
+  "num_traj": 45,
+  "num_base_traj_copied": 9,
+  "num_lhs_traj": 36,
+  "num_interior_lhs_traj": 18,
+  "num_exterior_lhs_traj": 18,
+  "lhs_seed": 42,
+  "margin_fraction": 0.25,
+  "original_mu1_range": [
+    4.25,
+    5.5
+  ],
+  "original_mu2_range": [
+    0.015,
+    0.03
+  ],
+  "expanded_mu1_range": [
+    3.9375,
+    5.8125
+  ],
+  "expanded_mu2_range": [
+    0.01125,
+    0.03375
+  ],
+  "exterior_region_labels": [
+    "left_margin",
+    "left_margin",
+    "left_margin",
+    "left_margin",
+    "left_margin",
+    "right_margin",
+    "right_margin",
+    "right_margin",
+    "right_margin",
+    "right_margin",
+    "top_margin",
+    "top_margin",
+    "top_margin",
+    "top_margin",
+    "bottom_margin",
+    "bottom_margin",
+    "bottom_margin",
+    "bottom_margin"
+  ],
+  "basis_path": "/scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy",
+  "basis_sha256": "009302ecacc855798887b13d89700978e7777addad355e552510ea01efca5afa",
+  "u_ref_path": "/scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy",
+  "u_ref_sha256": "6cda48104f3eaf8e27e6f8e0137133c5ee7cd444e06da4235fc1fba9c691f39d",
+  "base_dataset_dir": "/scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/prom_coeff_dataset_ntot151",
+  "base_dataset_meta_path": "/scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/prom_coeff_dataset_ntot151/meta.json",
+  "ecsw_weights_path": "/scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/ecsw/ecsw_weights_lspg_ntot151.npy",
+  "ecsw_weights_sha256": "04aa9bdd4039233540ae9292fefbc557a22c0e9de153d5aad768f7203f6b617b",
+  "ecsw_weights_source": "strict_reference_to_baseline_linear_hprom",
+  "ecsw_weights_copied": false,
+  "ecsw_weights_rebuilt": false,
+  "n_ecsw_elements": 5975,
+  "linear_solver": "lstsq",
+  "normal_eq_reg": 1e-12,
+  "max_its": 20,
+  "relnorm_cutoff": 1e-05,
+  "min_delta": 0.01,
+  "state_size": 125000,
+  "reduced_size": 151,
+  "save_rom_snaps": false,
+  "evaluation_points_excluded_from_lhs": [
+    [
+      4.875,
+      0.0225
+    ],
+    [
+      4.56,
+      0.019
+    ],
+    [
+      5.19,
+      0.026
+    ],
+    [
+      4.0,
+      0.033
+    ]
+  ]
+}

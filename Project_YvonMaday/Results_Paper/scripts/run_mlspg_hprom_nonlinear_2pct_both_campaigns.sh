@@ -90,6 +90,10 @@ ann_weights_path() {
 
 ann_extra_args() {
   local case_name="$1"
+  local primary="$2"
+  if [[ "$case_name" == "case2" ]]; then
+    printf '%s\n' --target-primary-modes "$primary"
+  fi
   if [[ "$case_name" == "case3" ]]; then
     printf '%s\n' --ecsw-svd-rel-tol "$ECSW_SVD_REL_TOL"
   fi
@@ -105,9 +109,11 @@ build_ann_ecsw_once() {
   local weights_dir="$7"
   local log_dir="$8"
   local weights
-  local -a extra
+  local -a extra=()
   weights="$(ann_weights_path "$case_name" "$model" "$primary" "$weights_dir")"
-  mapfile -t extra < <(ann_extra_args "$case_name")
+  while IFS= read -r arg; do
+    extra+=("$arg")
+  done < <(ann_extra_args "$case_name" "$primary")
 
   mkdir -p "$output_root" "$weights_dir" "$log_dir"
   if [[ -f "$weights" ]]; then
@@ -133,7 +139,7 @@ build_ann_ecsw_once() {
     --ecsw-snapshot-mode "$ECSW_SNAPSHOT_MODE" \
     --ecsw-random-seed "$ECSW_RANDOM_SEED" \
     --ecsw-ensure-mu-coverage \
-    "${extra[@]}" \
+    ${extra[@]+"${extra[@]}"} \
     --rebuild-ecsw \
     --ecsw-only \
     2>&1 | tee "$log_dir/ecsw_build.log"
@@ -157,12 +163,14 @@ run_ann_point() {
   local mu2="${10}"
   local point_label="${11}"
   local mu1_tag mu2_tag run_tag
-  local -a extra
+  local -a extra=()
 
   mu1_tag="$(printf "%.3f" "$mu1")"
   mu2_tag="$(printf "%.4f" "$mu2")"
   run_tag="${case_name}_hprom_ann_mu1_${mu1_tag}_mu2_${mu2_tag}_n${primary}_ntot151"
-  mapfile -t extra < <(ann_extra_args "$case_name")
+  while IFS= read -r arg; do
+    extra+=("$arg")
+  done < <(ann_extra_args "$case_name" "$primary")
 
   mkdir -p "$output_root" "$log_dir"
   if [[ \
@@ -192,7 +200,7 @@ run_ann_point() {
     --ecsw-snapshot-mode "$ECSW_SNAPSHOT_MODE" \
     --ecsw-random-seed "$ECSW_RANDOM_SEED" \
     --ecsw-ensure-mu-coverage \
-    "${extra[@]}" \
+    ${extra[@]+"${extra[@]}"} \
     --max-its 20 \
     --relnorm-cutoff 1e-5 \
     --min-delta 1e-2 \
@@ -411,10 +419,10 @@ run_baseline() {
 
   run_ann_family_for_campaign "baseline" "$root" "PROM-ANN Case 1" case1 run_prom_ann_case_1.py \
     "$models/case1_ann_ntot151_best.pt" 10 "Case1_Best" 1
-  run_ann_family_for_campaign "baseline" "$root" "PROM-ANN Case 2 (n=10)" case2 run_prom_ann_case_2.py \
-    "$models/case2_ann_ntot151_np10_best.pt" 10 "Case2_Best/np10" 1
-  run_ann_family_for_campaign "baseline" "$root" "PROM-ANN Case 2 (n=20)" case2 run_prom_ann_case_2.py \
-    "$models/case2_ann_ntot151_np20_best.pt" 20 "Case2_Best/np20" 1
+  run_ann_family_for_campaign "baseline" "$root" "Case 2 from POD-NN master map (n=10)" case2 run_prom_ann_case_2.py \
+    "$models/data_driven_ann_ntot151_best.pt" 10 "Case2_Master/np10" 1
+  run_ann_family_for_campaign "baseline" "$root" "Case 2 from POD-NN master map (n=20)" case2 run_prom_ann_case_2.py \
+    "$models/data_driven_ann_ntot151_best.pt" 20 "Case2_Master/np20" 1
   run_ann_family_for_campaign "baseline" "$root" "PROM-ANN Case 3" case3 run_prom_ann_case_3.py \
     "$models/case3_ann_ntot151_best.pt" 10 "Case3_Best" 1
   run_podae_family_for_campaign "baseline" "$root" "$models/prom_pod_ae_ntot151_best.pt" 1
@@ -429,10 +437,10 @@ run_ext25() {
 
   run_ann_family_for_campaign "ext25-lhs36" "$root" "PROM-ANN Case 1" case1 run_prom_ann_case_1.py \
     "$models/case1_ann_ntot151_gelu_samearch_test.pt" 10 "Case1_GELU_SameArch_Test" 0
-  run_ann_family_for_campaign "ext25-lhs36" "$root" "PROM-ANN Case 2 (n=10)" case2 run_prom_ann_case_2.py \
-    "$models/case2_ann_ntot151_np10_best.pt" 10 "Case2_Best/np10" 0
-  run_ann_family_for_campaign "ext25-lhs36" "$root" "PROM-ANN Case 2 (n=20)" case2 run_prom_ann_case_2.py \
-    "$models/case2_ann_ntot151_np20_best.pt" 20 "Case2_Best/np20" 0
+  run_ann_family_for_campaign "ext25-lhs36" "$root" "Case 2 from POD-NN master map (n=10)" case2 run_prom_ann_case_2.py \
+    "$models/data_driven_ann_ntot151_best.pt" 10 "Case2_Master/np10" 0
+  run_ann_family_for_campaign "ext25-lhs36" "$root" "Case 2 from POD-NN master map (n=20)" case2 run_prom_ann_case_2.py \
+    "$models/data_driven_ann_ntot151_best.pt" 20 "Case2_Master/np20" 0
   run_ann_family_for_campaign "ext25-lhs36" "$root" "PROM-ANN Case 3" case3 run_prom_ann_case_3.py \
     "$models/case3_ann_ntot151_best.pt" 10 "Case3_Best" 0
   run_podae_family_for_campaign "ext25-lhs36" "$root" "$models/prom_pod_ae_ntot151_best.pt" 0
@@ -449,7 +457,7 @@ cat <<PLAN
 [2pct-nonlinear] online threads:    $ONLINE_THREADS
 [2pct-nonlinear] device:            $ONLINE_DEVICE
 [2pct-nonlinear] FORCE:             $FORCE
-[2pct-nonlinear] runs:              Case 1, Case 2 n=10, Case 2 n=20, Case 3, PROM-POD-AE
+[2pct-nonlinear] runs:              Case 1, Case 2 n=10/n=20 from POD-NN master map, Case 3, PROM-POD-AE
 [2pct-nonlinear] skipped:           Linear HPROM, POD-NN-ROM, POD-DL-ROM
 PLAN
 

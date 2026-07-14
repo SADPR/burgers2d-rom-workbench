@@ -19,6 +19,17 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from manuscript_plot_style import (
+    COEFF_ABS_HEAT_VMAX,
+    COEFF_ABS_YLIM,
+    COEFF_REL_PERCENT_HEAT_VMAX,
+    COEFF_REL_PERCENT_YLIM,
+    HDM_COLOR,
+    METHOD_COLORS,
+    METHOD_LINE_STYLES,
+    STATE_CUTPLANE_YLIM,
+)
+
 SCRIPT = Path(__file__).resolve()
 PAPER = SCRIPT.parent
 REPO = PAPER.parents[1]
@@ -33,9 +44,9 @@ U_REF_PATH = PAPER / "MetricStudy" / "lspg_sensitive" / "Stage1" / "u_ref.npy"
 NTOT = 151
 
 plt.rcParams.update({
-    "font.family": "DejaVu Sans",
-    "mathtext.fontset": "dejavusans",
-    "text.usetex": False,
+    "font.family": "serif",
+    "text.usetex": True,
+    "text.latex.preamble": r"\usepackage{amsmath}",
     "axes.titlesize": 10,
     "axes.labelsize": 9,
     "legend.fontsize": 8,
@@ -59,15 +70,26 @@ POINTS = (
 )
 
 COLORS = {
-    "HDM": "#111111",
-    "Linear PROM": "#4C78A8",
-    "PROM-ANN C1": "#F58518",
-    "PROM-ANN C2": "#54A24B",
-    "PROM-ANN C2 n20": "#1B7F3A",
-    "PROM-ANN C3": "#B279A2",
-    "PROM-POD-AE": "#E45756",
-    "POD-NN-ROM": "#72B7B2",
-    "POD-DL-ROM": "#9D755D",
+    "HDM": HDM_COLOR,
+    "Linear PROM": METHOD_COLORS["linear"],
+    "PROM-ANN C1": METHOD_COLORS["case1"],
+    "PROM-ANN C2": METHOD_COLORS["case2_n10"],
+    "PROM-ANN C2 n20": METHOD_COLORS["case2_n20"],
+    "PROM-ANN C3": METHOD_COLORS["case3"],
+    "PROM-POD-AE": METHOD_COLORS["podae"],
+    "POD-NN-ROM": METHOD_COLORS["podnn"],
+    "POD-DL-ROM": METHOD_COLORS["poddl"],
+}
+
+LINE_STYLES = {
+    "Linear PROM": METHOD_LINE_STYLES["linear"],
+    "PROM-ANN C1": METHOD_LINE_STYLES["case1"],
+    "PROM-ANN C2": METHOD_LINE_STYLES["case2_n10"],
+    "PROM-ANN C2 n20": METHOD_LINE_STYLES["case2_n20"],
+    "PROM-ANN C3": METHOD_LINE_STYLES["case3"],
+    "PROM-POD-AE": METHOD_LINE_STYLES["podae"],
+    "POD-NN-ROM": METHOD_LINE_STYLES["podnn"],
+    "POD-DL-ROM": METHOD_LINE_STYLES["poddl"],
 }
 
 EXPECTED_MODELS = {
@@ -181,41 +203,103 @@ def hdm_path(p: Point) -> Path:
     raise FileNotFoundError(f"Missing HDM snapshots for {p.key}: {candidates}")
 
 
-def final_x_cut(path: Path) -> np.ndarray:
-    arr = np.load(path, mmap_mode="r")
-    vec = np.asarray(arr[:, -1], dtype=np.float64)
-    n = vec.size // 2
+def _cut_indices(state_size: int) -> tuple[np.ndarray, np.ndarray]:
+    """Return $u_x$ midline indices in the tensor-product state ordering."""
+    n = state_size // 2
     side = int(round(math.sqrt(n)))
-    if side * side != n:
-        raise ValueError(f"Cannot infer square grid from {path}: {arr.shape}")
-    u = vec[:n].reshape(side, side)
-    return u[side // 2, :]
+    if 2 * n != state_size or side * side != n:
+        raise ValueError(f"Cannot infer a square two-component grid from size {state_size}")
+    return (side // 2) * side + np.arange(side), np.arange(side) * side + (side // 2)
+
+
+def state_cut_lines_from_snaps(path: Path, tidx: int) -> tuple[np.ndarray, np.ndarray]:
+    arr = np.load(path, mmap_mode="r")
+    idx_x, idx_y = _cut_indices(arr.shape[0])
+    return np.asarray(arr[idx_x, tidx], dtype=np.float64), np.asarray(arr[idx_y, tidx], dtype=np.float64)
+
+
+def state_cut_lines_from_q(q_path: Path, tidx: int) -> tuple[np.ndarray, np.ndarray]:
+    q = np.load(q_path, mmap_mode="r")
+    if q.ndim != 2:
+        raise ValueError(f"Expected a coefficient trajectory at {q_path}, found {q.shape}")
+    if q.shape[0] != NTOT:
+        if q.shape[1] == NTOT:
+            q = q.T
+        else:
+            raise ValueError(f"Unexpected coefficient trajectory shape at {q_path}: {q.shape}")
+    V = np.load(BASIS_PATH, mmap_mode="r")
+    u_ref = np.load(U_REF_PATH, mmap_mode="r")
+    idx_x, idx_y = _cut_indices(u_ref.size)
+    q_t = np.asarray(q[:, tidx], dtype=np.float64)
+    return (
+        np.asarray(u_ref[idx_x] + V[idx_x, :] @ q_t, dtype=np.float64),
+        np.asarray(u_ref[idx_y] + V[idx_y, :] @ q_t, dtype=np.float64),
+    )
+
+
+def point_role(p: Point) -> str:
+    return {
+        "verification": "verification",
+        "offgrid1": "off-grid",
+        "offgrid2": "off-grid",
+        "extrapolation20pct": "extrapolation",
+    }[p.key]
 
 
 def generate_solution_overlay(rows: list[dict[str, object]]) -> Path:
     methods = ["HDM", "Linear PROM", "PROM-ANN C1", "PROM-ANN C2", "PROM-ANN C3", "PROM-POD-AE", "POD-NN-ROM", "POD-DL-ROM"]
-    fig, axes = plt.subplots(2, 2, figsize=(12.5, 7.0), sharex=True)
-    for ax, p in zip(axes.ravel(), POINTS):
-        x = np.linspace(0.0, 100.0, final_x_cut(hdm_path(p)).size)
-        ax.plot(x, final_x_cut(hdm_path(p)), color=COLORS["HDM"], lw=2.2, label="HDM")
-        for method in methods[1:]:
-            summary, snaps, _ = summary_and_snaps(method, p)
-            kv = read_kv(summary)
-            if not kv or snaps is None or not snaps.exists() or not is_current(method, kv):
-                continue
-            ax.plot(x, final_x_cut(snaps), color=COLORS[method], lw=1.4, alpha=0.78, label=method)
-        ax.set_title(f"{p.label}: $\\mu=({p.mu1:.3f},{p.mu2:.4f})$")
-        ax.grid(True, alpha=0.25)
-        ax.set_xlabel("x at final time, midline")
-        ax.set_ylabel("first state component")
+    time_ids = (120, 300, 500)
+    fig, axes = plt.subplots(len(POINTS), 2, figsize=(12.8, 13.0))
+    for row, p in enumerate(POINTS):
+        hdm = hdm_path(p)
+        xline, yline = state_cut_lines_from_snaps(hdm, time_ids[-1])
+        grids = (np.linspace(0.0, 100.0, xline.size), np.linspace(0.0, 100.0, yline.size))
+        for column, (ax, grid, cut_label) in enumerate(
+            zip(axes[row], grids, (r"$u_x(x,y_{\mathrm{mid}})$", r"$u_x(x_{\mathrm{mid}},y)$"))
+        ):
+            for tidx in time_ids[:-1]:
+                hdm_lines = state_cut_lines_from_snaps(hdm, tidx)
+                ax.plot(grid, hdm_lines[column], color=COLORS["HDM"], lw=0.9, alpha=0.22)
+            hdm_final = state_cut_lines_from_snaps(hdm, time_ids[-1])[column]
+            ax.plot(grid, hdm_final, color=COLORS["HDM"], lw=2.4, label="HDM" if row == 0 and column == 0 else None)
+            for method in methods[1:]:
+                summary, snaps, qpath = summary_and_snaps(method, p)
+                kv = read_kv(summary)
+                if not kv or not is_current(method, kv):
+                    continue
+                line_getter = None
+                if snaps is not None and snaps.exists():
+                    line_getter = lambda tidx, path=snaps: state_cut_lines_from_snaps(path, tidx)
+                elif qpath is not None and qpath.exists():
+                    line_getter = lambda tidx, path=qpath: state_cut_lines_from_q(path, tidx)
+                if line_getter is None:
+                    continue
+                for tidx in time_ids[:-1]:
+                    ax.plot(grid, line_getter(tidx)[column], color=COLORS[method], lw=0.85, alpha=0.20)
+                ax.plot(
+                    grid,
+                    line_getter(time_ids[-1])[column],
+                    color=COLORS[method],
+                    lw=1.75,
+                    alpha=0.96,
+                    label=method if row == 0 and column == 0 else None,
+                )
+            ax.set_title(rf"{p.label}: $\mu=({p.mu1:.3f},{p.mu2:.4f})$: {point_role(p)}: {cut_label}")
+            ax.set_xlabel(r"$x$" if column == 0 else r"$y$")
+            ax.set_ylabel(r"$u_x$")
+            ax.set_xlim(0.0, 100.0)
+            ax.set_ylim(*STATE_CUTPLANE_YLIM)
+            ax.grid(True, alpha=0.25)
     handles, labels = axes.ravel()[0].get_legend_handles_labels()
     # Preserve full method order while dropping missing duplicates.
     by_label = dict(zip(labels, handles))
     ordered = [(m, by_label[m]) for m in methods if m in by_label]
-    fig.legend([h for _, h in ordered], [m for m, _ in ordered], loc="upper center", ncol=4, frameon=False)
-    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.legend([h for _, h in ordered], [m for m, _ in ordered], loc="upper center", ncol=4, frameon=False, bbox_to_anchor=(0.5, 0.975))
+    fig.suptitle("PROM campaign: solution cut-plane overlays", y=0.995)
+    fig.text(0.5, 0.012, "Fainter solid curves: intermediate times; opaque solid curves: final time.", ha="center", fontsize=9)
+    fig.tight_layout(rect=(0.0, 0.035, 1.0, 0.93))
     out = FIG_DIR / "prom_only_solution_overlays.png"
-    fig.savefig(out, dpi=220)
+    fig.savefig(out, dpi=220, bbox_inches="tight")
     plt.close(fig)
     return out
 
@@ -273,6 +357,28 @@ def online_q_for_method(method: str, p: Point) -> np.ndarray | None:
     return None
 
 
+def coefficient_errors(methods: list[str]) -> dict[tuple[str, str], dict[str, np.ndarray]]:
+    """Compute all coefficient diagnostics from the saved online trajectories."""
+    errors: dict[tuple[str, str], dict[str, np.ndarray]] = {}
+    for p in POINTS:
+        qref = online_q_for_method("Linear PROM", p)
+        if qref is None:
+            raise FileNotFoundError(f"Missing linear PROM qN for {p.key}")
+        ref_norm = np.maximum(np.linalg.norm(qref, axis=1), 1.0e-14)
+        for method in methods:
+            q = online_q_for_method(method, p)
+            if q is None:
+                continue
+            error = q - qref
+            errors[(p.key, method)] = {
+                "abs_curve": np.linalg.norm(error, axis=1),
+                "rel_curve": 100.0 * np.linalg.norm(error, axis=1) / ref_norm,
+                "abs_heat": np.abs(error),
+                "rel_heat": 100.0 * np.abs(error) / ref_norm[:, None],
+            }
+    return errors
+
+
 def generate_coeff_error_plot() -> Path:
     methods = [
         "PROM-ANN C1",
@@ -282,47 +388,97 @@ def generate_coeff_error_plot() -> Path:
         "POD-NN-ROM",
         "POD-DL-ROM",
     ]
-    fig, axes = plt.subplots(2, 2, figsize=(12.5, 7.2), sharex=True, sharey=True)
-    for ax, p in zip(axes.ravel(), POINTS):
-        qref = online_q_for_method("Linear PROM", p)
-        if qref is None:
-            raise FileNotFoundError(f"Missing linear PROM qN for {p.key}")
+    errors = coefficient_errors(methods)
+    fig, axes = plt.subplots(2, len(POINTS), figsize=(16.2, 7.1), sharex=True)
+    for column, p in enumerate(POINTS):
+        ax_abs, ax_rel = axes[0, column], axes[1, column]
         for method in methods:
-            q = online_q_for_method(method, p)
-            if q is None:
+            error = errors.get((p.key, method))
+            if error is None:
                 continue
-            denom = np.maximum(np.linalg.norm(qref, axis=1), 1.0e-14)
-            rel = 100.0 * np.linalg.norm(q - qref, axis=1) / denom
-            ax.semilogy(
-                np.arange(1, NTOT + 1),
-                rel,
-                color=COLORS[method],
-                lw=1.45,
-                alpha=0.80,
-                label=method,
-            )
-        ax.set_title(f"{p.label}: $\\mu=({p.mu1:.3f},{p.mu2:.4f})$")
-        ax.axvline(10, color="#333333", lw=1.0, ls="--", alpha=0.65)
-        ax.grid(True, which="both", alpha=0.25)
-        ax.set_xlabel("coefficient index")
-        ax.set_ylabel("relative coefficient error (%)")
-        ax.set_ylim(1e-3, 2e2)
-    handles, labels = axes.ravel()[0].get_legend_handles_labels()
+            for ax, value in ((ax_abs, error["abs_curve"]), (ax_rel, error["rel_curve"])):
+                ax.semilogy(
+                    np.arange(1, NTOT + 1),
+                    np.maximum(value, 1.0e-14),
+                    color=COLORS[method],
+                    lw=1.8,
+                    alpha=0.96,
+                    label=method if ax is ax_abs else None,
+                )
+        for ax in (ax_abs, ax_rel):
+            ax.axvline(10, color="#333333", lw=1.0, ls=":", alpha=0.72)
+            ax.grid(True, which="both", alpha=0.22)
+            ax.set_xlim(1, NTOT)
+        ax_abs.set_title(f"{p.label}: $\\mu=({p.mu1:.3f},{p.mu2:.4f})$")
+        ax_abs.set_ylim(*COEFF_ABS_YLIM)
+        ax_rel.set_ylim(*COEFF_REL_PERCENT_YLIM)
+        ax_rel.set_xlabel("coefficient index")
+    axes[0, 0].set_ylabel(r"$\\|q_i-q_i^{\\mathrm{ref}}\\|_2$")
+    axes[1, 0].set_ylabel(r"relative coefficient error (\%)")
+    handles, labels = axes[0, 0].get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
     ordered = [(name, by_label[name]) for name in methods if name in by_label]
-    fig.legend([h for _, h in ordered], [m for m, _ in ordered], loc="upper center", ncol=4, frameon=False)
-    fig.tight_layout(rect=(0, 0, 1, 0.92))
-    out = FIG_DIR / "prom_only_coeff_rel_errors.png"
+    fig.legend([h for _, h in ordered], [m for m, _ in ordered], loc="upper center", ncol=4, frameon=False, bbox_to_anchor=(0.5, 1.01))
+    fig.tight_layout(rect=(0, 0, 1, 0.94), w_pad=1.05, h_pad=0.8)
+    out = FIG_DIR / "prom_only_coeff_abs_rel_errors.png"
     fig.savefig(out, dpi=220)
     plt.close(fig)
     return out
 
 
+def generate_coefficient_heatmaps() -> list[Path]:
+    methods = [
+        "PROM-ANN C1",
+        "PROM-ANN C2",
+        "PROM-ANN C3",
+        "PROM-POD-AE",
+        "POD-NN-ROM",
+        "POD-DL-ROM",
+    ]
+    errors = coefficient_errors(methods)
+    outputs: list[Path] = []
+    for kind, vmax, label, stem in (
+        ("abs_heat", COEFF_ABS_HEAT_VMAX, r"$|q_i-q_i^{\\mathrm{ref}}|$", "abs"),
+        ("rel_heat", COEFF_REL_PERCENT_HEAT_VMAX, r"relative coefficient error (\%)", "rel"),
+    ):
+        fig, axes = plt.subplots(len(methods), len(POINTS), figsize=(15.6, 10.9), sharex=True, sharey=True)
+        image = None
+        for row, method in enumerate(methods):
+            for column, p in enumerate(POINTS):
+                ax = axes[row, column]
+                error = errors.get((p.key, method))
+                if error is None:
+                    ax.set_axis_off()
+                    continue
+                image = ax.imshow(
+                    error[kind], origin="lower", aspect="auto", interpolation="nearest",
+                    extent=(0.0, 25.0, 1.0, float(NTOT)), cmap="viridis", vmin=0.0, vmax=vmax,
+                )
+                ax.axhline(10.5, color="white", linestyle=":", linewidth=0.75, alpha=0.82)
+                if row == 0:
+                    ax.set_title(f"{p.label}: $\\mu=({p.mu1:.3f},{p.mu2:.4f})$", pad=5)
+                if column == 0:
+                    ax.set_ylabel(method)
+                if row == len(methods) - 1:
+                    ax.set_xlabel("time")
+                ax.grid(False)
+        fig.subplots_adjust(left=0.17, right=0.88, bottom=0.07, top=0.93, wspace=0.15, hspace=0.22)
+        fig.supylabel("coefficient index", x=0.045)
+        cax = fig.add_axes([0.905, 0.15, 0.017, 0.68])
+        cbar = fig.colorbar(image, cax=cax)
+        cbar.set_label(label)
+        out = FIG_DIR / f"prom_only_coeff_{stem}_heatmaps.png"
+        fig.savefig(out, dpi=220, bbox_inches="tight")
+        plt.close(fig)
+        outputs.append(out)
+    return outputs
+
+
 def generate_case2_n10_n20_coeff_plot() -> Path:
     methods = [
-        ("POD-NN-ROM", "POD-NN-ROM ($n=0$)", "#72B7B2", "-"),
-        ("PROM-ANN C2", "Case 2 ($n=10$)", "#54A24B", "-"),
-        ("PROM-ANN C2 n20", "Case 2 ($n=20$)", "#1B7F3A", "-"),
+        ("POD-NN-ROM", "POD-NN-ROM ($n=0$)", METHOD_COLORS["podnn"], "-"),
+        ("PROM-ANN C2", "Case 2 ($n=10$)", METHOD_COLORS["case2_n10"], "-"),
+        ("PROM-ANN C2 n20", "Case 2 ($n=20$)", METHOD_COLORS["case2_n20"], "-"),
     ]
     fig, axes = plt.subplots(2, 2, figsize=(12.5, 7.2), sharex=True, sharey=True)
     for ax, p in zip(axes.ravel(), POINTS):
@@ -335,15 +491,15 @@ def generate_case2_n10_n20_coeff_plot() -> Path:
                 continue
             denom = np.maximum(np.linalg.norm(qref, axis=1), 1.0e-14)
             rel = 100.0 * np.linalg.norm(q - qref, axis=1) / denom
-            ax.semilogy(np.arange(1, NTOT + 1), rel, color=color, lw=1.7, ls=ls, alpha=0.86, label=label)
-        ax.axvline(10, color="#444444", lw=1.0, ls="--", alpha=0.65)
+            ax.semilogy(np.arange(1, NTOT + 1), rel, color=color, lw=1.9, ls=ls, alpha=0.98, label=label)
+        ax.axvline(10, color="#444444", lw=1.0, ls=":", alpha=0.65)
         ax.axvline(20, color="#444444", lw=1.0, ls=":", alpha=0.75)
-        ax.text(10.5, 1.5e-3, "n=10", rotation=90, va="bottom", ha="left", fontsize=7, color="#444444")
-        ax.text(20.5, 1.5e-3, "n=20", rotation=90, va="bottom", ha="left", fontsize=7, color="#444444")
+        ax.text(10.5, 1.5e-3, r"$n=10$", rotation=90, va="bottom", ha="left", fontsize=7, color="#444444")
+        ax.text(20.5, 1.5e-3, r"$n=20$", rotation=90, va="bottom", ha="left", fontsize=7, color="#444444")
         ax.set_title(f"{p.label}: $\\mu=({p.mu1:.3f},{p.mu2:.4f})$")
         ax.grid(True, which="both", alpha=0.25)
         ax.set_xlabel("coefficient index")
-        ax.set_ylabel("relative coefficient error (%)")
+        ax.set_ylabel(r"relative coefficient error (\%)")
         ax.set_ylim(1e-3, 2e2)
     handles, labels = axes.ravel()[0].get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
@@ -432,20 +588,24 @@ def write_online_table(rows: list[dict[str, object]]) -> Path:
     labels = {
         "Linear PROM": "Linear PROM",
         "PROM-ANN C1": "PROM--ANN Case 1",
-        "PROM-ANN C2": "PROM--ANN Case 2, $n=10$",
-        "PROM-ANN C2 n20": "PROM--ANN Case 2, $n=20$",
+        "PROM-ANN C2": "PROM--ANN Case 2 ($n=10$)",
+        "PROM-ANN C2 n20": "PROM--ANN Case 2 ($n=20$)",
         "PROM-ANN C3": "PROM--ANN Case 3",
-        "PROM-POD-AE": "PROM--POD--AE, $n_z=10$",
+        "PROM-POD-AE": "PROM--POD--AE ($n_z=10$)",
         "POD-NN-ROM": "POD--NN--ROM",
-        "POD-DL-ROM": "POD--DL--ROM, $n_z=10$",
+        "POD-DL-ROM": "POD--DL--ROM ($n_z=10$)",
     }
     lines = [
         r"\begin{tabular}{lrrrrrr}",
         r"\toprule",
-        r"Model & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & mean & $\mu^{(3)}$ & time (s) \\",
+        r"Model & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ & Mean time (s) \\",
         r"\midrule",
     ]
     for method in methods:
+        if method == "POD-NN-ROM":
+            # Direct maps share the coefficient teacher, but evaluate no
+            # residual. Keep the same visual/table separation as HPROM.
+            lines.append(r"\midrule")
         vals, time_s, ok = method_summary(rows, method)
         mean = None if any(v is None for v in vals[:3]) else sum(float(v) for v in vals[:3]) / 3.0
         row = [labels[method], *(fmt(v, 3) for v in vals[:3]), fmt(mean, 3), fmt(vals[3], 3), fmt(time_s, 3 if (time_s is not None and time_s < 1.0) else 1)]
@@ -459,31 +619,38 @@ def write_online_table(rows: list[dict[str, object]]) -> Path:
 
 
 def write_online_coeff_table() -> Path:
-    methods = ["PROM-ANN C1", "PROM-ANN C2", "PROM-ANN C2 n20", "PROM-ANN C3", "PROM-POD-AE", "POD-NN-ROM", "POD-DL-ROM"]
+    methods = ["Linear PROM", "PROM-ANN C1", "PROM-ANN C2", "PROM-ANN C2 n20", "PROM-ANN C3", "PROM-POD-AE", "POD-NN-ROM", "POD-DL-ROM"]
     labels = {
-        "PROM-ANN C1": "Case 1",
-        "PROM-ANN C2": "Case 2 $n=10$",
-        "PROM-ANN C2 n20": "Case 2 $n=20$",
-        "PROM-ANN C3": "Case 3",
-        "PROM-POD-AE": "POD--AE",
+        "Linear PROM": "Linear PROM",
+        "PROM-ANN C1": "PROM--ANN Case 1",
+        "PROM-ANN C2": "PROM--ANN Case 2 ($n=10$)",
+        "PROM-ANN C2 n20": "PROM--ANN Case 2 ($n=20$)",
+        "PROM-ANN C3": "PROM--ANN Case 3",
+        "PROM-POD-AE": "PROM--POD--AE",
         "POD-NN-ROM": "POD--NN--ROM",
         "POD-DL-ROM": "POD--DL--ROM",
     }
     lines = [
-        r"\begin{tabular}{lrrrrrrr}",
+        r"\begin{tabular}{lrrrrr}",
         r"\toprule",
-        "Point & " + " & ".join(labels[m] for m in methods) + r" \\",
+        r"Model & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ \\",
         r"\midrule",
     ]
-    for p in POINTS:
-        qref = online_q_for_method("Linear PROM", p)
-        if qref is None:
-            raise FileNotFoundError(f"Missing linear PROM qN for {p.key}")
-        vals = []
-        for method in methods:
+    for method in methods:
+        if method == "POD-NN-ROM":
+            lines.append(r"\midrule")
+        values: list[float | None] = []
+        for p in POINTS:
+            qref = online_q_for_method("Linear PROM", p)
+            if qref is None:
+                raise FileNotFoundError(f"Missing linear PROM qN for {p.key}")
             q = online_q_for_method(method, p)
-            vals.append(fmt(rel_q(q, qref), 3) if q is not None else "--")
-        lines.append(f"{p.label} & " + " & ".join(vals) + r" \\")
+            values.append(0.0 if method == "Linear PROM" else (rel_q(q, qref) if q is not None else None))
+        in_domain = [value for value in values[:3] if value is not None]
+        mean = float(np.mean(in_domain)) if len(in_domain) == 3 else None
+        lines.append(
+            f"{labels[method]} & {fmt(values[0], 3)} & {fmt(values[1], 3)} & "
+            f"{fmt(values[2], 3)} & {fmt(mean, 3)} & {fmt(values[3], 3)} " + r"\\")
     lines += [r"\bottomrule", r"\end{tabular}"]
     out = TAB_DIR / "prom_only_online_coeff_errors.tex"
     out.write_text("\n".join(lines) + "\n")
@@ -496,21 +663,26 @@ def stage3_value(path: Path, key: str) -> str:
 
 def write_training_table() -> Path:
     specs = [
-        ("PROM--ANN Case 1", "$(q_1,\\ldots,q_{10})\\mapsto(q_{11},\\ldots,q_{151})$", STAGE3 / "case1_ann_ntot151_best_summary.txt"),
-        ("PROM--ANN Case 3", "$(q_1,\\ldots,q_{10},\\mu_1,\\mu_2,t)\\mapsto(q_{11},\\ldots,q_{151})$", STAGE3 / "case3_ann_ntot151_best_summary.txt"),
-        ("Master POD--NN--ROM (Case 2 tail source)", "$(\\mu_1,\\mu_2,t)\\mapsto(q_1,\\ldots,q_{151})$", STAGE3 / "master_ann_mu_t_to_qtot_ntot151_best_summary.txt"),
-        ("PROM--POD--AE", "$q_{1:151}\\mapsto z_{1:10}\\mapsto q_{1:151}$", STAGE3 / "prom_pod_ae_ntot151_best_summary.txt"),
-        ("POD--DL--ROM", "$(\\mu_1,\\mu_2,t)\\mapsto z_{1:10}\\mapsto q_{1:151}$", STAGE3 / "pod_dl_data_driven_ntot151_best_summary.txt"),
+        ("PROM--ANN Case 1", "$\\q_p\\mapsto\\q_s$; $10\\to256\\to512\\to512\\to256\\to141$", STAGE3 / "case1_ann_ntot151_best_summary.txt"),
+        ("Master POD--NN--ROM (Case 2 tail source)", "$(\\mu_1,\\mu_2,t)\\mapsto\\q_{151}$; $3\\to256\\to512\\to512\\to256\\to151$", STAGE3 / "master_ann_mu_t_to_qtot_ntot151_best_summary.txt"),
+        ("PROM--ANN Case 3", "$(\\q_p,\\mu_1,\\mu_2,t)\\mapsto\\q_s$; $13\\to256\\to512\\to512\\to256\\to141$", STAGE3 / "case3_ann_ntot151_best_summary.txt"),
+        ("PROM--POD--AE", "z-score AE; $151\\to512\\to256\\to128\\to10\\to128\\to256\\to512\\to151$", STAGE3 / "prom_pod_ae_ntot151_best_summary.txt"),
+        ("POD--DL--ROM", "z-score latent dynamics; $3\\to256\\to512\\to512\\to256\\to10\\to151$", STAGE3 / "pod_dl_data_driven_ntot151_best_summary.txt"),
     ]
     lines = [
-        r"\begin{tabular}{llrrr}",
+        r"\begin{tabular}{llrrrr}",
         r"\toprule",
-        r"Model & learned map & parameters & train (\%) & validation (\%) \\",
+        r"Model & Map / network & Act. & Train $e_q$ (\%) & Val. $e_q$ (\%) & Params \\",
         r"\midrule",
     ]
     for model, mapping, path in specs:
         kv = read_kv(path)
         params = kv.get("trainable_parameters", "--")
+        activation = {
+            "silu": "SiLU",
+            "elu": "ELU",
+            "gelu": "GELU",
+        }.get(kv.get("activation", "--").lower(), kv.get("activation", "--"))
         train = kv.get("train_rel_frob_percent", "--")
         val = kv.get("val_rel_frob_percent", "--")
         try:
@@ -518,9 +690,9 @@ def write_training_table() -> Path:
         except Exception:
             params_txt = "--"
         lines.append(
-            f"{model} & {mapping} & {params_txt} & "
+            f"{model} & {mapping} & {activation} & "
             f"{fmt(float(train), 3) if train != '--' else '--'} & "
-            f"{fmt(float(val), 3) if val != '--' else '--'}"
+            f"{fmt(float(val), 3) if val != '--' else '--'} & {params_txt}"
             r" \\"
         )
     lines += [r"\bottomrule", r"\end{tabular}"]
@@ -574,6 +746,7 @@ def main() -> None:
     figs = []
     figs.append(generate_solution_overlay(rows))
     figs.append(generate_coeff_error_plot())
+    figs.extend(generate_coefficient_heatmaps())
     figs.append(generate_case2_n10_n20_coeff_plot())
     figs.extend(copy_existing_figures().values())
     print("[prom-only-assets] tables:")

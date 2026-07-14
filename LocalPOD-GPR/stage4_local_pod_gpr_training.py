@@ -523,6 +523,10 @@ def main(
     random_seed=42,
 ):
     os.makedirs(script_dir, exist_ok=True)
+    for _path in (model_pkl, switching_npz, all_in_one_npz, summary_file, train_error_plot_file):
+        _dir = os.path.dirname(_path)
+        if _dir:
+            os.makedirs(_dir, exist_ok=True)
 
     kernel_candidates = _normalize_kernel_candidates(kernel_candidates)
     alpha_values = _normalize_alpha_values(alpha_values)

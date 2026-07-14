@@ -9,6 +9,7 @@ export PAPER_RESULTS_ROOT="${PAPER_RESULTS_ROOT:-$PWD/Results_Paper}"
 export PAPER_TAG="${PAPER_TAG:-mlspg_hprom_enrichment_ext25_lhs36}"
 export PAPER_ROOT="$PAPER_RESULTS_ROOT/$PAPER_TAG"
 export DATASET_DIR="${DATASET_DIR:-$PAPER_ROOT/Stage2/prom_coeff_dataset_ntot151_enriched_lhs36}"
+export VAL_DATASET_DIR="${VAL_DATASET_DIR:-$PAPER_RESULTS_ROOT/mlspg_hprom_main/Stage2/prom_coeff_dataset_ntot151_validation2}"
 export STAGE3_DIR="$PAPER_ROOT/Stage3"
 export MODELS_DIR="$STAGE3_DIR/models"
 export LOG_ROOT="$PAPER_ROOT/logs/train_best"
@@ -29,9 +30,10 @@ CHECK_ONLY="${CHECK_ONLY:-0}"
 family="${1:-all}"
 
 case "$family" in
-  all|case1|case2|case2_np10|case2_np20|case3|data_driven|pod_ae|pod_dl) ;;
+  all|case1|case2|case3|data_driven|pod_ae|pod_dl) ;;
   *)
-    echo "Usage: $0 [all|case1|case2|case2_np10|case2_np20|case3|data_driven|pod_ae|pod_dl]" >&2
+    echo "Usage: $0 [all|case1|case2|case3|data_driven|pod_ae|pod_dl]" >&2
+    echo "Note: case2 trains the master POD-NN map used as the Case-2 tail source." >&2
     exit 2
     ;;
 esac
@@ -62,6 +64,7 @@ print_plan() {
 [ext25-lhs36-train] selected-architecture training, no sweep
 [ext25-lhs36-train] paper root:  $PAPER_ROOT
 [ext25-lhs36-train] dataset:     $DATASET_DIR
+[ext25-lhs36-train] validation:  $VAL_DATASET_DIR
 [ext25-lhs36-train] stage3 dir:  $STAGE3_DIR
 [ext25-lhs36-train] models dir:  $MODELS_DIR
 [ext25-lhs36-train] logs dir:    $LOG_ROOT
@@ -70,8 +73,7 @@ print_plan() {
 [ext25-lhs36-train] threads:     $TRAIN_NUM_THREADS
 [ext25-lhs36-train] selected architectures:
   Case 1:       C02 wide SiLU, n=10, hidden=(256,512,512,256)
-  Case 2 n=10: B01/A10-like SiLU, hidden=(256,512,512,256)
-  Case 2 n=20: B01/A10-like SiLU, hidden=(256,512,512,256)
+  Case 2:       uses the POD-NN-ROM map mu,t -> q_tot; no separate Case 2 ANN is trained
   Case 3:       C02 wide SiLU, n=10, hidden=(256,512,512,256)
   POD-NN-ROM:   A10 wide SiLU, hidden=(256,512,512,256)
   PROM-POD-AE:  PAE06, latent=10, GELU, z-score, hidden=(512,256,128)
@@ -90,6 +92,7 @@ import numpy as np
 
 project = Path.cwd().resolve()
 dataset = Path(os.environ["DATASET_DIR"]).expanduser().resolve()
+val_dataset = Path(os.environ["VAL_DATASET_DIR"]).expanduser().resolve()
 meta_path = dataset / "meta.json"
 if not meta_path.is_file():
     raise SystemExit(f"Missing extended enrichment metadata: {meta_path}\nRun Stage 2 first and wait for completion.")
@@ -143,8 +146,23 @@ for mu_dir in mu_dirs:
     if qn.shape != (151, 501) or not np.all(np.isfinite(qn)):
         raise SystemExit(f"Invalid qN in {mu_dir}: shape={qn.shape}.")
 
+val_meta_path = val_dataset / "meta.json"
+if not val_meta_path.is_file():
+    raise SystemExit(f"Missing validation metadata: {val_meta_path}")
+val_meta = json.loads(val_meta_path.read_text())
+if val_meta.get("solve_backend") != "hprom":
+    raise SystemExit(f"Expected validation solve_backend=hprom, found {val_meta.get('solve_backend')}.")
+val_dirs = sorted(path for path in (val_dataset / "per_mu").iterdir() if path.is_dir())
+if len(val_dirs) != 2:
+    raise SystemExit(f"Expected 2 validation trajectories, found {len(val_dirs)} in {val_dataset}.")
+for mu_dir in val_dirs:
+    qn = np.load(mu_dir / "qN.npy", allow_pickle=False)
+    if qn.shape != (151, 501) or not np.all(np.isfinite(qn)):
+        raise SystemExit(f"Invalid validation qN in {mu_dir}: shape={qn.shape}.")
+
 print("[ext25-lhs36-train-check] dataset:", dataset)
 print("[ext25-lhs36-train-check] trajectories:", len(mu_dirs), "(45 x 501 = 22545 rows)")
+print("[ext25-lhs36-train-check] validation trajectories:", len(val_dirs), "(2 x 501 = 1002 rows)")
 print("[ext25-lhs36-train-check] direct qN:", meta["coefficient_storage"])
 print("[ext25-lhs36-train-check] fixed linear ECSW:", ecsw)
 print("[ext25-lhs36-train-check] ECSW SHA-256:", meta["ecsw_weights_sha256"])
@@ -199,24 +217,22 @@ train_case1() {
       --lr-scheduler-factor 0.5 --lr-scheduler-patience 50 --lr-scheduler-min-lr 1e-6
 }
 
-train_case2_primary() {
-  local primary="$1"
-  local log_dir="$LOG_ROOT/case2_np${primary}"
-  local model="$MODELS_DIR/case2_ann_ntot151_np${primary}_best.pt"
-  local summary="$STAGE3_DIR/case2_ann_ntot151_np${primary}_best_summary.txt"
-  local log="$log_dir/case2_ann_ntot151_np${primary}_best.log"
+train_master_ann() {
+  local log_dir="$LOG_ROOT/data_driven"
+  local model="$MODELS_DIR/data_driven_ann_ntot151_best.pt"
+  local summary="$STAGE3_DIR/data_driven_ann_ntot151_best_summary.txt"
+  local log="$log_dir/data_driven_ann_ntot151_best.log"
   local epochs patience
   epochs="$(selected_epochs 6000)"
   patience="$(selected_patience 220)"
-  echo "==== Train ext25-lhs36 Case 2 n=${primary}: B01/A10-like wide SiLU"
+  echo "==== Train ext25-lhs36 POD-NN-ROM master map for Case 2/Data-driven"
   run_logged "$model" "$summary" "$log" \
-    python3 -u stage3_perform_training_case_2_ann_test_n20_maday.py \
+    python3 -u stage3_perform_training_rom_data_driven_maday.py \
       --maday-results-root "$PAPER_RESULTS_ROOT" --maday-tag "$PAPER_TAG" \
       --dataset-backend hprom --dataset-ntot 151 --dataset-dir "$DATASET_DIR" \
-      --primary-modes "$primary" \
-      --model-name "case2_ann_ntot151_np${primary}_best.pt" \
-      --summary-name "case2_ann_ntot151_np${primary}_best_summary.txt" \
-      --val-split-mode row --val-frac 0.1 \
+      --validation-dataset-dir "$VAL_DATASET_DIR" \
+      --model-name "data_driven_ann_ntot151_best.pt" \
+      --summary-name "data_driven_ann_ntot151_best_summary.txt" \
       --hidden-dims "256,512,512,256" --activation silu \
       --batch-size 128 --lr 5e-4 --weight-decay 1e-6 --dropout 0.0 \
       --epochs "$epochs" --patience "$patience" \
@@ -245,28 +261,6 @@ train_case3() {
       --batch-size 128 --lr 5e-4 --weight-decay 1e-6 --dropout 0.0 \
       --epochs "$epochs" --patience "$patience" \
       --lr-scheduler-factor 0.5 --lr-scheduler-patience 50 --lr-scheduler-min-lr 1e-6
-}
-
-train_data_driven() {
-  local log_dir="$LOG_ROOT/data_driven"
-  local model="$MODELS_DIR/data_driven_ann_ntot151_best.pt"
-  local summary="$STAGE3_DIR/data_driven_ann_ntot151_best_summary.txt"
-  local log="$log_dir/data_driven_ann_ntot151_best.log"
-  local epochs patience
-  epochs="$(selected_epochs 6000)"
-  patience="$(selected_patience 220)"
-  echo "==== Train ext25-lhs36 POD-NN-ROM: A10 wide SiLU"
-  run_logged "$model" "$summary" "$log" \
-    python3 -u stage3_perform_training_rom_data_driven_maday.py \
-      --maday-results-root "$PAPER_RESULTS_ROOT" --maday-tag "$PAPER_TAG" \
-      --dataset-backend hprom --dataset-ntot 151 --dataset-dir "$DATASET_DIR" \
-      --model-name "data_driven_ann_ntot151_best.pt" \
-      --summary-name "data_driven_ann_ntot151_best_summary.txt" \
-      --hidden-dims "256,512,512,256" --activation silu \
-      --batch-size 128 --lr 5e-4 --weight-decay 1e-6 --dropout 0.0 \
-      --epochs "$epochs" --patience "$patience" \
-      --lr-scheduler-factor 0.5 --lr-scheduler-patience 50 --lr-scheduler-min-lr 1e-6 \
-      --seed 42
 }
 
 train_pod_ae() {
@@ -323,11 +317,8 @@ train_pod_dl() {
 run_family() {
   case "$1" in
     case1) train_case1 ;;
-    case2) train_case2_primary 10; train_case2_primary 20 ;;
-    case2_np10) train_case2_primary 10 ;;
-    case2_np20) train_case2_primary 20 ;;
+    case2|data_driven) train_master_ann ;;
     case3) train_case3 ;;
-    data_driven) train_data_driven ;;
     pod_ae) train_pod_ae ;;
     pod_dl) train_pod_dl ;;
   esac
@@ -351,7 +342,7 @@ if [[ "$TRAIN_SMOKE_TEST" == "1" ]]; then
 fi
 
 if [[ "$family" == "all" ]]; then
-  families=(case1 case2_np10 case2_np20 case3 data_driven pod_ae pod_dl)
+  families=(case1 data_driven case3 pod_ae pod_dl)
   if [[ "$TRAIN_EXECUTION" == "parallel" ]]; then
     echo "[ext25-lhs36-train] Running selected trainings concurrently. Use only with adequate resources."
     pids=()

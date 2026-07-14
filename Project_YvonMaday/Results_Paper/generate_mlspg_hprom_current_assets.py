@@ -21,6 +21,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from manuscript_plot_style import METHOD_COLORS
+
 
 ROOT = Path(__file__).resolve().parent
 PROJECT = ROOT.parent
@@ -129,7 +131,7 @@ MODELS = [
         key="linear",
         label="Linear HPROM",
         table_label="Linear HPROM",
-        color="tab:red",
+        color=METHOD_COLORS["linear"],
         linestyle="-",
         alpha=0.90,
         linewidth=2.0,
@@ -139,7 +141,7 @@ MODELS = [
         key="case1",
         label="PROM-ANN Case 1",
         table_label="PROM-ANN Case 1",
-        color="tab:blue",
+        color=METHOD_COLORS["case1"],
         linestyle="-",
         alpha=0.88,
         linewidth=2.0,
@@ -154,7 +156,7 @@ MODELS = [
         key="case2_n10",
         label="PROM-ANN Case 2 ($n=10$)",
         table_label="PROM-ANN Case 2 ($n=10$)",
-        color="tab:cyan",
+        color=METHOD_COLORS["case2_n10"],
         linestyle="-",
         alpha=0.92,
         linewidth=2.0,
@@ -170,7 +172,7 @@ MODELS = [
         key="case2_n20",
         label="PROM-ANN Case 2 ($n=20$)",
         table_label="PROM-ANN Case 2 ($n=20$)",
-        color="tab:brown",
+        color=METHOD_COLORS["case2_n20"],
         linestyle="-",
         alpha=0.92,
         linewidth=2.0,
@@ -186,7 +188,7 @@ MODELS = [
         key="case3",
         label="PROM-ANN Case 3",
         table_label="PROM-ANN Case 3",
-        color="tab:green",
+        color=METHOD_COLORS["case3"],
         linestyle="-",
         alpha=0.90,
         linewidth=2.0,
@@ -201,7 +203,7 @@ MODELS = [
         key="pod_ae_best",
         label="PROM-POD-AE ($n_z=10$)",
         table_label="PROM-POD-AE",
-        color="tab:purple",
+        color=METHOD_COLORS["podae"],
         linestyle="-",
         alpha=0.90,
         linewidth=2.0,
@@ -212,7 +214,7 @@ MODELS = [
         key="pod_nn_best",
         label="Data-driven POD-NN",
         table_label="POD-NN-ROM",
-        color="tab:orange",
+        color=METHOD_COLORS["podnn"],
         linestyle="-",
         alpha=0.92,
         linewidth=2.0,
@@ -223,7 +225,7 @@ MODELS = [
         key="pod_dl_best",
         label="POD-DL-ROM ($n_z=10$)",
         table_label="POD-DL-ROM",
-        color="tab:pink",
+        color=METHOD_COLORS["poddl"],
         linestyle="-",
         alpha=0.90,
         linewidth=2.0,

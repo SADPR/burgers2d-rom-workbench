@@ -1,11 +1,11 @@
-\begin{tabular}{llrrr}
+\begin{tabular}{llrrrr}
 \toprule
-Model & learned map & parameters & train (\%) & validation (\%) \\
+Model & Map / network & Act. & Train $e_q$ (\%) & Val. $e_q$ (\%) & Params \\
 \midrule
-PROM--ANN Case 1 & $(q_1,\ldots,q_{10})\mapsto(q_{11},\ldots,q_{151})$ & 564,621 & 1.130 & 1.251 \\
-PROM--ANN Case 3 & $(q_1,\ldots,q_{10},\mu_1,\mu_2,t)\mapsto(q_{11},\ldots,q_{151})$ & 565,389 & 0.405 & 0.482 \\
-Master POD--NN--ROM (Case 2 tail source) & $(\mu_1,\mu_2,t)\mapsto(q_1,\ldots,q_{151})$ & 565,399 & 2.601 & 4.391 \\
-PROM--POD--AE & $q_{1:151}\mapsto z_{1:10}\mapsto q_{1:151}$ & 486,817 & 0.106 & 0.127 \\
-POD--DL--ROM & $(\mu_1,\mu_2,t)\mapsto z_{1:10}\mapsto q_{1:151}$ & 952,747 & 0.810 & 0.935 \\
+PROM--ANN Case 1 & $\q_p\mapsto\q_s$; $10\to256\to512\to512\to256\to141$ & SiLU & 1.130 & 1.251 & 564,621 \\
+Master POD--NN--ROM (Case 2 tail source) & $(\mu_1,\mu_2,t)\mapsto\q_{151}$; $3\to256\to512\to512\to256\to151$ & ELU & 2.601 & 4.391 & 565,399 \\
+PROM--ANN Case 3 & $(\q_p,\mu_1,\mu_2,t)\mapsto\q_s$; $13\to256\to512\to512\to256\to141$ & SiLU & 0.405 & 0.482 & 565,389 \\
+PROM--POD--AE & z-score AE; $151\to512\to256\to128\to10\to128\to256\to512\to151$ & GELU & 0.106 & 0.127 & 486,817 \\
+POD--DL--ROM & z-score latent dynamics; $3\to256\to512\to512\to256\to10\to151$ & SiLU & 0.810 & 0.935 & 952,747 \\
 \bottomrule
 \end{tabular}

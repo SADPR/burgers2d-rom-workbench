@@ -375,23 +375,23 @@ Gauss--Newton at iterate $\mathbf q^{(j)}$:
 \]
 \end{frame}
 
-\begin{frame}{Online Performance ($250\times250$): Max Error over 3 Test Points}
+\begin{frame}{Online Performance ($250\times250$): Avg/Max Error over 3 Test Points}
 \scriptsize
 \centering
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lrrrrrr}
+\begin{tabular}{lrrrrrrr}
 \hline
-\textbf{Computational model} & $n$ ($N$ for HDM) & $\bar{n}$ & $N_e$ & max $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & Wall-clock time (min) & Speedup \\
+\textbf{Computational model} & $n$ ($N$ for HDM) & $\bar{n}$ & $N_e$ & avg $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & max $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & Wall-clock time (min) & Speedup \\
 \hline
-HDM & 125\,000 & -- & 62\,500 & -- & 12.512 & -- \\
+HDM & 125\,000 & -- & 62\,500 & -- & -- & 12.512 & -- \\
 \addlinespace[0.35em]
-HPROM & 96 & -- & 4\,824 & 1.096 & 0.743 & 16.841 \\
-HQPROM & 39 & -- & 3\,505 & 0.933 & 0.888 & 14.084 \\
-HPROM-GPR & 20 & 131 & 1\,801 & 0.845 & 0.371 & 33.698 \\
+HPROM & 96 & -- & 4\,824 & 1.030 & 1.096 & 0.743 & 16.841 \\
+HQPROM & 39 & -- & 3\,505 & 0.871 & 0.933 & 0.888 & 14.084 \\
+HPROM-GPR & 20 & 131 & 1\,801 & 0.691 & 0.845 & 0.371 & 33.698 \\
 \addlinespace[0.35em]
-Local HPROM ($N_c=10$) & 14--23 & -- & 1\,522 & 0.956 & 0.198 & 63.257 \\
-Local HQPROM ($N_c=10$) & 8--12 & -- & 871 & 0.929 & 0.263 & 47.497 \\
-Local HPROM-GPR ($N_c=10$) & 6 & 24--47 & 541 & 0.801 & 0.244 & 51.261 \\
+Local HPROM ($N_c=3$) & 35--48 & -- & 3\,649 & 0.827 & 0.854 & 0.377 & 33.168 \\
+Local HQPROM ($N_c=3$) & 11--15 & -- & 1\,164 & 0.716 & 0.844 & 0.311 & 40.259 \\
+Local HPROM-GPR ($N_c=3$) & 10 & 60--97 & 901 & 0.510 & 0.640 & 0.306 & 40.841 \\
 \hline
 \end{tabular}}
 \vspace{0.2em}
@@ -399,6 +399,8 @@ Local HPROM-GPR ($N_c=10$) & 6 & 24--47 & 541 & 0.801 & 0.244 & 51.261 \\
 {\tiny Speedup is computed with respect to the HDM runtime, $t_{\mathrm{HDM}}=750.702$ s.}
 
 {\tiny $N_e$ denotes the number of sampled ECSW elements ($N_e=62{,}500$ for HDM/full mesh).}
+
+{\tiny Local ROM results shown here use $N_c=3$ clusters; the $N_c=10$ results are reproduced in the appendix.}
 \end{frame}
 
 \begin{frame}{Global Reduced Meshes (ECSW)}
@@ -421,23 +423,23 @@ Local HPROM-GPR ($N_c=10$) & 6 & 24--47 & 541 & 0.801 & 0.244 & 51.261 \\
 \end{columns}
 \end{frame}
 
-\begin{frame}{Local Reduced Meshes (ECSW)}
+\begin{frame}{Local Reduced Meshes (ECSW), $N_c=3$}
 \centering
 \begin{columns}[T]
 \column{0.33\textwidth}
 \centering
 \includegraphics[width=\linewidth]{local_hprom_reduced_mesh.png}\\
-{\tiny Local HPROM ($N_e=1{,}522$)}
+{\tiny Local HPROM ($N_e=3{,}649$)}
 
 \column{0.33\textwidth}
 \centering
 \includegraphics[width=\linewidth]{local_hqprom_reduced_mesh.png}\\
-{\tiny Local HQPROM ($N_e=871$)}
+{\tiny Local HQPROM ($N_e=1{,}164$)}
 
 \column{0.33\textwidth}
 \centering
 \includegraphics[width=\linewidth]{local_hprom_gpr_reduced_mesh.png}\\
-{\tiny Local HPROM-GPR ($N_e=541$)}
+{\tiny Local HPROM-GPR ($N_e=901$)}
 \end{columns}
 \end{frame}
 
@@ -456,17 +458,17 @@ Local HPROM-GPR ($N_c=10$) & 6 & 24--47 & 541 & 0.801 & 0.244 & 51.261 \\
 \includegraphics[width=0.82\textwidth]{Figures/hprom_vs_hdm_mu1_5.19_mu2_0.026.png}
 \end{frame}
 
-\begin{frame}{Local HPROM vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
+\begin{frame}{Local HPROM ($N_c=3$) vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
 \centering
 \includegraphics[width=0.82\textwidth]{Figures/local_hprom_vs_hdm_mu1_4.56_mu2_0.019.png}
 \end{frame}
 
-\begin{frame}{Local HPROM vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
+\begin{frame}{Local HPROM ($N_c=3$) vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
 \centering
 \includegraphics[width=0.82\textwidth]{Figures/local_hprom_vs_hdm_mu1_4.75_mu2_0.020.png}
 \end{frame}
 
-\begin{frame}{Local HPROM vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
+\begin{frame}{Local HPROM ($N_c=3$) vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
 \centering
 \includegraphics[width=0.82\textwidth]{Figures/local_hprom_vs_hdm_mu1_5.19_mu2_0.026.png}
 \end{frame}
@@ -486,17 +488,17 @@ Local HPROM-GPR ($N_c=10$) & 6 & 24--47 & 541 & 0.801 & 0.244 & 51.261 \\
 \includegraphics[width=0.82\textwidth]{Figures/hqprom_vs_hdm_mu1_5.19_mu2_0.026.png}
 \end{frame}
 
-\begin{frame}{Local HQPROM vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
+\begin{frame}{Local HQPROM ($N_c=3$) vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
 \centering
 \includegraphics[width=0.82\textwidth]{Figures/local_hqprom_vs_hdm_mu1_4.56_mu2_0.019.png}
 \end{frame}
 
-\begin{frame}{Local HQPROM vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
+\begin{frame}{Local HQPROM ($N_c=3$) vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
 \centering
 \includegraphics[width=0.82\textwidth]{Figures/local_hqprom_vs_hdm_mu1_4.75_mu2_0.020.png}
 \end{frame}
 
-\begin{frame}{Local HQPROM vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
+\begin{frame}{Local HQPROM ($N_c=3$) vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
 \centering
 \includegraphics[width=0.82\textwidth]{Figures/local_hqprom_vs_hdm_mu1_5.19_mu2_0.026.png}
 \end{frame}
@@ -516,22 +518,107 @@ Local HPROM-GPR ($N_c=10$) & 6 & 24--47 & 541 & 0.801 & 0.244 & 51.261 \\
 \includegraphics[width=0.82\textwidth]{Figures/hprom_gpr_vs_hdm_mu1_5.19_mu2_0.026.png}
 \end{frame}
 
-\begin{frame}{Local HPROM-GPR vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
+\begin{frame}{Local HPROM-GPR ($N_c=3$) vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
 \centering
 \includegraphics[width=0.82\textwidth]{Figures/local_hprom_gpr_vs_hdm_mu1_4.56_mu2_0.019.png}
 \end{frame}
 
-\begin{frame}{Local HPROM-GPR vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
+\begin{frame}{Local HPROM-GPR ($N_c=3$) vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
 \centering
 \includegraphics[width=0.82\textwidth]{Figures/local_hprom_gpr_vs_hdm_mu1_4.75_mu2_0.020.png}
 \end{frame}
 
-\begin{frame}{Local HPROM-GPR vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
+\begin{frame}{Local HPROM-GPR ($N_c=3$) vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
 \centering
 \includegraphics[width=0.82\textwidth]{Figures/local_hprom_gpr_vs_hdm_mu1_5.19_mu2_0.026.png}
 \end{frame}
 
 \appendix
+
+\begin{frame}{Appendix: Local ROM Results at $N_c=10$}
+\scriptsize
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrr}
+\hline
+\textbf{Computational model} & $n$ & $\bar{n}$ & $N_e$ & avg $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & max $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & Wall-clock time (min) & Speedup \\
+\hline
+Local HPROM ($N_c=10$) & 14--23 & -- & 1\,522 & 0.867 & 0.956 & 0.198 & 63.257 \\
+Local HQPROM ($N_c=10$) & 8--12 & -- & 871 & 0.572 & 0.929 & 0.263 & 47.497 \\
+Local HPROM-GPR ($N_c=10$) & 6 & 24--47 & 541 & 0.604 & 0.801 & 0.244 & 51.261 \\
+\hline
+\end{tabular}}
+\vspace{0.2em}
+
+{\tiny Speedup is computed with respect to the HDM runtime, $t_{\mathrm{HDM}}=750.702$ s.}
+
+{\tiny Global-model rows are unaffected by $N_c$ and are reproduced in the main results table.}
+\end{frame}
+
+\begin{frame}{Appendix: Local Reduced Meshes (ECSW), $N_c=10$}
+\centering
+\begin{columns}[T]
+\column{0.33\textwidth}
+\centering
+\includegraphics[width=\linewidth]{local_hprom_reduced_mesh_nc10.png}\\
+{\tiny Local HPROM ($N_e=1{,}522$)}
+
+\column{0.33\textwidth}
+\centering
+\includegraphics[width=\linewidth]{local_hqprom_reduced_mesh_nc10.png}\\
+{\tiny Local HQPROM ($N_e=871$)}
+
+\column{0.33\textwidth}
+\centering
+\includegraphics[width=\linewidth]{local_hprom_gpr_reduced_mesh_nc10.png}\\
+{\tiny Local HPROM-GPR ($N_e=541$)}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Appendix: Local HPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
+\centering
+\includegraphics[width=0.82\textwidth]{Figures/local_hprom_vs_hdm_mu1_4.56_mu2_0.019_nc10.png}
+\end{frame}
+
+\begin{frame}{Appendix: Local HPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
+\centering
+\includegraphics[width=0.82\textwidth]{Figures/local_hprom_vs_hdm_mu1_4.75_mu2_0.020_nc10.png}
+\end{frame}
+
+\begin{frame}{Appendix: Local HPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
+\centering
+\includegraphics[width=0.82\textwidth]{Figures/local_hprom_vs_hdm_mu1_5.19_mu2_0.026_nc10.png}
+\end{frame}
+
+\begin{frame}{Appendix: Local HQPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
+\centering
+\includegraphics[width=0.82\textwidth]{Figures/local_hqprom_vs_hdm_mu1_4.56_mu2_0.019_nc10.png}
+\end{frame}
+
+\begin{frame}{Appendix: Local HQPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
+\centering
+\includegraphics[width=0.82\textwidth]{Figures/local_hqprom_vs_hdm_mu1_4.75_mu2_0.020_nc10.png}
+\end{frame}
+
+\begin{frame}{Appendix: Local HQPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
+\centering
+\includegraphics[width=0.82\textwidth]{Figures/local_hqprom_vs_hdm_mu1_5.19_mu2_0.026_nc10.png}
+\end{frame}
+
+\begin{frame}{Appendix: Local HPROM-GPR ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
+\centering
+\includegraphics[width=0.82\textwidth]{Figures/local_hprom_gpr_vs_hdm_mu1_4.56_mu2_0.019_nc10.png}
+\end{frame}
+
+\begin{frame}{Appendix: Local HPROM-GPR ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
+\centering
+\includegraphics[width=0.82\textwidth]{Figures/local_hprom_gpr_vs_hdm_mu1_4.75_mu2_0.020_nc10.png}
+\end{frame}
+
+\begin{frame}{Appendix: Local HPROM-GPR ($N_c=10$) vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
+\centering
+\includegraphics[width=0.82\textwidth]{Figures/local_hprom_gpr_vs_hdm_mu1_5.19_mu2_0.026_nc10.png}
+\end{frame}
 
 \begin{frame}{Appendix: Linear Selector Expansion}
 \scriptsize

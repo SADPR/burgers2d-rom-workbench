@@ -33,6 +33,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from manuscript_plot_style import HDM_COLOR, METHOD_COLORS
+
 
 THIS_DIR = Path(__file__).resolve().parent
 FIG_DIR = THIS_DIR / "Figures"
@@ -69,14 +71,14 @@ MODEL_ORDER_NO_LINEAR = [
     "POD-DL-ROM",
 ]
 COLORS = {
-    "HDM": "black",
-    "Linear PROM": "dimgray",
-    "PROM-ANN Case 1": "tab:red",
-    "PROM-ANN Case 2": "tab:blue",
-    "PROM-ANN Case 3": "tab:green",
-    "POD-NN-ROM": "tab:orange",
-    "PROM-POD-AE": "tab:purple",
-    "POD-DL-ROM": "tab:brown",
+    "HDM": HDM_COLOR,
+    "Linear PROM": METHOD_COLORS["linear"],
+    "PROM-ANN Case 1": METHOD_COLORS["case1"],
+    "PROM-ANN Case 2": METHOD_COLORS["case2_n10"],
+    "PROM-ANN Case 3": METHOD_COLORS["case3"],
+    "POD-NN-ROM": METHOD_COLORS["podnn"],
+    "PROM-POD-AE": METHOD_COLORS["podae"],
+    "POD-DL-ROM": METHOD_COLORS["poddl"],
 }
 
 

@@ -1,0 +1,40 @@
+[run]
+timestamp: 2026-04-26T03:09:30
+script: stage1_local_pod_offline_cheap.py
+
+[configuration]
+dt: 5.00000000e-02
+num_steps: 500
+n_clusters: 10
+clustering_method: kmeans
+phi_overlap: 1.00000000e-01
+pod_tol: 1.50000000e-03
+pod_method: rsvd
+num_training_parameters: 9
+snap_folder: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/Results/param_snaps
+
+[snapshot_matrix]
+S_shape: (125000, 4509)
+state_size: 125000
+total_snapshots: 4509
+
+[clusters]
+cluster_sizes_disjoint: [538, 432, 493, 310, 445, 488, 461, 424, 474, 444]
+cluster_sizes_after_overlap: [586, 518, 586, 357, 535, 585, 554, 511, 554, 533]
+retained_modes_per_cluster: [14, 15, 20, 23, 14, 15, 18, 15, 22, 16]
+min_retained_modes: 14
+max_retained_modes: 23
+avg_retained_modes: 1.72000000e+01
+
+[timings_seconds]
+build_snapshots: 5.57299709e+00
+clustering: 1.37463484e+02
+overlap_build: 1.16136841e+02
+local_pod: 4.16202729e+02
+precompute_switching: 9.81834650e-01
+save_model: 7.87630081e-01
+total: 6.77145697e+02
+
+[outputs]
+local_pod_model_npz: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD/local_pod_data.npz
+summary_txt: /scratch/users/sadpr/Codes26Feb/burgers2d-rom-workbench/LocalPOD/stage1_local_pod_offline_summary.txt

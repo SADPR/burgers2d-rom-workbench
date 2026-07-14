@@ -1,0 +1,9 @@
+[check] trajectories: 45
+[check] baseline trajectories: 9
+[check] interior LHS trajectories: 18
+[check] exterior LHS trajectories: 18
+[check] direct solver qN: direct_solver_qN_only
+[check] fixed linear ECSW: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/ecsw/ecsw_weights_lspg_ntot151.npy
+[check] fixed linear ECSW SHA-256: 04aa9bdd4039233540ae9292fefbc557a22c0e9de153d5aad768f7203f6b617b
+[check] ECSW copied: False
+[check] ECSW rebuilt: False

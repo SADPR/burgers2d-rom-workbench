@@ -27,6 +27,7 @@ from burgers.ecsw_utils import (
     build_ecsw_snapshot_plan,
     select_local_cluster_count_snapshot_cols,
     save_ecsw_sampling_3d_plot,
+    direct_left_singular_vectors,
 )
 from burgers.empirical_cubature_method import EmpiricalCubatureMethod
 from burgers.randomized_singular_value_decomposition import (
@@ -120,6 +121,8 @@ def main(
     mu_samples=None,
     ecsw_snapshot_percent=2.0,
     ecsw_random_seed=42,
+    ecsw_svd_method="svd",
+    ecsw_svd_rel_tol=1e-8,
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
     max_its=20,
@@ -143,6 +146,9 @@ def main(
     ecsw_snapshot_percent = float(ecsw_snapshot_percent)
     if not np.isfinite(ecsw_snapshot_percent) or ecsw_snapshot_percent <= 0.0:
         raise ValueError("ecsw_snapshot_percent must be a finite value > 0.")
+    ecsw_svd_method = str(ecsw_svd_method).strip().lower()
+    if ecsw_svd_method not in ("svd", "rsvd"):
+        raise ValueError("ecsw_svd_method must be one of: 'svd', 'rsvd'.")
     ecsw_snapshot_mode = "local_cluster_param_time_stratified"
     ecsw_total_snapshots = None
     ecsw_total_snapshots_percent = ecsw_snapshot_percent
@@ -362,8 +368,15 @@ def main(
         C_ecm = np.ascontiguousarray(C, dtype=np.float64)
         b = np.ascontiguousarray(C_ecm.sum(axis=1), dtype=np.float64)
 
-        rsvd = RandomizedSingularValueDecomposition()
-        u, _, _, _ = rsvd.Calculate(C_ecm.T, 1e-8)
+        if ecsw_svd_method == "rsvd":
+            rsvd = RandomizedSingularValueDecomposition()
+            u, _, _, _ = rsvd.Calculate(C_ecm.T, ecsw_svd_rel_tol)
+        else:
+            u = direct_left_singular_vectors(C_ecm.T, relative_tolerance=ecsw_svd_rel_tol)
+        print(
+            f"[LOCAL-HPROM-RBF] ECSW/ECM SVD method: {ecsw_svd_method} "
+            f"(rel_tol={ecsw_svd_rel_tol:.1e}), basis shape={u.shape}"
+        )
 
         selector = EmpiricalCubatureMethod()
         selector.SetUp(
@@ -586,6 +599,8 @@ def main(
                     ("ecsw_sampling_policy", ecsw_snapshot_mode),
                     ("ecsw_snapshot_percent", ecsw_snapshot_percent),
                     ("ecsw_random_seed", ecsw_random_seed),
+                    ("ecsw_svd_method", ecsw_svd_method),
+                    ("ecsw_svd_rel_tol", ecsw_svd_rel_tol),
                     ("ecsw_cluster_min_per_cluster", ecsw_cluster_min_per_cluster),
                     ("mu_samples", mu_samples),
                     ("relnorm_cutoff", relnorm_cutoff),

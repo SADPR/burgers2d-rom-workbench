@@ -1,0 +1,82 @@
+\begin{thebibliography}{10}
+
+\bibitem{antoulas2005approximation}
+Athanasios~C Antoulas.
+\newblock {\em Approximation of large-scale dynamical systems}.
+\newblock SIAM, 2005.
+
+\bibitem{quarteroni2014reduced}
+Alfio Quarteroni, Gianluigi Rozza, et~al.
+\newblock {\em Reduced order methods for modeling and computational reduction},
+  volume~9.
+\newblock Springer, 2014.
+
+\bibitem{barnett2023neural}
+Joshua Barnett, Charbel Farhat, and Yvon Maday.
+\newblock Neural-network-augmented projection-based model order reduction for
+  mitigating the {Kolmogorov} barrier to reducibility.
+\newblock {\em Journal of Computational Physics}, 492:112420, 2023.
+
+\bibitem{cohen2023nonlinear}
+Albert Cohen, Charbel Farhat, Yvon Maday, and Agustin Somacal.
+\newblock Nonlinear compressive reduced basis approximation for {PDEs}.
+\newblock {\em Comptes Rendus. M{\'e}canique}, 351(S1):357--374, 2023.
+
+\bibitem{aghili2026nonlinear}
+Joubine Aghili, Hassan Ballout, Yvon Maday, and Christophe Prud'Homme.
+\newblock Nonlinear compressive reduced basis approximation: when taylor meets
+  kolmogorov.
+\newblock {\em arXiv preprint arXiv:2601.13712}, 2026.
+
+\bibitem{romor2025explicable}
+Francesco Romor, Giovanni Stabile, and Gianluigi Rozza.
+\newblock Explicable hyper-reduced order models on nonlinearly approximated
+  solution manifolds of compressible and incompressible navier-stokes
+  equations.
+\newblock {\em Journal of Computational Physics}, 524:113729, 2025.
+
+\bibitem{fresca2022pod}
+Stefania Fresca and Andrea Manzoni.
+\newblock Pod-dl-rom: Enhancing deep learning-based reduced order models for
+  nonlinear parametrized pdes by proper orthogonal decomposition.
+\newblock {\em Computer Methods in Applied Mechanics and Engineering},
+  388:114181, 2022.
+
+\bibitem{hernandez2017dimensional}
+Joaquin~Alberto Hernandez, Manuel~Alejandro Caicedo, and Alex Ferrer.
+\newblock Dimensional hyper-reduction of nonlinear finite element models via
+  empirical cubature.
+\newblock {\em Computer Methods in Applied Mechanics and Engineering},
+  313:687--722, 2017.
+
+\bibitem{hernandez2020multiscale}
+JA~Hern{\'a}ndez.
+\newblock A multiscale method for periodic structures using domain
+  decomposition and ecm-hyperreduction.
+\newblock {\em Computer Methods in Applied Mechanics and Engineering},
+  368:113192, 2020.
+
+\bibitem{de2023hyper}
+S~Ares De~Parga, Jose~Raul Bravo, JA~Hern{\'a}ndez, Rub{\'e}n Zorrilla, and
+  Riccardo Rossi.
+\newblock Hyper-reduction for petrov--galerkin reduced order models.
+\newblock {\em Computer Methods in Applied Mechanics and Engineering},
+  416:116298, 2023.
+
+\bibitem{ares2026closure}
+Sebastian Ares De~Parga, Radek Tezaur, Carlos~G. Hern{\'a}ndez, and Charbel
+  Farhat.
+\newblock Nonlinear projection-based model order reduction with machine
+  learning regression for closure error modeling in the latent space.
+\newblock {\em Computer Methods in Applied Mechanics and Engineering},
+  448:118443, 2026.
+
+\bibitem{farhat2015structure}
+Charbel Farhat, Todd Chapman, and Philip Avery.
+\newblock Structure-preserving, stability, and accuracy properties of the
+  energy-conserving sampling and weighting method for the hyper reduction of
+  nonlinear finite element dynamic models.
+\newblock {\em International Journal for Numerical Methods in Engineering},
+  102(5):1077--1110, 2015.
+
+\end{thebibliography}

@@ -234,6 +234,10 @@ def main(
     os.makedirs(script_dir, exist_ok=True)
     os.makedirs(plot_dir, exist_ok=True)
     os.makedirs(snap_folder, exist_ok=True)
+    for _path in (output_file, rank_plot_file, summary_file):
+        _dir = os.path.dirname(_path)
+        if _dir:
+            os.makedirs(_dir, exist_ok=True)
 
     print("\n====================================================")
     print("     STAGE 2: LOCAL POD-GPR POD PER CLUSTER")

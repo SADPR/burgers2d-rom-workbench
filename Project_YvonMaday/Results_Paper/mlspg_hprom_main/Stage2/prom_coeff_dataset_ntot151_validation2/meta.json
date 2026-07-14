@@ -1,0 +1,51 @@
+{
+  "basis_path": "/scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy",
+  "coefficient_storage": "qN_only",
+  "coordinate_recovery": "solver_coordinates",
+  "coordinate_source": "solver_coordinates",
+  "dt": 0.05,
+  "ecsw_ensure_mu_coverage": true,
+  "ecsw_num_candidates_total": null,
+  "ecsw_num_selected_per_mu": null,
+  "ecsw_num_selected_total": null,
+  "ecsw_num_training_mu": 2,
+  "ecsw_random_seed": 42,
+  "ecsw_residual": NaN,
+  "ecsw_snap_time_offset": 3,
+  "ecsw_snapshot_mode": "global_param_time_stratified",
+  "ecsw_snapshot_percent": 2.0,
+  "ecsw_svd_method": "direct_dense_svd",
+  "ecsw_svd_relative_tolerance": 1e-08,
+  "ecsw_weights_path": "/scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/ecsw/ecsw_weights_lspg_ntot151.npy",
+  "ecsw_weights_source": "loaded_local",
+  "linear_solver": "lstsq",
+  "make_plots": false,
+  "max_its": 20,
+  "min_delta": 0.01,
+  "mu_list": [
+    [
+      4.5625,
+      0.02625
+    ],
+    [
+      5.1875,
+      0.01875
+    ]
+  ],
+  "mu_source": "custom_mu_pair",
+  "n_available_modes": 151,
+  "n_ecsw_elements": 5975,
+  "normal_eq_reg": 1e-12,
+  "num_steps": 500,
+  "num_traj": 2,
+  "pod_dir": "/scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1",
+  "rebuild_ecsw_weights": false,
+  "reduced_size": 151,
+  "relnorm_cutoff": 1e-05,
+  "save_rom_snaps": false,
+  "snap_folder": "/scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Results/param_snaps",
+  "solve_backend": "hprom",
+  "state_size": 125000,
+  "total_modes": 151,
+  "u_ref_path": "/scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy"
+}

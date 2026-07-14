@@ -28,9 +28,9 @@ CHECK_ONLY="${CHECK_ONLY:-0}"
 family="${1:-all}"
 
 case "$family" in
-  all|case1|case2|case2_np10|case2_np20|case3|data_driven|pod_ae|pod_dl) ;;
+  all|case1|case2|case3|data_driven|pod_ae|pod_dl) ;;
   *)
-    echo "Usage: $0 [all|case1|case2|case2_np10|case2_np20|case3|data_driven|pod_ae|pod_dl]" >&2
+    echo "Usage: $0 [all|case1|case2|case3|data_driven|pod_ae|pod_dl]" >&2
     exit 2
     ;;
 esac
@@ -62,8 +62,7 @@ print_plan() {
 [hprom-baseline-train] force:       $FORCE
 [hprom-baseline-train] selected architectures:
   Case 1:       wide SiLU, n=10, hidden=(256,512,512,256)
-  Case 2 n=10: wide SiLU, hidden=(256,512,512,256)
-  Case 2 n=20: wide SiLU, hidden=(256,512,512,256)
+  Case 2:       uses the POD-NN-ROM map mu,t -> q_tot; no separate Case 2 ANN is trained
   Case 3:       wide SiLU, n=10, hidden=(256,512,512,256)
   POD-NN-ROM:   wide SiLU, hidden=(256,512,512,256)
   PROM-POD-AE:  latent=10, GELU, z-score, hidden=(512,256,128)
@@ -166,31 +165,6 @@ train_case1() {
       --lr-scheduler-factor 0.5 --lr-scheduler-patience 50 --lr-scheduler-min-lr 1e-6
 }
 
-train_case2_primary() {
-  local primary="$1"
-  local log_dir="$LOG_ROOT/case2_np${primary}"
-  local model="$MODELS_DIR/case2_ann_ntot151_np${primary}_best.pt"
-  local summary="$STAGE3_DIR/case2_ann_ntot151_np${primary}_best_summary.txt"
-  local log="$log_dir/case2_ann_ntot151_np${primary}_best.log"
-  local epochs patience
-  epochs="$(selected_epochs 6000)"
-  patience="$(selected_patience 220)"
-  echo "==== Train HPROM baseline Case 2 n=${primary}: wide SiLU"
-  run_logged "$model" "$summary" "$log" \
-    python3 -u stage3_perform_training_case_2_ann_test_n20_maday.py \
-      --maday-results-root "$PAPER_RESULTS_ROOT" --maday-tag "$PAPER_TAG" \
-      --dataset-backend hprom --dataset-ntot 151 --dataset-dir "$DATASET_DIR" \
-      --primary-modes "$primary" \
-      --model-name "case2_ann_ntot151_np${primary}_best.pt" \
-      --summary-name "case2_ann_ntot151_np${primary}_best_summary.txt" \
-      --val-split-mode row --val-frac 0.1 \
-      --hidden-dims "256,512,512,256" --activation silu \
-      --batch-size 128 --lr 5e-4 --weight-decay 1e-6 --dropout 0.0 \
-      --epochs "$epochs" --patience "$patience" \
-      --lr-scheduler-factor 0.5 --lr-scheduler-patience 50 --lr-scheduler-min-lr 1e-6 \
-      --seed 42
-}
-
 train_case3() {
   local log_dir="$LOG_ROOT/case3"
   local model="$MODELS_DIR/case3_ann_ntot151_best.pt"
@@ -290,9 +264,10 @@ train_pod_dl() {
 run_family() {
   case "$1" in
     case1) train_case1 ;;
-    case2) train_case2_primary 10; train_case2_primary 20 ;;
-    case2_np10) train_case2_primary 10 ;;
-    case2_np20) train_case2_primary 20 ;;
+    case2)
+      echo "==== Case 2 uses the POD-NN-ROM master map; training data_driven instead."
+      train_data_driven
+      ;;
     case3) train_case3 ;;
     data_driven) train_data_driven ;;
     pod_ae) train_pod_ae ;;
@@ -318,7 +293,7 @@ if [[ "$TRAIN_SMOKE_TEST" == "1" ]]; then
 fi
 
 if [[ "$family" == "all" ]]; then
-  for requested in case1 case2_np10 case2_np20 case3 data_driven pod_ae pod_dl; do
+  for requested in case1 case3 data_driven pod_ae pod_dl; do
     run_family "$requested"
   done
 else

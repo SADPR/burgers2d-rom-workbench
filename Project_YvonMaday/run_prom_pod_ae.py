@@ -35,14 +35,13 @@ from burgers.core import (
     load_or_compute_snaps,
     plot_snaps,
 )
-from burgers.ecsw_utils import build_ecsw_snapshot_plan
+from burgers.ecsw_utils import build_ecsw_snapshot_plan, direct_left_singular_vectors
 from burgers.empirical_cubature_method import EmpiricalCubatureMethod
 from burgers.pod_dl_manifold import (
     compute_ECSW_training_matrix_2D_pod_dl,
     inviscid_burgers_implicit2D_LSPG_pod_dl_2D,
     inviscid_burgers_implicit2D_LSPG_pod_dl_2D_ecsw,
 )
-from burgers.randomized_singular_value_decomposition import RandomizedSingularValueDecomposition
 try:
     from pod_ae_common import (
         PROMPODAEAutoencoder,
@@ -335,8 +334,7 @@ def _load_or_build_pod_ae_ecsw_weights(
     c_ecm = np.ascontiguousarray(c, dtype=np.float64)
     b = np.ascontiguousarray(c_ecm.sum(axis=1), dtype=np.float64)
 
-    rsvd = RandomizedSingularValueDecomposition(USE_RANDOMIZATION=False)
-    u, _, _, _ = rsvd.Calculate(c_ecm.T, 1e-8)
+    u = direct_left_singular_vectors(c_ecm.T, relative_tolerance=1e-8)
 
     selector = EmpiricalCubatureMethod()
     selector.SetUp(

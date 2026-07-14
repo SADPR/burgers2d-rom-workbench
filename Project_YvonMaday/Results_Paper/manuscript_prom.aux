@@ -1,17 +1,17 @@
 \relax 
 \@writefile{toc}{\contentsline {section}{\numberline {1}Objective and Scope}{1}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {2}PROM Reference Problem}{1}{}\protected@file@percent }
-\newlabel{eq:prom-affine-space}{{1}{1}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}PROM Reference Problem}{2}{}\protected@file@percent }
+\newlabel{eq:prom-affine-space}{{1}{2}{}{}{}}
 \newlabel{eq:linear-prom-lspg}{{2}{2}{}{}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3}Learned Model Families}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{PROM--ANN Case 1.}{2}{}\protected@file@percent }
 \newlabel{eq:case1}{{5}{2}{}{}{}}
 \@writefile{toc}{\contentsline {paragraph}{PROM--ANN Case 2 and POD--NN--ROM.}{2}{}\protected@file@percent }
 \newlabel{eq:master-map}{{6}{2}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{PROM--ANN Case 3.}{2}{}\protected@file@percent }
-\newlabel{eq:case3}{{7}{2}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{PROM--POD--AE.}{2}{}\protected@file@percent }
-\newlabel{eq:podae}{{8}{2}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{PROM--ANN Case 3.}{3}{}\protected@file@percent }
+\newlabel{eq:case3}{{7}{3}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{PROM--POD--AE.}{3}{}\protected@file@percent }
+\newlabel{eq:podae}{{8}{3}{}{}{}}
 \@writefile{toc}{\contentsline {paragraph}{POD--DL--ROM.}{3}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {4}Data Sets and Evaluation Points}{3}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces PROM coefficient data used for the enriched training campaign.}}{3}{}\protected@file@percent }
@@ -49,7 +49,50 @@
 \newlabel{tab:prom-enrichment-coeff}{{7}{10}{}{}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Effect of PROM data enrichment on online coefficient errors. The coefficient metric is stricter than the state metric because it measures the entire \(151\)-coordinate trajectory against the linear PROM teacher.}}{10}{}\protected@file@percent }
 \newlabel{fig:prom-enrichment-coeff}{{8}{10}{}{}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Per-coefficient relative error of the direct POD--NN--ROM coefficient prediction before and after PROM data enrichment. The vertical line marks coefficient 10. The plot uses the linear PROM coefficient trajectory as the reference.}}{11}{}\protected@file@percent }
-\newlabel{fig:prom-enrichment-podnn-coeff}{{9}{11}{}{}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusions}{11}{}\protected@file@percent }
-\gdef \@abspage@last{12}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Case--2 per-coefficient relative error before and after PROM data enrichment for \(n=10\). The vertical line marks the separation between the ten residual-solved primary coordinates and the ANN-injected secondary tail. The linear PROM coefficient trajectory is the reference.}}{11}{}\protected@file@percent }
+\newlabel{fig:prom-enrichment-case2-coeff}{{9}{11}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Baseline HPROM Results}{11}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Baseline HPROM cubature setup. The learned \(n=10\) rows cover Case 1, Case 2 with \(n=10\), Case 3, and PROM--POD--AE; Case 2 with \(n=20\) uses the larger \(n=20\) rule.}}{11}{}\protected@file@percent }
+\newlabel{tab:hprom-ecsw-setup}{{8}{11}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Baseline HPROM Stage--3 selected networks. The master map is the same parameter--time map used by Case 2; the online Case 2 solver trims this full \(q_{151}\) prediction and solves the first \(n\) coordinates.}}{12}{}\protected@file@percent }
+\newlabel{tab:hprom-training}{{9}{12}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Baseline HPROM online errors \(100\left \lVert \mathbf  u_{\mathrm  {HDM}}-\mathbf  u_{\mathrm  {ROM}} \right \rVert _F/\left \lVert \mathbf  u_{\mathrm  {HDM}} \right \rVert _F\). The mean column averages \(\bm  {\mu }^{(v)},\bm  {\mu }^{(1)},\bm  {\mu }^{(2)}\).}}{12}{}\protected@file@percent }
+\newlabel{tab:hprom-online}{{10}{12}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Baseline HPROM final-time midline comparison against the HDM at the four evaluation points. The linear HPROM curve is reconstructed from its saved coefficient trajectory; the learned HPROM curves are computed from the saved online snapshots.}}{13}{}\protected@file@percent }
+\newlabel{fig:hprom-solution-overlays}{{10}{13}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Baseline HPROM online coefficient error against the linear HPROM with \(n_{\mathrm  {tot}}=151\). Values are relative Frobenius percentages over all 151 coefficients and all time steps.}}{13}{}\protected@file@percent }
+\newlabel{tab:hprom-online-coeff}{{11}{13}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Baseline HPROM online per-coefficient relative errors against the \(n_{\mathrm  {tot}}=151\) linear HPROM coefficient trajectory. The vertical line marks coefficient 10. The linear HPROM itself is the reference and is not plotted.}}{14}{}\protected@file@percent }
+\newlabel{fig:hprom-coeff-rel-errors}{{11}{14}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.1}Case--2 HPROM Diagnostic Sweep}{14}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Case--2 HPROM diagnostic state errors $100\left \lVert \mathbf  u_{\mathrm  {HDM}}-\mathbf  u_{\mathrm  {ROM}} \right \rVert _F/\left \lVert \mathbf  u_{\mathrm  {HDM}} \right \rVert _F$. The intermediate rows use newly built, matched $2\%$ ECSW rules; $n=0$ and $n=151$ are the existing direct-map and linear-HPROM references. The mean averages $\bm  {\mu }^{(v)},\bm  {\mu }^{(1)},\bm  {\mu }^{(2)}$.}}{15}{}\protected@file@percent }
+\newlabel{tab:hprom-case2-n-sweep}{{12}{15}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Case--2 HPROM state error as the number $n$ of residual-solved primary coordinates is varied. Each intermediate point uses its matched $2\%$ ECSW rule. The dashed horizontal levels are the $151$-coordinate linear-HPROM errors.}}{15}{}\protected@file@percent }
+\newlabel{fig:hprom-case2-n-sweep-state}{{12}{15}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Case--2 HPROM coefficient errors for the matched-rule diagnostic sweep. Top: absolute time-trajectory error. Bottom: relative error with respect to the linear HPROM. The dashed vertical line separates the first ten coordinates. The $n=151$ linear HPROM is the zero-error reference and is omitted.}}{16}{}\protected@file@percent }
+\newlabel{fig:hprom-case2-n-sweep-coeff}{{13}{16}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {9.2}Fixed-Rule Tail-Error Sensitivity}{16}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces Fixed-rule Case--2 HPROM tail diagnostic for $n=10$; all error columns are percentages. The master-ANN tail error is measured against the linear HPROM. The zero-tail row is the constrained ten-coordinate sampled solve with the exact linear-HPROM tail; it is not the $151$-coordinate linear-HPROM solution.}}{17}{}\protected@file@percent }
+\newlabel{tab:hprom-case2-tail-sensitivity}{{13}{17}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Fixed-rule sensitivity of Case--2 HPROM with $n=10$ to secondary-coordinate error. Left: state error against the HDM. Right: error in the ten solved primary coordinates against the linear HPROM. Stars identify the actual master-ANN tail errors.}}{17}{}\protected@file@percent }
+\newlabel{fig:hprom-case2-tail-sensitivity}{{14}{17}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {10}Effect of HPROM Coefficient-Data Enrichment}{17}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces Reported coefficient-space training and validation errors for the HPROM learned maps before and after coefficient-data enrichment. Values are relative Frobenius percentages. The baseline records use their original internal held-out snapshot split; the enriched master-map record uses the two separate validation trajectories, so the validation columns are useful diagnostics but are not a strictly paired model-selection protocol.}}{18}{}\protected@file@percent }
+\newlabel{tab:hprom-enrichment-training}{{14}{18}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces Baseline and enriched HPROM state errors \(100\left \lVert \mathbf  u_{\mathrm  {HDM}}-\mathbf  u_{\mathrm  {ROM}} \right \rVert _F/\left \lVert \mathbf  u_{\mathrm  {HDM}} \right \rVert _F\). Each mean averages \(\bm  {\mu }^{(v)},\bm  {\mu }^{(1)},\bm  {\mu }^{(2)}\). The linear HPROM is identical in both columns because its basis and ECM rule are fixed.}}{18}{}\protected@file@percent }
+\newlabel{tab:hprom-enrichment-online}{{15}{18}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Effect of HPROM coefficient-data enrichment on state error. The dashed level is the fixed linear HPROM reference; logarithmic axes make both the baseline Case--2 degradation and the enriched recovery visible.}}{18}{}\protected@file@percent }
+\newlabel{fig:hprom-enrichment-state}{{15}{18}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces Baseline and enriched coefficient errors against the corresponding fixed \(n_{\mathrm  {tot}}=151\) linear HPROM coefficient trajectory. Values are relative Frobenius percentages over all coefficients and all time steps.}}{19}{}\protected@file@percent }
+\newlabel{tab:hprom-enrichment-coeff}{{16}{19}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Effect of HPROM coefficient-data enrichment on global coefficient error. Enrichment reduces the Case--2 tail error by more than one order of magnitude at the extrapolatory point, while retaining sub-percent global coefficient errors for the other intrusive closures.}}{19}{}\protected@file@percent }
+\newlabel{fig:hprom-enrichment-coeff}{{16}{19}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Direct maps trained on linear-HPROM data.}{19}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces Baseline and enriched online accuracy of the two direct maps trained on linear-HPROM coefficient data. Each coefficient error uses the corresponding linear HPROM trajectory as teacher. This is not an HPROM-versus-ROM comparison, because neither direct map evaluates an empirical-cubature residual.}}{20}{}\protected@file@percent }
+\newlabel{tab:hprom-enrichment-noninvasive}{{17}{20}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Effect of linear-HPROM coefficient-data enrichment on the two direct non-intrusive maps. The top row shows state error against the HDM; the bottom row shows coefficient error against the corresponding linear HPROM teacher. The dashed state-error level is the linear HPROM reference.}}{20}{}\protected@file@percent }
+\newlabel{fig:hprom-enrichment-direct-rom}{{17}{20}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Case--2 per-coefficient HPROM errors before and after coefficient-data enrichment. Dotted vertical lines mark coordinates 10 and 20. The \(n=10\) and \(n=20\) variants use the same master-map tail, so their enriched curves coincide after coefficient 20; their difference is confined to coordinates recovered by the residual solve.}}{21}{}\protected@file@percent }
+\newlabel{fig:hprom-enrichment-case2-coeff}{{18}{21}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {11}Conclusions}{21}{}\protected@file@percent }
+\gdef \@abspage@last{22}

@@ -1679,10 +1679,14 @@ accuracy--cost summary slide.
 \end{aligned}
 ```
 
-Visual suggestion: use
-`harmonic_manifold_closure_animations/outputs/local_prom_ann_two_bases.gif` on the right.
-It is a conceptual future-work sketch: two local PROM--ANN charts, each with
-its own local basis and learned closure, are switched along one trajectory.
+Visual suggestion: use the local nonlinear concept assets from
+`harmonic_manifold_closure_animations/outputs/`:
+`local_prom_ann_two_bases_global_ann_rbf_gpr.gif`,
+`local_prom_ann_two_bases_local_linear.gif`, and
+`local_prom_ann_two_bases_local_nonlinear.gif`. They form a conceptual
+future-work sequence: a global ANN/RBF/GPR closure is useful, local linear POD
+charts explain why locality helps, and two local ANN/RBF/GPR closure charts
+combine local bases with learned discarded-coordinate closure.
 Do not overclaim that intrusive models dominate here.  The honest conclusion is
 that the strongest methodological result is the multilevel workflow: an
 accurate linear HPROM supplies many low-cost coefficient trajectories, which

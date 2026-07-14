@@ -1,0 +1,15 @@
+dataset_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_enrichment_ext25_lhs36/Stage2/prom_coeff_dataset_ntot151_enriched_lhs36
+plan_only: True
+total_modes: 151
+num_base_traj_available: 9
+num_interior_lhs_traj: 18
+num_exterior_lhs_traj: 18
+num_lhs_traj: 36
+lhs_seed: 42
+margin_fraction: 0.25
+original_mu1_range: (4.25, 5.5)
+original_mu2_range: (0.015, 0.03)
+expanded_mu1_range: (3.9375, 5.8125)
+expanded_mu2_range: (0.01125, 0.03375)
+ecsw_weights_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_main/Stage2/ecsw/ecsw_weights_lspg_ntot151.npy
+ecsw_weights_sha256: 04aa9bdd4039233540ae9292fefbc557a22c0e9de153d5aad768f7203f6b617b

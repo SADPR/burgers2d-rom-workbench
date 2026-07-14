@@ -1,12 +1,12 @@
 [run]
-timestamp: 2026-04-26T08:38:56
+timestamp: 2026-07-12T07:36:13
 mu1: 4.75000000e+00
 mu2: 2.00000000e-02
 
 [configuration]
-local_model_file: LocalPOD-GPR/local_pod_gpr_all_offline.npz
+local_model_file: LocalPOD-GPRSweep/nc3_nprimary10/all_offline.npz
 compute_ecsw: False
-weights_file: Results/local_hprom_gpr_ecsw_weights.npy
+weights_file: LocalPOD-GPRSweep/nc3_nprimary10/ecsw_weights.npy
 weights_source: loaded
 snap_folder: Results/param_snaps
 dt: 5.00000000e-02
@@ -15,6 +15,8 @@ snap_time_offset: 3
 ecsw_sampling_policy: local_cluster_param_time_stratified
 ecsw_snapshot_percent: 2.00000000e+00
 ecsw_random_seed: 42
+ecsw_svd_method: svd
+ecsw_svd_rel_tol: 1.00000000e-08
 ecsw_cluster_min_per_cluster: 1
 mu_samples: [[4.25, 0.015], [4.25, 0.0225], [4.25, 0.03], [4.875, 0.015], [4.875, 0.0225], [4.875, 0.03], [5.5, 0.015], [5.5, 0.0225], [5.5, 0.03]]
 relnorm_cutoff: 1.00000000e-05
@@ -37,17 +39,17 @@ num_cells_y: 250
 full_state_size: 125000
 
 [local_gpr_model]
-num_clusters: 10
-cluster_sizes_after_overlap: [586, 518, 586, 357, 535, 585, 554, 511, 554, 533]
-retained_modes_per_cluster: [24, 30, 42, 47, 25, 25, 38, 27, 46, 34]
-n_primary: 6
-clusters_with_gpr: 10
-clusters_analytic_compatible: 10
-cluster_jacobian_modes: ['analytic', 'analytic', 'analytic', 'analytic', 'analytic', 'analytic', 'analytic', 'analytic', 'analytic', 'analytic']
-d_const_shape: (10, 10)
+num_clusters: 3
+cluster_sizes_after_overlap: [1524, 1744, 1845]
+retained_modes_per_cluster: [97, 60, 79]
+n_primary: 10
+clusters_with_gpr: 3
+clusters_analytic_compatible: 3
+cluster_jacobian_modes: ['analytic', 'analytic', 'analytic']
+d_const_shape: (3, 3)
 
 [ecsw]
-num_nonzero_weights: 541
+num_nonzero_weights: 901
 weights_sum: 6.25000000e+04
 ecsw_time_seconds: N/A
 ecsw_residual: N/A
@@ -59,32 +61,32 @@ snapshot_cluster_candidates_per_mu: N/A
 snapshot_cluster_selected_per_mu: N/A
 
 [hprom_timing]
-total_hprom_time_seconds: 1.68134253e+01
-avg_hprom_time_per_step_seconds: 3.36268506e-02
-gn_iterations_total: 1986
-avg_gn_iterations_per_step: 3.97200000e+00
-jacobian_time_seconds: 8.52013135e+00
-residual_time_seconds: 1.69504476e+00
-linear_solve_time_seconds: 5.39320469e-01
-hdm_load_or_solve_time_seconds: 3.04167509e-01
+total_hprom_time_seconds: 1.88843729e+01
+avg_hprom_time_per_step_seconds: 3.77687459e-02
+gn_iterations_total: 1999
+avg_gn_iterations_per_step: 3.99800000e+00
+jacobian_time_seconds: 9.74582171e+00
+residual_time_seconds: 1.83774447e+00
+linear_solve_time_seconds: 1.17657948e+00
+hdm_load_or_solve_time_seconds: 3.61351728e-01
 
 [cluster_metrics]
-initial_cluster: 0
-final_cluster: 3
-cluster_switches: 9
-cluster_visit_counts: [62, 49, 58, 6, 50, 56, 53, 48, 69, 50]
+initial_cluster: 1
+final_cluster: 0
+cluster_switches: 2
+cluster_visit_counts: [140, 184, 177]
 cluster_history_length: 501
 
 [error_metrics]
-relative_l2_error: 3.41304036e-03
-relative_error_percent: 3.41304036e-01
+relative_l2_error: 4.13581190e-03
+relative_error_percent: 4.13581190e-01
 
 [outputs]
 hprom_snapshots_npy: Results/local_hprom_gpr_snaps_mu1_4.75_mu2_0.020.npy
 cluster_history_npy: Results/local_hprom_gpr_cluster_history_mu1_4.75_mu2_0.020.npy
 red_coords_npy: Results/local_hprom_gpr_red_coords_mu1_4.75_mu2_0.020.npy
 comparison_plot_png: Results/local_hprom_gpr_mu1_4.75_mu2_0.020.png
-ecsw_weights_npy: Results/local_hprom_gpr_ecsw_weights.npy
+ecsw_weights_npy: LocalPOD-GPRSweep/nc3_nprimary10/ecsw_weights.npy
 ecsw_reduced_mesh_png: N/A
 ecsw_sampling_3d_png: N/A
 summary_txt: Results/local_hprom_gpr_summary_mu1_4.75_mu2_0.020.txt

@@ -23,6 +23,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from manuscript_plot_style import METHOD_COLORS
+
 ROOT = Path(__file__).resolve().parent
 PROJECT = ROOT.parent
 MAIN = ROOT / "mlspg_hprom_main"
@@ -116,14 +118,14 @@ class ModelSpec:
 
 
 MODELS = [
-    ModelSpec("linear", "Linear HPROM", "Linear HPROM", "tab:red", kind="linear"),
-    ModelSpec("case1", "PROM-ANN Case 1", "PROM-ANN Case 1", "tab:blue", "Case1_GELU_SameArch_Test", "case1_hprom_ann", 10, 10, 141, 10),
-    ModelSpec("case2_n10", "PROM-ANN Case 2 ($n=10$)", "PROM-ANN Case 2 ($n=10$)", "tab:cyan", "Case2_Best/np10", "case2_hprom_ann", 10, 10, 141, 10),
-    ModelSpec("case2_n20", "PROM-ANN Case 2 ($n=20$)", "PROM-ANN Case 2 ($n=20$)", "tab:brown", "Case2_Best/np20", "case2_hprom_ann", 20, 20, 131, 20),
-    ModelSpec("case3", "PROM-ANN Case 3", "PROM-ANN Case 3", "tab:green", "Case3_Best", "case3_hprom_ann", 10, 10, 141, 10),
-    ModelSpec("podae", "PROM-POD-AE ($n_z=10$)", "PROM-POD-AE", "tab:purple", n_primary=10, kind="podae"),
-    ModelSpec("podnn", "POD-NN-ROM", "POD-NN-ROM", "tab:orange", kind="data"),
-    ModelSpec("poddl", "POD-DL-ROM ($n_z=10$)", "POD-DL-ROM", "tab:pink", n_primary=10, kind="poddl"),
+    ModelSpec("linear", "Linear HPROM", "Linear HPROM", METHOD_COLORS["linear"], kind="linear"),
+    ModelSpec("case1", "PROM-ANN Case 1", "PROM-ANN Case 1", METHOD_COLORS["case1"], "Case1_GELU_SameArch_Test", "case1_hprom_ann", 10, 10, 141, 10),
+    ModelSpec("case2_n10", "PROM-ANN Case 2 ($n=10$)", "PROM-ANN Case 2 ($n=10$)", METHOD_COLORS["case2_n10"], "Case2_Best/np10", "case2_hprom_ann", 10, 10, 141, 10),
+    ModelSpec("case2_n20", "PROM-ANN Case 2 ($n=20$)", "PROM-ANN Case 2 ($n=20$)", METHOD_COLORS["case2_n20"], "Case2_Best/np20", "case2_hprom_ann", 20, 20, 131, 20),
+    ModelSpec("case3", "PROM-ANN Case 3", "PROM-ANN Case 3", METHOD_COLORS["case3"], "Case3_Best", "case3_hprom_ann", 10, 10, 141, 10),
+    ModelSpec("podae", "PROM-POD-AE ($n_z=10$)", "PROM-POD-AE", METHOD_COLORS["podae"], n_primary=10, kind="podae"),
+    ModelSpec("podnn", "POD-NN-ROM", "POD-NN-ROM", METHOD_COLORS["podnn"], kind="data"),
+    ModelSpec("poddl", "POD-DL-ROM ($n_z=10$)", "POD-DL-ROM", METHOD_COLORS["poddl"], n_primary=10, kind="poddl"),
 ]
 
 

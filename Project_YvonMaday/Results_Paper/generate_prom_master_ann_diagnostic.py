@@ -18,6 +18,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from manuscript_plot_style import CASE2_SWEEP_COLORS, METHOD_COLORS
+
 
 SCRIPT = Path(__file__).resolve()
 PAPER = SCRIPT.parent
@@ -29,9 +31,9 @@ NTOT = 151
 
 plt.rcParams.update(
     {
-        "text.usetex": False,
-        "font.family": "DejaVu Sans",
-        "mathtext.fontset": "dejavusans",
+        "text.usetex": True,
+        "font.family": "serif",
+        "text.latex.preamble": r"\usepackage{amsmath}",
     }
 )
 
@@ -51,10 +53,10 @@ POINTS = (
     Point("extrapolation20pct", r"$\mu^{(3)}$", 4.000, 0.0330),
 )
 POINT_COLORS = {
-    "verification": "#4c78a8",
-    "offgrid1": "#f58518",
-    "offgrid2": "#54a24b",
-    "extrapolation20pct": "#b279a2",
+    "verification": METHOD_COLORS["case1"],
+    "offgrid1": METHOD_COLORS["podnn"],
+    "offgrid2": METHOD_COLORS["case3"],
+    "extrapolation20pct": METHOD_COLORS["podae"],
 }
 N_SWEEP = (0, 3, 5, 10, 20, 30, 50, 100, 151)
 N_COEFF_SWEEP = tuple(n for n in N_SWEEP if n != NTOT)
@@ -287,27 +289,26 @@ def plot_n_sweep_state_errors(rows: list[dict[str, object]]) -> Path:
 def plot_n_sweep_coeff_curves() -> Path:
     FIG_DIR.mkdir(parents=True, exist_ok=True)
     x = np.arange(1, NTOT + 1)
-    colors = plt.cm.viridis(np.linspace(0.08, 0.92, len(N_COEFF_SWEEP)))
     fig, axes = plt.subplots(2, len(POINTS), figsize=(18.0, 8.2), sharex=True)
 
     for c, p in enumerate(POINTS):
         q_ref = load_q(q_path("linear", p))
         ax_abs, ax_rel = axes[0, c], axes[1, c]
-        for color, n in zip(colors, N_COEFF_SWEEP):
+        for n in N_COEFF_SWEEP:
             q = load_q(n_sweep_q_path(n, p))
             abs_curve, rel_curve = coeff_curves(q, q_ref)
             label = r"$n=0$ data-driven" if n == 0 else rf"$n={n}$"
             ax_abs.semilogy(
                 x,
                 abs_curve + 1.0e-14,
-                color=color,
+                color=CASE2_SWEEP_COLORS[n],
                 linewidth=2.4 if n == 0 else 1.65,
                 label=label if c == 0 else None,
             )
             ax_rel.semilogy(
                 x,
                 rel_curve / 100.0 + 1.0e-14,
-                color=color,
+                color=CASE2_SWEEP_COLORS[n],
                 linewidth=2.4 if n == 0 else 1.65,
             )
 
@@ -339,6 +340,9 @@ def plot_secondary_sensitivity(rows: list[dict[str, object]]) -> Path:
         x = np.asarray([float(r["actual_secondary_error_percent"]) for r in subset])
         uerr = np.asarray([float(r["state_error_percent_vs_hdm"]) for r in subset])
         qerr = np.asarray([float(r["primary_q_error_percent_vs_linear_prom"]) for r in subset])
+        # Retain the common range of the PROM and HPROM perturbation studies.
+        keep = x <= 50.0 + 1.0e-12
+        x, uerr, qerr = x[keep], uerr[keep], qerr[keep]
         ann_err = float(subset[0]["ann_secondary_error_percent"])
         idx_ann = int(np.argmin(np.abs(x - ann_err)))
         label = rf"{p.label}: $\mu=({p.mu1:.3f},{p.mu2:.4f})$"
@@ -347,12 +351,12 @@ def plot_secondary_sensitivity(rows: list[dict[str, object]]) -> Path:
             ax.plot(x, y, marker="o", linewidth=2.0, markersize=4.8, color=POINT_COLORS[p.key], label=label)
             ax.scatter([x[idx_ann]], [y[idx_ann]], marker="*", s=125, color=POINT_COLORS[p.key], edgecolor="black", linewidth=0.45, zorder=5)
 
-    axes[0].set_ylabel("state relative error against HDM (%)")
-    axes[1].set_ylabel("primary coefficient error vs linear PROM (%)")
+    axes[0].set_ylabel(r"state relative error against HDM (\%)")
+    axes[1].set_ylabel(r"primary coefficient error vs linear PROM (\%)")
     for ax in axes:
-        ax.set_xlabel(r"imposed relative error in $q_{11:151}$ only (%)")
+        ax.set_xlabel(r"imposed relative error in $q_{11:151}$ only (\%)")
         ax.grid(True, which="major", alpha=0.30)
-        ax.set_xlim(left=-0.4)
+        ax.set_xlim(-0.4, 50.5)
     axes[0].set_title(r"Effect on state error $\|u_{HDM}-u_{approx}\|/\|u_{HDM}\|$")
     axes[1].set_title(r"Effect on solved coordinates $q_1,\ldots,q_{10}$")
     axes[0].legend(loc="upper left", fontsize=8.0, frameon=True)

@@ -25,7 +25,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.patches import Rectangle
+from matplotlib.lines import Line2D
 
 THIS_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = THIS_DIR.parent
@@ -38,6 +38,20 @@ from stage3_dataset_utils import read_dataset_meta
 
 ORIGINAL_MU1_RANGE = (float(MU1_RANGE[0]), float(MU1_RANGE[1]))
 ORIGINAL_MU2_RANGE = (float(MU2_RANGE[0]), float(MU2_RANGE[1]))
+
+plt.rcParams.update(
+    {
+        "text.usetex": True,
+        "font.family": "serif",
+        "font.serif": ["Computer Modern Roman"],
+        "mathtext.fontset": "cm",
+        "axes.titlesize": 14,
+        "axes.labelsize": 13,
+        "legend.fontsize": 10,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+    }
+)
 
 
 def _sha256(path: Path) -> str:
@@ -332,6 +346,101 @@ def _load_or_create_design(
     return interior_mu, exterior_mu, exterior_regions, expanded_mu1, expanded_mu2
 
 
+def _plot_parameter_design(
+    path: Path,
+    *,
+    title: str,
+    baseline_mu: np.ndarray,
+    interior_mu: np.ndarray,
+    exterior_mu: np.ndarray,
+    evaluation_mu: np.ndarray,
+    expanded_mu1: tuple[float, float],
+    expanded_mu2: tuple[float, float],
+    include_enrichment: bool,
+) -> None:
+    # The two panels deliberately use identical axes so that the extra
+    # coverage is visible without a change of visual scale.
+    fig, ax = plt.subplots(figsize=(6.55, 7.15))
+    ax.scatter(
+        baseline_mu[:, 0],
+        baseline_mu[:, 1],
+        s=92,
+        color="black",
+        marker="o",
+        zorder=5,
+    )
+    if include_enrichment:
+        ax.scatter(
+            interior_mu[:, 0],
+            interior_mu[:, 1],
+            s=65,
+            color="#0072B2",
+            edgecolors="white",
+            linewidths=0.40,
+            zorder=4,
+        )
+        ax.scatter(
+            exterior_mu[:, 0],
+            exterior_mu[:, 1],
+            s=65,
+            color="#009E73",
+            edgecolors="white",
+            linewidths=0.40,
+            zorder=4,
+        )
+    ax.scatter(
+        evaluation_mu[:, 0],
+        evaluation_mu[:, 1],
+        s=140,
+        color="#D62728",
+        marker="*",
+        edgecolors="white",
+        linewidths=0.80,
+        zorder=7,
+    )
+    for label, mu, offset in zip(
+        (r"$\mu^{(v)}$", r"$\mu^{(1)}$", r"$\mu^{(2)}$", r"$\mu^{(3)}$"),
+        evaluation_mu,
+        ((10, -18), (8, 7), (8, 7), (8, -5)),
+    ):
+        ax.annotate(label, xy=mu, xytext=offset, textcoords="offset points", color="#B22222", fontsize=11)
+
+    ax.set_xlim(3.70, 6.00)
+    ax.set_ylim(0.0088, 0.0372)
+    # Equal data scaling would make the grid almost flat because the two
+    # parameter ranges differ by two orders of magnitude.  A square axes box
+    # instead keeps both coordinates readable.
+    ax.set_box_aspect(1)
+    ax.set_xlabel(r"$\mu_1$")
+    ax.set_ylabel(r"$\mu_2$")
+    ax.set_title(title, pad=8)
+    ax.grid(True, color="#B8B8B8", alpha=0.34, linewidth=0.55)
+
+    handles = [
+        Line2D([], [], color="black", marker="o", linestyle="None", markersize=8, label=r"Baseline $3\times3$ grid"),
+    ]
+    if include_enrichment:
+        handles.extend(
+            [
+                Line2D([], [], color="#0072B2", marker="o", linestyle="None", markersize=6.8, label=r"18 interior LHS HPROM points"),
+                Line2D([], [], color="#009E73", marker="o", linestyle="None", markersize=6.8, label=r"18 margin LHS HPROM points"),
+            ]
+        )
+    handles.append(Line2D([], [], color="#D62728", marker="*", linestyle="None", markersize=10, label=r"Evaluation points"))
+    ax.legend(
+        handles=handles,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.16),
+        ncol=2,
+        frameon=True,
+        columnspacing=1.8,
+        handletextpad=0.65,
+    )
+    fig.subplots_adjust(left=0.16, right=0.97, bottom=0.20, top=0.93)
+    fig.savefig(path, dpi=260)
+    plt.close(fig)
+
+
 def _plot_sampling(
     path: Path,
     baseline_mu: np.ndarray,
@@ -341,91 +450,27 @@ def _plot_sampling(
     expanded_mu1: tuple[float, float],
     expanded_mu2: tuple[float, float],
 ) -> None:
-    fig, ax = plt.subplots(figsize=(8.8, 6.4))
-    ax.add_patch(
-        Rectangle(
-            (expanded_mu1[0], expanded_mu2[0]),
-            expanded_mu1[1] - expanded_mu1[0],
-            expanded_mu2[1] - expanded_mu2[0],
-            fill=False,
-            linestyle=":",
-            linewidth=1.4,
-            edgecolor="0.45",
-            label="25% expanded box",
-            zorder=1,
-        )
+    """Write separate baseline/enrichment figures and refresh the legacy path."""
+    common = {
+        "baseline_mu": baseline_mu,
+        "interior_mu": interior_mu,
+        "exterior_mu": exterior_mu,
+        "evaluation_mu": evaluation_mu,
+        "expanded_mu1": expanded_mu1,
+        "expanded_mu2": expanded_mu2,
+    }
+    _plot_parameter_design(
+        path.with_name("stage2_sampling_points_baseline.png"),
+        title=r"Baseline training set in parameter space",
+        include_enrichment=False,
+        **common,
     )
-    ax.add_patch(
-        Rectangle(
-            (ORIGINAL_MU1_RANGE[0], ORIGINAL_MU2_RANGE[0]),
-            ORIGINAL_MU1_RANGE[1] - ORIGINAL_MU1_RANGE[0],
-            ORIGINAL_MU2_RANGE[1] - ORIGINAL_MU2_RANGE[0],
-            fill=False,
-            linestyle="-",
-            linewidth=1.5,
-            edgecolor="black",
-            label="Original training box",
-            zorder=2,
-        )
+    _plot_parameter_design(
+        path,
+        title=r"Expanded enriched training set in parameter space",
+        include_enrichment=True,
+        **common,
     )
-    ax.scatter(
-        baseline_mu[:, 0],
-        baseline_mu[:, 1],
-        s=82,
-        facecolors="white",
-        edgecolors="black",
-        linewidths=1.5,
-        marker="o",
-        label="Baseline 3 x 3 grid",
-        zorder=4,
-    )
-    ax.scatter(
-        interior_mu[:, 0],
-        interior_mu[:, 1],
-        s=58,
-        color="#2b7bba",
-        alpha=0.88,
-        label=f"Interior LHS HPROM ({len(interior_mu)})",
-        zorder=5,
-    )
-    if exterior_mu.size:
-        ax.scatter(
-            exterior_mu[:, 0],
-            exterior_mu[:, 1],
-            s=62,
-            color="#d9822b",
-            alpha=0.88,
-            label=f"Exterior-margin LHS HPROM ({len(exterior_mu)})",
-            zorder=5,
-        )
-    if evaluation_mu.size:
-        ax.scatter(
-            evaluation_mu[:, 0],
-            evaluation_mu[:, 1],
-            s=135,
-            color="#c1272d",
-            marker="*",
-            edgecolors="white",
-            linewidths=0.8,
-            label="Evaluation points",
-            zorder=6,
-        )
-    labels = [r"$\mu^{(v)}$", r"$\mu^{(1)}$", r"$\mu^{(2)}$", r"$\mu^{(3)}$"]
-    offsets = [(0.020, 0.00055), (0.022, 0.00055), (0.022, 0.00055), (0.022, -0.00075)]
-    for label, mu, (dx, dy) in zip(labels, evaluation_mu, offsets):
-        ax.text(float(mu[0]) + dx, float(mu[1]) + dy, label, color="#9a1b20", fontsize=11.5, zorder=7)
-    pad_x = 0.04 * (expanded_mu1[1] - expanded_mu1[0])
-    pad_y = 0.05 * (expanded_mu2[1] - expanded_mu2[0])
-    ax.set_xlim(expanded_mu1[0] - pad_x, expanded_mu1[1] + pad_x)
-    ax.set_ylim(expanded_mu2[0] - pad_y, expanded_mu2[1] + pad_y)
-    ax.set_xlabel(r"$\mu_1$")
-    ax.set_ylabel(r"$\mu_2$")
-    ax.set_title("Extended HPROM enrichment design in parameter space")
-    ax.grid(True, alpha=0.23)
-    ax.legend(loc="upper left", frameon=True, fontsize=10.5)
-    fig.tight_layout()
-    fig.savefig(path, dpi=220)
-    plt.close(fig)
 
 
 def _write_manifest(
