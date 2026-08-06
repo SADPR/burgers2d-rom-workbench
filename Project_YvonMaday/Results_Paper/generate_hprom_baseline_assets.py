@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import math
 from dataclasses import dataclass
 from pathlib import Path
@@ -38,8 +39,12 @@ TAB_DIR = PAPER / "tables" / "hprom_only"
 BASIS_PATH = PAPER / "MetricStudy" / "lspg_sensitive" / "Stage1" / "basis.npy"
 U_REF_PATH = PAPER / "MetricStudy" / "lspg_sensitive" / "Stage1" / "u_ref.npy"
 NTOT = 151
-CASE2_N_SWEEP = (0, 3, 5, 10, 20, 30, 50, 151)
+# The raw n=3 and n=5 diagnostics remain available, but the reported sweep
+# starts from the production n=10 split.
+CASE2_N_SWEEP = (0, 10, 20, 30, 50, 151)
 ROW_END = r"\\"
+HDM_REFERENCE_TIME_S = 7.37437560e02
+DIRECT_TIMING_SUMMARY = "direct_inference_repeat10_summary.txt"
 BASELINE_FILL = "#9ecae9"
 BASELINE_EDGE = "#376795"
 ENRICHED_FILL = "#a1d99b"
@@ -107,6 +112,18 @@ DIRECT_COEFF_METHODS = (
 # comparisons.  The n=20 Case-2 study remains reported in the dedicated
 # matched-rule diagnostic, rather than creating an unmatched PROM-only row.
 COMPARISON_METHODS = tuple(method for method in METHODS[1:] if method.key != "case2_n20")
+
+# The first four entries are residual-evaluating HPROMs.  The direct maps at
+# right are non-intrusive and are separated explicitly in aggregate plots.
+ENRICHMENT_BAR_LABELS = (
+    r"HPROM--ANN C1",
+    r"HPROM--ANN C2 ($n=10$)",
+    r"HPROM--ANN C3",
+    r"HPROM--POD--AE ($n_z=10$)",
+    r"POD--NN--ROM",
+    r"POD--DL--ROM ($n_z=10$)",
+)
+INTRUSIVE_DIRECT_SPLIT = 3.5
 
 
 TRAINING_SUMMARIES = (
@@ -376,7 +393,7 @@ def case2_sensitivity_rows(point: Point) -> list[dict[str, float]]:
     return sorted(rows, key=lambda row: row["tail"])
 
 
-def write_case2_diagnostic_tables() -> None:
+def write_case2_n_sweep_table() -> None:
     state_lines = [
         r"\begin{tabular}{lrrrrrrr}",
         r"\toprule",
@@ -394,6 +411,8 @@ def write_case2_diagnostic_tables() -> None:
     state_lines += [r"\bottomrule", r"\end{tabular}"]
     (TAB_DIR / "hprom_case2_n_sweep_state_errors.tex").write_text("\n".join(state_lines) + "\n")
 
+
+def write_case2_tail_sensitivity_table() -> None:
     tail_lines = [
         r"\begin{tabular}{lrrrrr}",
         r"\toprule",
@@ -411,6 +430,11 @@ def write_case2_diagnostic_tables() -> None:
         )
     tail_lines += [r"\bottomrule", r"\end{tabular}"]
     (TAB_DIR / "hprom_case2_n10_tail_sensitivity.tex").write_text("\n".join(tail_lines) + "\n")
+
+
+def write_case2_diagnostic_tables() -> None:
+    write_case2_n_sweep_table()
+    write_case2_tail_sensitivity_table()
 
 
 def plot_case2_n_sweep_state() -> None:
@@ -928,6 +952,33 @@ def direct_rom_metrics(enriched: bool, kind: str) -> tuple[list[float], list[flo
     return states, coeffs
 
 
+def repeated_direct_rom_time(enriched: bool, kind: str) -> float | None:
+    """Read the all-points repeated forward-pass timing summary, if available.
+
+    The one-shot timestamps saved with the accuracy launchers include unrelated
+    process and allocation effects.  They are deliberately not used for the
+    manuscript timing comparison.
+    """
+    root = HPROM_ENRICHED if enriched else HPROM
+    summary = root / "timing" / DIRECT_TIMING_SUMMARY
+    return num(read_kv(summary), f"{kind}_all_points_mean_inference_time_s")
+
+
+def fmt_duration(seconds: float | None) -> str:
+    """Use enough digits to distinguish the millisecond-scale direct maps."""
+    if seconds is None or not math.isfinite(float(seconds)):
+        return "--"
+    if seconds < 0.1:
+        return f"{seconds:.4f}"
+    return f"{seconds:.3f}" if seconds < 1.0 else f"{seconds:.2f}"
+
+
+def fmt_speedup(value: float | None) -> str:
+    if value is None or not math.isfinite(float(value)):
+        return "--"
+    return f"{value:,.1f}"
+
+
 def plot_direct_rom_enrichment_comparison() -> None:
     """Show the direct-map gain without conflating it with an ECM approximation."""
     methods = (("POD--NN--ROM", "podnn"), ("POD--DL--ROM", "poddl"))
@@ -991,7 +1042,7 @@ def write_enrichment_training_table() -> None:
                           .replace("POD-DL-ROM", "POD--DL--ROM ($n_z=10$)")
                           .replace("HPROM-POD-AE", "HPROM-POD-AE ($n_z=10$)"))
         lines.append(
-            f"{tex_escape(display_label)} & {fmt(num(base, 'train_rel_frob_percent'))} & "
+            f"{display_label} & {fmt(num(base, 'train_rel_frob_percent'))} & "
             f"{fmt(base_val)} & {fmt(num(enriched, 'train_rel_frob_percent'))} & "
             f"{fmt(enriched_val)} & {fmt(reduction, 1)} {ROW_END}"
         )
@@ -1049,6 +1100,43 @@ def write_enrichment_online_tables() -> None:
     (TAB_DIR / "hprom_enrichment_online_coeff_comparison.tex").write_text("\n".join(coeff_lines) + "\n")
 
 
+def write_enrichment_online_timing_table() -> None:
+    """Write wall times and speed-ups against one fixed HDM reference.
+
+    The linear HPROM is not retrained during coefficient enrichment: its basis
+    and ECM rule remain fixed.  Its measured baseline time is consequently
+    reproduced in both columns rather than treating run-to-run wall-clock
+    variation as an algorithmic change.
+    """
+    fixed_linear_time = float(np.mean(campaign_metrics(False, METHODS[0])[2]))
+    lines = [
+        r"\begin{tabular}{lrr|rr}",
+        r"\toprule",
+        r"& \multicolumn{2}{c|}{Baseline (9 trajectories)} & \multicolumn{2}{c}{Enriched (9+36 trajectories)} \\",
+        r"Model & Mean time (s) & $T_{\mathrm{HDM}}/T$ & Mean time (s) & $T_{\mathrm{HDM}}/T$ \\",
+        r"\midrule",
+    ]
+    for method in METHODS:
+        baseline_time = float(np.mean(campaign_metrics(False, method)[2]))
+        enriched_time = fixed_linear_time if method.is_linear else float(np.mean(campaign_metrics(True, method)[2]))
+        lines.append(
+            f"{method.table_label} & {fmt_duration(baseline_time)} & "
+            f"{fmt_speedup(HDM_REFERENCE_TIME_S / baseline_time)} & "
+            f"{fmt_duration(enriched_time)} & {fmt_speedup(HDM_REFERENCE_TIME_S / enriched_time)} {ROW_END}"
+        )
+    lines.append(r"\midrule")
+    for label, kind in (("POD--NN--ROM", "podnn"), ("POD--DL--ROM ($n_z=10$)", "poddl")):
+        baseline_time = repeated_direct_rom_time(False, kind)
+        enriched_time = repeated_direct_rom_time(True, kind)
+        lines.append(
+            f"{label} & {fmt_duration(baseline_time)} & "
+            f"{fmt_speedup(HDM_REFERENCE_TIME_S / baseline_time if baseline_time else None)} & "
+            f"{fmt_duration(enriched_time)} & {fmt_speedup(HDM_REFERENCE_TIME_S / enriched_time if enriched_time else None)} {ROW_END}"
+        )
+    lines += [r"\bottomrule", r"\end{tabular}"]
+    (TAB_DIR / "hprom_enrichment_online_timing_comparison.tex").write_text("\n".join(lines) + "\n")
+
+
 def plot_enrichment_state_comparison() -> None:
     methods: tuple[tuple[str, Method | str], ...] = tuple((m.label, m) for m in COMPARISON_METHODS) + (
         ("POD-NN-ROM", "podnn"), ("POD-DL-ROM", "poddl"),
@@ -1078,10 +1166,11 @@ def plot_enrichment_state_comparison() -> None:
         ax.bar(x + width / 2, enriched_values, width, color=ENRICHED_FILL, edgecolor=ENRICHED_EDGE,
                alpha=0.92, label="enriched 9+36")
         ax.axhline(linear_value, color="#222222", ls="-", lw=1.1, label="linear HPROM" if ax is axes[0] else None)
+        ax.axvline(INTRUSIVE_DIRECT_SPLIT, color="#5a5a5a", linestyle="--", linewidth=0.9, alpha=0.8)
         ax.set_yscale("log")
         ax.set_title(title)
         ax.set_xticks(x)
-        ax.set_xticklabels(["C1", "C2 $n=10$", "C3", "POD-AE", "POD-NN", "POD-DL"], rotation=18, ha="right")
+        ax.set_xticklabels(ENRICHMENT_BAR_LABELS, rotation=25, ha="right", fontsize=8)
         ax.grid(axis="y", which="both", alpha=0.27)
     axes[0].set_ylabel(r"state relative error vs HDM (\%)")
     axes[0].legend(frameon=True, fontsize=8)
@@ -1117,10 +1206,11 @@ def plot_enrichment_coeff_comparison() -> None:
                alpha=0.92, label="baseline 9")
         ax.bar(x + width / 2, enriched_values, width, color=ENRICHED_FILL, edgecolor=ENRICHED_EDGE,
                alpha=0.92, label="enriched 9+36")
+        ax.axvline(INTRUSIVE_DIRECT_SPLIT, color="#5a5a5a", linestyle="--", linewidth=0.9, alpha=0.8)
         ax.set_yscale("log")
         ax.set_title(title)
         ax.set_xticks(x)
-        ax.set_xticklabels(["C1", "C2 $n=10$", "C3", "POD-AE", "POD-NN", "POD-DL"], rotation=18, ha="right")
+        ax.set_xticklabels(ENRICHMENT_BAR_LABELS, rotation=25, ha="right", fontsize=8)
         ax.grid(axis="y", which="both", alpha=0.27)
     axes[0].set_ylabel(r"relative coefficient error vs linear HPROM (\%)")
     axes[0].legend(frameon=True, fontsize=8)
@@ -1156,20 +1246,56 @@ def plot_enrichment_case2_coefficients() -> None:
     plt.close(figure)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Generate HPROM manuscript assets from saved campaign outputs."
+    )
+    diagnostics = parser.add_mutually_exclusive_group()
+    diagnostics.add_argument(
+        "--skip-case2-diagnostics",
+        action="store_true",
+        help=(
+            "Preserve the Case-2 HPROM n-sweep and tail-sensitivity assets. "
+            "Use while the diagnostic rerun is pending."
+        ),
+    )
+    diagnostics.add_argument(
+        "--only-case2-n-sweep",
+        action="store_true",
+        help=(
+            "Refresh only the Case-2 n-sweep table and figures; preserve the "
+            "fixed-rule tail-sensitivity diagnostic."
+        ),
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
+    args = parse_args()
     ensure_dirs()
+    if args.only_case2_n_sweep:
+        write_case2_n_sweep_table()
+        plot_case2_n_sweep_state()
+        plot_case2_n_sweep_coefficients()
+        print("[hprom-assets] refreshed the Case-2 n-sweep only")
+        return
+
     write_training_table()
     write_online_tables()
     write_ecm_table()
-    write_case2_diagnostic_tables()
     write_enrichment_training_table()
     write_enrichment_online_tables()
+    write_enrichment_online_timing_table()
     generate_solution_overlay()
     generate_coeff_plot()
     generate_coefficient_heatmaps()
-    plot_case2_n_sweep_state()
-    plot_case2_n_sweep_coefficients()
-    plot_case2_tail_sensitivity()
+    if args.skip_case2_diagnostics:
+        print("[hprom-assets] preserved existing Case-2 diagnostic assets")
+    else:
+        write_case2_diagnostic_tables()
+        plot_case2_n_sweep_state()
+        plot_case2_n_sweep_coefficients()
+        plot_case2_tail_sensitivity()
     plot_enrichment_state_comparison()
     plot_enrichment_coeff_comparison()
     plot_enrichment_case2_coefficients()

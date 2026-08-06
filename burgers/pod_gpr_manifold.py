@@ -772,8 +772,11 @@ def compute_ECSW_training_matrix_2D_gpr(
     max_local_its=10,
     local_tol=1e-2,
 ):
-    """
-    ECSW training matrix for the POD-GPR ROM.
+    """Build ECM contributions for the global POD--GPR manifold.
+
+    Both states entering each backward-Euler residual are reconstructed on
+    the GPR manifold.  The resulting training residual is therefore the same
+    residual family used by the online global HPROM.
     """
     n_tot, n_snaps = snaps.shape
     n_hdm = n_tot // 2
@@ -826,12 +829,10 @@ def compute_ECSW_training_matrix_2D_gpr(
             )
         raise ValueError(f"Unsupported jacobian_mode: {jacobian_mode}")
 
-    for isnap in range(n_snaps):
-        snap = snaps[:, isnap]
-        snap_prev = prev_snaps[:, isnap]
-
-        y = (basis.T @ (snap - u_ref)).copy()
-
+    def _fit_snapshot(snapshot):
+        """Return the GPR-manifold fit of one full state."""
+        snapshot = np.asarray(snapshot, dtype=np.float64).reshape(-1)
+        y = (basis.T @ (snapshot - u_ref)).copy()
         w_rec = decode_gp(
             q_p=y,
             gp_model=gp_model,
@@ -844,18 +845,14 @@ def compute_ECSW_training_matrix_2D_gpr(
             scaler_affine_cache=scaler_affine_cache,
             echo_level=0,
         )
-        init_res = np.linalg.norm(w_rec - snap)
+        init_res = np.linalg.norm(w_rec - snapshot)
         curr_res = init_res
         num_it = 0
-
-        snap_norm = np.linalg.norm(snap)
-        denom = snap_norm if snap_norm > 0.0 else 1.0
-        print("Initial reconstruction residual: {:3.2e}".format(init_res / denom))
 
         while init_res > 0.0 and (curr_res / init_res > local_tol) and num_it < max_local_its:
             Jf = jac_gp_train(y)
 
-            res_rec = w_rec - snap
+            res_rec = w_rec - snapshot
             JJ = Jf.T @ Jf
             Jr = Jf.T @ res_rec
 
@@ -874,13 +871,23 @@ def compute_ECSW_training_matrix_2D_gpr(
                 scaler_affine_cache=scaler_affine_cache,
                 echo_level=0,
             )
-            curr_res = np.linalg.norm(w_rec - snap)
+            curr_res = np.linalg.norm(w_rec - snapshot)
             num_it += 1
 
-        final_res = np.linalg.norm(w_rec - snap)
+        return y, w_rec, init_res, curr_res
+
+    for isnap in range(n_snaps):
+        snap = snaps[:, isnap]
+        snap_prev = prev_snaps[:, isnap]
+        y, w_rec, init_res, final_res = _fit_snapshot(snap)
+        _, w_prev_rec, _, _ = _fit_snapshot(snap_prev)
+
+        denom = np.linalg.norm(snap)
+        denom = denom if denom > 0.0 else 1.0
+        print("Initial reconstruction residual: {:3.2e}".format(init_res / denom))
         print("Final reconstruction residual: {:3.2e}".format(final_res / denom))
 
-        ires = res(w_rec, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+        ires = res(w_rec, grid_x, grid_y, dt, w_prev_rec, mu, Dxec, Dyec)
         Ji = jac(w_rec, dt, JDxec, JDyec, Eye)
 
         V = jac_gp_train(y)
@@ -921,8 +928,12 @@ def compute_ECSW_training_matrix_2D_gpr_local(
     init_cluster=None,
     selector_mode="linear",
 ):
-    """
-    ECSW training matrix for the local POD-GPR ROM.
+    """Build ECM contributions for the local POD--GPR manifold.
+
+    The current and predecessor training states are both assigned to a local
+    chart and reconstructed before forming a backward-Euler residual.  This
+    prevents HDM predecessor snapshots from entering a rule used online by
+    manifold states only.
     """
     n_tot, n_snaps = snaps.shape
     n_hdm = n_tot // 2
@@ -939,12 +950,11 @@ def compute_ECSW_training_matrix_2D_gpr_local(
 
     Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
 
-    for isnap in range(n_snaps):
-        u_i = snaps[:, isnap]
-        u_prev = prev_snaps[:, isnap]
-
+    def _fit_local_state(state):
+        """Select a chart and fit one state to its local GPR manifold."""
+        state = np.asarray(state, dtype=np.float64).reshape(-1)
         if init_cluster is None:
-            k0 = int(np.argmin([np.linalg.norm(u_i - u0_k) ** 2 for u0_k in u0_list]))
+            k0 = int(np.argmin([np.linalg.norm(state - u0_k) ** 2 for u0_k in u0_list]))
         else:
             k0 = int(init_cluster)
             if not (0 <= k0 < K):
@@ -954,7 +964,7 @@ def compute_ECSW_training_matrix_2D_gpr_local(
         u0_k0 = np.asarray(u0_list[k0], dtype=np.float64)
         y_k0 = _build_local_selector_coords_gpr(
             k=k0,
-            state=u_i,
+            state=state,
             u0_k=u0_k0,
             V_k=V_k0,
             model_k=models[k0],
@@ -970,7 +980,7 @@ def compute_ECSW_training_matrix_2D_gpr_local(
         u0_k = np.asarray(u0_list[k], dtype=np.float64)
         n_dof_k = _cluster_primary_dim(models[k], V_k.shape[1], n_primary)
 
-        q = (V_k.T @ (u_i - u0_k))[:n_dof_k].copy()
+        q = (V_k.T @ (state - u0_k))[:n_dof_k].copy()
 
         w_rec = decode_gpr_local(
             k,
@@ -981,14 +991,13 @@ def compute_ECSW_training_matrix_2D_gpr_local(
             n_primary,
             use_custom_predict=use_custom_predict,
         )
-        r_rec = w_rec - u_i
+        r_rec = w_rec - state
 
         init_norm = np.linalg.norm(r_rec)
         curr_norm = init_norm
         num_it = 0
-        u_norm = np.linalg.norm(u_i)
+        u_norm = np.linalg.norm(state)
         denom = u_norm if u_norm > 0.0 else 1.0
-        print("Initial residual: {:3.2e}".format(init_norm / denom))
 
         if init_norm > 0.0:
             while curr_norm / init_norm > tol_rel and num_it < max_gn_its:
@@ -1018,15 +1027,22 @@ def compute_ECSW_training_matrix_2D_gpr_local(
                     n_primary,
                     use_custom_predict=use_custom_predict,
                 )
-                r_rec = w_rec - u_i
+                r_rec = w_rec - state
                 curr_norm = np.linalg.norm(r_rec)
                 num_it += 1
 
+        return k, q, w_rec, n_dof_k, init_norm, curr_norm, denom
+
+    for isnap in range(n_snaps):
+        u_i = snaps[:, isnap]
+        u_prev = prev_snaps[:, isnap]
+        k, q, u_tilde, n_dof_k, init_norm, curr_norm, denom = _fit_local_state(u_i)
+        _, _, u_prev_tilde, _, _, _, _ = _fit_local_state(u_prev)
+
+        print("Initial residual: {:3.2e}".format(init_norm / denom))
         print("Final residual: {:3.2e}".format(curr_norm / denom))
 
-        u_tilde = w_rec
-
-        ires = res(u_tilde, grid_x, grid_y, dt, u_prev, mu, Dxec, Dyec)
+        ires = res(u_tilde, grid_x, grid_y, dt, u_prev_tilde, mu, Dxec, Dyec)
         Ji = jac(u_tilde, dt, JDxec, JDyec, Eye)
 
         V_q = jac_gpr_local(

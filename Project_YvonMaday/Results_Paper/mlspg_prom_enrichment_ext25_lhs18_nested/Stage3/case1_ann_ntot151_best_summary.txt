@@ -1,0 +1,30 @@
+model_name: case1_ann_ntot151_best.pt
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs18_nested/Stage3/models/case1_ann_ntot151_best.pt
+dataset_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs18_nested/Stage2/prom_coeff_dataset_ntot151_enriched_lhs18
+dataset_root: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs18_nested/Stage2/prom_coeff_dataset_ntot151_enriched_lhs18/per_mu
+dataset_ntot: 151
+dataset_backend: prom
+primary_modes: 10
+secondary_modes: 141
+samples_M: 13527
+n_p: 10
+n_s: 141
+epochs_ran: 6000
+best_val_mse: 0.0016969925491139293
+seed: 42
+device: cpu
+hidden_dims: (256, 512, 512, 256)
+activation: silu
+dropout: 0.0
+architecture: q_p -> [256, 512, 512, 256] SILU -> q_s
+optimizer: AdamW
+lr: 0.0005
+weight_decay: 1e-06
+batch_size: 128
+trainable_parameters: 564621
+lr_scheduler: ReduceLROnPlateau
+lr_scheduler_factor: 0.5
+lr_scheduler_patience: 50
+lr_scheduler_min_lr: 1e-06
+train_rel_frob_percent: 0.5118419881910086
+val_rel_frob_percent: 0.556988175958395

@@ -1,0 +1,36 @@
+mu_test: [4.0, 0.033]
+device: cpu
+model_name: prom_pod_ae_ntot151_best.pt
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Stage3/models/prom_pod_ae_ntot151_best.pt
+basis_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/lspg_sensitive/Stage1/u_ref.npy
+q_dim: 151
+latent_dim: 10
+hidden_dims: (512, 256, 128)
+scaling: zscore
+activation: gelu
+solve_backend_requested: prom
+solve_backend_effective: prom
+use_ecsw: False
+rebuild_ecsw_weights: False
+ecsw_num_training_mu: 9
+ecsw_snap_time_offset: 3
+ecsw_predecessor_lag_steps: 1
+ecsw_snapshot_percent: 2.0
+ecsw_snapshot_random_seed: 42
+ecsw_ensure_mu_coverage: True
+ecsw_weights_path: N/A
+ecsw_residual: nan
+n_ecsw_elements: None
+ecsw_setup_elapsed_s: 0.0
+online_solve_elapsed_s: 580.0833957195282
+elapsed_s: 580.0833957195282
+num_iterations: 1916
+jac_time_s: 233.7064802646637
+res_time_s: 10.011146545410156
+ls_time_s: 48.47764706611633
+relative_error_percent: 1.2230542332058851
+snaps_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Runs/PROM/PODAE_Best/podae_prom_mu1_4.000_mu2_0.0330_ntot151_nz10_snaps.npy
+latent_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Runs/PROM/PODAE_Best/podae_prom_mu1_4.000_mu2_0.0330_ntot151_nz10_latent.npy
+qN_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Runs/PROM/PODAE_Best/podae_prom_mu1_4.000_mu2_0.0330_ntot151_nz10_qN.npy
+plot_output: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Runs/PROM/PODAE_Best/podae_prom_mu1_4.000_mu2_0.0330_ntot151_nz10_hdm_vs_rom.png

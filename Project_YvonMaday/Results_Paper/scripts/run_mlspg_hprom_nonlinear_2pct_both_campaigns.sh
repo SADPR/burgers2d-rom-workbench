@@ -436,7 +436,7 @@ run_ext25() {
   mkdir -p "$MPLCONFIGDIR"
 
   run_ann_family_for_campaign "ext25-lhs36" "$root" "PROM-ANN Case 1" case1 run_prom_ann_case_1.py \
-    "$models/case1_ann_ntot151_gelu_samearch_test.pt" 10 "Case1_GELU_SameArch_Test" 0
+    "$models/case1_ann_ntot151_best.pt" 10 "Case1_Best" 0
   run_ann_family_for_campaign "ext25-lhs36" "$root" "Case 2 from POD-NN master map (n=10)" case2 run_prom_ann_case_2.py \
     "$models/data_driven_ann_ntot151_best.pt" 10 "Case2_Master/np10" 0
   run_ann_family_for_campaign "ext25-lhs36" "$root" "Case 2 from POD-NN master map (n=20)" case2 run_prom_ann_case_2.py \

@@ -621,8 +621,12 @@ def compute_ECSW_training_matrix_2D_rbf_global(
     kernel_type="gaussian",
     u_ref=None,
 ):
-    """
-    ECSW training matrix for the global POD-RBF ROM.
+    """Build ECM contributions for the global POD--RBF manifold.
+
+    Both states in every backward-Euler residual are fitted to the RBF
+    manifold.  This is the residual evaluated by the online HPROM, where the
+    predecessor is the preceding reconstructed ROM state rather than an HDM
+    snapshot.
     """
     n_tot, n_snaps = snaps.shape
     n_hdm = n_tot // 2
@@ -633,12 +637,10 @@ def compute_ECSW_training_matrix_2D_rbf_global(
 
     Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
 
-    for isnap in range(n_snaps):
-        snap = snaps[:, isnap]
-        snap_prev = prev_snaps[:, isnap]
-
-        y = (basis.T @ (snap - u_ref)).copy()
-
+    def _fit_snapshot(snapshot):
+        """Return the RBF-manifold fit of one full state."""
+        snapshot = np.asarray(snapshot, dtype=np.float64).reshape(-1)
+        y = (basis.T @ (snapshot - u_ref)).copy()
         w_rec = decode_rbf_global(
             y,
             W_global,
@@ -650,18 +652,16 @@ def compute_ECSW_training_matrix_2D_rbf_global(
             kernel_type,
             u_ref=u_ref,
         )
-        init_res = np.linalg.norm(w_rec - snap)
+        init_res = np.linalg.norm(w_rec - snapshot)
         curr_res = init_res
         num_it = 0
 
-        print("Initial residual: {:3.2e}".format(init_res / np.linalg.norm(snap)))
-
-        while curr_res / init_res > 1e-2 and num_it < 10:
+        while init_res > 0.0 and curr_res / init_res > 1e-2 and num_it < 10:
             Jf = jac_rbf_global(
                 y, W_global, q_p_train, q_s_train, basis, basis2, epsilon, scaler, kernel_type
             )
 
-            res_rec = w_rec - snap
+            res_rec = w_rec - snapshot
             JJ = Jf.T @ Jf
             Jr = Jf.T @ res_rec
 
@@ -679,13 +679,23 @@ def compute_ECSW_training_matrix_2D_rbf_global(
                 kernel_type,
                 u_ref=u_ref,
             )
-            curr_res = np.linalg.norm(w_rec - snap)
+            curr_res = np.linalg.norm(w_rec - snapshot)
             num_it += 1
 
-        final_res = np.linalg.norm(w_rec - snap)
-        print("Final residual: {:3.2e}".format(final_res / np.linalg.norm(snap)))
+        return y, w_rec, init_res, curr_res
 
-        ires = res(w_rec, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+    for isnap in range(n_snaps):
+        snap = snaps[:, isnap]
+        snap_prev = prev_snaps[:, isnap]
+        y, w_rec, init_res, final_res = _fit_snapshot(snap)
+        _, w_prev_rec, _, _ = _fit_snapshot(snap_prev)
+
+        denom = np.linalg.norm(snap)
+        denom = denom if denom > 0.0 else 1.0
+        print("Initial residual: {:3.2e}".format(init_res / denom))
+        print("Final residual: {:3.2e}".format(final_res / denom))
+
+        ires = res(w_rec, grid_x, grid_y, dt, w_prev_rec, mu, Dxec, Dyec)
         Ji = jac(w_rec, dt, JDxec, JDyec, Eye)
 
         V = jac_rbf_global(
@@ -725,8 +735,11 @@ def compute_ECSW_training_matrix_2D_rbf_local(
     init_cluster=None,
     selector_mode="linear",
 ):
-    """
-    ECSW training matrix for the local POD-RBF ROM.
+    """Build ECM contributions for the local POD--RBF manifold.
+
+    Current and predecessor states are independently assigned and fitted on
+    the local nonlinear manifold before their backward-Euler residual is
+    assembled.  This mirrors the online local HPROM state convention.
     """
     n_tot, n_snaps = snaps.shape
     n_hdm = n_tot // 2
@@ -756,12 +769,11 @@ def compute_ECSW_training_matrix_2D_rbf_local(
 
     Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
 
-    for isnap in range(n_snaps):
-        u_i = snaps[:, isnap]
-        u_prev = prev_snaps[:, isnap]
-
+    def _fit_local_state(state):
+        """Select a chart and fit one state to its local RBF manifold."""
+        state = np.asarray(state, dtype=np.float64).reshape(-1)
         if init_cluster is None:
-            k0 = int(np.argmin([np.linalg.norm(u_i - u0_k) ** 2 for u0_k in u0_list]))
+            k0 = int(np.argmin([np.linalg.norm(state - u0_k) ** 2 for u0_k in u0_list]))
         else:
             k0 = int(init_cluster)
             if not (0 <= k0 < K):
@@ -770,7 +782,7 @@ def compute_ECSW_training_matrix_2D_rbf_local(
         V_k0 = np.asarray(V_list[k0], dtype=float)
         u0_k0 = np.asarray(u0_list[k0], dtype=float)
         y_k0 = _build_local_selector_coords_rbf(
-            state=u_i,
+            state=state,
             u0_k=u0_k0,
             V_k=V_k0,
             model_k=models[k0],
@@ -796,17 +808,16 @@ def compute_ECSW_training_matrix_2D_rbf_local(
         else:
             n_dof_k = n_total_k
 
-        q = (V_k.T @ (u_i - u0_k))[:n_dof_k].copy()
+        q = (V_k.T @ (state - u0_k))[:n_dof_k].copy()
 
         w_rec = decode_rbf_local(k, q, u0_list, V_list, models, n_primary)
-        r_rec = w_rec - u_i
+        r_rec = w_rec - state
 
         init_norm = np.linalg.norm(r_rec)
         curr_norm = init_norm
         num_it = 0
-        u_norm = np.linalg.norm(u_i)
+        u_norm = np.linalg.norm(state)
         denom = u_norm if u_norm > 0.0 else 1.0
-        print("Initial residual: {:3.2e}".format(init_norm / denom))
 
         if init_norm > 0.0:
             while curr_norm / init_norm > tol_rel and num_it < max_gn_its:
@@ -819,15 +830,22 @@ def compute_ECSW_training_matrix_2D_rbf_local(
                 q += dq
 
                 w_rec = decode_rbf_local(k, q, u0_list, V_list, models, n_primary)
-                r_rec = w_rec - u_i
+                r_rec = w_rec - state
                 curr_norm = np.linalg.norm(r_rec)
                 num_it += 1
 
+        return k, q, w_rec, n_dof_k, init_norm, curr_norm, denom
+
+    for isnap in range(n_snaps):
+        u_i = snaps[:, isnap]
+        u_prev = prev_snaps[:, isnap]
+        k, q, u_tilde, n_dof_k, init_norm, curr_norm, denom = _fit_local_state(u_i)
+        _, _, u_prev_tilde, _, _, _, _ = _fit_local_state(u_prev)
+
+        print("Initial residual: {:3.2e}".format(init_norm / denom))
         print("Final residual: {:3.2e}".format(curr_norm / denom))
 
-        u_tilde = w_rec
-
-        ires = res(u_tilde, grid_x, grid_y, dt, u_prev, mu, Dxec, Dyec)
+        ires = res(u_tilde, grid_x, grid_y, dt, u_prev_tilde, mu, Dxec, Dyec)
         Ji = jac(u_tilde, dt, JDxec, JDyec, Eye)
 
         V_q = jac_rbf_local(k, q, u0_list, V_list, models, n_primary)

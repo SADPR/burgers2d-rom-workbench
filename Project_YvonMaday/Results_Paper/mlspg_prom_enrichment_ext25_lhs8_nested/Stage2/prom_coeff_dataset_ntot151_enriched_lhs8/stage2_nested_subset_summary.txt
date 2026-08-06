@@ -1,0 +1,9 @@
+source_dataset: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs36/Stage2/prom_coeff_dataset_ntot151_enriched_lhs36
+output_dataset: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Stage2/prom_coeff_dataset_ntot151_enriched_lhs8
+subset_label: ext25_lhs8_nested
+n_interior: 4
+n_exterior: 4
+num_traj: 17
+selected_interior_source_indices: [1, 10, 0, 16]
+selected_exterior_source_indices: [1, 6, 12, 17]
+selection_method: deterministic nested centre-seeded greedy maximin in expanded normalized parameter space; exterior prefixes are seeded with one representative from each margin

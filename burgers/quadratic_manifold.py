@@ -373,8 +373,10 @@ def compute_ECSW_training_matrix_2D_qm(
     max_gn_its=20,
     tol_rel=1e-5,
 ):
-    """
-    ECSW training matrix for the global quadratic-manifold ROM.
+    """Build ECM contributions for the global quadratic manifold.
+
+    Both states in each backward-Euler training residual are fitted to the
+    quadratic decoder, as they are in the online quadratic HPROM.
     """
     n_tot, n_snaps = snaps.shape
     n_hdm = n_tot // 2
@@ -384,12 +386,10 @@ def compute_ECSW_training_matrix_2D_qm(
 
     Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
 
-    for isnap in range(n_snaps):
-        u_i = snaps[:, isnap]
-        u_prev = prev_snaps[:, isnap]
-
-        q_i = gauss_newton_quadratic_q(
-            u_snap=u_i,
+    def _fit_snapshot(snapshot):
+        """Return the quadratic-manifold fit of one full state."""
+        q = gauss_newton_quadratic_q(
+            u_snap=snapshot,
             V=V,
             H=H,
             u_ref=u_ref,
@@ -397,10 +397,15 @@ def compute_ECSW_training_matrix_2D_qm(
             tol_rel=tol_rel,
             verbose=False,
         )
+        return q, u_qm(q, V, H, u_ref)
 
-        u_tilde = u_qm(q_i, V, H, u_ref)
+    for isnap in range(n_snaps):
+        u_i = snaps[:, isnap]
+        u_prev = prev_snaps[:, isnap]
+        q_i, u_tilde = _fit_snapshot(u_i)
+        _, u_prev_tilde = _fit_snapshot(u_prev)
 
-        ires = res(u_tilde, grid_x, grid_y, dt, u_prev, mu, Dxec, Dyec)
+        ires = res(u_tilde, grid_x, grid_y, dt, u_prev_tilde, mu, Dxec, Dyec)
         Ji = jac(u_tilde, dt, JDxec, JDyec, Eye)
 
         Wi = Ji @ J_qm(q_i, V, H)
@@ -437,8 +442,11 @@ def compute_ECSW_training_matrix_2D_qm_local(
     selector_mode="linear",
     m_list=None,
 ):
-    """
-    ECSW training matrix for the local quadratic-manifold ROM.
+    """Build ECM contributions for the local quadratic manifold.
+
+    The two states in every backward-Euler residual are independently mapped
+    to their local quadratic charts before the entity contributions are
+    assembled.
     """
     n_tot, n_snaps = snaps.shape
     n_hdm = n_tot // 2
@@ -460,15 +468,14 @@ def compute_ECSW_training_matrix_2D_qm_local(
 
     Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
 
-    for isnap in range(n_snaps):
-        u_i = snaps[:, isnap]
-        u_prev = prev_snaps[:, isnap]
-
-        k0 = int(np.argmin([np.linalg.norm(u_i - u0_k) ** 2 for u0_k in u0_list]))
+    def _fit_local_state(state):
+        """Select a chart and fit one state to its quadratic manifold."""
+        state = np.asarray(state, dtype=np.float64).reshape(-1)
+        k0 = int(np.argmin([np.linalg.norm(state - u0_k) ** 2 for u0_k in u0_list]))
 
         V_k0 = V_list[k0]
         u0_k0 = u0_list[k0]
-        y_k0 = V_k0.T @ (u_i - u0_k0)
+        y_k0 = V_k0.T @ (state - u0_k0)
 
         if selector_mode == "linear":
             k = select_cluster_reduced(k0, y_k0, d_const, g_list)
@@ -485,16 +492,15 @@ def compute_ECSW_training_matrix_2D_qm_local(
         V_k = V_list[k]
         H_k = H_list[k]
         r_k = V_k.shape[1]
-        u_norm = np.linalg.norm(u_i)
+        u_norm = np.linalg.norm(state)
         denom = u_norm if u_norm > 0.0 else 1.0
 
-        q0 = V_k.T @ (u_i - u0_k)
+        q0 = V_k.T @ (state - u0_k)
         u_init = u_qm(q0, V_k, H_k, u0_k)
-        init_res = np.linalg.norm(u_init - u_i)
-        print("Initial residual: {:3.2e}".format(init_res / denom))
+        init_res = np.linalg.norm(u_init - state)
 
         q_i = gauss_newton_quadratic_q(
-            u_snap=u_i,
+            u_snap=state,
             V=V_k,
             H=H_k,
             u_ref=u0_k,
@@ -504,10 +510,19 @@ def compute_ECSW_training_matrix_2D_qm_local(
         )
 
         u_tilde = u_qm(q_i, V_k, H_k, u0_k)
-        final_res = np.linalg.norm(u_tilde - u_i)
+        final_res = np.linalg.norm(u_tilde - state)
+        return k, q_i, u_tilde, r_k, init_res, final_res, denom
+
+    for isnap in range(n_snaps):
+        u_i = snaps[:, isnap]
+        u_prev = prev_snaps[:, isnap]
+        k, q_i, u_tilde, r_k, init_res, final_res, denom = _fit_local_state(u_i)
+        _, _, u_prev_tilde, _, _, _, _ = _fit_local_state(u_prev)
+
+        print("Initial residual: {:3.2e}".format(init_res / denom))
         print("Final residual: {:3.2e}".format(final_res / denom))
 
-        ires = res(u_tilde, grid_x, grid_y, dt, u_prev, mu, Dxec, Dyec)
+        ires = res(u_tilde, grid_x, grid_y, dt, u_prev_tilde, mu, Dxec, Dyec)
         Ji = jac(u_tilde, dt, JDxec, JDyec, Eye)
 
         Wi = Ji @ J_qm(q_i, V_k, H_k)

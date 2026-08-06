@@ -1,0 +1,16 @@
+\begin{tabular}{lrr|rr}
+\toprule
+& \multicolumn{2}{c|}{Baseline (9 trajectories)} & \multicolumn{2}{c}{Enriched (9+36 trajectories)} \\
+Model & Mean time (s) & $T_{\mathrm{HDM}}/T$ & Mean time (s) & $T_{\mathrm{HDM}}/T$ \\
+\midrule
+Linear HPROM & 99.03 & 7.4 & 99.03 & 7.4 \\
+HPROM--ANN Case 1 & 18.94 & 38.9 & 19.44 & 37.9 \\
+HPROM--ANN Case 2 ($n=10$) & 6.03 & 122.2 & 5.99 & 123.0 \\
+HPROM--ANN Case 2 ($n=20$) & 9.10 & 81.0 & 8.57 & 86.1 \\
+HPROM--ANN Case 3 & 19.90 & 37.1 & 19.54 & 37.7 \\
+HPROM-POD-AE ($n_z=10$) & 17.32 & 42.6 & 18.06 & 40.8 \\
+\midrule
+POD--NN--ROM & 0.0079 & 92,966.3 & 0.0076 & 97,669.1 \\
+POD--DL--ROM ($n_z=10$) & 0.0103 & 71,823.6 & 0.0100 & 73,414.5 \\
+\bottomrule
+\end{tabular}

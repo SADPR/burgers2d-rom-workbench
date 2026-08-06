@@ -297,7 +297,9 @@ def _load_or_build_pod_ae_ecsw_weights(
         now_cols = np.asarray(ecsw_plan["selected_now_cols_by_mu"][imu], dtype=int)
         if now_cols.size == 0:
             continue
-        prev_cols = now_cols - snap_time_offset
+        # `snap_time_offset` only controls the earliest eligible current state.
+        # The backward-Euler residual always uses the immediate predecessor.
+        prev_cols = now_cols - 1
         snaps_now = mu_snaps[:, now_cols]
         snaps_prev = mu_snaps[:, prev_cols]
 
@@ -373,7 +375,12 @@ def main(argv=None):
     parser.add_argument("--output-root", type=str, default=None, help="Optional output folder for run files.")
     parser.add_argument("--ecsw-weights-dir", type=str, default=None, help="Optional folder for POD-AE ECSW weights.")
     parser.add_argument("--ecsw-num-training-mu", type=int, default=9)
-    parser.add_argument("--ecsw-snap-time-offset", type=int, default=3)
+    parser.add_argument(
+        "--ecsw-snap-time-offset",
+        type=int,
+        default=3,
+        help="Earliest current snapshot index eligible for ECM training; the residual predecessor is always one step earlier.",
+    )
     parser.add_argument("--ecsw-snapshot-percent", type=float, default=2.0)
     parser.add_argument("--ecsw-random-seed", type=int, default=42)
     parser.add_argument("--ecsw-ensure-mu-coverage", dest="ecsw_ensure_mu_coverage", action="store_true")
@@ -648,6 +655,7 @@ def main(argv=None):
             ("rebuild_ecsw_weights", rebuild_ecsw_weights),
             ("ecsw_num_training_mu", ecsw_num_training_mu),
             ("ecsw_snap_time_offset", ecsw_snap_time_offset),
+            ("ecsw_predecessor_lag_steps", 1),
             ("ecsw_snapshot_percent", ecsw_snapshot_percent),
             ("ecsw_snapshot_random_seed", ecsw_snapshot_random_seed),
             ("ecsw_ensure_mu_coverage", bool(ecsw_ensure_mu_coverage)),

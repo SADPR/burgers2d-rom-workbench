@@ -370,13 +370,13 @@ def global_local_gif(output: Path, global_key: str, local_key: str, local_color:
     grid = fig.add_gridspec(
         3,
         2,
-        width_ratios=(0.47, 1.0),
-        left=0.055,
-        right=0.985,
+        width_ratios=(0.38, 1.0),
+        left=0.020,
+        right=0.990,
         top=0.790,
         bottom=0.090,
         hspace=0.55,
-        wspace=0.20,
+        wspace=0.13,
     )
     summary_axis = fig.add_subplot(grid[:, 0])
     cut_axes = [fig.add_subplot(grid[row, 1]) for row in range(3)]
@@ -498,6 +498,158 @@ def global_local_gif(output: Path, global_key: str, local_key: str, local_color:
             changed.extend((hdm_line, global_line, local_line))
         time_stamp.set_text(rf"$t={tidx * DT:.2f}$")
         return [*changed, time_stamp]
+
+    animation.FuncAnimation(
+        fig, update, frames=len(FRAME_IDS), interval=110, blit=False
+    ).save(output, writer=animation.PillowWriter(fps=9), dpi=115)
+    plt.close(fig)
+
+
+def global_local_single_point_gif(
+    output: Path,
+    global_key: str,
+    local_key: str,
+    local_color: str,
+    point_index: int,
+) -> None:
+    """Animate one selected parameter point for a global/local pair."""
+    configure_style()
+    point = POINTS[point_index]
+    cuts = all_cuts(("hdm", global_key, local_key))
+    first_hdm = load_trajectory("hdm", *point)
+    x, y, _, _, _ = grid_from_trajectory(first_hdm)
+    global_metrics = METRICS[global_key]
+    local_metrics = METRICS[local_key]
+    improvement_error = (
+        1.0 - local_metrics["avg_error"] / global_metrics["avg_error"]
+    ) * 100.0
+    improvement_speed = local_metrics["speedup"] / global_metrics["speedup"]
+
+    fig = plt.figure(figsize=(11.4, 5.8))
+    grid = fig.add_gridspec(
+        1,
+        2,
+        width_ratios=(0.38, 1.0),
+        left=0.020,
+        right=0.990,
+        top=0.750,
+        bottom=0.135,
+        wspace=0.13,
+    )
+    summary_axis = fig.add_subplot(grid[0, 0])
+    axis = fig.add_subplot(grid[0, 1])
+    summary_axis.set_axis_off()
+
+    axis.set(
+        xlim=(0, 100),
+        ylim=(0, 6.6),
+        ylabel=r"$u_x$",
+        xlabel=r"$x$",
+    )
+    axis.grid(True)
+    axis.set_title(
+        rf"$\mu^{{({point_index + 1})}}=({point[0]:.2f},{point[1]:.3f})$: "
+        rf"$u_x(x,y={y[len(y)//2]:.1f},t)$",
+        pad=10,
+    )
+    hdm_line, = axis.plot(
+        x, np.zeros_like(x), color=COLORS["hdm"], linewidth=2.8, label="HDM"
+    )
+    global_line, = axis.plot(
+        x,
+        np.zeros_like(x),
+        color=COLORS["global"],
+        linewidth=2.15,
+        linestyle="--",
+        label=global_metrics["short"],
+    )
+    local_line, = axis.plot(
+        x,
+        np.zeros_like(x),
+        color=local_color,
+        linewidth=2.4,
+        label=local_metrics["short"],
+    )
+
+    fig.suptitle(
+        "{} versus {} ($N_c=3$)".format(
+            global_metrics["short"], local_metrics["short"]
+        ),
+        y=0.985,
+        fontsize=16,
+        fontweight="bold",
+    )
+    fig.legend(
+        handles=[hdm_line, global_line, local_line],
+        loc="upper center",
+        bbox_to_anchor=(0.69, 0.915),
+        ncol=3,
+        frameon=True,
+    )
+    summary_axis.text(
+        0.5,
+        0.72,
+        "GLOBAL\n{}\n\nmean error: {:.3f}%\nspeedup: {:.1f}x".format(
+            global_metrics["short"],
+            global_metrics["avg_error"],
+            global_metrics["speedup"],
+        ),
+        ha="center",
+        va="center",
+        fontsize=12.4,
+        fontweight="bold",
+        color=COLORS["global"],
+        bbox={
+            "boxstyle": "round,pad=0.60",
+            "facecolor": "#f2f2f2",
+            "edgecolor": COLORS["global"],
+            "linewidth": 1.45,
+        },
+        transform=summary_axis.transAxes,
+    )
+    summary_axis.text(
+        0.5,
+        0.37,
+        "LOCAL ($N_c=3$)\n{}\n\nmean error: {:.3f}%\nspeedup: {:.1f}x".format(
+            local_metrics["short"],
+            local_metrics["avg_error"],
+            local_metrics["speedup"],
+        ),
+        ha="center",
+        va="center",
+        fontsize=12.4,
+        fontweight="bold",
+        color=local_color,
+        bbox={
+            "boxstyle": "round,pad=0.60",
+            "facecolor": "#f7fbff",
+            "edgecolor": local_color,
+            "linewidth": 1.65,
+        },
+        transform=summary_axis.transAxes,
+    )
+    summary_axis.text(
+        0.5,
+        0.075,
+        "LOCAL ADVANTAGE\n{:.0f}% lower mean error | {:.1f}x faster".format(
+            improvement_error, improvement_speed
+        ),
+        ha="center",
+        va="center",
+        fontsize=10.8,
+        fontweight="bold",
+        color=local_color,
+        transform=summary_axis.transAxes,
+    )
+    time_stamp = fig.text(0.967, 0.055, r"$t=0.00$", ha="right", fontsize=11.2)
+
+    def update(frame_index: int):
+        tidx = int(FRAME_IDS[frame_index])
+        hdm_line.set_ydata(cuts["hdm"][point][0][:, frame_index])
+        global_line.set_ydata(cuts[global_key][point][0][:, frame_index])
+        local_line.set_ydata(cuts[local_key][point][0][:, frame_index])
+        time_stamp.set_text(rf"$t={tidx * DT:.2f}$")
+        return [hdm_line, global_line, local_line, time_stamp]
 
     animation.FuncAnimation(
         fig, update, frames=len(FRAME_IDS), interval=110, blit=False

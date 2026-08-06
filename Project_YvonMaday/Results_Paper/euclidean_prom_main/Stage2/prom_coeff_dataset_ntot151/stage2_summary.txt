@@ -1,0 +1,27 @@
+solve_backend: prom
+dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151
+per_mu_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151/per_mu
+basis_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/basis.npy
+u_ref_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/u_ref.npy
+total_modes: 151
+coefficient_storage: qN_only
+coordinate_recovery: solver_coordinates
+coordinate_source: solver_coordinates
+num_traj: 9
+mu_source: configured_training_grid
+mu_list: [[4.25, 0.015], [4.25, 0.0225], [4.25, 0.03], [4.875, 0.015], [4.875, 0.0225], [4.875, 0.03], [5.5, 0.015], [5.5, 0.0225], [5.5, 0.03]]
+ecsw_num_training_mu: 9
+ecsw_snapshot_mode: global_param_time_stratified
+ecsw_snapshot_percent: 2.0
+ecsw_random_seed: 42
+ecsw_ensure_mu_coverage: True
+ecsw_svd_method: direct_dense_svd
+ecsw_svd_relative_tolerance: 1e-08
+ecsw_snap_time_offset: 3
+ecsw_num_candidates_total: None
+ecsw_num_selected_total: None
+ecsw_num_selected_per_mu: None
+ecsw_weights_path: None
+ecsw_weights_source: None
+ecsw_residual: nan
+n_ecsw_elements: None

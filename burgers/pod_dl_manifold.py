@@ -137,8 +137,11 @@ def compute_ECSW_training_matrix_2D_pod_dl(
     mu,
     u_ref=None,
 ):
-    """
-    Build ECSW training matrix C for POD-DL manifold with latent coordinates.
+    """Build ECM contributions for the POD-AE manifold in latent coordinates.
+
+    Each backward-Euler residual uses manifold fits of both the current and
+    predecessor training states, matching the states carried by the online
+    latent HPROM.
     """
     snaps = np.asarray(snaps, dtype=np.float64)
     prev_snaps = np.asarray(prev_snaps, dtype=np.float64)
@@ -169,9 +172,10 @@ def compute_ECSW_training_matrix_2D_pod_dl(
         u_ref=u_ref_np,
     )
 
-    # Project all ECSW training snapshots at once. Re-solving this least-squares
+    # Project all ECM training snapshots at once. Re-solving this least-squares
     # problem per snapshot is prohibitively expensive for the full Burgers mesh.
     q_snaps, *_ = np.linalg.lstsq(basis, snaps - u_ref_np[:, None], rcond=None)
+    q_prev_snaps, *_ = np.linalg.lstsq(basis, prev_snaps - u_ref_np[:, None], rcond=None)
 
     q0 = q_snaps[:, 0]
     q0_t = torch.tensor(q0, dtype=dtype_t, device=device)
@@ -200,7 +204,19 @@ def compute_ECSW_training_matrix_2D_pod_dl(
             rel_tol=1e-2,
         )
 
-        ires = res(w_rec, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+        q_prev_init_t = torch.tensor(q_prev_snaps[:, isnap], dtype=dtype_t, device=device)
+        with torch.no_grad():
+            z_prev_init = pod_dl_model.encode(q_prev_init_t).reshape(-1)
+        _, w_prev_rec = _fit_latent_to_snapshot(
+            z_init=z_prev_init,
+            target_snapshot=snap_prev,
+            decode_u=decode_u,
+            jac_u_z=jac_u_z,
+            max_its=10,
+            rel_tol=1e-2,
+        )
+
+        ires = res(w_rec, grid_x, grid_y, dt, w_prev_rec, mu, Dxec, Dyec)
         Ji = jac(w_rec, dt, JDxec, JDyec, Eye)
         V = jac_u_z(z_fit).detach().cpu().numpy()
         Wi = Ji @ V

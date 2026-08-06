@@ -583,15 +583,22 @@ def save_asset_png(data, asset, path):
     plt.close(fig)
 
 
-def save_asset_gif(data, asset, path):
+def save_asset_gif(
+    data,
+    asset,
+    path,
+    *,
+    full_trajectory_at_start=False,
+    rotation_laps=1,
+):
     fig, ax, artists = build_asset_figure(data, asset)
 
     curve_steps = np.unique(np.linspace(1, len(data.u), 120, dtype=int))
-    n_true = len(curve_steps)
+    n_true = 0 if full_trajectory_at_start else len(curve_steps)
     n_fade = 18
     n_reconstruction = len(curve_steps)
     n_hold = 24
-    n_rotation = 144
+    n_rotation = 144 * rotation_laps
     fade_start = n_true
     reconstruction_start = fade_start + n_fade
     hold_start = reconstruction_start + n_reconstruction
@@ -629,7 +636,10 @@ def save_asset_gif(data, asset, path):
 
         if frame >= rotation_start:
             fraction = (frame - rotation_start) / max(1, n_rotation - 1)
-            ax.view_init(elev=ELEVATION, azim=AZIMUTH + 360.0 * fraction)
+            ax.view_init(
+                elev=ELEVATION,
+                azim=AZIMUTH + 360.0 * rotation_laps * fraction,
+            )
 
         return [
             artists["true_curve"],
@@ -666,6 +676,17 @@ def output_paths(output_dir):
     }
 
 
+def full_trajectory_two_laps_output_paths(output_dir):
+    return {
+        "local_linear": output_dir
+        / "local_prom_ann_two_bases_local_linear_full_trajectory_two_laps.gif",
+        "global_ann_rbf_gpr": output_dir
+        / "local_prom_ann_two_bases_global_ann_rbf_gpr_full_trajectory_two_laps.gif",
+        "local_nonlinear": output_dir
+        / "local_prom_ann_two_bases_local_nonlinear_full_trajectory_two_laps.gif",
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Render separate local-linear, global-GPR, and local-nonlinear assets."
@@ -677,12 +698,37 @@ def main():
         action="store_true",
         help="write the three PNG files without rendering GIFs",
     )
+    parser.add_argument(
+        "--full-trajectory-two-laps",
+        action="store_true",
+        help=(
+            "write parallel GIFs with the full trajectory visible from the first "
+            "frame and two final camera laps"
+        ),
+    )
     args = parser.parse_args()
+
+    if args.png_only and args.full_trajectory_two_laps:
+        parser.error("--png-only cannot be combined with --full-trajectory-two-laps")
 
     output_dir = HERE / "outputs"
     output_dir.mkdir(exist_ok=True)
     data = build_manifold_data()
     paths = output_paths(output_dir)
+
+    if args.full_trajectory_two_laps:
+        variant_paths = full_trajectory_two_laps_output_paths(output_dir)
+        for asset in ASSETS:
+            gif_path = variant_paths[asset]
+            save_asset_gif(
+                data,
+                asset,
+                gif_path,
+                full_trajectory_at_start=True,
+                rotation_laps=2,
+            )
+            print(gif_path)
+        return
 
     for asset in ASSETS:
         png_path, gif_path = paths[asset]

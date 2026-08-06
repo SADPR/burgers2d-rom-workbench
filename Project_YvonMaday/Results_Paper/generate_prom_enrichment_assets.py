@@ -2,10 +2,11 @@
 """Generate PROM baseline-vs-enriched manuscript assets."""
 from __future__ import annotations
 
+import argparse
+import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
-import shutil
 
 import matplotlib
 matplotlib.use("Agg")
@@ -25,17 +26,43 @@ from manuscript_plot_style import (
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
 BASE = HERE / "mlspg_prom_main"
+EARLY = HERE / "mlspg_prom_enrichment_ext25_lhs8_nested"
+MID = HERE / "mlspg_prom_enrichment_ext25_lhs18_nested"
 ENR = HERE / "mlspg_prom_enrichment_ext25_lhs36"
 FIG_DIR = HERE / "Figures" / "prom_only"
 TAB_DIR = HERE / "tables" / "prom_only"
 BASIS_PATH = HERE / "MetricStudy" / "lspg_sensitive" / "Stage1" / "basis.npy"
 UREF_PATH = HERE / "MetricStudy" / "lspg_sensitive" / "Stage1" / "u_ref.npy"
 NTOT = 151
+PARAMETER_MANIFEST = ENR / "Stage2" / "prom_coeff_dataset_ntot151_enriched_lhs36" / "parameter_manifest.csv"
+EARLY_PARAMETER_MANIFEST = EARLY / "Stage2" / "prom_coeff_dataset_ntot151_enriched_lhs8" / "parameter_manifest.csv"
+MID_PARAMETER_MANIFEST = MID / "Stage2" / "prom_coeff_dataset_ntot151_enriched_lhs18" / "parameter_manifest.csv"
+
+# These locations are held out as complete trajectories for validation of the
+# parameter--time master map.  They are distinct from the four reported online
+# evaluation points and are never part of the 9- or 9+36-trajectory fits.
+PARAMETER_VALIDATION_POINTS = (
+    (4.5625, 0.02625),
+    (5.1875, 0.01875),
+)
+PARAMETER_XLIM = (3.70, 6.00)
+PARAMETER_YLIM = (0.009, 0.037)
 
 BASELINE_FILL = "#9ecae9"
 BASELINE_EDGE = "#376795"
+EARLY_FILL = "#fdd0a2"
+EARLY_EDGE = "#e6550d"
+INTERMEDIATE_FILL = "#fdae6b"
+INTERMEDIATE_EDGE = "#c55c00"
 ENRICHED_FILL = "#a1d99b"
 ENRICHED_EDGE = "#2b7a2b"
+
+CAMPAIGNS = (
+    ("Baseline (9 trajectories)", "baseline 9", BASE, BASELINE_FILL, BASELINE_EDGE),
+    ("Early (9+8 trajectories)", "nested 9+8", EARLY, EARLY_FILL, EARLY_EDGE),
+    ("Intermediate (9+18 trajectories)", "nested 9+18", MID, INTERMEDIATE_FILL, INTERMEDIATE_EDGE),
+    ("Enriched (9+36 trajectories)", "enriched 9+36", ENR, ENRICHED_FILL, ENRICHED_EDGE),
+)
 
 plt.rcParams.update({
     "font.family": "serif",
@@ -67,6 +94,19 @@ METHODS = (
     ("POD--NN--ROM", "POD-NN-ROM", "podnn"),
     ("POD--DL--ROM ($n_z=10$)", "POD-DL-ROM", "poddl"),
 )
+
+# The first four models evaluate a PROM residual online.  The final two are
+# direct non-intrusive maps, so retain an explicit visual boundary in the
+# baseline--enriched aggregate comparisons.
+ENRICHMENT_BAR_LABELS = (
+    r"PROM--ANN C1",
+    r"PROM--ANN C2 ($n=10$)",
+    r"PROM--ANN C3",
+    r"PROM--POD--AE ($n_z=10$)",
+    r"POD--NN--ROM",
+    r"POD--DL--ROM ($n_z=10$)",
+)
+INTRUSIVE_DIRECT_SPLIT = 3.5
 
 COLORS = {
     "Case 1": METHOD_COLORS["case1"],
@@ -171,7 +211,13 @@ def recover_q(snaps_path: Path) -> np.ndarray:
         return _RECOVERED_Q[snaps_path]
     V, gram, vtu = projection_cache()
     snaps = np.load(snaps_path, mmap_mode="r")
-    rhs = V.T @ np.asarray(snaps, dtype=np.float64) - vtu[:, None]
+    # Some online PROM runs store only full states.  Project in small time
+    # blocks to avoid materializing a 125000 x 501 array for each diagnostic.
+    rhs = np.empty((NTOT, snaps.shape[1]), dtype=np.float64)
+    for start in range(0, snaps.shape[1], 16):
+        stop = min(start + 16, snaps.shape[1])
+        rhs[:, start:stop] = V.T @ np.asarray(snaps[:, start:stop], dtype=np.float64)
+    rhs -= vtu[:, None]
     q = np.linalg.solve(gram, rhs)
     _RECOVERED_Q[snaps_path] = q
     return q
@@ -406,22 +452,26 @@ def write_training_comparison() -> Path:
         if key in seen:
             continue
         seen.add(key)
-        kb = read_kv(stage3_summary(BASE, kind))
-        ke = read_kv(stage3_summary(ENR, kind))
-        train_b = float(kb.get("train_rel_frob_percent", "nan"))
-        val_b = float(kb.get("val_rel_frob_percent", "nan"))
-        train_e = float(ke.get("train_rel_frob_percent", "nan"))
-        val_e = float(ke.get("val_rel_frob_percent", "nan"))
+        metrics = []
+        for _block_label, _legend_label, root, _fill, _edge in CAMPAIGNS:
+            summary = read_kv(stage3_summary(root, kind))
+            metrics.extend(
+                (
+                    float(summary.get("train_rel_frob_percent", "nan")),
+                    float(summary.get("val_rel_frob_percent", "nan")),
+                )
+            )
         if kind == "case2":
             label = "Master POD--NN--ROM (Case 2 tail source)"
-        rows.append((label, train_b, val_b, train_e, val_e, float(100.0 * (val_b - val_e) / val_b) if val_b else float("nan")))
+        rows.append((label, *metrics))
     with out.open("w") as f:
-        f.write("\\begin{tabular}{lrr|rrr}\n")
+        f.write("\\begin{tabular}{lrr|rr|rr|rr}\n")
         f.write("\\toprule\n")
-        f.write("Model & Base train $e_q$ (\\%) & Base val. $e_q$ (\\%) & Enriched train $e_q$ (\\%) & Enriched val. $e_q$ (\\%) & Val. reduction (\\%) \\\\ \n")
+        f.write(r"& \multicolumn{2}{c|}{Baseline (9)} & \multicolumn{2}{c|}{Early (9+8)} & \multicolumn{2}{c|}{Intermediate (9+18)} & \multicolumn{2}{c}{Enriched (9+36)} \\" + "\n")
+        f.write(r"Model & train $e_q$ (\%) & val. $e_q$ (\%) & train $e_q$ (\%) & val. $e_q$ (\%) & train $e_q$ (\%) & val. $e_q$ (\%) & train $e_q$ (\%) & val. $e_q$ (\%) \\" + "\n")
         f.write("\\midrule\n")
-        for label, tb, vb, te, ve, red in rows:
-            f.write(f"{label} & {fmt(tb)} & {fmt(vb)} & {fmt(te)} & {fmt(ve)} & {fmt(red,1)} \\\\ \n")
+        for row in rows:
+            f.write(f"{row[0]} & " + " & ".join(fmt(value) for value in row[1:]) + r" \\" + "\n")
         f.write("\\bottomrule\n")
         f.write("\\end{tabular}\n")
     return out
@@ -430,20 +480,20 @@ def write_training_comparison() -> Path:
 def write_online_state_comparison() -> Path:
     out = TAB_DIR / "prom_enrichment_online_state_comparison.tex"
     with out.open("w") as f:
-        f.write("\\begin{tabular}{lrrrrr|rrrrr}\n")
+        f.write("\\begin{tabular}{lrr|rr|rr|rr}\n")
         f.write("\\toprule\n")
-        f.write(r"& \multicolumn{5}{c|}{Baseline (9 trajectories)} & \multicolumn{5}{c}{Enriched (9+36 trajectories)} \\" + "\n")
-        f.write(r"Model & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ \\" + "\n")
+        f.write(r"& \multicolumn{2}{c|}{Baseline (9)} & \multicolumn{2}{c|}{Early (9+8)} & \multicolumn{2}{c|}{Intermediate (9+18)} & \multicolumn{2}{c}{Enriched (9+36)} \\" + "\n")
+        f.write(r"Model & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ \\" + "\n")
         f.write("\\midrule\n")
         entries = [("Linear PROM", "linear"), *[(label, kind) for label, _, kind in METHODS]]
         for index, (label, kind) in enumerate(entries):
             if index == 5:
                 f.write("\\midrule\n")
-            base = [state_error(BASE, kind, p) for p in POINTS]
-            enriched = [state_error(ENR, kind, p) for p in POINTS]
-            base_fmt = [*base[:3], float(np.mean(base[:3])), base[3]]
-            enr_fmt = [*enriched[:3], float(np.mean(enriched[:3])), enriched[3]]
-            f.write(f"{label} & " + " & ".join(fmt(v) for v in base_fmt + enr_fmt) + " \\\\ \n")
+            blocks = []
+            for _block_label, _legend_label, root, _fill, _edge in CAMPAIGNS:
+                values = [state_error(root, kind, p) for p in POINTS]
+                blocks.extend((float(np.mean(values[:3])), values[3]))
+            f.write(f"{label} & " + " & ".join(fmt(v) for v in blocks) + r" \\" + "\n")
         f.write("\\bottomrule\n")
         f.write("\\end{tabular}\n")
     return out
@@ -452,63 +502,224 @@ def write_online_state_comparison() -> Path:
 def write_coeff_comparison() -> Path:
     out = TAB_DIR / "prom_enrichment_online_coeff_comparison.tex"
     with out.open("w") as f:
-        f.write("\\begin{tabular}{lrrrrr|rrrrr}\n")
+        f.write("\\begin{tabular}{lrr|rr|rr|rr}\n")
         f.write("\\toprule\n")
-        f.write(r"& \multicolumn{5}{c|}{Baseline (9 trajectories)} & \multicolumn{5}{c}{Enriched (9+36 trajectories)} \\" + "\n")
-        f.write(r"Model & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ \\" + "\n")
+        f.write(r"& \multicolumn{2}{c|}{Baseline (9)} & \multicolumn{2}{c|}{Early (9+8)} & \multicolumn{2}{c|}{Intermediate (9+18)} & \multicolumn{2}{c}{Enriched (9+36)} \\" + "\n")
+        f.write(r"Model & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ \\" + "\n")
         f.write("\\midrule\n")
         entries = [("Linear PROM", "linear"), *[(label, kind) for label, _, kind in METHODS]]
         for index, (label, kind) in enumerate(entries):
             if index == 5:
                 f.write("\\midrule\n")
-            base = [0.0] * len(POINTS) if kind == "linear" else [rel_q_error(BASE, kind, p) for p in POINTS]
-            enriched = [0.0] * len(POINTS) if kind == "linear" else [rel_q_error(ENR, kind, p) for p in POINTS]
-            base_fmt = [*base[:3], float(np.mean(base[:3])), base[3]]
-            enr_fmt = [*enriched[:3], float(np.mean(enriched[:3])), enriched[3]]
-            f.write(f"{label} & " + " & ".join(fmt(v) for v in base_fmt + enr_fmt) + " \\\\ \n")
+            blocks = []
+            for _block_label, _legend_label, root, _fill, _edge in CAMPAIGNS:
+                values = [0.0] * len(POINTS) if kind == "linear" else [rel_q_error(root, kind, p) for p in POINTS]
+                blocks.extend((float(np.mean(values[:3])), values[3]))
+            f.write(f"{label} & " + " & ".join(fmt(v) for v in blocks) + r" \\" + "\n")
         f.write("\\bottomrule\n")
         f.write("\\end{tabular}\n")
     return out
 
 
-def copy_sampling_figures() -> list[Path]:
-    FIG_DIR.mkdir(parents=True, exist_ok=True)
-    src_dir = ENR / "Stage2" / "prom_coeff_dataset_ntot151_enriched_lhs36"
-    pairs = (
-        (src_dir / "stage2_sampling_points_baseline.png", FIG_DIR / "prom_enrichment_sampling_baseline.png"),
-        (src_dir / "stage2_sampling_points.png", FIG_DIR / "prom_enrichment_sampling_points.png"),
+def _plot_parameter_evaluations(ax: plt.Axes) -> None:
+    offsets = {
+        "verification": (12, -21),
+        "offgrid1": (8, 7),
+        "offgrid2": (8, 7),
+        "extrapolation20pct": (8, -2),
+    }
+    for index, point in enumerate(POINTS):
+        ax.scatter(
+            point.mu1,
+            point.mu2,
+            s=190,
+            marker="*",
+            color="#cf2f2f",
+            edgecolors="white",
+            linewidths=0.75,
+            zorder=7,
+            label="Online evaluation points" if index == 0 else None,
+        )
+        ax.annotate(
+            point.tex,
+            (point.mu1, point.mu2),
+            xytext=offsets[point.key],
+            textcoords="offset points",
+            color="#b52b2b",
+            fontsize=10,
+            zorder=8,
+        )
+
+
+def _plot_parameter_validation(ax: plt.Axes) -> None:
+    """Mark the two complete trajectories reserved for parameter validation."""
+    offsets = ((8, 8), (8, -17))
+    for index, ((mu1, mu2), offset) in enumerate(zip(PARAMETER_VALIDATION_POINTS, offsets), start=1):
+        ax.annotate(
+            rf"$\mu^{{\mathrm{{val}},{index}}}$",
+            (mu1, mu2),
+            xytext=offset,
+            textcoords="offset points",
+            color="#70420c",
+            fontsize=9,
+            zorder=8,
+        )
+
+
+def _setup_parameter_axis(ax: plt.Axes, title: str) -> None:
+    ax.set_facecolor("#fbfbf7")
+    ax.set_xlim(*PARAMETER_XLIM)
+    ax.set_ylim(*PARAMETER_YLIM)
+    ax.set_box_aspect(1)
+    ax.set_xlabel(r"$\mu_1$")
+    ax.set_ylabel(r"$\mu_2$")
+    ax.set_title(title)
+    ax.grid(True, alpha=0.34)
+
+
+def _finish_parameter_figure(fig: plt.Figure, ax: plt.Axes, out: Path, ncol: int) -> None:
+    ax.legend(
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.025),
+        bbox_transform=fig.transFigure,
+        ncol=ncol,
+        frameon=True,
+        fontsize=9,
     )
-    outputs = []
-    for src, dst in pairs:
-        if not src.exists():
-            raise FileNotFoundError(src)
-        shutil.copy2(src, dst)
-        outputs.append(dst)
+    fig.subplots_adjust(left=0.12, right=0.965, bottom=0.20, top=0.92)
+    fig.savefig(out, dpi=220)
+    plt.close(fig)
+
+
+def plot_sampling_figures() -> list[Path]:
+    """Plot training, held-out parameter validation, and online test locations."""
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    baseline: list[tuple[float, float]] = []
+    interior_lhs: list[tuple[float, float]] = []
+    margin_lhs: list[tuple[float, float]] = []
+    with PARAMETER_MANIFEST.open(newline="") as handle:
+        for row in csv.DictReader(handle):
+            point = (float(row["mu1"]), float(row["mu2"]))
+            if row["role"] == "baseline_training":
+                baseline.append(point)
+            elif row["role"] == "lhs_enrichment" and row["region"] == "interior_original_box":
+                interior_lhs.append(point)
+            elif row["role"] == "lhs_enrichment":
+                margin_lhs.append(point)
+
+    baseline_arr = np.asarray(baseline)
+    interior_arr = np.asarray(interior_lhs)
+    margin_arr = np.asarray(margin_lhs)
+    def nested_points(manifest: Path, count: int, label: str) -> tuple[np.ndarray, np.ndarray]:
+        interior: list[tuple[float, float]] = []
+        margin: list[tuple[float, float]] = []
+        with manifest.open(newline="") as handle:
+            for row in csv.DictReader(handle):
+                if row["role"] != "lhs_enrichment":
+                    continue
+                point = (float(row["mu1"]), float(row["mu2"]))
+                if row["region"] == "interior_original_box":
+                    interior.append(point)
+                else:
+                    margin.append(point)
+        interior_arr, margin_arr = np.asarray(interior), np.asarray(margin)
+        if interior_arr.shape != (count, 2) or margin_arr.shape != (count, 2):
+            raise ValueError(f"Expected the nested {label} subset manifest.")
+        return interior_arr, margin_arr
+
+    early_interior_arr, early_margin_arr = nested_points(EARLY_PARAMETER_MANIFEST, 4, "9+8")
+    intermediate_interior_arr, intermediate_margin_arr = nested_points(MID_PARAMETER_MANIFEST, 9, "9+18")
+    validation_arr = np.asarray(PARAMETER_VALIDATION_POINTS)
+    outputs: list[Path] = []
+
+    fig, ax = plt.subplots(figsize=(7.3, 7.8))
+    _setup_parameter_axis(ax, "Baseline training and parameter validation")
+    ax.scatter(baseline_arr[:, 0], baseline_arr[:, 1], s=105, color="black", edgecolors="black",
+               linewidths=0.8, label=r"Baseline $3\times3$ grid", zorder=4)
+    ax.scatter(validation_arr[:, 0], validation_arr[:, 1], s=72, marker="D", color="#d18b20",
+               edgecolors="#70420c", linewidths=0.8, label="Held-out parameter-validation points", zorder=6)
+    _plot_parameter_validation(ax)
+    _plot_parameter_evaluations(ax)
+    out = FIG_DIR / "prom_enrichment_sampling_baseline.png"
+    _finish_parameter_figure(fig, ax, out, ncol=3)
+    outputs.append(out)
+
+    fig, ax = plt.subplots(figsize=(7.3, 7.8))
+    _setup_parameter_axis(ax, "Early nested enrichment and parameter validation")
+    ax.scatter(baseline_arr[:, 0], baseline_arr[:, 1], s=105, color="black", edgecolors="black",
+               linewidths=0.8, label=r"Baseline $3\times3$ grid", zorder=4)
+    ax.scatter(early_interior_arr[:, 0], early_interior_arr[:, 1], s=58, color="#e6550d", alpha=0.90,
+               label="4 nested interior LHS points", zorder=3)
+    ax.scatter(early_margin_arr[:, 0], early_margin_arr[:, 1], s=62, color="#d7301f", alpha=0.90,
+               label="4 nested margin LHS points", zorder=3)
+    ax.scatter(validation_arr[:, 0], validation_arr[:, 1], s=72, marker="D", color="#d18b20",
+               edgecolors="#70420c", linewidths=0.8, label="Held-out parameter-validation points", zorder=6)
+    _plot_parameter_validation(ax)
+    _plot_parameter_evaluations(ax)
+    out = FIG_DIR / "prom_enrichment_sampling_early.png"
+    _finish_parameter_figure(fig, ax, out, ncol=3)
+    outputs.append(out)
+
+    fig, ax = plt.subplots(figsize=(7.3, 7.8))
+    _setup_parameter_axis(ax, "Intermediate nested enrichment and parameter validation")
+    ax.scatter(baseline_arr[:, 0], baseline_arr[:, 1], s=105, color="black", edgecolors="black",
+               linewidths=0.8, label=r"Baseline $3\times3$ grid", zorder=4)
+    ax.scatter(intermediate_interior_arr[:, 0], intermediate_interior_arr[:, 1], s=58, color="#2b7bba", alpha=0.90,
+               label="9 nested interior LHS points", zorder=3)
+    ax.scatter(intermediate_margin_arr[:, 0], intermediate_margin_arr[:, 1], s=62, color="#1b9e77", alpha=0.90,
+               label="9 nested margin LHS points", zorder=3)
+    ax.scatter(validation_arr[:, 0], validation_arr[:, 1], s=72, marker="D", color="#d18b20",
+               edgecolors="#70420c", linewidths=0.8, label="Held-out parameter-validation points", zorder=6)
+    _plot_parameter_validation(ax)
+    _plot_parameter_evaluations(ax)
+    out = FIG_DIR / "prom_enrichment_sampling_intermediate.png"
+    _finish_parameter_figure(fig, ax, out, ncol=3)
+    outputs.append(out)
+
+    fig, ax = plt.subplots(figsize=(7.3, 7.8))
+    _setup_parameter_axis(ax, "Expanded enriched training and parameter validation")
+    ax.scatter(baseline_arr[:, 0], baseline_arr[:, 1], s=105, color="black", edgecolors="black",
+               linewidths=0.8, label=r"Baseline $3\times3$ grid", zorder=4)
+    ax.scatter(interior_arr[:, 0], interior_arr[:, 1], s=54, color="#2b7bba", alpha=0.88,
+               label="18 interior LHS training points", zorder=3)
+    ax.scatter(margin_arr[:, 0], margin_arr[:, 1], s=58, color="#1b9e77", alpha=0.88,
+               label="18 margin LHS training points", zorder=3)
+    ax.scatter(validation_arr[:, 0], validation_arr[:, 1], s=72, marker="D", color="#d18b20",
+               edgecolors="#70420c", linewidths=0.8, label="Held-out parameter-validation points", zorder=6)
+    _plot_parameter_validation(ax)
+    _plot_parameter_evaluations(ax)
+    out = FIG_DIR / "prom_enrichment_sampling_points.png"
+    _finish_parameter_figure(fig, ax, out, ncol=3)
+    outputs.append(out)
     return outputs
 
 
 def plot_state_bar() -> Path:
     FIG_DIR.mkdir(parents=True, exist_ok=True)
-    labels = ["C1", "C2 $n=10$", "C3", "POD-AE", "POD-NN", "POD-DL"]
-    base_mean, enr_mean, base_mu3, enr_mu3 = [], [], [], []
+    campaign_values: dict[str, tuple[list[float], list[float]]] = {}
     for _, _, kind in METHODS:
-        b = [state_error(BASE, kind, p) for p in POINTS]
-        e = [state_error(ENR, kind, p) for p in POINTS]
-        base_mean.append(np.mean(b[:3])); enr_mean.append(np.mean(e[:3])); base_mu3.append(b[3]); enr_mu3.append(e[3])
+        for campaign_label, _legend_label, root, _fill, _edge in CAMPAIGNS:
+            means, extrapolations = campaign_values.setdefault(campaign_label, ([], []))
+            values = [state_error(root, kind, p) for p in POINTS]
+            means.append(float(np.mean(values[:3])))
+            extrapolations.append(values[3])
     lin = [state_error(BASE, "linear", p) for p in POINTS]
-    x = np.arange(len(labels))
-    width = 0.36
+    x = np.arange(len(ENRICHMENT_BAR_LABELS))
+    width = 0.18
+    offsets = width * (np.arange(len(CAMPAIGNS)) - 0.5 * (len(CAMPAIGNS) - 1))
     fig, axes = plt.subplots(1, 2, figsize=(13.0, 4.6), sharey=True)
-    for ax, bvals, evals, title, lin_val in (
-        (axes[0], base_mean, enr_mean, r"in-domain mean: $\mu^{(v)},\mu^{(1)},\mu^{(2)}$", np.mean(lin[:3])),
-        (axes[1], base_mu3, enr_mu3, r"extrapolatory point $\mu^{(3)}$", lin[3]),
+    for ax, value_index, title, lin_val in (
+        (axes[0], 0, r"in-domain mean: $\mu^{(v)},\mu^{(1)},\mu^{(2)}$", np.mean(lin[:3])),
+        (axes[1], 1, r"extrapolatory point $\mu^{(3)}$", lin[3]),
     ):
-        ax.bar(x - width/2, bvals, width, label="baseline 9", color=BASELINE_FILL, edgecolor=BASELINE_EDGE)
-        ax.bar(x + width/2, evals, width, label="enriched 9+36", color=ENRICHED_FILL, edgecolor=ENRICHED_EDGE)
+        for offset, (campaign_label, legend_label, _root, fill, edge) in zip(offsets, CAMPAIGNS):
+            ax.bar(x + offset, campaign_values[campaign_label][value_index], width, label=legend_label,
+                   color=fill, edgecolor=edge)
         ax.axhline(lin_val, color="black", linestyle="-", linewidth=1.1, label="linear PROM" if ax is axes[0] else None)
+        ax.axvline(INTRUSIVE_DIRECT_SPLIT, color="#5a5a5a", linestyle="--", linewidth=0.9, alpha=0.8)
         ax.set_title(title)
         ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=25, ha="right")
+        ax.set_xticklabels(ENRICHMENT_BAR_LABELS, rotation=25, ha="right", fontsize=8)
         ax.grid(axis="y", alpha=0.3)
     axes[0].set_ylabel(r"state relative error vs HDM (\%)")
     axes[0].legend(frameon=True, fontsize=8)
@@ -520,23 +731,27 @@ def plot_state_bar() -> Path:
 
 
 def plot_coeff_bar() -> Path:
-    labels = ["C1", "C2 $n=10$", "C3", "POD-AE", "POD-NN", "POD-DL"]
-    base_mean, enr_mean, base_mu3, enr_mu3 = [], [], [], []
+    campaign_values: dict[str, tuple[list[float], list[float]]] = {}
     for _, _, kind in METHODS:
-        b = [rel_q_error(BASE, kind, p) for p in POINTS]
-        e = [rel_q_error(ENR, kind, p) for p in POINTS]
-        base_mean.append(np.mean(b[:3])); enr_mean.append(np.mean(e[:3])); base_mu3.append(b[3]); enr_mu3.append(e[3])
-    x = np.arange(len(labels)); width = 0.36
+        for campaign_label, _legend_label, root, _fill, _edge in CAMPAIGNS:
+            means, extrapolations = campaign_values.setdefault(campaign_label, ([], []))
+            values = [rel_q_error(root, kind, p) for p in POINTS]
+            means.append(float(np.mean(values[:3])))
+            extrapolations.append(values[3])
+    x = np.arange(len(ENRICHMENT_BAR_LABELS)); width = 0.18
+    offsets = width * (np.arange(len(CAMPAIGNS)) - 0.5 * (len(CAMPAIGNS) - 1))
     fig, axes = plt.subplots(1, 2, figsize=(13.0, 4.6), sharey=True)
-    for ax, bvals, evals, title in (
-        (axes[0], base_mean, enr_mean, r"in-domain mean coefficient error"),
-        (axes[1], base_mu3, enr_mu3, r"extrapolatory coefficient error"),
+    for ax, value_index, title in (
+        (axes[0], 0, r"in-domain mean coefficient error"),
+        (axes[1], 1, r"extrapolatory coefficient error"),
     ):
-        ax.bar(x - width/2, bvals, width, label="baseline 9", color=BASELINE_FILL, edgecolor=BASELINE_EDGE)
-        ax.bar(x + width/2, evals, width, label="enriched 9+36", color=ENRICHED_FILL, edgecolor=ENRICHED_EDGE)
+        for offset, (campaign_label, legend_label, _root, fill, edge) in zip(offsets, CAMPAIGNS):
+            ax.bar(x + offset, campaign_values[campaign_label][value_index], width, label=legend_label,
+                   color=fill, edgecolor=edge)
+        ax.axvline(INTRUSIVE_DIRECT_SPLIT, color="#5a5a5a", linestyle="--", linewidth=0.9, alpha=0.8)
         ax.set_title(title)
         ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=25, ha="right")
+        ax.set_xticklabels(ENRICHMENT_BAR_LABELS, rotation=25, ha="right", fontsize=8)
         ax.grid(axis="y", alpha=0.3)
     axes[0].set_ylabel(r"relative coefficient error vs linear PROM (\%)")
     axes[0].legend(frameon=True, fontsize=8)
@@ -553,7 +768,7 @@ def plot_case2_coeff_curves() -> Path:
     fig, axes = plt.subplots(2, 2, figsize=(12.4, 7.3), sharex=True, sharey=True)
     for ax, p in zip(axes.ravel(), POINTS):
         qref = online_q(BASE, "linear", p)
-        for root, label, color in ((BASE, "baseline 9", BASELINE_EDGE), (ENR, "enriched 9+36", ENRICHED_EDGE)):
+        for _campaign_label, label, root, _fill, color in CAMPAIGNS:
             q = online_q(root, "case2", p)
             denom = np.maximum(np.linalg.norm(qref, axis=1), 1.0e-14)
             rel = 100.0 * np.linalg.norm(q - qref, axis=1) / denom
@@ -575,26 +790,37 @@ def plot_case2_coeff_curves() -> Path:
 
 def write_dataset_macros() -> Path:
     out = TAB_DIR / "prom_enrichment_dataset_summary.tex"
-    meta = json.loads((ENR / "Stage2" / "prom_coeff_dataset_ntot151_enriched_lhs36" / "meta.json").read_text())
+    meta_base = json.loads((BASE / "Stage2" / "prom_coeff_dataset_ntot151" / "meta.json").read_text())
+    meta_early = json.loads((EARLY / "Stage2" / "prom_coeff_dataset_ntot151_enriched_lhs8" / "meta.json").read_text())
+    meta_mid = json.loads((MID / "Stage2" / "prom_coeff_dataset_ntot151_enriched_lhs18" / "meta.json").read_text())
+    meta_full = json.loads((ENR / "Stage2" / "prom_coeff_dataset_ntot151_enriched_lhs36" / "meta.json").read_text())
     with out.open("w") as f:
-        f.write("\\begin{tabular}{lr}\n")
+        f.write("\\begin{tabular}{lrrrr}\n")
         f.write("\\toprule\n")
-        f.write("Quantity & Value \\\\ \n")
+        f.write(r"Quantity & Baseline & Early & Intermediate & Enriched \\" + "\n")
         f.write("\\midrule\n")
-        f.write(f"Baseline PROM trajectories & {meta['num_base_traj_copied']} \\\\ \n")
-        f.write(f"Interior LHS trajectories & {meta['num_interior_lhs_traj']} \\\\ \n")
-        f.write(f"Exterior LHS trajectories & {meta['num_exterior_lhs_traj']} \\\\ \n")
-        f.write(f"Total training trajectories & {meta['num_traj']} \\\\ \n")
-        f.write(f"Snapshots per trajectory & 501 \\\\ \n")
-        f.write(f"Training samples & {meta['num_traj'] * 501} \\\\ \n")
-        f.write(f"LHS seed & {meta['lhs_seed']} \\\\ \n")
-        f.write(f"Margin fraction & {meta['margin_fraction']} \\\\ \n")
+        f.write(f"Baseline grid trajectories & {meta_base['num_traj']} & {meta_early['num_base_traj_copied']} & {meta_mid['num_base_traj_copied']} & {meta_full['num_base_traj_copied']}" + r" \\" + "\n")
+        f.write(f"Interior LHS trajectories & 0 & {meta_early['num_interior_lhs_traj']} & {meta_mid['num_interior_lhs_traj']} & {meta_full['num_interior_lhs_traj']}" + r" \\" + "\n")
+        f.write(f"Margin LHS trajectories & 0 & {meta_early['num_exterior_lhs_traj']} & {meta_mid['num_exterior_lhs_traj']} & {meta_full['num_exterior_lhs_traj']}" + r" \\" + "\n")
+        f.write(f"Total training trajectories & {meta_base['num_traj']} & {meta_early['num_traj']} & {meta_mid['num_traj']} & {meta_full['num_traj']}" + r" \\" + "\n")
+        f.write(f"Training samples & {meta_base['num_traj'] * 501} & {meta_early['num_traj'] * 501} & {meta_mid['num_traj'] * 501} & {meta_full['num_traj'] * 501}" + r" \\" + "\n")
+        f.write("Held-out parameter-validation trajectories & 2 & 2 & 2 & 2 \\\\" + "\n")
+        f.write("Held-out parameter-validation samples & 1002 & 1002 & 1002 & 1002 \\\\" + "\n")
+        f.write(f"LHS seed & -- & {meta_early['lhs_seed']} & {meta_mid['lhs_seed']} & {meta_full['lhs_seed']}" + r" \\" + "\n")
+        f.write(f"Margin fraction & -- & {meta_early['margin_fraction']} & {meta_mid['margin_fraction']} & {meta_full['margin_fraction']}" + r" \\" + "\n")
         f.write("\\bottomrule\n")
         f.write("\\end{tabular}\n")
     return out
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--comparison-only",
+        action="store_true",
+        help="Regenerate only the 9/9+8/9+18/9+36 comparison tables and figures.",
+    )
+    args = parser.parse_args()
     TAB_DIR.mkdir(parents=True, exist_ok=True)
     FIG_DIR.mkdir(parents=True, exist_ok=True)
     tables = [
@@ -603,15 +829,15 @@ def main() -> None:
         write_online_state_comparison(),
         write_coeff_comparison(),
     ]
-    figures = [
-        *copy_sampling_figures(),
-        plot_state_bar(),
-        plot_enriched_solution_overlay(),
-        plot_coeff_bar(),
-        plot_enriched_coeff_error_diagnostics(),
-        *plot_enriched_coefficient_heatmaps(),
-        plot_case2_coeff_curves(),
-    ]
+    figures = [*plot_sampling_figures(), plot_state_bar(), plot_coeff_bar(), plot_case2_coeff_curves()]
+    if not args.comparison_only:
+        figures.extend(
+            [
+                plot_enriched_solution_overlay(),
+                plot_enriched_coeff_error_diagnostics(),
+                *plot_enriched_coefficient_heatmaps(),
+            ]
+        )
     print("[prom-enrichment-assets] tables:")
     for t in tables:
         print(f"  {t}")

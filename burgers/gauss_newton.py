@@ -31,6 +31,25 @@ def _safe_init_norm(val):
     return 1.0 if val == 0.0 else val
 
 
+def _sqrt_ecm_weights(weights, label="ECM weights"):
+    """Return residual/Jacobian multipliers for positive ECM cubature weights.
+
+    An ECM rule approximates a sum of squared entity residuals,
+
+        sum_e xi_e ||r_e||_2^2.
+
+    Therefore a least-squares solve must multiply both the residual and its
+    Jacobian by ``sqrt(xi_e)``.  Applying ``xi_e`` directly would instead
+    minimize sum_e xi_e^2 ||r_e||_2^2 and change the online HPROM objective.
+    """
+    weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+    if not np.all(np.isfinite(weights)):
+        raise ValueError(f"{label} must be finite.")
+    if np.any(weights < 0.0):
+        raise ValueError(f"{label} must be non-negative.")
+    return np.sqrt(weights)
+
+
 def _to_numpy(x):
     if torch.is_tensor(x):
         return x.detach().cpu().numpy()
@@ -214,7 +233,7 @@ def gauss_newton_ECSW_2D(
     u_ref = _prepare_u_ref(u_ref, basis.shape[0])
 
     weights = np.asarray(sample_weights, dtype=np.float64).reshape(-1)
-    sqrt_w = np.sqrt(weights)
+    sqrt_w = _sqrt_ecm_weights(weights)
 
     w = u_ref + basis @ y
 
@@ -361,7 +380,9 @@ def gauss_newton_LSPG_local_ecsw(
     else:
         u_ref_eff = _prepare_u_ref(u_ref, V_loc.shape[0])
 
-    weights = np.concatenate((sample_weights_cells, sample_weights_cells)).astype(np.float64)
+    sqrt_weights = _sqrt_ecm_weights(
+        np.concatenate((sample_weights_cells, sample_weights_cells)).astype(np.float64)
+    )
 
     w_loc = u_ref_eff + V_loc @ q
 
@@ -369,7 +390,7 @@ def gauss_newton_LSPG_local_ecsw(
     r = res_fun(w_loc)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(weights * r))
+    init_norm = _safe_init_norm(np.linalg.norm(sqrt_weights * r))
     resnorms = []
 
     for it in range(max_its):
@@ -378,7 +399,7 @@ def gauss_newton_LSPG_local_ecsw(
             r = res_fun(w_loc)
             res_time += time.time() - t0
 
-        rw = weights * r
+        rw = sqrt_weights * r
         resnorm = np.linalg.norm(rw)
         resnorms.append(resnorm)
 
@@ -394,7 +415,7 @@ def gauss_newton_LSPG_local_ecsw(
 
         t0 = time.time()
         JV = J_loc @ V_loc
-        JVw = weights[:, None] * JV
+        JVw = sqrt_weights[:, None] * JV
         dq = _solve_reduced_update(
             JVw,
             rw,
@@ -566,7 +587,7 @@ def gauss_newton_LSPG_qm_ecsw(
     V_loc = np.asarray(V_loc, dtype=np.float64)
     q = np.asarray(q0, dtype=np.float64).copy()
     u_ref_loc = _prepare_u_ref(u_ref_loc, V_loc.shape[0])
-    sample_weights = np.asarray(sample_weights, dtype=np.float64).reshape(-1)
+    sqrt_weights = _sqrt_ecm_weights(sample_weights)
 
     w_loc = u_qm(q, V_loc, H_loc, u_ref_loc)
 
@@ -574,7 +595,7 @@ def gauss_newton_LSPG_qm_ecsw(
     r = res_fun(w_loc)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(sample_weights * r))
+    init_norm = _safe_init_norm(np.linalg.norm(sqrt_weights * r))
     resnorms = []
 
     for it in range(max_its):
@@ -583,7 +604,7 @@ def gauss_newton_LSPG_qm_ecsw(
             r = res_fun(w_loc)
             res_time += time.time() - t0
 
-        rw = sample_weights * r
+        rw = sqrt_weights * r
         resnorm = np.linalg.norm(rw)
         resnorms.append(resnorm)
 
@@ -602,7 +623,7 @@ def gauss_newton_LSPG_qm_ecsw(
         t0 = time.time()
         Du_loc = J_qm(q, V_loc, H_loc)
         JV = J_loc @ Du_loc
-        JVw = sample_weights[:, None] * JV
+        JVw = sqrt_weights[:, None] * JV
         dq = _solve_reduced_update(
             JVw,
             rw,
@@ -733,6 +754,12 @@ def gauss_newton_pod_ann_ecsw(
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
 ):
+    """Solve the ECM-weighted nonlinear LSPG problem on an ANN manifold.
+
+    ``weight`` stores the positive entity cubature weights.  The weighted
+    least-squares residual is ``diag(sqrt(weight)) r`` for each state
+    component, exactly as in the linear ECM HPROM.
+    """
     del sample_inds, augmented_sample, u_ref
 
     jac_time = 0.0
@@ -740,14 +767,16 @@ def gauss_newton_pod_ann_ecsw(
     ls_time = 0.0
 
     y = y0.detach().clone()
-    weights = np.concatenate((weight, weight)).astype(np.float64)
+    sqrt_weights = _sqrt_ecm_weights(
+        np.concatenate((weight, weight)).astype(np.float64)
+    )
 
     with torch.no_grad():
         w = _call_decode(decode, y, with_grad=False)
 
     w_np = _to_numpy(w).squeeze()
     r = func(w_np)
-    init_norm = _safe_init_norm(np.linalg.norm(weights * r))
+    init_norm = _safe_init_norm(np.linalg.norm(sqrt_weights * r))
     resnorms = []
 
     for it in range(max_its):
@@ -757,7 +786,7 @@ def gauss_newton_pod_ann_ecsw(
             r = func(w_np)
             res_time += time.time() - t0
 
-        rw = weights * r
+        rw = sqrt_weights * r
         resnorm = np.linalg.norm(rw)
         resnorms.append(resnorm)
 
@@ -774,7 +803,7 @@ def gauss_newton_pod_ann_ecsw(
 
         t0 = time.time()
         JV = J @ V
-        JVw = weights[:, None] * JV
+        JVw = sqrt_weights[:, None] * JV
         dy = _solve_reduced_update(
             JVw,
             rw,
@@ -998,8 +1027,9 @@ def gauss_newton_pod_rbf_ecsw(
     ls_time = 0.0
 
     y = np.asarray(y0, dtype=float).copy()
-    weights_uv = np.concatenate((np.asarray(weights, dtype=float),
-                                 np.asarray(weights, dtype=float)))
+    sqrt_weights_uv = _sqrt_ecm_weights(
+        np.concatenate((np.asarray(weights, dtype=float), np.asarray(weights, dtype=float)))
+    )
 
     w = decode_rbf(y)
 
@@ -1007,7 +1037,7 @@ def gauss_newton_pod_rbf_ecsw(
     r = func(w)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(weights_uv * r))
+    init_norm = _safe_init_norm(np.linalg.norm(sqrt_weights_uv * r))
     resnorms = []
 
     J_frozen = None
@@ -1018,7 +1048,7 @@ def gauss_newton_pod_rbf_ecsw(
             r = func(w)
             res_time += time.time() - t0
 
-        rw = weights_uv * r
+        rw = sqrt_weights_uv * r
         resnorm = np.linalg.norm(rw)
         resnorms.append(resnorm)
 
@@ -1044,7 +1074,7 @@ def gauss_newton_pod_rbf_ecsw(
 
         t0 = time.time()
         JV = J.dot(V) if hasattr(J, "dot") else (J @ V)
-        JVw = weights_uv[:, None] * JV
+        JVw = sqrt_weights_uv[:, None] * JV
         solver_mode = linear_solver
         if solver_mode is None:
             solver_mode = "normal_eq" if bool(normal_eqn) else "lstsq"
@@ -1089,13 +1119,13 @@ def gauss_newton_pod_rbf_ecsw_old(
 
     y = np.asarray(y0, dtype=float).copy()
     w = decode_rbf(y)
-    weights_uv = np.concatenate((weights, weights))
+    sqrt_weights_uv = _sqrt_ecm_weights(np.concatenate((weights, weights)))
 
     t0 = time.time()
     r = func(w)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(weights_uv * r))
+    init_norm = _safe_init_norm(np.linalg.norm(sqrt_weights_uv * r))
     resnorms = []
 
     for it in range(max_its):
@@ -1104,7 +1134,7 @@ def gauss_newton_pod_rbf_ecsw_old(
             r = func(w)
             res_time += time.time() - t0
 
-        rw = weights_uv * r
+        rw = sqrt_weights_uv * r
         resnorm = np.linalg.norm(rw)
         resnorms.append(resnorm)
 
@@ -1121,7 +1151,7 @@ def gauss_newton_pod_rbf_ecsw_old(
 
         t0 = time.time()
         JV = J @ V
-        JVw = weights_uv[:, None] * JV
+        JVw = sqrt_weights_uv[:, None] * JV
         dy, *_ = np.linalg.lstsq(JVw, -rw, rcond=None)
         ls_time += time.time() - t0
 
@@ -1156,13 +1186,15 @@ def gauss_newton_pod_gp_ecsw(
 
     y = np.asarray(y0, dtype=float).copy()
     w = decode_gp(y)
-    weights_uv = np.concatenate((weights, weights))
+    sqrt_weights_uv = _sqrt_ecm_weights(
+        np.concatenate((np.asarray(weights, dtype=float), np.asarray(weights, dtype=float)))
+    )
 
     t0 = time.time()
     r = func(w)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(weights_uv * r))
+    init_norm = _safe_init_norm(np.linalg.norm(sqrt_weights_uv * r))
     resnorms = []
 
     for it in range(max_its):
@@ -1171,7 +1203,7 @@ def gauss_newton_pod_gp_ecsw(
             r = func(w)
             res_time += time.time() - t0
 
-        rw = weights_uv * r
+        rw = sqrt_weights_uv * r
         resnorm = np.linalg.norm(rw)
         resnorms.append(resnorm)
 
@@ -1188,7 +1220,7 @@ def gauss_newton_pod_gp_ecsw(
 
         t0 = time.time()
         JV = J @ V
-        JVw = weights_uv[:, None] * JV
+        JVw = sqrt_weights_uv[:, None] * JV
         dy = _solve_reduced_update(
             JVw,
             rw,
@@ -1292,6 +1324,11 @@ def gauss_newton_poddl_ecsw(
     linear_solver: str = "lstsq",
     normal_eq_reg: float = 1e-12,
 ) -> Tuple[torch.Tensor, Sequence[float], Tuple[float, float, float]]:
+    """Solve the ECM-weighted nonlinear LSPG problem on a POD-AE manifold.
+
+    ``weight`` stores entity cubature weights, so both the residual and
+    tangent are multiplied by their square roots in the least-squares solve.
+    """
     del sample_inds, augmented_sample, u_ref
 
     jac_time = 0.0
@@ -1299,8 +1336,10 @@ def gauss_newton_poddl_ecsw(
     ls_time = 0.0
 
     z = z0.detach().clone()
-    weights = np.concatenate(
-        (np.asarray(weight, dtype=np.float64), np.asarray(weight, dtype=np.float64))
+    sqrt_weights = _sqrt_ecm_weights(
+        np.concatenate(
+            (np.asarray(weight, dtype=np.float64), np.asarray(weight, dtype=np.float64))
+        )
     )
 
     with torch.no_grad():
@@ -1312,7 +1351,7 @@ def gauss_newton_poddl_ecsw(
     r = func(u_np)
     res_time += time.time() - t0
 
-    init_norm = _safe_init_norm(np.linalg.norm(weights * r))
+    init_norm = _safe_init_norm(np.linalg.norm(sqrt_weights * r))
     resnorms = []
 
     for it in range(max_its):
@@ -1322,7 +1361,7 @@ def gauss_newton_poddl_ecsw(
             r = func(u_np)
             res_time += time.time() - t0
 
-        rw = weights * r
+        rw = sqrt_weights * r
         resnorm = np.linalg.norm(rw)
         resnorms.append(resnorm)
 
@@ -1339,7 +1378,7 @@ def gauss_newton_poddl_ecsw(
 
         t0 = time.time()
         JV = J @ Uz
-        JVw = weights[:, None] * JV
+        JVw = sqrt_weights[:, None] * JV
         dz = _solve_reduced_update(
             JVw,
             rw,

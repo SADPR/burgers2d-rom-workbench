@@ -1,15 +1,15 @@
-\begin{tabular}{lrrrrr|rrrrr}
+\begin{tabular}{lrr|rr|rr|rr}
 \toprule
-& \multicolumn{5}{c|}{Baseline (9 trajectories)} & \multicolumn{5}{c}{Enriched (9+36 trajectories)} \\
-Model & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ \\
+& \multicolumn{2}{c|}{Baseline (9)} & \multicolumn{2}{c|}{Early (9+8)} & \multicolumn{2}{c|}{Intermediate (9+18)} & \multicolumn{2}{c}{Enriched (9+36)} \\
+Model & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ \\
 \midrule
-Linear PROM & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\ 
-PROM--ANN Case 1 & 0.295 & 0.593 & 1.297 & 0.729 & 2.923 & 0.066 & 0.057 & 0.089 & 0.070 & 0.178 \\ 
-PROM--ANN Case 2 ($n=10$) & 2.440 & 3.361 & 3.906 & 3.236 & 4.257 & 0.377 & 0.357 & 0.433 & 0.389 & 0.583 \\ 
-PROM--ANN Case 3 & 0.164 & 0.856 & 0.788 & 0.603 & 2.396 & 0.039 & 0.038 & 0.055 & 0.044 & 0.117 \\ 
-PROM--POD--AE ($n_z=10$) & 0.140 & 0.773 & 0.929 & 0.614 & 4.394 & 0.041 & 0.041 & 0.059 & 0.047 & 0.151 \\ 
+Linear PROM & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\
+PROM--ANN Case 1 & 0.729 & 2.923 & 0.278 & 1.644 & 0.125 & 0.222 & 0.070 & 0.178 \\
+PROM--ANN Case 2 ($n=10$) & 3.236 & 4.257 & 1.383 & 3.066 & 0.552 & 0.679 & 0.389 & 0.583 \\
+PROM--ANN Case 3 & 0.603 & 2.396 & 0.159 & 1.012 & 0.070 & 0.136 & 0.044 & 0.117 \\
+PROM--POD--AE ($n_z=10$) & 0.614 & 4.394 & 0.227 & 2.074 & 0.093 & 0.188 & 0.047 & 0.151 \\
 \midrule
-POD--NN--ROM & 2.499 & 3.924 & 4.249 & 3.557 & 7.444 & 0.385 & 0.362 & 0.446 & 0.398 & 0.805 \\ 
-POD--DL--ROM ($n_z=10$) & 0.814 & 3.129 & 3.225 & 2.389 & 8.639 & 0.108 & 0.099 & 0.130 & 0.112 & 0.240 \\ 
+POD--NN--ROM & 3.557 & 7.444 & 1.473 & 5.348 & 0.585 & 0.893 & 0.398 & 0.805 \\
+POD--DL--ROM ($n_z=10$) & 2.389 & 8.639 & 0.436 & 2.249 & 0.212 & 0.340 & 0.112 & 0.240 \\
 \bottomrule
 \end{tabular}

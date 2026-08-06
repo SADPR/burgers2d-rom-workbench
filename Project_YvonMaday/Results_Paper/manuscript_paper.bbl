@@ -79,4 +79,16 @@ Charbel Farhat, Todd Chapman, and Philip Avery.
 \newblock {\em International Journal for Numerical Methods in Engineering},
   102(5):1077--1110, 2015.
 
+\bibitem{chmiel2024assessment}
+Matthew~R. Chmiel, Joshua~L. Barnett, and Charbel Farhat.
+\newblock Assessment of projection-based model order reduction for a benchmark
+  hypersonic flow problem.
+\newblock In {\em AIAA SciTech 2024 Forum}, page 0250, 2024.
+
+\bibitem{chmiel2025unified}
+Matthew~R Chmiel, Joshua Barnett, and Charbel Farhat.
+\newblock Unified {LSPG} model reduction framework and assessment for
+  hypersonic computational fluid dynamics.
+\newblock {\em AIAA Journal}, 63(1):72--90, 2025.
+
 \end{thebibliography}

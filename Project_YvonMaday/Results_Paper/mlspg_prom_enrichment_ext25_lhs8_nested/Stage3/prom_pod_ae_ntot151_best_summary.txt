@@ -1,0 +1,27 @@
+model_name: prom_pod_ae_ntot151_best.pt
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Stage3/models/prom_pod_ae_ntot151_best.pt
+dataset_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Stage2/prom_coeff_dataset_ntot151_enriched_lhs8
+dataset_root: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Stage2/prom_coeff_dataset_ntot151_enriched_lhs8/per_mu
+dataset_ntot: 151
+dataset_backend: prom
+samples_M: 8517
+q_dim: 151
+latent_dim: 10
+hidden_dims: (512, 256, 128)
+scaling: zscore
+activation: gelu
+batch_size: 128
+lr: 0.0005
+weight_decay: 1e-06
+lr_scheduler: ReduceLROnPlateau
+lr_scheduler_factor: 0.5
+lr_scheduler_patience: 50
+lr_scheduler_min_lr: 1e-06
+trainable_parameters: 486817
+epochs_ran: 6500
+best_val_mse: 0.001108662341721356
+train_rel_frob_percent: 0.08740772609598935
+val_rel_frob_percent: 0.09773086057975888
+elapsed_s: 3776.679890871048
+seed: 42
+device: cpu

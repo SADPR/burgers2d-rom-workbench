@@ -15,6 +15,16 @@ export MODELS_DIR="$STAGE3_DIR/models"
 export LOG_ROOT="$PAPER_ROOT/logs/train_best"
 export MPLCONFIGDIR="${MPLCONFIGDIR:-$PAPER_ROOT/.mplcache}"
 
+# Defaults preserve the completed 9+36 campaign. Intermediate campaigns set
+# these values through a small wrapper while keeping this trainer identical.
+CAMPAIGN_LABEL="${CAMPAIGN_LABEL:-ext25-lhs36}"
+EXPECTED_BASE_TRAJ="${EXPECTED_BASE_TRAJ:-9}"
+EXPECTED_INTERIOR_LHS="${EXPECTED_INTERIOR_LHS:-18}"
+EXPECTED_EXTERIOR_LHS="${EXPECTED_EXTERIOR_LHS:-18}"
+EXPECTED_LHS_TRAJ="${EXPECTED_LHS_TRAJ:-$((EXPECTED_INTERIOR_LHS + EXPECTED_EXTERIOR_LHS))}"
+EXPECTED_TOTAL_TRAJ="${EXPECTED_TOTAL_TRAJ:-$((EXPECTED_BASE_TRAJ + EXPECTED_LHS_TRAJ))}"
+export EXPECTED_BASE_TRAJ EXPECTED_INTERIOR_LHS EXPECTED_EXTERIOR_LHS EXPECTED_LHS_TRAJ EXPECTED_TOTAL_TRAJ
+
 TRAIN_NUM_THREADS="${TRAIN_NUM_THREADS:-16}"
 export BLIS_NUM_THREADS="$TRAIN_NUM_THREADS"
 export GOTO_NUM_THREADS="$TRAIN_NUM_THREADS"
@@ -61,17 +71,18 @@ selected_pretrain() {
 
 print_plan() {
   cat <<EOF
-[prom-ext25-lhs36-train] selected-architecture PROM training, no sweep
-[prom-ext25-lhs36-train] paper root:     $PAPER_ROOT
-[prom-ext25-lhs36-train] train dataset:  $DATASET_DIR
-[prom-ext25-lhs36-train] validation set: $VAL_DATASET_DIR
-[prom-ext25-lhs36-train] stage3 dir:     $STAGE3_DIR
-[prom-ext25-lhs36-train] models dir:     $MODELS_DIR
-[prom-ext25-lhs36-train] logs dir:       $LOG_ROOT
-[prom-ext25-lhs36-train] execution:      $TRAIN_EXECUTION
-[prom-ext25-lhs36-train] family:         $family
-[prom-ext25-lhs36-train] threads:        $TRAIN_NUM_THREADS
-[prom-ext25-lhs36-train] selected architectures:
+[$CAMPAIGN_LABEL-train] selected-architecture PROM training, no sweep
+[$CAMPAIGN_LABEL-train] paper root:     $PAPER_ROOT
+[$CAMPAIGN_LABEL-train] train dataset:  $DATASET_DIR
+[$CAMPAIGN_LABEL-train] validation set: $VAL_DATASET_DIR
+[$CAMPAIGN_LABEL-train] stage3 dir:     $STAGE3_DIR
+[$CAMPAIGN_LABEL-train] models dir:     $MODELS_DIR
+[$CAMPAIGN_LABEL-train] logs dir:       $LOG_ROOT
+[$CAMPAIGN_LABEL-train] execution:      $TRAIN_EXECUTION
+[$CAMPAIGN_LABEL-train] family:         $family
+[$CAMPAIGN_LABEL-train] threads:        $TRAIN_NUM_THREADS
+[$CAMPAIGN_LABEL-train] trajectories:   $EXPECTED_TOTAL_TRAJ ($EXPECTED_BASE_TRAJ baseline + $EXPECTED_INTERIOR_LHS interior + $EXPECTED_EXTERIOR_LHS margin)
+[$CAMPAIGN_LABEL-train] selected architectures:
   Case 1:       n=10, hidden=(256,512,512,256), SiLU
   Case 2:       master POD-NN map (mu,t)->q_1:151, hidden=(256,512,512,256), ELU
   Case 3:       n=10, hidden=(256,512,512,256), SiLU
@@ -97,11 +108,11 @@ if not meta_path.is_file():
 meta = json.loads(meta_path.read_text())
 checks = [
     (meta.get("solve_backend") == "prom", "Expected solve_backend=prom."),
-    (meta.get("num_traj") == 45, f"Expected 45 trajectories, got {meta.get('num_traj')}."),
-    (meta.get("num_base_traj_copied") == 9, "Expected 9 copied baseline trajectories."),
-    (meta.get("num_lhs_traj") == 36, "Expected 36 LHS enrichment trajectories."),
-    (meta.get("num_interior_lhs_traj") == 18, "Expected 18 interior LHS trajectories."),
-    (meta.get("num_exterior_lhs_traj") == 18, "Expected 18 exterior LHS trajectories."),
+    (meta.get("num_traj") == int(os.environ["EXPECTED_TOTAL_TRAJ"]), f"Unexpected total trajectories: {meta.get('num_traj')}"),
+    (meta.get("num_base_traj_copied") == int(os.environ["EXPECTED_BASE_TRAJ"]), "Unexpected copied baseline trajectory count."),
+    (meta.get("num_lhs_traj") == int(os.environ["EXPECTED_LHS_TRAJ"]), "Unexpected LHS enrichment trajectory count."),
+    (meta.get("num_interior_lhs_traj") == int(os.environ["EXPECTED_INTERIOR_LHS"]), "Unexpected interior LHS trajectory count."),
+    (meta.get("num_exterior_lhs_traj") == int(os.environ["EXPECTED_EXTERIOR_LHS"]), "Unexpected exterior LHS trajectory count."),
     (meta.get("coefficient_storage") == "direct_solver_qN_only", "Expected direct solver-side qN targets."),
     (abs(float(meta.get("margin_fraction", -1.0)) - 0.25) < 1e-14, "Expected margin_fraction=0.25."),
 ]
@@ -110,8 +121,9 @@ for ok, msg in checks:
         raise SystemExit(msg)
 
 mu_dirs = sorted(path for path in (dataset / "per_mu").iterdir() if path.is_dir())
-if len(mu_dirs) != 45:
-    raise SystemExit(f"Expected 45 per_mu directories, found {len(mu_dirs)}.")
+expected_total = int(os.environ["EXPECTED_TOTAL_TRAJ"])
+if len(mu_dirs) != expected_total:
+    raise SystemExit(f"Expected {expected_total} per_mu directories, found {len(mu_dirs)}.")
 for mu_dir in mu_dirs:
     qn = np.load(mu_dir / "qN.npy", allow_pickle=False)
     if qn.shape != (151, 501) or not np.all(np.isfinite(qn)):
@@ -125,10 +137,10 @@ for mu_dir in val_dirs:
     if qn.shape != (151, 501) or not np.all(np.isfinite(qn)):
         raise SystemExit(f"Invalid validation qN in {mu_dir}: shape={qn.shape}.")
 
-print("[prom-ext25-lhs36-train-check] dataset:", dataset)
-print("[prom-ext25-lhs36-train-check] training trajectories:", len(mu_dirs), "(45 x 501 = 22545 rows)")
-print("[prom-ext25-lhs36-train-check] validation trajectories:", len(val_dirs), "(2 x 501 = 1002 rows)")
-print("[prom-ext25-lhs36-train-check] direct qN:", meta["coefficient_storage"])
+print("[prom-enrichment-train-check] dataset:", dataset)
+print("[prom-enrichment-train-check] training trajectories:", len(mu_dirs), f"({len(mu_dirs)} x 501 = {len(mu_dirs) * 501} rows)")
+print("[prom-enrichment-train-check] validation trajectories:", len(val_dirs), "(2 x 501 = 1002 rows)")
+print("[prom-enrichment-train-check] direct qN:", meta["coefficient_storage"])
 PY
 }
 
@@ -165,7 +177,7 @@ train_case1() {
   local epochs patience
   epochs="$(selected_epochs 6000)"
   patience="$(selected_patience 220)"
-  echo "==== Train PROM ext25-lhs36 Case 1"
+  echo "==== Train PROM $CAMPAIGN_LABEL Case 1"
   run_logged "$model" "$summary" "$log" \
     python3 -u stage3_perform_training_case_1_ann_maday.py \
       --maday-results-root "$PAPER_RESULTS_ROOT" --maday-tag "$PAPER_TAG" \
@@ -188,7 +200,7 @@ train_master_ann() {
   local epochs patience
   epochs="$(selected_epochs 7000)"
   patience="$(selected_patience 300)"
-  echo "==== Train PROM ext25-lhs36 master POD-NN map for Case 2/Data-driven"
+  echo "==== Train PROM $CAMPAIGN_LABEL master POD-NN map for Case 2/Data-driven"
   run_logged "$model" "$summary" "$log" \
     python3 -u stage3_perform_training_rom_data_driven_maday.py \
       --maday-results-root "$PAPER_RESULTS_ROOT" --maday-tag "$PAPER_TAG" \
@@ -213,7 +225,7 @@ train_case3() {
   local epochs patience
   epochs="$(selected_epochs 6000)"
   patience="$(selected_patience 220)"
-  echo "==== Train PROM ext25-lhs36 Case 3"
+  echo "==== Train PROM $CAMPAIGN_LABEL Case 3"
   run_logged "$model" "$summary" "$log" \
     python3 -u stage3_perform_training_case_3_ann_maday.py \
       --maday-results-root "$PAPER_RESULTS_ROOT" --maday-tag "$PAPER_TAG" \
@@ -236,7 +248,7 @@ train_pod_ae() {
   local epochs patience
   epochs="$(selected_epochs 6500)"
   patience="$(selected_patience 300)"
-  echo "==== Train PROM ext25-lhs36 PROM-POD-AE"
+  echo "==== Train PROM $CAMPAIGN_LABEL PROM-POD-AE"
   run_logged "$model" "$summary" "$log" \
     python3 -u stage3_perform_training_prom_pod_ae.py \
       --dataset-backend prom --dataset-ntot 151 --dataset-dir "$DATASET_DIR" \
@@ -260,7 +272,7 @@ train_pod_dl() {
   epochs="$(selected_epochs 7000)"
   patience="$(selected_patience 320)"
   pretrain="$(selected_pretrain 300)"
-  echo "==== Train PROM ext25-lhs36 POD-DL-ROM"
+  echo "==== Train PROM $CAMPAIGN_LABEL POD-DL-ROM"
   run_logged "$model" "$summary" "$log" \
     python3 -u stage3_perform_training_pod_dl_data_driven.py \
       --dataset-backend prom --dataset-ntot 151 --dataset-dir "$DATASET_DIR" \
@@ -291,25 +303,25 @@ run_family() {
 
 print_plan
 if [[ "$PLAN_ONLY" == "1" ]]; then
-  echo "[prom-ext25-lhs36-train] PLAN_ONLY=1; no dataset check or training was run."
+  echo "[$CAMPAIGN_LABEL-train] PLAN_ONLY=1; no dataset check or training was run."
   exit 0
 fi
 
 check_dataset
 
 if [[ "$CHECK_ONLY" == "1" ]]; then
-  echo "[prom-ext25-lhs36-train] CHECK_ONLY=1; dataset is complete and no training was run."
+  echo "[$CAMPAIGN_LABEL-train] CHECK_ONLY=1; dataset is complete and no training was run."
   exit 0
 fi
 
 if [[ "$TRAIN_SMOKE_TEST" == "1" ]]; then
-  echo "[prom-ext25-lhs36-train] TRAIN_SMOKE_TEST=1: using one epoch and no POD-DL pretrain."
+  echo "[$CAMPAIGN_LABEL-train] TRAIN_SMOKE_TEST=1: using one epoch and no POD-DL pretrain."
 fi
 
 if [[ "$family" == "all" ]]; then
   families=(case1 data_driven case3 pod_ae pod_dl)
   if [[ "$TRAIN_EXECUTION" == "parallel" ]]; then
-    echo "[prom-ext25-lhs36-train] Running selected trainings concurrently. Use only with adequate resources."
+    echo "[$CAMPAIGN_LABEL-train] Running selected trainings concurrently. Use only with adequate resources."
     pids=()
     for requested in "${families[@]}"; do
       run_family "$requested" &
@@ -334,4 +346,4 @@ else
   run_family "$family"
 fi
 
-echo "[prom-ext25-lhs36-train] Completed selected training for family=$family"
+echo "[$CAMPAIGN_LABEL-train] Completed selected training for family=$family"

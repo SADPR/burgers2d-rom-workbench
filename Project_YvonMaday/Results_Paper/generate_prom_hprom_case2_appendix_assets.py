@@ -185,6 +185,8 @@ def log_limits(curves: list[np.ndarray]) -> tuple[float, float]:
 
 def plot_n_sweep_coefficient_comparison() -> Path:
     """Compare PROM and HPROM coefficient errors for each common Case--2 n."""
+    # Use exactly the reported dimensions shared by the PROM and HPROM sweeps.
+    # The n=3 and n=5 raw runs are deliberately excluded from this appendix.
     n_values = tuple(n for n in CASE2_N_SWEEP if n < 151)
     prom_points = {point.key: point for point in PROM_POINTS}
     x = np.arange(1, 152)

@@ -559,19 +559,14 @@ def collect_online_rows() -> list[dict[str, object]]:
             kv = read_kv(summary)
             ok = bool(kv) and is_current(method, kv)
             err = numeric_from_summary(kv, "relative_error_percent") if ok else None
-            time_s = numeric_from_summary(kv, "online_solve_elapsed_s")
-            if time_s is None:
-                time_s = numeric_from_summary(kv, "inference_time_s")
-            rows.append({"method": method, "point": p.key, "label": p.label, "err": err, "time_s": time_s if ok else None, "ok": ok})
+            rows.append({"method": method, "point": p.key, "label": p.label, "err": err, "ok": ok})
     return rows
 
 
-def method_summary(rows: list[dict[str, object]], method: str) -> tuple[list[float | None], float | None, bool]:
+def method_summary(rows: list[dict[str, object]], method: str) -> tuple[list[float | None], bool]:
     vals = [next(r for r in rows if r["method"] == method and r["point"] == p.key)["err"] for p in POINTS]
-    times = [next(r for r in rows if r["method"] == method and r["point"] == p.key)["time_s"] for p in POINTS]
     ok = all(next(r for r in rows if r["method"] == method and r["point"] == p.key)["ok"] for p in POINTS)
-    valid_times = [float(t) for t in times if t is not None]
-    return vals, (sum(valid_times) / len(valid_times) if valid_times else None), ok
+    return vals, ok
 
 
 def write_online_table(rows: list[dict[str, object]]) -> Path:
@@ -596,9 +591,9 @@ def write_online_table(rows: list[dict[str, object]]) -> Path:
         "POD-DL-ROM": "POD--DL--ROM ($n_z=10$)",
     }
     lines = [
-        r"\begin{tabular}{lrrrrrr}",
+        r"\begin{tabular}{lrrrrr}",
         r"\toprule",
-        r"Model & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ & Mean time (s) \\",
+        r"Model & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ \\",
         r"\midrule",
     ]
     for method in methods:
@@ -606,9 +601,9 @@ def write_online_table(rows: list[dict[str, object]]) -> Path:
             # Direct maps share the coefficient teacher, but evaluate no
             # residual. Keep the same visual/table separation as HPROM.
             lines.append(r"\midrule")
-        vals, time_s, ok = method_summary(rows, method)
+        vals, ok = method_summary(rows, method)
         mean = None if any(v is None for v in vals[:3]) else sum(float(v) for v in vals[:3]) / 3.0
-        row = [labels[method], *(fmt(v, 3) for v in vals[:3]), fmt(mean, 3), fmt(vals[3], 3), fmt(time_s, 3 if (time_s is not None and time_s < 1.0) else 1)]
+        row = [labels[method], *(fmt(v, 3) for v in vals[:3]), fmt(mean, 3), fmt(vals[3], 3)]
         if not ok:
             row[0] += r"$^{\dagger}$"
         lines.append(" & ".join(row) + r" \\")

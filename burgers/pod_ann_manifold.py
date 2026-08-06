@@ -18,6 +18,7 @@ from .core import (
 from .ecsw_utils import generate_augmented_mesh
 
 from .gauss_newton import (
+    _sqrt_ecm_weights,
     gauss_newton_pod_ann,
     gauss_newton_pod_ann_ecsw,
     _solve_reduced_update,
@@ -192,6 +193,76 @@ def _align_module_device(module, target_device):
     return module
 
 
+def _fit_ann_state_to_snapshot(
+    target_snapshot,
+    basis,
+    u_ref,
+    approx,
+    jacfwdfunc,
+    max_its=10,
+    rel_tol=1e-2,
+):
+    """Project one state onto a state-only ANN manifold.
+
+    This is the offline counterpart of the Case-1 nonlinear decoder.  ECM
+    training needs both the current and predecessor states represented on the
+    same manifold that is used by the online backward-Euler residual.
+    """
+    target = np.asarray(target_snapshot, dtype=np.float64).reshape(-1)
+    basis = np.asarray(basis, dtype=np.float64)
+    u_ref = np.asarray(u_ref, dtype=np.float64).reshape(-1)
+
+    y = torch.tensor(_project_reduced_coords(basis, target - u_ref), dtype=torch.float32)
+    with torch.no_grad():
+        w_rec = approx(y).reshape(-1).detach().cpu().numpy()
+
+    init_res = np.linalg.norm(w_rec - target)
+    if init_res <= 0.0:
+        return y, w_rec, 0.0, 0.0
+
+    curr_res = init_res
+    num_it = 0
+    while curr_res / init_res > rel_tol and num_it < max_its:
+        Jf = jacfwdfunc(y).detach().cpu().numpy().reshape(target.size, -1)
+        rhs = Jf.T @ (w_rec - target)
+        lhs = Jf.T @ Jf
+        dy = np.linalg.lstsq(lhs, rhs, rcond=None)[0]
+
+        with torch.no_grad():
+            y -= torch.tensor(dy, dtype=y.dtype, device=y.device)
+            w_rec = approx(y).reshape(-1).detach().cpu().numpy()
+
+        curr_res = np.linalg.norm(w_rec - target)
+        num_it += 1
+
+    return y, w_rec, init_res, curr_res
+
+
+def _fit_case2_state_to_snapshot(
+    target_snapshot,
+    time_value,
+    basis,
+    basis2,
+    ann_model,
+    u_ref,
+    mu1,
+    mu2,
+    device,
+):
+    """Project one state onto the Case-2 parameter--time manifold."""
+    target = np.asarray(target_snapshot, dtype=np.float64).reshape(-1)
+    x = torch.tensor([mu1, mu2, float(time_value)], dtype=torch.float32, device=device)
+    with torch.no_grad():
+        qbar = ann_model(x).reshape(-1).detach().cpu().numpy()
+
+    offset = u_ref + basis2 @ qbar
+    q0 = _project_reduced_coords(basis, target - u_ref)
+    w_init = offset + basis @ q0
+    q = np.linalg.lstsq(basis, target - offset, rcond=None)[0]
+    w_tilde = offset + basis @ q
+    return q, w_tilde, np.linalg.norm(w_init - target), np.linalg.norm(w_tilde - target)
+
+
 def compute_ECSW_training_matrix_2D_pod_ann(
     snaps,
     prev_snaps,
@@ -206,8 +277,11 @@ def compute_ECSW_training_matrix_2D_pod_ann(
     mu,
     u_ref=None,
 ):
-    """
-    ECSW training matrix for the POD-ANN ROM.
+    """Build ECM contributions for a state-only POD-ANN manifold.
+
+    The current and predecessor snapshots are both projected onto the learned
+    manifold before forming the one-step residual.  This matches the online
+    backward-Euler HPROM, whose predecessor is its previous manifold state.
     """
     n_tot, n_snaps = snaps.shape
     n_hdm = n_tot // 2
@@ -230,42 +304,29 @@ def compute_ECSW_training_matrix_2D_pod_ann(
         snap = snaps[:, isnap]
         snap_prev = prev_snaps[:, isnap]
 
-        y0 = _project_reduced_coords(basis, snap - u_ref_vec)
-        y = torch.tensor(y0, dtype=torch.float32)
+        y, w_rec, init_res, final_res = _fit_ann_state_to_snapshot(
+            target_snapshot=snap,
+            basis=basis,
+            u_ref=u_ref_vec,
+            approx=approx,
+            jacfwdfunc=jacfwdfunc,
+        )
+        _, w_prev_rec, _, _ = _fit_ann_state_to_snapshot(
+            target_snapshot=snap_prev,
+            basis=basis,
+            u_ref=u_ref_vec,
+            approx=approx,
+            jacfwdfunc=jacfwdfunc,
+        )
 
-        w_rec = approx(y).squeeze().detach().cpu().numpy()
-        init_res = np.linalg.norm(w_rec - snap)
-        curr_res = init_res
-        num_it = 0
+        denom = np.linalg.norm(snap) + 1e-30
+        print("Initial residual: {:3.2e}".format(init_res / denom))
+        print("Final residual: {:3.2e}".format(final_res / denom))
 
-        print("Initial residual: {:3.2e}".format(init_res / np.linalg.norm(snap)))
-
-        while curr_res / init_res > 1e-2 and num_it < 10:
-            w_t = approx(y).squeeze()
-            snap_t = torch.tensor(snap, dtype=w_t.dtype, device=w_t.device)
-
-            Jf = jacfwdfunc(y)
-            JJ = Jf.T @ Jf
-            Jr = Jf.T @ (w_t - snap_t)
-
-            dy, *_ = np.linalg.lstsq(
-                JJ.squeeze().detach().cpu().numpy(),
-                Jr.squeeze().detach().cpu().numpy(),
-                rcond=None,
-            )
-
-            y -= torch.tensor(dy, dtype=y.dtype, device=y.device)
-            w_rec = approx(y).squeeze().detach().cpu().numpy()
-            curr_res = np.linalg.norm(w_rec - snap)
-            num_it += 1
-
-        final_res = np.linalg.norm(w_rec - snap)
-        print("Final residual: {:3.2e}".format(final_res / np.linalg.norm(snap)))
-
-        ires = res(w_rec, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+        ires = res(w_rec, grid_x, grid_y, dt, w_prev_rec, mu, Dxec, Dyec)
         Ji = jac(w_rec, dt, JDxec, JDyec, Eye)
 
-        V = jacfwdfunc(y).detach().squeeze().cpu().numpy()
+        V = jacfwdfunc(y).detach().cpu().numpy().reshape(n_tot, n_red)
         Wi = Ji @ V
 
         row0 = isnap * n_red
@@ -296,11 +357,12 @@ def compute_ECSW_training_matrix_2D_pod_ann_case2(
     u_ref=None,
 ):
     """
-    ECSW training matrix for POD-ANN Case 2 manifold
+    Build ECM contributions for the POD-ANN Case-2 manifold
 
         w(y, t; mu) = u_ref + basis @ y + basis2 @ ann_model([mu1, mu2, t]).
 
-    The decoder Jacobian wrt y is basis.
+    The decoder Jacobian wrt y is basis.  Both states in each one-step
+    residual are represented on this parameter--time manifold.
     """
     snaps = np.asarray(snaps, dtype=np.float64)
     prev_snaps = np.asarray(prev_snaps, dtype=np.float64)
@@ -341,24 +403,35 @@ def compute_ECSW_training_matrix_2D_pod_ann_case2(
         snap_prev = prev_snaps[:, isnap]
         t_now = float(t_samples[isnap])
 
-        x = torch.tensor([mu1, mu2, t_now], dtype=torch.float32, device=device)
-        with torch.no_grad():
-            qbar = ann_model(x).reshape(-1).detach().cpu().numpy()
+        q, w_tilde, init_res, final_res = _fit_case2_state_to_snapshot(
+            target_snapshot=snap,
+            time_value=t_now,
+            basis=basis,
+            basis2=basis2,
+            ann_model=ann_model,
+            u_ref=u_ref_vec,
+            mu1=mu1,
+            mu2=mu2,
+            device=device,
+        )
+        _, w_prev_tilde, _, _ = _fit_case2_state_to_snapshot(
+            target_snapshot=snap_prev,
+            time_value=t_now - float(dt),
+            basis=basis,
+            basis2=basis2,
+            ann_model=ann_model,
+            u_ref=u_ref_vec,
+            mu1=mu1,
+            mu2=mu2,
+            device=device,
+        )
 
-        offset = u_ref_vec + basis2 @ qbar
-        q0 = _project_reduced_coords(basis, snap - u_ref_vec)
-        w_init = offset + basis @ q0
         snap_norm = np.linalg.norm(snap)
         denom = snap_norm if snap_norm > 0.0 else 1.0
-        init_res = np.linalg.norm(w_init - snap)
         print("Initial residual: {:3.2e}".format(init_res / denom))
-
-        q = np.linalg.lstsq(basis, snap - offset, rcond=None)[0]
-        w_tilde = offset + basis @ q
-        final_res = np.linalg.norm(w_tilde - snap)
         print("Final residual: {:3.2e}".format(final_res / denom))
 
-        ires = res(w_tilde, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+        ires = res(w_tilde, grid_x, grid_y, dt, w_prev_tilde, mu, Dxec, Dyec)
         Ji = jac(w_tilde, dt, JDxec, JDyec, Eye)
         Wi = Ji @ basis
 
@@ -390,7 +463,7 @@ def compute_ECSW_training_matrix_2D_pod_ann_case2_petrov_galerkin(
     u_ref=None,
 ):
     """
-    ECSW training matrix for POD-ANN Case 2 with enriched residual testing.
+    Build ECM contributions for POD-ANN Case 2 with enriched residual testing.
 
     Uses the Case-2 manifold
 
@@ -440,24 +513,35 @@ def compute_ECSW_training_matrix_2D_pod_ann_case2_petrov_galerkin(
         snap_prev = prev_snaps[:, isnap]
         t_now = float(t_samples[isnap])
 
-        x = torch.tensor([mu1, mu2, t_now], dtype=torch.float32, device=device)
-        with torch.no_grad():
-            qbar = ann_model(x).reshape(-1).detach().cpu().numpy()
+        _, w_tilde, init_res, final_res = _fit_case2_state_to_snapshot(
+            target_snapshot=snap,
+            time_value=t_now,
+            basis=basis,
+            basis2=basis2,
+            ann_model=ann_model,
+            u_ref=u_ref_vec,
+            mu1=mu1,
+            mu2=mu2,
+            device=device,
+        )
+        _, w_prev_tilde, _, _ = _fit_case2_state_to_snapshot(
+            target_snapshot=snap_prev,
+            time_value=t_now - float(dt),
+            basis=basis,
+            basis2=basis2,
+            ann_model=ann_model,
+            u_ref=u_ref_vec,
+            mu1=mu1,
+            mu2=mu2,
+            device=device,
+        )
 
-        offset = u_ref_vec + basis2 @ qbar
-        q0 = _project_reduced_coords(basis, snap - u_ref_vec)
-        w_init = offset + basis @ q0
         snap_norm = np.linalg.norm(snap)
         denom = snap_norm if snap_norm > 0.0 else 1.0
-        init_res = np.linalg.norm(w_init - snap)
         print("Initial residual: {:3.2e}".format(init_res / denom))
-
-        q = np.linalg.lstsq(basis, snap - offset, rcond=None)[0]
-        w_tilde = offset + basis @ q
-        final_res = np.linalg.norm(w_tilde - snap)
         print("Final residual: {:3.2e}".format(final_res / denom))
 
-        ires = res(w_tilde, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+        ires = res(w_tilde, grid_x, grid_y, dt, w_prev_tilde, mu, Dxec, Dyec)
         Ji = jac(w_tilde, dt, JDxec, JDyec, Eye)
         Wi = Ji @ Vtot
 
@@ -534,16 +618,19 @@ def compute_ECSW_training_matrix_2D_pod_ann_case3(
         raise ValueError(f"mu must have length 2, got {mu_vec.shape}")
     tmu = torch.tensor(mu_vec, dtype=torch.float32, device=device)
 
-    for isnap in range(n_snaps):
-        snap = snaps[:, isnap]
-        snap_prev = prev_snaps[:, isnap]
-        t_now = torch.tensor(float(t_samples[isnap]), dtype=torch.float32, device=device)
-        snap_t = torch.tensor(snap, dtype=torch.float32, device=device)
-
-        y = torch.tensor(_project_reduced_coords(basis, snap - u_ref_vec), dtype=torch.float32, device=device)
+    def _fit_snapshot_at_time(snapshot, time_value):
+        """Return a Case-3 manifold fit and tangent at one physical time."""
+        snapshot = np.asarray(snapshot, dtype=np.float64).reshape(-1)
+        t_value_t = torch.tensor(float(time_value), dtype=torch.float32, device=device)
+        snapshot_t = torch.tensor(snapshot, dtype=torch.float32, device=device)
+        y = torch.tensor(
+            _project_reduced_coords(basis, snapshot - u_ref_vec),
+            dtype=torch.float32,
+            device=device,
+        )
 
         def _ann_eval(y_vec):
-            x = torch.cat([y_vec.reshape(-1), tmu, t_now.reshape(1)], dim=0)
+            x = torch.cat([y_vec.reshape(-1), tmu, t_value_t.reshape(1)], dim=0)
             return ann_model(x).reshape(-1)
 
         def decode(y_vec):
@@ -557,18 +644,15 @@ def compute_ECSW_training_matrix_2D_pod_ann_case3(
 
         with torch.no_grad():
             w_rec_t = decode(y)
-        init_res = np.linalg.norm((w_rec_t - snap_t).detach().cpu().numpy()) + 1e-30
+        init_res = np.linalg.norm((w_rec_t - snapshot_t).detach().cpu().numpy()) + 1e-30
         curr_res = init_res
         proj_it = 0
-        snap_norm = np.linalg.norm(snap)
-        denom = snap_norm if snap_norm > 0.0 else 1.0
-        print("Initial residual: {:3.2e}".format(init_res / denom))
 
         while (curr_res / init_res > projection_relnorm_cutoff) and (proj_it < projection_max_its):
             Jf_np = jac_decode(y).detach().cpu().numpy()
             w_rec_np = w_rec_t.detach().cpu().numpy()
 
-            rhs = Jf_np.T @ (w_rec_np - snap)
+            rhs = Jf_np.T @ (w_rec_np - snapshot)
             lhs = Jf_np.T @ Jf_np
             dy = np.linalg.lstsq(lhs, rhs, rcond=None)[0]
 
@@ -576,15 +660,30 @@ def compute_ECSW_training_matrix_2D_pod_ann_case3(
                 y = y - torch.tensor(dy, dtype=y.dtype, device=y.device)
                 w_rec_t = decode(y)
 
-            curr_res = np.linalg.norm((w_rec_t - snap_t).detach().cpu().numpy())
+            curr_res = np.linalg.norm((w_rec_t - snapshot_t).detach().cpu().numpy())
             proj_it += 1
 
-        Jf_np = jac_decode(y).detach().cpu().numpy()
-        w_tilde = w_rec_t.detach().cpu().numpy()
-        final_res = np.linalg.norm(w_tilde - snap)
+        return (
+            y,
+            w_rec_t.detach().cpu().numpy(),
+            jac_decode(y).detach().cpu().numpy(),
+            init_res,
+            curr_res,
+        )
+
+    for isnap in range(n_snaps):
+        snap = snaps[:, isnap]
+        snap_prev = prev_snaps[:, isnap]
+        t_now = float(t_samples[isnap])
+        y, w_tilde, Jf_np, init_res, final_res = _fit_snapshot_at_time(snap, t_now)
+        _, w_prev_tilde, _, _, _ = _fit_snapshot_at_time(snap_prev, t_now - float(dt))
+
+        snap_norm = np.linalg.norm(snap)
+        denom = snap_norm if snap_norm > 0.0 else 1.0
+        print("Initial residual: {:3.2e}".format(init_res / denom))
         print("Final residual: {:3.2e}".format(final_res / denom))
 
-        ires = res(w_tilde, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+        ires = res(w_tilde, grid_x, grid_y, dt, w_prev_tilde, mu, Dxec, Dyec)
         Ji = jac(w_tilde, dt, JDxec, JDyec, Eye)
         Wi = Ji @ Jf_np
 
@@ -617,6 +716,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D(
     min_delta=0.1,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    return_red_coords=False,
 ):
     """
     POD-ANN manifold ROM with decoder
@@ -654,6 +754,12 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D(
         ann_device_after = device
 
     u_ref_t = _to_torch_vector(u_ref_np, dtype=dtype_t, device=device)
+    # Diagnostic closures can expose a time-table correction through this
+    # optional hook. Standard Case-1 models do not implement it.
+    set_time = getattr(ann_model, "set_time", None)
+    if callable(set_time):
+        set_time(0.0)
+
     y0 = _initialize_ann_manifold_coords(
         target_state=w0_np,
         u_ref=u_ref_np,
@@ -697,6 +803,9 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D(
 
     for istep in range(num_steps):
         print(f" ... Working on timestep {istep}")
+
+        if callable(set_time):
+            set_time((istep + 1) * float(dt))
 
         def res(w_np):
             return inviscid_burgers_res2D(
@@ -742,7 +851,10 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D(
         wp = w_t.detach().clone()
         yp = y.detach().clone()
 
-    return snaps, (num_its, jac_time, res_time, ls_time)
+    stats = (num_its, jac_time, res_time, ls_time)
+    if return_red_coords:
+        return snaps, red_coords, stats
+    return snaps, stats
 
 
 def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_ecsw(
@@ -1338,6 +1450,7 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3(
     min_delta=0.1,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    return_red_coords=False,
 ):
     """
     POD-ANN manifold ROM with decoder
@@ -1470,7 +1583,10 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case3(
         wp = w_t.detach().clone()
         yp = y.detach().clone()
 
-    return snaps, (num_its, jac_time, res_time, ls_time)
+    stats = (num_its, jac_time, res_time, ls_time)
+    if return_red_coords:
+        return snaps, red_coords, stats
+    return snaps, stats
 
 
 def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_ecsw(
@@ -1713,7 +1829,9 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin_ecsw(
     JDyec_ecsw = JDyec[sample_inds, :][:, augmented_sample].tocsr()
 
     sample_weights_cells = weights[sample_inds]
-    weights_full = np.concatenate((sample_weights_cells, sample_weights_cells)).astype(np.float64)
+    sqrt_weights_full = _sqrt_ecm_weights(
+        np.concatenate((sample_weights_cells, sample_weights_cells)).astype(np.float64)
+    )
     idx = np.concatenate((augmented_sample, n_cells + augmented_sample))
 
     V_global = np.asarray(basis.detach().cpu().numpy() if hasattr(basis, "detach") else basis, dtype=np.float64)
@@ -1807,11 +1925,11 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin_ecsw(
             jac_time += time.time() - t0
 
             t0 = time.time()
-            rw = weights_full * r
+            rw = sqrt_weights_full * r
             JV = J @ V_loc
             JVTOT = J @ Vtot_loc
-            JVw = weights_full[:, None] * JV
-            JVTOTw = weights_full[:, None] * JVTOT
+            JVw = sqrt_weights_full[:, None] * JV
+            JVTOTw = sqrt_weights_full[:, None] * JVTOT
 
             s = JVTOTw.T @ rw
             snorm = np.linalg.norm(s)

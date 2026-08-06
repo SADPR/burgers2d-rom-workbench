@@ -1,0 +1,39 @@
+benchmark: repeated loaded direct-map forward inference
+campaign_root: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_enrichment_ext25_lhs36
+device: cpu
+repeats_per_point: 10
+warmup_per_point: 3
+time_steps_per_trajectory: 501
+timed_operation: coefficient prediction only; excludes checkpoint loading, state reconstruction, HDM, and file I/O
+
+podnn_model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_enrichment_ext25_lhs36/Stage3/models/data_driven_ann_ntot151_best.pt
+podnn_trainable_parameters: 565399
+podnn_output_shape: (501, 151)
+podnn_all_points_mean_inference_time_s: 7.550364010967e-03
+podnn_all_points_std_inference_time_s: 1.856968715753e-05
+podnn_all_points_min_inference_time_s: 7.522623986006e-03
+podnn_all_points_max_inference_time_s: 7.629597559571e-03
+podnn_verification_mean_inference_time_s: 7.555804308504e-03
+podnn_verification_std_inference_time_s: 2.851015743033e-05
+podnn_offgrid1_mean_inference_time_s: 7.548138406128e-03
+podnn_offgrid1_std_inference_time_s: 1.253359503296e-05
+podnn_offgrid2_mean_inference_time_s: 7.547606620938e-03
+podnn_offgrid2_std_inference_time_s: 1.655932589062e-05
+podnn_extrapolation20pct_mean_inference_time_s: 7.549906708300e-03
+podnn_extrapolation20pct_std_inference_time_s: 1.425050085333e-05
+
+poddl_model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_hprom_enrichment_ext25_lhs36/Stage3/models/pod_dl_data_driven_ntot151_best.pt
+poddl_trainable_parameters: 952747
+poddl_output_shape: (501, 151)
+poddl_all_points_mean_inference_time_s: 1.004485350568e-02
+poddl_all_points_std_inference_time_s: 9.042802560077e-05
+poddl_all_points_min_inference_time_s: 1.000926177949e-02
+poddl_all_points_max_inference_time_s: 1.059778779745e-02
+poddl_verification_mean_inference_time_s: 1.009271601215e-02
+poddl_verification_std_inference_time_s: 1.779590255834e-04
+poddl_offgrid1_mean_inference_time_s: 1.003254065290e-02
+poddl_offgrid1_std_inference_time_s: 1.068561073229e-05
+poddl_offgrid2_mean_inference_time_s: 1.002678293735e-02
+poddl_offgrid2_std_inference_time_s: 1.106861341061e-05
+poddl_extrapolation20pct_mean_inference_time_s: 1.002737442032e-02
+poddl_extrapolation20pct_std_inference_time_s: 1.060390918850e-05

@@ -1,0 +1,36 @@
+model_name: pod_dl_data_driven_ntot151_best.pt
+model_path: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Stage3/models/pod_dl_data_driven_ntot151_best.pt
+dataset_dir: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Stage2/prom_coeff_dataset_ntot151_enriched_lhs8
+dataset_root: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/mlspg_prom_enrichment_ext25_lhs8_nested/Stage2/prom_coeff_dataset_ntot151_enriched_lhs8/per_mu
+dataset_ntot: 151
+dataset_backend: prom
+samples_M: 8517
+in_dim: 3
+q_dim: 151
+latent_dim: 10
+encoder_hidden_dims: (512, 256)
+decoder_hidden_dims: (256, 512)
+dynamics_hidden_dims: (256, 512, 512, 256)
+activation: silu
+x_scaling: zscore
+q_scaling: zscore
+omega_data: 1.0
+omega_latent: 0.03
+omega_recon: 0.01
+detach_encoder_target: False
+pretrain_epochs: 300
+batch_size: 128
+lr: 0.0005
+weight_decay: 1e-06
+lr_scheduler: ReduceLROnPlateau
+lr_scheduler_factor: 0.5
+lr_scheduler_patience: 50
+lr_scheduler_min_lr: 1e-06
+trainable_parameters: 952747
+epochs_ran: 7000
+best_val_total: 0.015328019857406616
+train_rel_frob_percent: 0.34826365299522877
+val_rel_frob_percent: 0.36156545393168926
+elapsed_s: 16818.858615636826
+seed: 42
+device: cpu

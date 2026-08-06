@@ -385,8 +385,10 @@ def compute_ECSW_training_matrix_2D_gplvm(
     inverse_loss="linear",
     inverse_f_scale=1.0,
 ):
-    """
-    ECSW training matrix for global POD-GPLVM ROM.
+    """Build ECM contributions for the global POD--GPLVM manifold.
+
+    The backward-Euler residual is evaluated between two GPLVM-manifold fits,
+    consistently with the states advanced by the online latent HPROM.
     """
     snaps = np.asarray(snaps, dtype=np.float64)
     prev_snaps = np.asarray(prev_snaps, dtype=np.float64)
@@ -415,22 +417,21 @@ def compute_ECSW_training_matrix_2D_gplvm(
 
     Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
 
-    for isnap in range(n_snaps):
-        snap = snaps[:, isnap]
-        snap_prev = prev_snaps[:, isnap]
+    def decode_loc(z):
+        return decode_gplvm(z, gplvm_model, basis_q, u_ref=u_ref)
 
-        def decode_loc(z):
-            return decode_gplvm(z, gplvm_model, basis_q, u_ref=u_ref)
+    def jac_loc(z):
+        return jac_gplvm(z, gplvm_model, basis_q)
 
-        def jac_loc(z):
-            return jac_gplvm(z, gplvm_model, basis_q)
-
+    def _fit_snapshot(snapshot):
+        """Return the bounded or Gauss--Newton GPLVM fit of one state."""
+        snapshot = np.asarray(snapshot, dtype=np.float64).reshape(-1)
         mode = str(inverse_method).strip().lower()
         if mode == "gauss_newton":
-            z0 = _initial_latent_from_state(snap, basis_q, u_ref, gplvm_model)
+            z0 = _initial_latent_from_state(snapshot, basis_q, u_ref, gplvm_model)
             z = _gauss_newton_decoder_inverse(
                 z_init=z0,
-                target_state=snap,
+                target_state=snapshot,
                 decode_func=decode_loc,
                 jac_func=jac_loc,
                 max_its=max_local_its,
@@ -440,7 +441,7 @@ def compute_ECSW_training_matrix_2D_gplvm(
             )
         else:
             z_seeds = _initial_latent_seeds_from_state(
-                snap,
+                snapshot,
                 basis_q,
                 u_ref,
                 gplvm_model,
@@ -448,7 +449,7 @@ def compute_ECSW_training_matrix_2D_gplvm(
             )
             z, _, _, _ = _bounded_decoder_inverse_multistart(
                 z_seeds=z_seeds,
-                target_state=snap,
+                target_state=snapshot,
                 decode_func=decode_loc,
                 jac_func=jac_loc,
                 lb=z_lb,
@@ -460,9 +461,15 @@ def compute_ECSW_training_matrix_2D_gplvm(
                 f_scale=inverse_f_scale,
             )
 
-        w_rec = decode_loc(z)
+        return z, decode_loc(z)
 
-        ires = res(w_rec, grid_x, grid_y, dt, snap_prev, mu, Dxec, Dyec)
+    for isnap in range(n_snaps):
+        snap = snaps[:, isnap]
+        snap_prev = prev_snaps[:, isnap]
+        z, w_rec = _fit_snapshot(snap)
+        _, w_prev_rec = _fit_snapshot(snap_prev)
+
+        ires = res(w_rec, grid_x, grid_y, dt, w_prev_rec, mu, Dxec, Dyec)
         Ji = jac(w_rec, dt, JDxec, JDyec, Eye)
         V = jac_loc(z)
         Wi = Ji @ V

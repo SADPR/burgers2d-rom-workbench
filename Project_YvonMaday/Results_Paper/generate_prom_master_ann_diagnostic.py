@@ -58,7 +58,9 @@ POINT_COLORS = {
     "offgrid2": METHOD_COLORS["case3"],
     "extrapolation20pct": METHOD_COLORS["podae"],
 }
-N_SWEEP = (0, 3, 5, 10, 20, 30, 50, 100, 151)
+# Report the production-scale dimensions only.  The raw n=3 and n=5 runs are
+# retained on disk, but are intentionally omitted from the manuscript sweep.
+N_SWEEP = (0, 10, 20, 30, 50, 100, 151)
 N_COEFF_SWEEP = tuple(n for n in N_SWEEP if n != NTOT)
 
 
@@ -268,8 +270,19 @@ def plot_n_sweep_state_errors(rows: list[dict[str, object]]) -> Path:
             label=rf"{p.label}: $\mu=({p.mu1:.3f},{p.mu2:.4f})$",
         )
 
-    mean_curve = np.mean(np.asarray(all_vals, dtype=float), axis=0)
-    ax.plot(ns, mean_curve, marker="s", linewidth=2.7, markersize=5.5, color="black", label="Mean")
+    # Match the HPROM diagnostic: the aggregate curve is the in-domain mean
+    # over verification plus the two off-grid points.  The extrapolatory point
+    # remains visible as its own curve and is not folded into that average.
+    in_domain_mean = np.mean(np.asarray(all_vals[:3], dtype=float), axis=0)
+    ax.plot(
+        ns,
+        in_domain_mean,
+        marker="s",
+        linewidth=2.7,
+        markersize=5.5,
+        color="black",
+        label="in-domain mean",
+    )
     ax.axvline(0, color="0.55", linewidth=1.0, linestyle=":")
     ax.axvline(NTOT, color="0.55", linewidth=1.0, linestyle=":")
     ax.set_xticks(list(N_SWEEP))
