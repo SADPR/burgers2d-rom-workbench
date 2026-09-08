@@ -1,0 +1,627 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage[hypertexnames=false]{hyperref}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage[section]{placeins}
+\usepackage{array}
+\setlength{\emergencystretch}{1.5em}
+
+\newcommand{\q}{\mathbf q}
+\newcommand{\qp}{\mathbf q_p}
+\newcommand{\qs}{\mathbf q_s}
+\newcommand{\uvec}{\mathbf u}
+\newcommand{\mub}{\bm\mu}
+\newcommand{\z}{\mathbf z}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+
+\title{\vspace{-1.5em}Learned closures and nonlinear manifolds for parametric projection-based reduced models}
+\author{S. Ares de Parga, H. Ballout, Y. Maday, H. Hassan}
+\date{\today}
+
+\begin{document}
+\maketitle
+\vspace{-1.0em}
+
+\begin{abstract}
+We compare learned closures and nonlinear manifolds for parametric
+projection-based reduced-order models of a nonlinear time-dependent system.
+All models use a common Euclidean proper-orthogonal-decomposition (POD)
+coordinate system and are trained from full-residual linear
+projection-based reduced-order model (PROM) trajectories.  The comparison
+includes state-conditioned, parameter--time-conditioned, and hybrid
+\textsc{PROM-ANN} closures; an intrusive \textsc{PROM-POD-AE} decoder
+manifold; a non-intrusive \textsc{POD-NN-ROM} direct coefficient map; and a
+non-intrusive latent \textsc{POD-DL-ROM}.
+
+The numerical study uses a parametric two-dimensional inviscid Burgers
+benchmark.  The intrusive models all minimize the same time-discrete residual,
+but over different learned trial maps.  A shared parameter--time map gives a
+controlled sweep from a non-intrusive POD--NN--ROM endpoint to the
+full-coordinate linear PROM.  A complementary tail-perturbation diagnostic
+quantifies how a prescribed Case--2 secondary-coordinate error transfers to
+the residual-solved primary coordinates.  We also state the empirical
+cubature method (ECM) formulation required for a future HPROM extension; all
+numerical results reported here are full-residual PROM results.
+\end{abstract}
+
+\vspace{-0.8em}
+
+\section{Introduction}
+\label{sec:introduction}
+Projection-based model order reduction (PMOR) reduces a high-dimensional model
+while retaining its governing residual and its parameter dependence
+\cite{antoulas2005approximation,quarteroni2014reduced}.  For nonlinear,
+transport-dominated systems, an accurate linear subspace may nevertheless
+require many coordinates.  Nonlinear trial manifolds, learned closures, and
+latent representations seek to reduce the number of online unknowns without
+discarding the projection principle
+\cite{barnett2023neural,cohen2023nonlinear,aghili2026nonlinear}.
+
+This work compares intrusive closure-enhanced PROMs (PROM--ANN), an intrusive
+decoder manifold (PROM--POD--AE), a non-intrusive direct coefficient map
+(POD--NN--ROM), and a non-intrusive latent map (POD--DL--ROM).  PROM means
+that the full time-discrete residual is minimized online.  It is not
+synonymous with a generic ROM: the non-intrusive baselines do not evaluate a
+residual online.  Likewise, the HPROM formulation below is a sampled-residual
+extension of PROM, not a second name for the same computation.
+
+The reported campaign uses a standard Euclidean POD basis and a common
+full-residual linear PROM teacher.  This permits a direct comparison between
+Case~2, which prescribes a learned secondary-coordinate tail but solves a
+primary coordinate block, and POD--NN--ROM, which predicts the full coordinate
+vector from the same parameter--time map.  Hyperreduction is developed
+explicitly because an ECM rule must be tied to the trial manifold and its LSPG
+tangent; HPROM numerical results are deliberately deferred until the
+corresponding campaign is available.
+
+\section{Projection Framework}
+\label{sec:projection-framework}
+\subsection{Time-discrete residual and Euclidean POD basis}
+Consider a parametric nonlinear semi-discrete initial-value problem
+\begin{equation}
+\mathbf M(\mub)\dot{\uvec}(t;\mub)+\mathbf f(\uvec(t;\mub);\mub)
+-\mathbf g(t;\mub)=\mathbf0,\qquad \uvec(0;\mub)=\uvec_0(\mub),
+\label{eq:ivp}
+\end{equation}
+with $\mub\in\mathcal D$.  For the selected implicit integrator, let
+$\mathbf r^{m+1}(\uvec;\mub)$ be the residual at step $m+1$, so the HDM solves
+\begin{equation}
+\mathbf r^{m+1}(\uvec^{m+1};\mub)=\mathbf0.
+\label{eq:discrete-residual}
+\end{equation}
+Let $\uvec_{\mathrm{ref}}$ be the snapshot mean and let $\mathbf S_c$ collect
+centered HDM snapshots.  Its thin singular-value decomposition
+\begin{equation}
+\mathbf S_c=\mathbf U\boldsymbol\Sigma\mathbf Y^T
+\end{equation}
+defines the Euclidean POD basis
+\begin{equation}
+\mathbf V_{\mathrm{tot}}=\mathbf U(:,1:n_{\mathrm{tot}}),\qquad
+\mathbf V_{\mathrm{tot}}^T\mathbf V_{\mathrm{tot}}=\mathbf I.
+\label{eq:euclidean-pod}
+\end{equation}
+The affine reconstruction is
+\begin{equation}
+\widetilde{\uvec}(t;\mub)=\uvec_{\mathrm{ref}}+
+\mathbf V_{\mathrm{tot}}\q_N(t;\mub),\qquad
+\q_N\in\mathbb R^{n_{\mathrm{tot}}}.
+\label{eq:linear-reconstruction}
+\end{equation}
+
+\subsection{Linear PROM and LSPG reference}
+The full-residual linear PROM is the time-discrete least-squares
+Petrov--Galerkin (LSPG) problem
+\begin{equation}
+\q_N^{m+1}(\mub)=\arg\min_{\mathbf x\in\mathbb R^{n_{\mathrm{tot}}}}
+\norm{\mathbf r^{m+1}(\uvec_{\mathrm{ref}}+
+\mathbf V_{\mathrm{tot}}\mathbf x;\mub)}_2^2.
+\label{eq:linear-prom}
+\end{equation}
+At a Gauss--Newton iterate, define
+\begin{equation}
+\mathbf J=\frac{\partial\mathbf r}{\partial\uvec},\qquad
+\mathbf T_N=\mathbf V_{\mathrm{tot}},\qquad
+\mathbf W_N=\mathbf J\mathbf T_N.
+\end{equation}
+The increment solves
+\begin{equation}
+\mathbf W_N^T\mathbf W_N\Delta\q_N=-\mathbf W_N^T\mathbf r.
+\label{eq:linear-prom-gn}
+\end{equation}
+Equation~\eqref{eq:linear-prom} generates all training targets in the PROM
+campaign.
+
+\subsection{Linear HPROM and ECM formulation}
+\label{sec:linear-hprom}
+This subsection fixes the hyperreduction formulation needed for the later
+HPROM campaign.  Let $\mathcal E=\{e_i\}_{i=1}^{N_e}$ be the mesh entities and
+assemble the residual from local contributions,
+\begin{equation}
+\mathbf r^{m+1}(\uvec;\mub)=\sum_{e_i\in\mathcal E}\mathbf L_{e_i}^T
+\mathbf r_{e_i}^{m+1}(\mathbf L_{e_i^+}\uvec;\mub).
+\label{eq:entity-residual}
+\end{equation}
+Here $\mathbf L_{e_i}$ extracts residual degrees of freedom and
+$\mathbf L_{e_i^+}$ extracts the stencil required for evaluation.  The
+projected LSPG residual and Gauss--Newton matrix are entity sums,
+\begin{equation}
+\begin{aligned}
+\mathbf g_N&=\mathbf W_N^T\mathbf r
+=\sum_{e_i\in\mathcal E}(\mathbf L_{e_i}\mathbf W_N)^T
+\mathbf r_{e_i}(\mathbf L_{e_i^+}\boldsymbol\phi_N;\mub),\\
+\mathbf J_N&=\mathbf W_N^T\mathbf J\mathbf T_N
+=\sum_{e_i\in\mathcal E}(\mathbf L_{e_i}\mathbf W_N)^T
+\mathbf J_{e_i}(\mathbf L_{e_i^+}\mathbf T_N),
+\end{aligned}
+\label{eq:linear-entity-normal-equations}
+\end{equation}
+where $\boldsymbol\phi_N(\q_N)=\uvec_{\mathrm{ref}}+
+\mathbf V_{\mathrm{tot}}\q_N$.  ECM selects a reduced set
+$\widetilde{\mathcal E}_N$ and positive weights $\xi_{N,e_i}$ that replace
+both sums by weighted sums over $\widetilde{\mathcal E}_N$.
+
+For a selected parameter--time state $s$, the contribution of entity $e_i$ is
+\begin{equation}
+\mathbf c_{N,e_i}^{(s)}=(\mathbf L_{e_i}\mathbf W_{N,s})^T
+\mathbf r_{e_i}(\mathbf L_{e_i^+}\boldsymbol\phi_N(\q_{N,s});\mub_s).
+\label{eq:linear-ecm-contribution}
+\end{equation}
+Stacking these vectors gives $\mathbf C_N$ and
+$\mathbf b_N=\mathbf C_N\mathbf1$.  ECM seeks
+\begin{equation}
+\boldsymbol\xi_N=\arg\min_{\boldsymbol\zeta\geq\mathbf0}
+\norm{\mathbf C_N\boldsymbol\zeta-\mathbf b_N}_2^2,\qquad
+\widetilde{\mathcal E}_N=\{e_i\in\mathcal E:\xi_{N,e_i}>0\}.
+\label{eq:linear-ecm}
+\end{equation}
+We use ECM in the sense of empirical cubature
+\cite{hernandez2017dimensional,hernandez2020multiscale}.  ECSW is another
+project--then--approximate hyperreduction strategy
+\cite{farhat2015structure}; it is not the rule used here.
+
+\section{Learned Reduced Representations}
+\label{sec:learned-representations}
+\subsection{PROM--ANN closures}
+Partition the common POD basis and coordinate vector as
+\begin{equation}
+\mathbf V_{\mathrm{tot}}=[\mathbf V\ \overline{\mathbf V}],\qquad
+\q_N=\begin{bmatrix}\qp\\\qs\end{bmatrix},\qquad
+n+\bar n=n_{\mathrm{tot}}.
+\label{eq:partition}
+\end{equation}
+PROM--ANN supplies the secondary block through a learned relation
+\begin{equation}
+\qs=\mathcal F(\qp,\mub,t),\qquad
+\boldsymbol\phi_{\mathcal F}(\qp;\mub,t)=\uvec_{\mathrm{ref}}+
+\mathbf V\qp+\overline{\mathbf V}\mathcal F(\qp,\mub,t).
+\label{eq:closure-manifold}
+\end{equation}
+The network provides reduced secondary coordinates, not a direct HDM state
+approximation.  The primary coordinates remain online unknowns of a residual
+minimization.  This is the neural-network-augmented projection construction
+of \cite{barnett2023neural}; analogous closure roles have also been
+represented by non-neural regressors \cite{ares2026closure}.
+
+The three cases are information patterns in this common construction:
+\begin{align}
+\text{Case 1:}\quad&\qs=\mathcal N(\qp),&
+\text{Case 2:}\quad&\qs=\mathcal M(\mub,t),&
+\text{Case 3:}\quad&\qs=\mathcal H(\qp,\mub,t).
+\label{eq:closure-cases}
+\end{align}
+Case~1 is state-conditioned, Case~2 parameter--time-conditioned, and Case~3
+combines both inputs.  The LSPG problem is
+\begin{equation}
+\qp^{m+1}(\mub)=\arg\min_{\mathbf x\in\mathbb R^n}
+\norm{\mathbf r^{m+1}(\boldsymbol\phi_{\mathcal F}
+(\mathbf x;\mub,t^{m+1});\mub)}_2^2,
+\label{eq:closure-lspg}
+\end{equation}
+with tangent
+\begin{equation}
+\mathbf T_{\mathcal F}=\mathbf V+\overline{\mathbf V}
+\frac{\partial\mathcal F}{\partial\qp},\qquad
+\mathbf W_{\mathcal F}=\mathbf J\mathbf T_{\mathcal F}.
+\label{eq:closure-tangent}
+\end{equation}
+For Case~2, $\partial\mathcal M/\partial\qp=\mathbf0$ and
+$\mathbf T_{\mathcal M}=\mathbf V$.  Its tangent is therefore the cheapest,
+but its prescribed secondary block is not corrected through a
+state-dependent tangent.
+
+\subsection{PROM--POD--AE and intrusive trial maps}
+An autoencoder maps the complete linear coordinate vector through a latent
+variable,
+\begin{equation}
+\z=\mathcal E(\q_N),\qquad
+\widehat{\q}_N=\mathcal D(\z),\qquad \z\in\mathbb R^{n_z}.
+\end{equation}
+PROM--POD--AE uses the decoder as an intrusive nonlinear trial manifold,
+\begin{equation}
+\boldsymbol\phi_{\mathrm{AE}}(\z)=\uvec_{\mathrm{ref}}+
+\mathbf V_{\mathrm{tot}}\mathcal D(\z),\qquad
+\mathbf T_{\mathrm{AE}}=\mathbf V_{\mathrm{tot}}
+\frac{\partial\mathcal D}{\partial\z}.
+\label{eq:podae-manifold}
+\end{equation}
+Its latent coordinate minimizes the same residual as
+\eqref{eq:closure-lspg}, but over $\z$ rather than $\qp$.  This is distinct
+from POD--DL--ROM, which is non-intrusive.
+
+\begin{table}[H]
+\centering
+\caption{Trial decoders and tangent bases of the intrusive models.  Every row
+minimizes the same time-discrete residual over its displayed online variable.}
+\label{tab:trial-maps}
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}l c l l@{}}
+\toprule
+Model & Online variable & Trial decoder & Tangent \\
+\midrule
+Linear PROM/HPROM & $\q_N$ & $\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\q_N$ & $\mathbf V_{\mathrm{tot}}$ \\
+PROM--ANN Case 1 & $\qp$ & $\uvec_{\mathrm{ref}}+\mathbf V\qp+\overline{\mathbf V}\mathcal N(\qp)$ & $\mathbf V+\overline{\mathbf V}\,\partial\mathcal N/\partial\qp$ \\
+PROM--ANN Case 2 & $\qp$ & $\uvec_{\mathrm{ref}}+\mathbf V\qp+\overline{\mathbf V}\mathcal M(\mub,t)$ & $\mathbf V$ \\
+PROM--ANN Case 3 & $\qp$ & $\uvec_{\mathrm{ref}}+\mathbf V\qp+\overline{\mathbf V}\mathcal H(\qp,\mub,t)$ & $\mathbf V+\overline{\mathbf V}\,\partial\mathcal H/\partial\qp$ \\
+PROM--POD--AE & $\z$ & $\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\z)$ & $\mathbf V_{\mathrm{tot}}\,\partial\mathcal D/\partial\z$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Model-specific ECM construction}
+\label{sec:nonlinear-ecm}
+The HPROM extension does not reuse the linear rule in \eqref{eq:linear-ecm}.
+For any intrusive map $\boldsymbol\phi_c$ and tangent $\mathbf T_c$, the
+entity contributions use $\mathbf W_c=\mathbf J\mathbf T_c$.  A manifold
+coordinate is first fitted at every selected HDM state,
+\begin{equation}
+\mathbf y_{c,s}=\arg\min_{\mathbf y}\norm{\uvec_s^{m_s+1}-
+\boldsymbol\phi_c(\mathbf y;\mub_s,t^{m_s+1})}_2^2.
+\label{eq:nonlinear-manifold-fit}
+\end{equation}
+For Case~2 this is linear least squares after subtracting the prescribed tail,
+\begin{equation}
+{\qp}_{2,s}=\mathbf V^\dagger\left[
+\uvec_s^{m_s+1}-\uvec_{\mathrm{ref}}-
+\overline{\mathbf V}\mathcal M(\mub_s,t^{m_s+1})\right].
+\label{eq:case2-ecm-fit}
+\end{equation}
+For Cases~1 and~3 and for the decoder manifold, it is nonlinear least
+squares, for example with the Gauss--Newton update
+\begin{equation}
+\mathbf y_{c,s}^{(k+1)}=\mathbf y_{c,s}^{(k)}-
+\left[\frac{\partial\boldsymbol\phi_c}{\partial\mathbf y}\right]^\dagger
+\left[\boldsymbol\phi_c(\mathbf y_{c,s}^{(k)};\mub_s,t^{m_s+1})-
+\uvec_s^{m_s+1}\right].
+\label{eq:nonlinear-manifold-fit-gn}
+\end{equation}
+At the fitted state,
+\begin{equation}
+\mathbf c_{c,e_i}^{(s)}=(\mathbf L_{e_i}\mathbf W_{c,s})^T
+\mathbf r_{e_i}(\mathbf L_{e_i^+}
+\boldsymbol\phi_c(\mathbf y_{c,s};\mub_s,t^{m_s+1});\mub_s).
+\label{eq:nonlinear-ecm-contribution}
+\end{equation}
+Stacking these vectors produces $\mathbf C_c$ and
+$\mathbf b_c=\mathbf C_c\mathbf1$ as in \eqref{eq:linear-ecm}; a positive
+ECM rule is then computed for each map.  The trained closure or decoder, its
+tangent, and the parameter--time sample set are therefore part of a rule.  A
+linear-HPROM rule, or one built for a different nonlinear map, cannot be
+reused \cite{hernandez2017dimensional,hernandez2020multiscale,de2023hyper}.
+
+\subsection{Non-intrusive reference models}
+POD--NN--ROM is a direct map
+\begin{equation}
+\q_N(t;\mub)\approx\mathcal G_q(\mub,t),
+\label{eq:podnn}
+\end{equation}
+and does not solve a residual online.  POD--DL--ROM uses a learned latent map
+and decoder,
+\begin{equation}
+\z(t;\mub)\approx\mathcal G_z(\mub,t),\qquad
+\q_N(t;\mub)\approx\mathcal D(\mathcal G_z(\mub,t)),
+\label{eq:poddl}
+\end{equation}
+following the POD--DL--ROM principle \cite{fresca2022pod}.  These are direct
+reduced-coordinate regressors, not PROM residual solves.
+
+\section{Benchmark and PROM Protocol}
+\label{sec:benchmark}
+\subsection{Burgers problem and discretization}
+We use the two-dimensional parametric inviscid Burgers benchmark of
+\cite{barnett2023neural},
+\begin{equation}
+\frac{\partial\mathbf U}{\partial t}+
+\frac{\partial\mathbf F(\mathbf U)}{\partial x}+
+\frac{\partial\mathbf G(\mathbf U)}{\partial y}=\mathbf S(x;\mub),\qquad
+\mathbf U=\begin{bmatrix}u_x\\u_y\end{bmatrix},
+\end{equation}
+where
+\begin{equation}
+\mathbf F(\mathbf U)=\begin{bmatrix}\tfrac12u_x^2\\\tfrac12u_xu_y\end{bmatrix},
+\quad\mathbf G(\mathbf U)=\begin{bmatrix}\tfrac12u_xu_y\\\tfrac12u_y^2\end{bmatrix},
+\quad\mathbf S(x;\mub)=\begin{bmatrix}0.02\exp(\mu_2x)\\0\end{bmatrix}.
+\end{equation}
+The domain is $[0,100]^2$, $T_f=25$, and
+$\mathcal D=[4.25,5.50]\times[0.015,0.03]$.  The HDM uses a cell-centered
+finite-volume Godunov discretization on a $250\times250$ grid
+($N=125{,}000$) and $500$ uniform time steps with $\Delta t=0.05$.
+
+\subsection{Data, validation, and online points}
+Nine HDM trajectories on a $3\times3$ tensor grid define the centered
+snapshot matrix for the Euclidean POD.  We retain $n_{\mathrm{tot}}=151$
+modes, which capture $99.9900\%$ of its energy.  At these same nine parameters
+we solve the full-residual linear PROM.  The resulting PROM-generated
+trajectories, rather than HDM snapshots orthogonally projected after the fact,
+are the learning targets for every model.  This comparison-control choice
+aligns every learned model with the reduced optimality problem used as its
+teacher; it is not the conventional purely non-intrusive workflow, which
+typically uses projected HDM labels.
+
+Two complete 151-coordinate linear-PROM trajectories are reserved before
+training,
+\begin{equation}
+\mub^{\mathrm{val},1}=(4.5625,0.02625),\qquad
+\mub^{\mathrm{val},2}=(5.1875,0.01875).
+\label{eq:validation-points}
+\end{equation}
+Because each held-out parameter contains all time samples, this is a
+parameter-generalization test rather than a random time-snapshot split.  The
+four online evaluations are
+\begin{equation}
+\begin{aligned}
+\mub^{(v)}&=(4.875,0.0225),&
+\mub^{(1)}&=(4.560,0.0190),\\
+\mub^{(2)}&=(5.190,0.0260),&
+\mub^{(3)}&=(4.000,0.0330).
+\end{aligned}
+\label{eq:evaluation-points}
+\end{equation}
+The first three are in-domain and $\mub^{(3)}$ is extrapolatory.  The
+validation locations are neither training nor online evaluation points.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.66\textwidth]{Figures/euclidean_prom_only/euclidean_prom_parameter_space.png}
+\caption{Euclidean-POD PROM data layout.  Black circles are the nine HDM and
+linear-PROM training parameters; purple diamonds are the two held-out
+linear-PROM parameter-validation trajectories; red stars are the four online
+evaluation points.  Validation targets are used only for regression model
+selection and are unrelated to the reported online tests.}
+\label{fig:parameter-space}
+\end{figure}
+
+\subsection{Model training and shared Case--2 map}
+All networks use the same $4509$ training and $1002$ external-validation
+parameter--time samples.  Case~1 and Case~3 use $n=10$ primary coordinates;
+PROM--POD--AE and POD--DL--ROM use $n_z=10$.  The architectures and reduced
+coordinate errors are reported in Table~\ref{tab:training}.
+\begin{table}[H]
+\centering
+\caption{Training and held-out parameter-validation errors in reduced
+coordinates.  The master map is shared between the Case--2 tail and the
+POD--NN--ROM direct endpoint.}
+\label{tab:training}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_training_errors.tex}}
+\end{table}
+
+For the controlled Case--2 comparison, one master map is trained as
+\begin{equation}
+\mathcal G_q:(\mub,t)\longmapsto\widehat{\q}_{151}.
+\label{eq:master-map}
+\end{equation}
+For primary dimension $n$, Case~2 inserts
+$\qs=\mathbf P_{>n}\mathcal G_q(\mub,t)$ into the residual solve, whereas
+POD--NN--ROM uses the entire vector directly.  Thus $n=0$ is exactly the
+POD--NN--ROM endpoint from this same trained map, and $n=151$ is the linear
+PROM endpoint.  The shared-map construction is a diagnostic control, not a
+restriction of the general Case--2 formulation.
+
+\subsection{Reported errors}
+For each evaluation parameter, the state error is
+\begin{equation}
+e_u(\mub)=100\frac{\norm{\uvec_{\mathrm{HDM}}-\uvec_{\mathrm{ROM}}}_F}
+{\norm{\uvec_{\mathrm{HDM}}}_F},
+\label{eq:state-error}
+\end{equation}
+and the coefficient error against the full linear PROM trajectory is
+\begin{equation}
+e_q(\mub)=100\frac{\norm{\q_{151}^{\mathrm{lin}}-\widehat{\q}_{151}}_F}
+{\norm{\q_{151}^{\mathrm{lin}}}_F}.
+\label{eq:coefficient-error}
+\end{equation}
+The linear PROM is an accuracy reference for the fixed basis and full
+residual, not a universal lower bound with respect to the HDM.
+
+\section{Euclidean-POD PROM Results}
+\label{sec:prom-results}
+\subsection{Baseline state accuracy and solution fields}
+Table~\ref{tab:online-state} reports space--time state errors.  The linear
+PROM remains below $0.5\%$ at the three in-domain points.  Among the learned
+intrusive models, Case~3 and PROM--POD--AE remain closest to that reference in
+domain.  Case~2 improves on the direct POD--NN--ROM endpoint at all four
+points, but its prescribed tail remains visible, particularly away from the
+training grid.  POD--DL--ROM is the closer of the two non-intrusive baselines
+in this campaign.
+
+\begin{table}[H]
+\centering
+\caption{Online state errors $100\norm{\uvec_{\mathrm{HDM}}-\uvec_{\mathrm{ROM}}}_F/
+\norm{\uvec_{\mathrm{HDM}}}_F$.  The mean averages the three in-domain
+points.  The horizontal rule separates intrusive residual-minimizing models
+from non-intrusive maps.}
+\label{tab:online-state}
+\resizebox{0.94\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_online_state_errors.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_solution_overlays.png}
+\caption{Final-time solution cut-plane overlays for the Euclidean-POD PROM
+campaign.  Fainter solid curves show two intermediate times.  Every intrusive
+curve uses the full residual; the two non-intrusive curves are direct reduced
+coordinate predictions.}
+\label{fig:solution-overlays}
+\end{figure}
+
+\subsection{Coefficient diagnostics}
+Table~\ref{tab:online-coefficients} and Fig.~\ref{fig:coefficient-curves}
+compare each complete coordinate history with its 151-coordinate linear-PROM
+counterpart.  The vertical line marks the $n=10$ primary/secondary split used
+by PROM--ANN.  The direct maps are kept in the same figures and tables as the
+intrusive models, with an explicit separator, because all use the same
+linear-PROM coordinate teacher in this campaign.
+
+\begin{table}[H]
+\centering
+\caption{Relative coefficient-history errors $e_q$ against the corresponding
+linear PROM.  The horizontal rule separates intrusive and non-intrusive
+models, consistently with Table~\ref{tab:online-state}.}
+\label{tab:online-coefficients}
+\resizebox{0.94\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_online_coefficient_errors.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_coefficient_abs_rel_errors.png}
+\caption{Per-coefficient absolute (top) and relative (bottom) errors against
+the 151-coordinate linear PROM.  All panels in each row share the same
+logarithmic ordinate range.  The dotted vertical line marks coefficient 10;
+all model curves are solid.}
+\label{fig:coefficient-curves}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_coefficient_abs_heatmaps.png}
+\caption{Absolute coefficient errors over time.  Complete model names
+distinguish the intrusive PROM--POD--AE model from the non-intrusive
+POD--DL--ROM.  The dotted white line marks the $n=10$ primary split.}
+\label{fig:coefficient-absolute-heatmaps}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_coefficient_rel_heatmaps.png}
+\caption{Relative coefficient errors over time, using the same ordering and
+coordinate split as Fig.~\ref{fig:coefficient-absolute-heatmaps}.}
+\label{fig:coefficient-relative-heatmaps}
+\end{figure}
+
+\subsection{Case--2 solved-dimension sweep}
+\label{sec:case2-sweep}
+The shared master map permits an interpolation between a direct parameter--time
+regression and the full-coordinate linear PROM.  Table~\ref{tab:case2-sweep}
+and Fig.~\ref{fig:case2-sweep-state} show that increasing $n$ reduces state
+error, with the sharpest improvement between $n=50$ and $n=100$.  This records
+the balance in this controlled Case--2 setting between coordinates supplied by
+the ANN and coordinates corrected by the residual.
+
+\begin{table}[H]
+\centering
+\caption{Case--2 state errors as the number of residual-solved primary
+coordinates is varied.  The $n=0$ and $n=151$ endpoints are respectively the
+shared-map POD--NN--ROM and the linear PROM.}
+\label{tab:case2-sweep}
+\resizebox{0.94\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_case2_n_sweep_state_errors.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.78\textwidth]{Figures/euclidean_prom_only/euclidean_prom_case2_n_sweep_state_errors.png}
+\caption{Case--2 state error versus the solved primary dimension.  The black
+curve is the in-domain mean and the dotted line marks the baseline $n=10$
+split.}
+\label{fig:case2-sweep-state}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_case2_n_sweep_coefficient_errors.png}
+\caption{Case--2 coefficient trajectories in the shared-master-map sweep.
+Top: absolute error against linear PROM.  Bottom: the corresponding relative
+error.  The $n=151$ linear-PROM reference has zero coefficient error and is
+therefore omitted.}
+\label{fig:case2-sweep-coefficients}
+\end{figure}
+
+\subsection{Controlled Case--2 tail perturbation}
+\label{sec:tail-perturbation}
+To test the transfer mechanism independently of a regression magnitude, we
+start from the linear-PROM secondary history $\qs^{\mathrm{lin}}$ and add a
+perturbation in the direction of the actual master-map secondary error:
+\begin{equation}
+{\qs}_{\epsilon}=\qs^{\mathrm{lin}}+
+\frac{\epsilon}{100}\frac{\widehat{\qs}-\qs^{\mathrm{lin}}}
+{\norm{\widehat{\qs}-\qs^{\mathrm{lin}}}_F}
+\norm{\qs^{\mathrm{lin}}}_F.
+\label{eq:tail-perturbation}
+\end{equation}
+For each prescribed percentage $\epsilon$, Case~2 solves only the
+first ten coordinates.  Thus the diagnostic uses the observed ANN-error
+direction but does not conflate its effect with a change of learned model.
+Table~\ref{tab:tail-perturbation} and Fig.~\ref{fig:tail-perturbation} show a
+monotone transfer from secondary-tail error to the recovered primary block.
+The amount of transfer is parameter dependent, so a tail loss alone does not
+imply a pointwise primary-coordinate bound.
+
+\clearpage
+\begin{table}[H]
+\centering
+\caption{Primary-coordinate error induced by a controlled secondary-tail
+perturbation in Case~2 with $n=10$.  Each entry is relative to the
+corresponding linear-PROM primary history.}
+\label{tab:tail-perturbation}
+\resizebox{0.9\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_case2_tail_primary_errors.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_case2_tail_sensitivity.png}
+\caption{Euclidean-POD Case--2 sensitivity to a prescribed secondary-tail
+error, restricted to perturbations up to $50\%$.  Left: state error against
+the HDM.  Right: error in the ten residual-solved primary coordinates against
+linear PROM.}
+\label{fig:tail-perturbation}
+\end{figure}
+
+\section{Conclusions}
+The Euclidean-POD PROM campaign gives a common full-residual comparison of
+three learned closures, an intrusive decoder, and two direct
+reduced-coordinate maps.  The linear PROM remains the most accurate model in
+the fixed 151-coordinate trial representation.  Case~3 and PROM--POD--AE
+retain close in-domain state accuracy while solving a low-dimensional online
+variable.  The Case--2/POD--NN shared-map study gives a precise interpretation
+of intrusive correction: solving progressively more coordinates through the
+residual moves the result from the direct-map endpoint toward linear PROM, but
+the prescribed tail can still transfer its error into the solved block.
+
+The results intentionally do not mix PROM evidence with an unavailable HPROM
+data set.  The ECM derivation establishes the required model-specific
+construction: an HPROM rule must be built from each learned trial map and its
+tangent, rather than borrowed from a linear HPROM or from a different closure.
+The next HPROM campaign can therefore use the same reporting order, tables,
+and model comparisons as the PROM study.
+
+\appendix
+\section{LSPG-Sensitive Basis Exploration}
+\label{app:lspg-sensitive}
+Before adopting the Euclidean POD basis used in the main text, we explored an
+$M$-regularized basis metric intended to emphasize sensitivity of the LSPG
+normal equations to reduced-coordinate perturbations.  The objective was to
+reduce transfer from a learned secondary block to residual-solved primary
+coordinates without degrading the linear reference.  In the present Burgers
+campaign, controlled tests did not establish a systematic improvement
+sufficient to justify making that metric the main experimental variable.  For
+clarity and reproducibility, every reported result therefore uses the standard
+Euclidean POD basis of \eqref{eq:euclidean-pod}.  The metric-aware
+construction is retained as an exploratory direction, not as a contribution
+or as a source of the numerical comparisons in this paper.
+
+\bibliographystyle{unsrt}
+\bibliography{bibliography}
+\end{document}

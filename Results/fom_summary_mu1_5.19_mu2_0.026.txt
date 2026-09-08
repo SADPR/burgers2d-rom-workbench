@@ -1,5 +1,5 @@
 [run]
-timestamp: 2026-04-23T06:55:15
+timestamp: 2026-09-07T18:37:50
 mu1: 5.19000000e+00
 mu2: 2.60000000e-02
 
@@ -16,8 +16,8 @@ num_cells_y: 250
 full_state_size: 125000
 
 [fom_timing]
-total_hdm_time_seconds: 4.90233898e-01
-avg_hdm_time_per_step_seconds: 9.80467796e-04
+total_hdm_time_seconds: 7.46539335e+02
+avg_hdm_time_per_step_seconds: 1.49307867e+00
 
 [snapshot_stats]
 snapshot_shape: (125000, 501)

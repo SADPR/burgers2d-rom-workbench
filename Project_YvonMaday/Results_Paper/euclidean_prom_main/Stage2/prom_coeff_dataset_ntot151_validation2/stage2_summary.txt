@@ -1,8 +1,8 @@
 solve_backend: prom
-dataset_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2
-per_mu_dir: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2/per_mu
-basis_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/basis.npy
-u_ref_path: /home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/u_ref.npy
+dataset_dir: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2
+per_mu_dir: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2/per_mu
+basis_path: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/basis.npy
+u_ref_path: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/u_ref.npy
 total_modes: 151
 coefficient_storage: qN_only
 coordinate_recovery: solver_coordinates

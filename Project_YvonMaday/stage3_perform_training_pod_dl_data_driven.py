@@ -153,6 +153,15 @@ def main(argv=None):
     parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="prom")
     parser.add_argument("--dataset-ntot", type=int, default=None)
     parser.add_argument("--dataset-dir", type=str, default=None)
+    parser.add_argument(
+        "--validation-dataset-dir",
+        type=str,
+        default=None,
+        help=(
+            "Optional external Stage-2 validation dataset. When provided, the model is "
+            "trained on every row of --dataset-dir and early stopping uses this dataset."
+        ),
+    )
     parser.add_argument("--model-name", type=str, default="pod_dl_data_driven_model.pt")
     parser.add_argument("--stage3-dir", type=str, default=None)
     parser.add_argument("--models-dir", type=str, default=None)
@@ -230,6 +239,9 @@ def main(argv=None):
         expected_backend=str(args.dataset_backend).strip().lower(),
         requested_dataset_dir=args.dataset_dir,
     )
+    external_validation = args.validation_dataset_dir is not None
+    if (not external_validation) and not (0.0 < float(args.val_frac) < 0.5):
+        raise ValueError(f"--val-frac must be in (0,0.5), got {args.val_frac}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[POD-DL] device = {device}")
@@ -246,6 +258,12 @@ def main(argv=None):
     print(f"[POD-DL] batch_size = {args.batch_size}")
     print(f"[POD-DL] lr = {args.lr}")
     print(f"[POD-DL] weight_decay = {args.weight_decay}")
+    if external_validation:
+        print("[POD-DL] val_split = external validation dataset")
+        print(f"[POD-DL] validation_dataset_dir = {args.validation_dataset_dir}")
+    else:
+        print("[POD-DL] val_split = row (train_test_split shuffle)")
+        print(f"[POD-DL] val_frac = {args.val_frac}")
     print(
         "[POD-DL] lr_scheduler = ReduceLROnPlateau("
         f"factor={args.lr_scheduler_factor}, patience={args.lr_scheduler_patience}, "
@@ -263,15 +281,45 @@ def main(argv=None):
         raise ValueError(f"latent_dim={latent_dim} must be < q_dim={q_dim}.")
     print(f"[POD-DL] Loaded: M={m}, in_dim={in_dim}, q_dim={q_dim}")
 
-    idx = np.arange(m, dtype=np.int64)
-    tr_idx, va_idx = train_test_split(
-        idx,
-        test_size=float(args.val_frac),
-        random_state=seed,
-        shuffle=True,
-    )
-    xtr, ytr = x_raw[tr_idx], y_raw[tr_idx]
-    xva, yva = x_raw[va_idx], y_raw[va_idx]
+    validation_dataset_dir = None
+    validation_dataset_root = None
+    validation_dataset_meta = None
+    if external_validation:
+        (
+            validation_dataset_root,
+            validation_dataset_ntot,
+            validation_dataset_dir,
+            validation_dataset_meta,
+            _,
+        ) = resolve_stage3_dataset(
+            this_dir=THIS_DIR,
+            requested_ntot=dataset_ntot,
+            expected_backend=str(args.dataset_backend).strip().lower(),
+            requested_dataset_dir=args.validation_dataset_dir,
+        )
+        if int(validation_dataset_ntot) != int(dataset_ntot):
+            raise ValueError(
+                f"Validation dataset ntot={validation_dataset_ntot}, expected {dataset_ntot}."
+            )
+        xva, yva = _load_dataset(validation_dataset_root)
+        if xva.shape[1] != in_dim or yva.shape[1] != q_dim:
+            raise ValueError(
+                "Validation data dimensions do not match training data: "
+                f"xva={xva.shape}, yva={yva.shape}, expected (*,{in_dim}) and (*,{q_dim})."
+            )
+        xtr, ytr = x_raw, y_raw
+    else:
+        idx = np.arange(m, dtype=np.int64)
+        tr_idx, va_idx = train_test_split(
+            idx,
+            test_size=float(args.val_frac),
+            random_state=seed,
+            shuffle=True,
+        )
+        xtr, ytr = x_raw[tr_idx], y_raw[tr_idx]
+        xva, yva = x_raw[va_idx], y_raw[va_idx]
+    print(f"[POD-DL] train_samples = {xtr.shape[0]}")
+    print(f"[POD-DL] val_samples = {xva.shape[0]}")
 
     x_stats, q_stats = _build_stats(xtr, ytr, x_scaling=args.x_scaling, q_scaling=args.q_scaling)
     model = PODDLDataDrivenModel(
@@ -457,9 +505,18 @@ def main(argv=None):
         "dataset_dir": dataset_dir,
         "dataset_ntot": int(dataset_ntot),
         "dataset_backend": dataset_meta.get("solve_backend"),
+        "validation_dataset_root": validation_dataset_root,
+        "validation_dataset_dir": validation_dataset_dir,
+        "validation_dataset_backend": (
+            None if validation_dataset_meta is None else validation_dataset_meta.get("solve_backend")
+        ),
         "basis_file": _localize_project_path(dataset_meta.get("basis_path")),
         "u_ref_file": _localize_project_path(dataset_meta.get("u_ref_path") or dataset_meta.get("uref_path")),
         "formula": "q_hat = D(phi(mu,t)); loss = w_data||q_hat-q||^2 + w_latent||E(q)-phi(mu,t)||^2 + w_recon||D(E(q))-q||^2",
+        "val_split": "external_dataset" if external_validation else "row",
+        "val_frac": None if external_validation else float(args.val_frac),
+        "train_samples": int(xtr.shape[0]),
+        "val_samples": int(xva.shape[0]),
     }
     torch.save(ckpt, model_path)
     print(f"[POD-DL] Saved model checkpoint: {model_path}")
@@ -473,7 +530,15 @@ def main(argv=None):
             ("dataset_root", dataset_root),
             ("dataset_ntot", dataset_ntot),
             ("dataset_backend", dataset_meta.get("solve_backend")),
-            ("samples_M", m),
+            ("validation_dataset_dir", validation_dataset_dir),
+            ("validation_dataset_root", validation_dataset_root),
+            (
+                "validation_dataset_backend",
+                None if validation_dataset_meta is None else validation_dataset_meta.get("solve_backend"),
+            ),
+            ("samples_M", int(xtr.shape[0] + xva.shape[0])),
+            ("train_samples", int(xtr.shape[0])),
+            ("val_samples", int(xva.shape[0])),
             ("in_dim", in_dim),
             ("q_dim", q_dim),
             ("latent_dim", latent_dim),
@@ -498,6 +563,8 @@ def main(argv=None):
             ("trainable_parameters", trainable_parameters),
             ("epochs_ran", ep_last),
             ("best_val_total", best_val),
+            ("val_split", "external_dataset" if external_validation else "row"),
+            ("val_frac", None if external_validation else float(args.val_frac)),
             ("train_rel_frob_percent", train_rel_frob),
             ("val_rel_frob_percent", val_rel_frob),
             ("elapsed_s", elapsed),

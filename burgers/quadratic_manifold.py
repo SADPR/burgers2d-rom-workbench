@@ -525,7 +525,9 @@ def compute_ECSW_training_matrix_2D_qm_local(
         ires = res(u_tilde, grid_x, grid_y, dt, u_prev_tilde, mu, Dxec, Dyec)
         Ji = jac(u_tilde, dt, JDxec, JDyec, Eye)
 
-        Wi = Ji @ J_qm(q_i, V_k, H_k)
+        # The chart matrices are local to _fit_local_state; recover them from
+        # the cluster index it returns for the current state.
+        Wi = Ji @ J_qm(q_i, V_list[k], H_list[k])
 
         row0 = isnap * r_max
         row1 = row0 + r_k

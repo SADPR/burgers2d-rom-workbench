@@ -132,6 +132,15 @@ def main(argv=None):
     parser.add_argument("--dataset-backend", choices=("prom", "hprom"), default="prom")
     parser.add_argument("--dataset-ntot", type=int, default=None)
     parser.add_argument("--dataset-dir", type=str, default=None)
+    parser.add_argument(
+        "--validation-dataset-dir",
+        type=str,
+        default=None,
+        help=(
+            "Optional external Stage-2 validation dataset. When provided, the model is "
+            "trained on every row of --dataset-dir and early stopping uses this dataset."
+        ),
+    )
     parser.add_argument("--model-name", type=str, default="prom_pod_ae_model.pt")
     parser.add_argument("--stage3-dir", type=str, default=None)
     parser.add_argument("--models-dir", type=str, default=None)
@@ -187,6 +196,9 @@ def main(argv=None):
         expected_backend=str(args.dataset_backend).strip().lower(),
         requested_dataset_dir=args.dataset_dir,
     )
+    external_validation = args.validation_dataset_dir is not None
+    if (not external_validation) and not (0.0 < float(args.val_frac) < 0.5):
+        raise ValueError(f"--val-frac must be in (0,0.5), got {args.val_frac}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[POD-AE] device = {device}")
@@ -200,6 +212,12 @@ def main(argv=None):
     print(f"[POD-AE] batch_size = {args.batch_size}")
     print(f"[POD-AE] lr = {args.lr}")
     print(f"[POD-AE] weight_decay = {args.weight_decay}")
+    if external_validation:
+        print("[POD-AE] val_split = external validation dataset")
+        print(f"[POD-AE] validation_dataset_dir = {args.validation_dataset_dir}")
+    else:
+        print("[POD-AE] val_split = row (train_test_split shuffle)")
+        print(f"[POD-AE] val_frac = {args.val_frac}")
     print(
         "[POD-AE] lr_scheduler = ReduceLROnPlateau("
         f"factor={args.lr_scheduler_factor}, patience={args.lr_scheduler_patience}, "
@@ -215,15 +233,44 @@ def main(argv=None):
 
     print(f"[POD-AE] Loaded: M={m}, q_dim={q_dim}")
 
-    idx = np.arange(m, dtype=np.int64)
-    tr_idx, va_idx = train_test_split(
-        idx,
-        test_size=float(args.val_frac),
-        random_state=seed,
-        shuffle=True,
-    )
-    ytr = y_raw[tr_idx]
-    yva = y_raw[va_idx]
+    validation_dataset_dir = None
+    validation_dataset_root = None
+    validation_dataset_meta = None
+    if external_validation:
+        (
+            validation_dataset_root,
+            validation_dataset_ntot,
+            validation_dataset_dir,
+            validation_dataset_meta,
+            _,
+        ) = resolve_stage3_dataset(
+            this_dir=THIS_DIR,
+            requested_ntot=dataset_ntot,
+            expected_backend=str(args.dataset_backend).strip().lower(),
+            requested_dataset_dir=args.validation_dataset_dir,
+        )
+        if int(validation_dataset_ntot) != int(dataset_ntot):
+            raise ValueError(
+                f"Validation dataset ntot={validation_dataset_ntot}, expected {dataset_ntot}."
+            )
+        ytr = y_raw
+        yva = _load_qn_samples(validation_dataset_root)
+        if yva.shape[1] != q_dim:
+            raise ValueError(
+                f"Validation q_dim={yva.shape[1]}, expected {q_dim}."
+            )
+    else:
+        idx = np.arange(m, dtype=np.int64)
+        tr_idx, va_idx = train_test_split(
+            idx,
+            test_size=float(args.val_frac),
+            random_state=seed,
+            shuffle=True,
+        )
+        ytr = y_raw[tr_idx]
+        yva = y_raw[va_idx]
+    print(f"[POD-AE] train_samples = {ytr.shape[0]}")
+    print(f"[POD-AE] val_samples = {yva.shape[0]}")
 
     q_stats = _build_q_stats(ytr, scaling=args.scaling)
     model = PROMPODAEAutoencoder(
@@ -329,9 +376,18 @@ def main(argv=None):
         "dataset_dir": dataset_dir,
         "dataset_ntot": int(dataset_ntot),
         "dataset_backend": dataset_meta.get("solve_backend"),
+        "validation_dataset_root": validation_dataset_root,
+        "validation_dataset_dir": validation_dataset_dir,
+        "validation_dataset_backend": (
+            None if validation_dataset_meta is None else validation_dataset_meta.get("solve_backend")
+        ),
         "basis_file": basis_path,
         "u_ref_file": uref_path,
         "mapping": "qN_hat = D(E(qN))",
+        "val_split": "external_dataset" if external_validation else "row",
+        "val_frac": None if external_validation else float(args.val_frac),
+        "train_samples": int(ytr.shape[0]),
+        "val_samples": int(yva.shape[0]),
     }
     torch.save(ckpt, model_path)
     print(f"[POD-AE] Saved model checkpoint: {model_path}")
@@ -345,7 +401,15 @@ def main(argv=None):
             ("dataset_root", dataset_root),
             ("dataset_ntot", dataset_ntot),
             ("dataset_backend", dataset_meta.get("solve_backend")),
-            ("samples_M", m),
+            ("validation_dataset_dir", validation_dataset_dir),
+            ("validation_dataset_root", validation_dataset_root),
+            (
+                "validation_dataset_backend",
+                None if validation_dataset_meta is None else validation_dataset_meta.get("solve_backend"),
+            ),
+            ("samples_M", int(ytr.shape[0] + yva.shape[0])),
+            ("train_samples", int(ytr.shape[0])),
+            ("val_samples", int(yva.shape[0])),
             ("q_dim", q_dim),
             ("latent_dim", latent_dim),
             ("hidden_dims", hidden_dims),
@@ -361,6 +425,8 @@ def main(argv=None):
             ("trainable_parameters", trainable_parameters),
             ("epochs_ran", ep_last),
             ("best_val_mse", best_val),
+            ("val_split", "external_dataset" if external_validation else "row"),
+            ("val_frac", None if external_validation else float(args.val_frac)),
             ("train_rel_frob_percent", train_rel_frob),
             ("val_rel_frob_percent", val_rel_frob),
             ("elapsed_s", elapsed),

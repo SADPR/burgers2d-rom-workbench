@@ -1237,6 +1237,576 @@ def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2(
     return snaps, stats
 
 
+def _robust_cell_weights(magnitude, sigma, kernel="huber", delta=1.345):
+    """Bounded-influence weight for a per-cell residual magnitude.
+
+    ``sigma`` is a robust scale (see caller), held fixed across the
+    Gauss-Newton iterations of one time step so it does not drift as the
+    residual shrinks.  ``kernel='none'`` returns unit weights, which recovers
+    the plain (non-robust) LSPG normal equations exactly.
+    """
+    if kernel == "none":
+        return np.ones_like(magnitude)
+    scaled = magnitude / max(float(sigma), 1.0e-30)
+    if kernel == "huber":
+        weights = np.ones_like(scaled)
+        mask = scaled > delta
+        weights[mask] = delta / scaled[mask]
+        return weights
+    if kernel == "geman_mcclure":
+        return 1.0 / (1.0 + scaled**2) ** 2
+    if kernel == "welsch":
+        return np.exp(-0.5 * scaled**2)
+    raise ValueError(f"Unknown robust kernel {kernel!r}; expected one of "
+                      "'none', 'huber', 'geman_mcclure', 'welsch'.")
+
+
+def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_robust(
+    grid_x,
+    grid_y,
+    w0,
+    dt,
+    num_steps,
+    mu,
+    ann_model,
+    ref,
+    basis,
+    basis2,
+    u_ref=None,
+    max_its=20,
+    relnorm_cutoff=1e-5,
+    min_delta=0.1,
+    robust_kernel="huber",
+    huber_delta=1.345,
+    return_red_coords=False,
+):
+    """POD-ANN Case-2 ROM with a robust (IRLS) LSPG residual minimization.
+
+    Same online manifold and tangent as the standard Case--2 solve,
+    ``w = u_ref + V y + Vbar N([mu1, mu2, t])`` with ``dw/dy = V``: the
+    injected tail is unchanged, and no online unknowns are added.  The only
+    change is how the Gauss--Newton normal equations are formed.  Instead of
+    minimizing the plain L2 residual, each cell's momentum-residual magnitude
+    ``sqrt(r_u^2 + r_v^2)`` is given a bounded-influence weight relative to a
+    robust (median-based) scale of the time step's initial residual, and the
+    weighted normal equations
+
+        (JV)^T W (JV) dy = -(JV)^T W r
+
+    are solved instead.  A cell whose residual cannot be reduced by any
+    choice of the ten primary coordinates -- because the injected secondary
+    tail is locally wrong there, and the tangent has no dependence on that
+    tail -- keeps a large residual across Gauss-Newton iterations and is
+    down-weighted, rather than being allowed to bias the primary-coordinate
+    estimate.  This is the classical M-estimation/IRLS treatment of a
+    partially contaminated least-squares problem (Huber, 1964), the same
+    mechanism used for robust bundle adjustment and ICP in vision/graphics.
+    The scale is fixed per time step, estimated once from the pre-update
+    residual, so it does not drift as Gauss-Newton converges within the step.
+    ``robust_kernel='none'`` reproduces the plain Case--2 solve exactly.
+    """
+
+    del ref
+
+    w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
+    N = w0.size
+    if N % 2 != 0:
+        raise ValueError(f"State size {N} must be even (u,v components).")
+    ncell = N // 2
+    u_ref_np = _prepare_reference(u_ref, N)
+
+    Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
+
+    V = np.asarray(basis.detach().cpu().numpy() if hasattr(basis, "detach") else basis, dtype=np.float64)
+    Vbar = np.asarray(basis2.detach().cpu().numpy() if hasattr(basis2, "detach") else basis2, dtype=np.float64)
+    ann_model = _align_module_device(ann_model, torch.device("cpu"))
+
+    nred = V.shape[1]
+    tgrid = dt * np.arange(num_steps + 1, dtype=np.float64)
+
+    if hasattr(ann_model, "parameters"):
+        try:
+            device = next(ann_model.parameters()).device
+        except StopIteration:
+            device = torch.device("cpu")
+    else:
+        device = torch.device("cpu")
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
+    def qbar_np(tval):
+        inp = torch.tensor([mu1, mu2, float(tval)], dtype=torch.float32, device=device).unsqueeze(0)
+        with torch.no_grad():
+            qbar = ann_model(inp).squeeze(0)
+        return qbar.detach().cpu().numpy()
+
+    def offset_np(tval):
+        return u_ref_np + Vbar @ qbar_np(tval)
+
+    y = _project_reduced_coords(
+        V,
+        w0 - u_ref_np - Vbar @ qbar_np(tgrid[0]),
+    ).astype(np.float64, copy=False)
+
+    snaps = np.zeros((N, num_steps + 1), dtype=np.float64)
+    red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
+
+    w = offset_np(tgrid[0]) + V @ y
+    snaps[:, 0] = w
+    red_coords[:, 0] = y
+
+    wp = w.copy()
+
+    num_its = 0
+    jac_time = 0.0
+    res_time = 0.0
+    ls_time = 0.0
+
+    print(
+        f"Running robust (IRLS, kernel={robust_kernel}) POD-ANN Case 2 ROM of size {nred} "
+        f"for mu1={mu1}, mu2={mu2}"
+    )
+
+    for k in range(num_steps):
+        tk1 = tgrid[k + 1]
+        off = offset_np(tk1)
+
+        yk = y.copy()
+        wk = off + V @ yk
+
+        def compute_residual(w_state):
+            return inviscid_burgers_res2D(w_state, grid_x, grid_y, dt, wp, mu, Dxec, Dyec)
+
+        def compute_jacobian(w_state):
+            return inviscid_burgers_exact_jac2D(w_state, dt, JDxec, JDyec, Eye)
+
+        t0 = time.time()
+        fk = compute_residual(wk)
+        res_time += time.time() - t0
+        init_norm = np.linalg.norm(fk) + 1e-30
+
+        # Robust scale fixed for this time step from the pre-update residual,
+        # so per-iteration weights adapt without the scale itself drifting.
+        cell_magnitude0 = np.sqrt(fk[:ncell] ** 2 + fk[ncell:] ** 2)
+        sigma = 1.4826 * float(np.median(cell_magnitude0)) + 1e-30
+
+        resnorms = []
+
+        for it in range(max_its):
+            if it > 0:
+                t0 = time.time()
+                fk = compute_residual(wk)
+                res_time += time.time() - t0
+
+            rnorm = np.linalg.norm(fk)
+            resnorms.append(rnorm)
+
+            if rnorm / init_norm < relnorm_cutoff:
+                break
+
+            if len(resnorms) > 1:
+                rel_drop = abs((resnorms[-2] - resnorms[-1]) / (resnorms[-2] + 1e-30))
+                if rel_drop < min_delta:
+                    break
+
+            t0 = time.time()
+            J = compute_jacobian(wk)
+            jac_time += time.time() - t0
+
+            t0 = time.time()
+            JV = J @ V
+            cell_magnitude = np.sqrt(fk[:ncell] ** 2 + fk[ncell:] ** 2)
+            cell_weight = _robust_cell_weights(cell_magnitude, sigma, kernel=robust_kernel, delta=huber_delta)
+            sqrt_weight = np.sqrt(np.concatenate((cell_weight, cell_weight)))
+            dy, *_ = np.linalg.lstsq(sqrt_weight[:, None] * JV, -sqrt_weight * fk, rcond=None)
+            ls_time += time.time() - t0
+
+            yk += dy
+            wk = off + V @ yk
+
+        num_its += len(resnorms)
+
+        y = yk
+        w = wk
+        wp = w.copy()
+
+        snaps[:, k + 1] = w
+        red_coords[:, k + 1] = y
+
+        print(f"  step {k:4d}: GN iters={len(resnorms):2d} rel={resnorms[-1] / init_norm:.2e}")
+
+    stats = (num_its, jac_time, res_time, ls_time)
+    if return_red_coords:
+        return snaps, red_coords, stats
+    return snaps, stats
+
+
+def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_gls(
+    grid_x,
+    grid_y,
+    w0,
+    dt,
+    num_steps,
+    mu,
+    ann_model,
+    ref,
+    basis,
+    basis2,
+    tail_error_factor,
+    u_ref=None,
+    max_its=20,
+    relnorm_cutoff=1e-5,
+    min_delta=0.1,
+    ridge_fraction=0.1,
+    return_red_coords=False,
+):
+    r"""POD-ANN Case-2 ROM with a Generalized-Least-Squares LSPG solve.
+
+    Same online manifold and tangent as the standard Case--2 solve,
+    ``w = u_ref + V y + Vbar N([mu1, mu2, t])`` with ``dw/dy = V``: the
+    injected tail is unchanged and no online unknowns are added.  Unlike the
+    robust (IRLS) variant, the reweighting here does not come from the
+    online residual itself (which the ordinary normal equations already
+    weigh correctly through ``(JV)^T``) -- it comes from an external,
+    offline-estimated statistic of where the injected tail is known to be
+    unreliable.
+
+    Given the out-of-fold tail-error covariance
+    ``Sigma_tail = E[dqbar dqbar^T] ~= W W^T`` (``W`` a
+    ``(n_secondary, r_eff)`` low-rank factor, e.g. the leading left singular
+    vectors of the OOF tail-error matrix scaled by their singular values),
+    the residual contamination induced by a wrong tail has covariance
+
+        Sigma_r = eps*I + (J Vbar W)(J Vbar W)^T,
+
+    with ``eps`` a small ridge representing residual noise unrelated to the
+    tail.  The Gauss--Newton normal equations are formed with the resulting
+    precision (inverse-covariance) weight,
+
+        (JV)^T Sigma_r^{-1} (JV) dy = -(JV)^T Sigma_r^{-1} r,
+
+    which is the Gauss-Markov / generalized-least-squares BLUE estimator of
+    ``dy`` given that noise model.  ``Sigma_r^{-1}`` is applied via the
+    Sherman-Morrison-Woodbury identity so only an ``r_eff x r_eff`` solve is
+    needed per iteration; ``Vbar W`` is state-independent and is
+    precomputed once.
+    """
+
+    del ref
+
+    w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
+    N = w0.size
+    u_ref_np = _prepare_reference(u_ref, N)
+
+    Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
+
+    V = np.asarray(basis.detach().cpu().numpy() if hasattr(basis, "detach") else basis, dtype=np.float64)
+    Vbar = np.asarray(basis2.detach().cpu().numpy() if hasattr(basis2, "detach") else basis2, dtype=np.float64)
+    ann_model = _align_module_device(ann_model, torch.device("cpu"))
+
+    W = np.asarray(tail_error_factor, dtype=np.float64)
+    if W.ndim != 2 or W.shape[0] != Vbar.shape[1]:
+        raise ValueError(
+            "tail_error_factor must have shape (number of secondary modes, r_eff); "
+            f"got {W.shape}, expected ({Vbar.shape[1]}, r_eff)."
+        )
+    if not np.all(np.isfinite(W)):
+        raise ValueError("tail_error_factor contains non-finite values.")
+    VbarW = Vbar @ W  # (N, r_eff); state-independent, precomputed once.
+    r_eff = VbarW.shape[1]
+    r_eye = np.eye(r_eff, dtype=np.float64)
+
+    nred = V.shape[1]
+    tgrid = dt * np.arange(num_steps + 1, dtype=np.float64)
+
+    if hasattr(ann_model, "parameters"):
+        try:
+            device = next(ann_model.parameters()).device
+        except StopIteration:
+            device = torch.device("cpu")
+    else:
+        device = torch.device("cpu")
+    mu1 = float(mu[0])
+    mu2 = float(mu[1])
+
+    def qbar_np(tval):
+        inp = torch.tensor([mu1, mu2, float(tval)], dtype=torch.float32, device=device).unsqueeze(0)
+        with torch.no_grad():
+            qbar = ann_model(inp).squeeze(0)
+        return qbar.detach().cpu().numpy()
+
+    def offset_np(tval):
+        return u_ref_np + Vbar @ qbar_np(tval)
+
+    y = _project_reduced_coords(
+        V,
+        w0 - u_ref_np - Vbar @ qbar_np(tgrid[0]),
+    ).astype(np.float64, copy=False)
+
+    snaps = np.zeros((N, num_steps + 1), dtype=np.float64)
+    red_coords = np.zeros((nred, num_steps + 1), dtype=np.float64)
+
+    w = offset_np(tgrid[0]) + V @ y
+    snaps[:, 0] = w
+    red_coords[:, 0] = y
+
+    wp = w.copy()
+
+    num_its = 0
+    jac_time = 0.0
+    res_time = 0.0
+    ls_time = 0.0
+
+    print(
+        f"Running GLS (precision-weighted, r_eff={r_eff}, ridge_fraction={ridge_fraction}) "
+        f"POD-ANN Case 2 ROM of size {nred} for mu1={mu1}, mu2={mu2}"
+    )
+
+    for k in range(num_steps):
+        tk1 = tgrid[k + 1]
+        off = offset_np(tk1)
+
+        yk = y.copy()
+        wk = off + V @ yk
+
+        def compute_residual(w_state):
+            return inviscid_burgers_res2D(w_state, grid_x, grid_y, dt, wp, mu, Dxec, Dyec)
+
+        def compute_jacobian(w_state):
+            return inviscid_burgers_exact_jac2D(w_state, dt, JDxec, JDyec, Eye)
+
+        t0 = time.time()
+        fk = compute_residual(wk)
+        res_time += time.time() - t0
+        init_norm = np.linalg.norm(fk) + 1e-30
+
+        resnorms = []
+
+        for it in range(max_its):
+            if it > 0:
+                t0 = time.time()
+                fk = compute_residual(wk)
+                res_time += time.time() - t0
+
+            rnorm = np.linalg.norm(fk)
+            resnorms.append(rnorm)
+
+            if rnorm / init_norm < relnorm_cutoff:
+                break
+
+            if len(resnorms) > 1:
+                rel_drop = abs((resnorms[-2] - resnorms[-1]) / (resnorms[-2] + 1.0e-30))
+                if rel_drop < min_delta:
+                    break
+
+            t0 = time.time()
+            J = compute_jacobian(wk)
+            jac_time += time.time() - t0
+
+            t0 = time.time()
+            JV = J @ V
+            A = J @ VbarW
+            AtA = A.T @ A
+            eps = max(ridge_fraction * (np.trace(AtA) / max(r_eff, 1)), 1.0e-30)
+            m_small = eps * r_eye + AtA
+
+            def whiten(x):
+                solved = np.linalg.solve(m_small, A.T @ x)
+                return (x - A @ solved) / eps
+
+            whitened_JV = whiten(JV)
+            whitened_fk = whiten(fk)
+            lhs = JV.T @ whitened_JV
+            rhs = JV.T @ whitened_fk
+            try:
+                dy = np.linalg.solve(lhs, -rhs)
+            except np.linalg.LinAlgError:
+                dy, *_ = np.linalg.lstsq(lhs, -rhs, rcond=1.0e-12)
+            ls_time += time.time() - t0
+
+            yk += dy
+            wk = off + V @ yk
+
+        num_its += len(resnorms)
+
+        y = yk
+        w = wk
+        wp = w.copy()
+
+        snaps[:, k + 1] = w
+        red_coords[:, k + 1] = y
+
+        print(f"  step {k:4d}: GN iters={len(resnorms):2d} rel={resnorms[-1] / init_norm:.2e}")
+
+    stats = (num_its, jac_time, res_time, ls_time)
+    if return_red_coords:
+        return snaps, red_coords, stats
+    return snaps, stats
+
+
+def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_tail_corrected(
+    grid_x,
+    grid_y,
+    w0,
+    dt,
+    num_steps,
+    mu,
+    ann_model,
+    correction_basis,
+    ref,
+    basis,
+    basis2,
+    u_ref=None,
+    max_its=20,
+    relnorm_cutoff=1e-5,
+    min_delta=0.1,
+):
+    """Case--2 LSPG with a low-rank residual-solved tail correction.
+
+    The ANN supplies ``qbar_ann(mu, t)`` and the online state is
+
+        u = u_ref + V q + Vbar (qbar_ann + B eta),
+
+    where only the small vector ``eta`` is added to the usual Case--2
+    unknowns.  ``B`` is fixed offline, so the tangent is the constant matrix
+    ``[V, Vbar B]`` and no ANN derivative is required online.  For an empty
+    ``B`` this reduces exactly to the standard Case--2 PROM solve.
+    """
+
+    del ref
+
+    w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
+    nstate = w0.size
+    u_ref_np = _prepare_reference(u_ref, nstate)
+
+    dxec, dyec, jdxec, jdyec, eye = get_ops(grid_x, grid_y)
+    V = np.asarray(
+        basis.detach().cpu().numpy() if hasattr(basis, "detach") else basis,
+        dtype=np.float64,
+    )
+    Vbar = np.asarray(
+        basis2.detach().cpu().numpy() if hasattr(basis2, "detach") else basis2,
+        dtype=np.float64,
+    )
+    B = np.asarray(correction_basis, dtype=np.float64)
+    if B.ndim != 2 or B.shape[0] != Vbar.shape[1]:
+        raise ValueError(
+            "correction_basis must have shape (number of secondary modes, rank); "
+            f"got {B.shape}, expected ({Vbar.shape[1]}, r)."
+        )
+    if not np.all(np.isfinite(B)):
+        raise ValueError("correction_basis contains non-finite values.")
+
+    ann_model = _align_module_device(ann_model, torch.device("cpu"))
+    if hasattr(ann_model, "parameters"):
+        try:
+            device = next(ann_model.parameters()).device
+        except StopIteration:
+            device = torch.device("cpu")
+    else:
+        device = torch.device("cpu")
+
+    nprimary = V.shape[1]
+    rank = B.shape[1]
+    tangent_basis = np.hstack((V, Vbar @ B))
+    nred = tangent_basis.shape[1]
+    tgrid = dt * np.arange(num_steps + 1, dtype=np.float64)
+    mu1, mu2 = float(mu[0]), float(mu[1])
+
+    def qbar_ann_np(tval):
+        inp = torch.tensor([mu1, mu2, float(tval)], dtype=torch.float32, device=device).unsqueeze(0)
+        with torch.no_grad():
+            qbar = ann_model(inp).squeeze(0)
+        qbar_np = qbar.detach().cpu().numpy().reshape(-1)
+        if qbar_np.size != Vbar.shape[1]:
+            raise ValueError(
+                f"ANN tail size mismatch: got {qbar_np.size}, expected {Vbar.shape[1]}."
+            )
+        return qbar_np
+
+    qbar_table = np.column_stack([qbar_ann_np(tval) for tval in tgrid])
+    z = np.linalg.lstsq(
+        tangent_basis,
+        w0 - u_ref_np - Vbar @ qbar_table[:, 0],
+        rcond=None,
+    )[0]
+    current = u_ref_np + Vbar @ qbar_table[:, 0] + tangent_basis @ z
+    previous = current.copy()
+
+    snaps = np.zeros((nstate, num_steps + 1), dtype=np.float64)
+    primary_coords = np.zeros((nprimary, num_steps + 1), dtype=np.float64)
+    correction_coords = np.zeros((rank, num_steps + 1), dtype=np.float64)
+    snaps[:, 0] = current
+    primary_coords[:, 0] = z[:nprimary]
+    correction_coords[:, 0] = z[nprimary:]
+
+    num_its = 0
+    jac_time = 0.0
+    res_time = 0.0
+    ls_time = 0.0
+    print(
+        f"Running tail-corrected Case 2 ROM of size {nprimary}+{rank} "
+        f"for mu1={mu1}, mu2={mu2}"
+    )
+
+    for k in range(num_steps):
+        offset = u_ref_np + Vbar @ qbar_table[:, k + 1]
+        zk = z.copy()
+        state = offset + tangent_basis @ zk
+
+        def compute_residual(w_state):
+            return inviscid_burgers_res2D(
+                w_state, grid_x, grid_y, dt, previous, mu, dxec, dyec
+            )
+
+        t0 = time.time()
+        residual = compute_residual(state)
+        res_time += time.time() - t0
+        initial_norm = np.linalg.norm(residual) + 1.0e-30
+        residual_norms = []
+
+        for iteration in range(max_its):
+            if iteration > 0:
+                t0 = time.time()
+                residual = compute_residual(state)
+                res_time += time.time() - t0
+            residual_norm = np.linalg.norm(residual)
+            residual_norms.append(float(residual_norm))
+            if residual_norm / initial_norm < relnorm_cutoff:
+                break
+            if len(residual_norms) > 1:
+                relative_drop = abs(
+                    (residual_norms[-2] - residual_norms[-1])
+                    / (residual_norms[-2] + 1.0e-30)
+                )
+                if relative_drop < min_delta:
+                    break
+
+            t0 = time.time()
+            jacobian = inviscid_burgers_exact_jac2D(state, dt, jdxec, jdyec, eye)
+            jac_time += time.time() - t0
+            t0 = time.time()
+            jacobian_tangent = jacobian @ tangent_basis
+            delta, *_ = np.linalg.lstsq(jacobian_tangent, -residual, rcond=None)
+            ls_time += time.time() - t0
+            zk += delta
+            state = offset + tangent_basis @ zk
+
+        z = zk
+        previous = state.copy()
+        snaps[:, k + 1] = state
+        primary_coords[:, k + 1] = z[:nprimary]
+        correction_coords[:, k + 1] = z[nprimary:]
+        num_its += len(residual_norms)
+        print(
+            f"  step {k:4d}: GN iters={len(residual_norms):2d} "
+            f"rel={residual_norms[-1] / initial_norm:.2e}"
+        )
+
+    stats = (num_its, jac_time, res_time, ls_time)
+    return snaps, primary_coords, correction_coords, qbar_table, stats
+
+
 def inviscid_burgers_implicit2D_LSPG_pod_ann_2D_case2_petrov_galerkin(
     grid_x,
     grid_y,

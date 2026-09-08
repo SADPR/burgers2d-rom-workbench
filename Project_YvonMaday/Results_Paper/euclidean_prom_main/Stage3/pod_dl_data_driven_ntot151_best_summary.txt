@@ -1,0 +1,43 @@
+model_name: pod_dl_data_driven_ntot151_best.pt
+model_path: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage3/models/pod_dl_data_driven_ntot151_best.pt
+dataset_dir: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151
+dataset_root: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151/per_mu
+dataset_ntot: 151
+dataset_backend: prom
+validation_dataset_dir: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2
+validation_dataset_root: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2/per_mu
+validation_dataset_backend: prom
+samples_M: 5511
+train_samples: 4509
+val_samples: 1002
+in_dim: 3
+q_dim: 151
+latent_dim: 10
+encoder_hidden_dims: (512, 256)
+decoder_hidden_dims: (256, 512)
+dynamics_hidden_dims: (256, 512, 512, 256)
+activation: silu
+x_scaling: zscore
+q_scaling: zscore
+omega_data: 1.0
+omega_latent: 0.03
+omega_recon: 0.01
+detach_encoder_target: False
+pretrain_epochs: 300
+batch_size: 128
+lr: 0.0005
+weight_decay: 1e-06
+lr_scheduler: ReduceLROnPlateau
+lr_scheduler_factor: 0.5
+lr_scheduler_patience: 50
+lr_scheduler_min_lr: 1e-06
+trainable_parameters: 952747
+epochs_ran: 1374
+best_val_total: 0.9227809906005859
+val_split: external_dataset
+val_frac: None
+train_rel_frob_percent: 1.8431782722473145
+val_rel_frob_percent: 2.981230802834034
+elapsed_s: 2392.172943353653
+seed: 42
+device: cpu

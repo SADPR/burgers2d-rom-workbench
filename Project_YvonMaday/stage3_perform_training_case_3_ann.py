@@ -244,6 +244,15 @@ def main(argv=None):
         default=None,
         help="Explicit Stage-2 dataset directory. Use this to keep paper campaigns isolated.",
     )
+    parser.add_argument(
+        "--validation-dataset-dir",
+        type=str,
+        default=None,
+        help=(
+            "Optional external Stage-2 validation dataset. When provided, the model is "
+            "trained on every row of --dataset-dir and early stopping uses this dataset."
+        ),
+    )
     parser.add_argument("--model-name", type=str, default=None)
     parser.add_argument("--primary-modes", type=int, default=None)
     parser.add_argument("--seed", type=int, default=42)
@@ -304,7 +313,8 @@ def main(argv=None):
     activation = str(args.activation).strip().lower()
     dropout = float(args.dropout)
 
-    if not (0.0 < val_frac < 0.5):
+    external_validation = args.validation_dataset_dir is not None
+    if (not external_validation) and not (0.0 < val_frac < 0.5):
         raise ValueError(f"--val-frac must be in (0,0.5), got {val_frac}")
     if batch_size <= 0 or epochs <= 0 or patience <= 0:
         raise ValueError("batch-size, epochs and patience must be positive")
@@ -322,6 +332,12 @@ def main(argv=None):
     print(f"[Case3] hidden_dims = {hidden_dims}")
     print(f"[Case3] activation = {activation}")
     print(f"[Case3] dropout = {dropout}")
+    if external_validation:
+        print("[Case3] val_split = external validation dataset")
+        print(f"[Case3] validation_dataset_dir = {args.validation_dataset_dir}")
+    else:
+        print("[Case3] val_split = row (train_test_split shuffle)")
+        print(f"[Case3] val_frac = {val_frac}")
     print(
         "[Case3] lr_scheduler = ReduceLROnPlateau("
         f"factor={lr_scheduler_factor}, patience={lr_scheduler_patience}, "
@@ -345,16 +361,48 @@ def main(argv=None):
     # -----------------------------
     # Split
     # -----------------------------
-    idx = np.arange(M, dtype=np.int64)
-    tr_idx, va_idx = train_test_split(
-        idx,
-        test_size=val_frac,
-        random_state=seed,
-        shuffle=True,
-    )
-
-    Xtr, Ytr = X_raw[tr_idx], Y_raw[tr_idx]
-    Xva, Yva = X_raw[va_idx], Y_raw[va_idx]
+    validation_dataset_dir = None
+    validation_dataset_root = None
+    validation_dataset_meta = None
+    if external_validation:
+        (
+            validation_dataset_root,
+            validation_dataset_ntot,
+            validation_dataset_dir,
+            validation_dataset_meta,
+            _,
+        ) = resolve_stage3_dataset(
+            this_dir=THIS_DIR,
+            requested_ntot=dataset_ntot,
+            expected_backend=dataset_backend,
+            requested_dataset_dir=args.validation_dataset_dir,
+        )
+        if int(validation_dataset_ntot) != int(dataset_ntot):
+            raise ValueError(
+                f"Validation dataset ntot={validation_dataset_ntot}, expected {dataset_ntot}."
+            )
+        Xva, Yva = load_prom_dataset_case3(
+            validation_dataset_root,
+            primary_modes=primary_modes,
+        )
+        if Xva.shape[1] != in_dim or Yva.shape[1] != n_s:
+            raise ValueError(
+                "Validation data dimensions do not match training data: "
+                f"Xva={Xva.shape}, Yva={Yva.shape}, expected (*,{in_dim}) and (*,{n_s})."
+            )
+        Xtr, Ytr = X_raw, Y_raw
+    else:
+        idx = np.arange(M, dtype=np.int64)
+        tr_idx, va_idx = train_test_split(
+            idx,
+            test_size=val_frac,
+            random_state=seed,
+            shuffle=True,
+        )
+        Xtr, Ytr = X_raw[tr_idx], Y_raw[tr_idx]
+        Xva, Yva = X_raw[va_idx], Y_raw[va_idx]
+    print(f"[Case3] train_samples = {Xtr.shape[0]}")
+    print(f"[Case3] val_samples = {Xva.shape[0]}")
 
     # -----------------------------
     # Compute scaling stats on TRAIN only
@@ -486,6 +534,11 @@ def main(argv=None):
         "dataset_dir": dataset_dir,
         "dataset_ntot": int(dataset_ntot),
         "dataset_backend": dataset_meta.get("solve_backend"),
+        "validation_dataset_root": validation_dataset_root,
+        "validation_dataset_dir": validation_dataset_dir,
+        "validation_dataset_backend": (
+            None if validation_dataset_meta is None else validation_dataset_meta.get("solve_backend")
+        ),
         "primary_modes": int(primary_modes),
         "secondary_modes": int(dataset_ntot - primary_modes),
         "hidden_dims": tuple(int(d) for d in hidden_dims),
@@ -496,6 +549,10 @@ def main(argv=None):
         "weight_decay": float(weight_decay),
         "trainable_parameters": int(trainable_params),
         "best_val_mse": float(best_val),
+        "val_split": "external_dataset" if external_validation else "row",
+        "val_frac": None if external_validation else float(val_frac),
+        "train_samples": int(Xtr.shape[0]),
+        "val_samples": int(Xva.shape[0]),
         "train_rel_frob_percent": float(train_rel_frob_percent),
         "val_rel_frob_percent": float(val_rel_frob_percent),
         "lr_scheduler": "ReduceLROnPlateau",
@@ -516,9 +573,17 @@ def main(argv=None):
             ("dataset_root", dataset_root),
             ("dataset_ntot", dataset_ntot),
             ("dataset_backend", dataset_meta.get("solve_backend")),
+            ("validation_dataset_dir", validation_dataset_dir),
+            ("validation_dataset_root", validation_dataset_root),
+            (
+                "validation_dataset_backend",
+                None if validation_dataset_meta is None else validation_dataset_meta.get("solve_backend"),
+            ),
             ("primary_modes", primary_modes),
             ("secondary_modes", int(dataset_ntot - primary_modes)),
-            ("samples_M", M),
+            ("samples_M", int(Xtr.shape[0] + Xva.shape[0])),
+            ("train_samples", int(Xtr.shape[0])),
+            ("val_samples", int(Xva.shape[0])),
             ("n_p", n_p),
             ("in_dim", in_dim),
             ("n_s", n_s),
@@ -542,6 +607,8 @@ def main(argv=None):
             ("lr_scheduler_factor", lr_scheduler_factor),
             ("lr_scheduler_patience", lr_scheduler_patience),
             ("lr_scheduler_min_lr", lr_scheduler_min_lr),
+            ("val_split", "external_dataset" if external_validation else "row"),
+            ("val_frac", None if external_validation else val_frac),
             ("train_rel_frob_percent", train_rel_frob_percent),
             ("val_rel_frob_percent", val_rel_frob_percent),
         ],

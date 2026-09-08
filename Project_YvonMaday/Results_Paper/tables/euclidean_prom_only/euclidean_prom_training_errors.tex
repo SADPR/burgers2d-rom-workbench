@@ -1,0 +1,11 @@
+\begin{tabular}{llrrr}
+\toprule
+Model & Learned map & Train $e_q$ (\%) & Validation $e_q$ (\%) & Parameters \\
+\midrule
+PROM--ANN Case 1 & $\q_p\mapsto\q_s$ & 1.422 & 3.590 & 564,621 \\
+Master map (Case 2 / POD--NN--ROM) & $(\bm\mu,t)\mapsto\q_{151}$ & 2.888 & 4.261 & 565,399 \\
+PROM--ANN Case 3 & $(\q_p,\bm\mu,t)\mapsto\q_s$ & 0.572 & 3.482 & 565,389 \\
+PROM--POD--AE & $\q_{151}\mapsto\z\mapsto\widehat{\q}_{151}$ & 0.194 & 2.673 & 486,817 \\
+POD--DL--ROM & $(\bm\mu,t)\mapsto\z\mapsto\widehat{\q}_{151}$ & 1.843 & 2.981 & 952,747 \\
+\bottomrule
+\end{tabular}
