@@ -1,0 +1,33 @@
+[run]
+timestamp: 2026-07-11T02:29:58
+script: stage2_local_pod_per_cluster.py
+
+[configuration]
+clusters_file: LocalPOD-GPRSweep/nc3_baseline/clusters.npz
+snap_folder: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Results/param_snaps
+eps2_pod: 1.00000000e-04
+center_local_snapshots_for_svd: True
+centering_source: stage1_centers_w
+dt: 5.00000000e-02
+num_steps: 500
+time_subsample: 1
+
+[clusters]
+K: 3
+S_w_shape: (125000, 4509)
+total_snapshots_used: 5113
+retained_ranks: [97, 60, 79]
+min_rank: 60
+max_rank: 97
+
+[timings_seconds]
+build_local_matrices: 1.95853193e+01
+svd_total: 7.11950200e+01
+total: 1.33962643e+02
+
+[outputs]
+pod_npz: LocalPOD-GPRSweep/nc3_baseline/pod_per_cluster.npz
+rank_plot_png: LocalPOD-GPRSweep/nc3_baseline/stage2_ranks.png
+sv_loss_plot_count: 3
+sv_loss_plot_dir: LocalPOD-GPRSweep/nc3_baseline/stage2_plots
+summary_txt: LocalPOD-GPRSweep/nc3_baseline/stage2_summary.txt

@@ -1,0 +1,42 @@
+[run]
+timestamp: 2026-07-11T03:01:40
+script: stage4_local_pod_gpr_training.py
+
+[configuration]
+q_file: LocalPOD-GPRSweep/nc3_baseline/q_per_cluster.npz
+n_primary: 6
+delta_duplicates: 1.00000000e-03
+n_splits_max: 5
+kernel_candidates: ['matern15']
+alpha_values: [1e-10]
+constant_value: 1.00000000e+00
+length_scale: 1.00000000e+00
+constant_value_bounds: [0.001, 1000.0]
+length_scale_bounds: [0.01, 5.0]
+optimize_hyperparameters: True
+n_restarts_optimizer: 3
+normalize_y: False
+random_seed: 42
+dt: 5.00000000e-02
+num_steps: 500
+
+[clusters]
+K: 3
+r_list: [97, 60, 79]
+has_gpr: [True, True, True]
+best_kernel: ['matern15', 'matern15', 'matern15']
+best_alpha: [1e-10, 1e-10, 1e-10]
+cv_rpe_percent: [0.4371042248616789, 2.188091621858618, 0.5543028503412791]
+train_rpe_percent: [8.084944210506088e-09, 2.1710985851442793e-08, 7.738032376851354e-09]
+analytic_jacobian_compatible: [True, True, True]
+
+[timings_seconds]
+training: 1.86804401e+03
+total: 1.87595078e+03
+
+[outputs]
+models_pkl: LocalPOD-GPRSweep/nc3_baseline/models.pkl
+switching_npz: LocalPOD-GPRSweep/nc3_baseline/switching.npz
+all_in_one_npz: LocalPOD-GPRSweep/nc3_baseline/all_offline.npz
+training_error_png: LocalPOD-GPRSweep/nc3_baseline/stage4_train_err.png
+summary_txt: LocalPOD-GPRSweep/nc3_baseline/stage4_summary.txt

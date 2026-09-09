@@ -1,0 +1,26 @@
+[run]
+timestamp: 2026-07-11T02:30:24
+script: stage3_local_project_to_q.py
+
+[configuration]
+pod_file: LocalPOD-GPRSweep/nc3_baseline/pod_per_cluster.npz
+snap_folder: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Results/param_snaps
+u0_source_policy: stage2_u0_svd_if_available_else_cluster_mean
+dt: 5.00000000e-02
+num_steps: 500
+
+[clusters]
+K: 3
+cluster_snapshot_counts: [1524, 1744, 1845]
+r_list: [97, 60, 79]
+u0_source_per_cluster: ['stage2_u0_svd', 'stage2_u0_svd', 'stage2_u0_svd']
+nonempty_clusters: 3
+
+[timings_seconds]
+build_u0_and_q_total: 2.27005067e+01
+total: 2.59294238e+01
+
+[outputs]
+q_npz: LocalPOD-GPRSweep/nc3_baseline/q_per_cluster.npz
+cluster_count_png: LocalPOD-GPRSweep/nc3_baseline/stage3_counts.png
+summary_txt: LocalPOD-GPRSweep/nc3_baseline/stage3_summary.txt

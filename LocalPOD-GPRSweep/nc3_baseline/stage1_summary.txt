@@ -1,0 +1,34 @@
+[run]
+timestamp: 2026-07-11T02:27:43
+script: stage1_cluster_snapshots_u.py
+
+[configuration]
+n_clusters: 3
+clustering_method: kmeans
+phi: 1.00000000e-01
+time_subsample: 1
+dt: 5.00000000e-02
+num_steps: 500
+snap_folder: /scratch/users/sadpr/Code12May/burgers2d-rom-workbench/Results/param_snaps
+
+[snapshot_matrix]
+S_w_shape: (125000, 4509)
+num_parameters: 9
+num_snapshots: 4509
+time_indices_count: 501
+
+[clusters]
+primary_sizes: [1370, 1590, 1549]
+overlap_sizes: [1524, 1744, 1845]
+min_overlap_size: 1524
+max_overlap_size: 1845
+
+[timings_seconds]
+build_snapshot_matrix: 1.38694491e+01
+clustering: 5.66792886e+01
+total: 1.36637300e+02
+
+[outputs]
+clusters_npz: LocalPOD-GPRSweep/nc3_baseline/clusters.npz
+cluster_sizes_png: LocalPOD-GPRSweep/nc3_baseline/stage1_sizes.png
+summary_txt: LocalPOD-GPRSweep/nc3_baseline/stage1_summary.txt

@@ -127,40 +127,50 @@ def compute_ECSW_training_matrix_2D_local(
 
     Dxec, Dyec, JDxec, JDyec, Eye = get_ops(grid_x, grid_y)
 
-    for isnap in range(n_snaps):
-        u_i = snaps[:, isnap]
-        u_prev = prev_snaps[:, isnap]
-
-        k0 = int(np.argmin([np.linalg.norm(u_i - u0_k) ** 2 for u0_k in u0_list]))
+    def _project_local_state(state):
+        """Select a chart and project one state onto its local affine subspace."""
+        state = np.asarray(state, dtype=np.float64).reshape(-1)
+        k0 = int(np.argmin([np.linalg.norm(state - u0_k) ** 2 for u0_k in u0_list]))
 
         V_k0 = V_list[k0]
         u0_k0 = u0_list[k0]
-        y_k0 = V_k0.T @ (u_i - u0_k0)
+        y_k0 = V_k0.T @ (state - u0_k0)
 
         k = select_cluster_reduced(k0, y_k0, d_const, g_list)
 
         u0_k = u0_list[k]
         V_k = V_list[k]
         r_k = V_k.shape[1]
-        u_norm = np.linalg.norm(u_i)
+        u_norm = np.linalg.norm(state)
         denom = u_norm if u_norm > 0.0 else 1.0
 
-        u_init = u0_k
-        init_res = np.linalg.norm(u_init - u_i)
-        print("Initial residual: {:3.2e}".format(init_res / denom))
+        init_res = np.linalg.norm(u0_k - state)
 
         if use_projection:
-            q_i = V_k.T @ (u_i - u0_k)
-            u_tilde = u0_k + V_k @ q_i
+            q = V_k.T @ (state - u0_k)
+            u_tilde = u0_k + V_k @ q
         else:
-            u_tilde = u_i
+            u_tilde = state
 
-        final_res = np.linalg.norm(u_tilde - u_i)
+        final_res = np.linalg.norm(u_tilde - state)
+        return k, u_tilde, r_k, init_res, final_res, denom
+
+    for isnap in range(n_snaps):
+        u_i = snaps[:, isnap]
+        u_prev = prev_snaps[:, isnap]
+
+        # Both states in the backward-Euler residual are mapped to their own
+        # local chart, as they are in the online local LSPG solve. Using a raw
+        # u_prev here makes the training residual inconsistent with the model.
+        k, u_tilde, r_k, init_res, final_res, denom = _project_local_state(u_i)
+        _, u_prev_tilde, _, _, _, _ = _project_local_state(u_prev)
+
+        print("Initial residual: {:3.2e}".format(init_res / denom))
         print("Final residual: {:3.2e}".format(final_res / denom))
 
-        ires = res(u_tilde, grid_x, grid_y, dt, u_prev, mu, Dxec, Dyec)
+        ires = res(u_tilde, grid_x, grid_y, dt, u_prev_tilde, mu, Dxec, Dyec)
         Ji = jac(u_tilde, dt, JDxec, JDyec, Eye)
-        Wi = Ji @ V_k
+        Wi = Ji @ V_list[k]
 
         row0 = isnap * r_max
         row1 = row0 + r_k
