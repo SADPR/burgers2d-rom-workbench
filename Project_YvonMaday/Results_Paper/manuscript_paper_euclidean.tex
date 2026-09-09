@@ -86,49 +86,55 @@ Consider a parametric nonlinear semi-discrete initial-value problem
 -\mathbf g(t;\mub)=\mathbf0,\qquad \uvec(0;\mub)=\uvec_0(\mub),
 \label{eq:ivp}
 \end{equation}
-with $\mub\in\mathcal D$.  For the selected implicit integrator, let
-$\mathbf r^{m+1}(\uvec;\mub)$ be the residual at step $m+1$, so the HDM solves
+with $\mub\in\mathcal D$.  After a chosen implicit time discretization, let
+$\mathbf r^{m+1}(\uvec;\mub)\in\mathbb R^N$ denote the residual at step
+$m+1$, with dependence on the previous state understood.  The HDM solves
 \begin{equation}
 \mathbf r^{m+1}(\uvec^{m+1};\mub)=\mathbf0.
 \label{eq:discrete-residual}
 \end{equation}
 Let $\uvec_{\mathrm{ref}}$ be the snapshot mean and let $\mathbf S_c$ collect
-centered HDM snapshots.  Its thin singular-value decomposition
+the centered HDM snapshots.  The thin singular-value decomposition
 \begin{equation}
 \mathbf S_c=\mathbf U\boldsymbol\Sigma\mathbf Y^T
 \end{equation}
-defines the Euclidean POD basis
+defines the Euclidean POD basis retained in this work,
 \begin{equation}
 \mathbf V_{\mathrm{tot}}=\mathbf U(:,1:n_{\mathrm{tot}}),\qquad
 \mathbf V_{\mathrm{tot}}^T\mathbf V_{\mathrm{tot}}=\mathbf I.
 \label{eq:euclidean-pod}
 \end{equation}
-The affine reconstruction is
+The common affine linear trial manifold is
 \begin{equation}
-\widetilde{\uvec}(t;\mub)=\uvec_{\mathrm{ref}}+
-\mathbf V_{\mathrm{tot}}\q_N(t;\mub),\qquad
+\boldsymbol\phi_N(\q_N)=\uvec_{\mathrm{ref}}+
+\mathbf V_{\mathrm{tot}}\q_N,\qquad
 \q_N\in\mathbb R^{n_{\mathrm{tot}}}.
 \label{eq:linear-reconstruction}
 \end{equation}
+All learned trial maps below are expressed in these same coordinates.
 
 \subsection{Linear PROM and LSPG reference}
 The full-residual linear PROM is the time-discrete least-squares
 Petrov--Galerkin (LSPG) problem
 \begin{equation}
 \q_N^{m+1}(\mub)=\arg\min_{\mathbf x\in\mathbb R^{n_{\mathrm{tot}}}}
-\norm{\mathbf r^{m+1}(\uvec_{\mathrm{ref}}+
-\mathbf V_{\mathrm{tot}}\mathbf x;\mub)}_2^2.
+\norm{\mathbf r^{m+1}(\boldsymbol\phi_N(\mathbf x);\mub)}_2^2.
 \label{eq:linear-prom}
 \end{equation}
-At a Gauss--Newton iterate, define
+At Gauss--Newton iterate $k$, define
 \begin{equation}
-\mathbf J=\frac{\partial\mathbf r}{\partial\uvec},\qquad
 \mathbf T_N=\mathbf V_{\mathrm{tot}},\qquad
-\mathbf W_N=\mathbf J\mathbf T_N.
+\mathbf J^{m+1,k}=
+\left.\frac{\partial\mathbf r^{m+1}}{\partial\uvec}\right|_{
+\boldsymbol\phi_N(\q_N^{m+1,k})},\qquad
+\mathbf W_N^{m+1,k}=\mathbf J^{m+1,k}\mathbf T_N.
 \end{equation}
-The increment solves
+The normal equations for the increment are
 \begin{equation}
-\mathbf W_N^T\mathbf W_N\Delta\q_N=-\mathbf W_N^T\mathbf r.
+\left(\mathbf W_N^{m+1,k}\right)^T\mathbf W_N^{m+1,k}
+\Delta\q_N^{m+1,k}=-
+\left(\mathbf W_N^{m+1,k}\right)^T
+\mathbf r^{m+1}\!\left(\boldsymbol\phi_N(\q_N^{m+1,k});\mub\right).
 \label{eq:linear-prom-gn}
 \end{equation}
 Equation~\eqref{eq:linear-prom} generates all training targets in the PROM
@@ -136,51 +142,120 @@ campaign.
 
 \subsection{Linear HPROM and ECM formulation}
 \label{sec:linear-hprom}
-This subsection fixes the hyperreduction formulation needed for the later
-HPROM campaign.  Let $\mathcal E=\{e_i\}_{i=1}^{N_e}$ be the mesh entities and
-assemble the residual from local contributions,
+The linear HPROM replaces full residual evaluations in the LSPG update by a
+sparse, positive empirical-cubature approximation.  This formulation is
+given in detail because the same projected-residual algebra is used when the
+affine trial manifold is replaced by a learned one.  Let
+$\mathcal E=\{e_i\}_{i=1}^{N_e}$ be the mesh entities.  The time-discrete
+residual is assembled from local contributions as
 \begin{equation}
 \mathbf r^{m+1}(\uvec;\mub)=\sum_{e_i\in\mathcal E}\mathbf L_{e_i}^T
 \mathbf r_{e_i}^{m+1}(\mathbf L_{e_i^+}\uvec;\mub).
 \label{eq:entity-residual}
 \end{equation}
-Here $\mathbf L_{e_i}$ extracts residual degrees of freedom and
-$\mathbf L_{e_i^+}$ extracts the stencil required for evaluation.  The
-projected LSPG residual and Gauss--Newton matrix are entity sums,
+Here $\mathbf r_{e_i}^{m+1}\in\mathbb R^{d_{e_i}}$ is the contribution of
+entity $e_i$, $\mathbf L_{e_i}\in\{0,1\}^{d_{e_i}\times N}$ extracts its
+residual degrees of freedom, and $\mathbf L_{e_i^+}$ extracts the enlarged
+state stencil needed to evaluate it.  The stencil contains neighbouring
+entities whenever the discretization requires them.
+
+For the affine trial map \eqref{eq:linear-reconstruction}, the projected
+LSPG residual at a Gauss--Newton iterate has the entity-wise form
 \begin{equation}
 \begin{aligned}
-\mathbf g_N&=\mathbf W_N^T\mathbf r
-=\sum_{e_i\in\mathcal E}(\mathbf L_{e_i}\mathbf W_N)^T
-\mathbf r_{e_i}(\mathbf L_{e_i^+}\boldsymbol\phi_N;\mub),\\
-\mathbf J_N&=\mathbf W_N^T\mathbf J\mathbf T_N
-=\sum_{e_i\in\mathcal E}(\mathbf L_{e_i}\mathbf W_N)^T
-\mathbf J_{e_i}(\mathbf L_{e_i^+}\mathbf T_N),
+\mathbf g_N^{m+1,k}(\mub)
+&:=\left(\mathbf W_N^{m+1,k}\right)^T
+\mathbf r^{m+1}\!\left(\boldsymbol\phi_N(\q_N^{m+1,k});\mub\right)\\
+&=\sum_{e_i\in\mathcal E}
+\left(\mathbf L_{e_i}\mathbf W_N^{m+1,k}\right)^T
+\mathbf r_{e_i}^{m+1}\!\left(
+\mathbf L_{e_i^+}\boldsymbol\phi_N(\q_N^{m+1,k});\mub\right).
 \end{aligned}
-\label{eq:linear-entity-normal-equations}
+\label{eq:linear-projected-residual}
 \end{equation}
-where $\boldsymbol\phi_N(\q_N)=\uvec_{\mathrm{ref}}+
-\mathbf V_{\mathrm{tot}}\q_N$.  ECM selects a reduced set
-$\widetilde{\mathcal E}_N$ and positive weights $\xi_{N,e_i}$ that replace
-both sums by weighted sums over $\widetilde{\mathcal E}_N$.
+Let $\mathbf J_{e_i}^{m+1,k}$ be the derivative of the local residual with
+respect to the stencil state at the same iterate.  The Gauss--Newton matrix
+is assembled analogously,
+\begin{equation}
+\mathbf A_N^{m+1,k}:=
+\left(\mathbf W_N^{m+1,k}\right)^T\mathbf J^{m+1,k}\mathbf T_N
+=\sum_{e_i\in\mathcal E}
+\left(\mathbf L_{e_i}\mathbf W_N^{m+1,k}\right)^T
+\mathbf J_{e_i}^{m+1,k}\left(\mathbf L_{e_i^+}\mathbf T_N\right).
+\label{eq:linear-projected-jacobian}
+\end{equation}
 
-For a selected parameter--time state $s$, the contribution of entity $e_i$ is
+ECM selects a reduced entity set $\widetilde{\mathcal E}_N\subset\mathcal E$
+and positive weights $\xi_{N,e_i}$.  The same rule approximates both
+projected quantities,
+\begin{equation}
+\begin{aligned}
+\widehat{\mathbf g}_N^{m+1,k}
+&=\sum_{e_i\in\widetilde{\mathcal E}_N}\xi_{N,e_i}
+\left(\mathbf L_{e_i}\mathbf W_N^{m+1,k}\right)^T
+\mathbf r_{e_i}^{m+1}\!\left(
+\mathbf L_{e_i^+}\boldsymbol\phi_N(\q_N^{m+1,k});\mub\right),\\
+\widehat{\mathbf A}_N^{m+1,k}
+&=\sum_{e_i\in\widetilde{\mathcal E}_N}\xi_{N,e_i}
+\left(\mathbf L_{e_i}\mathbf W_N^{m+1,k}\right)^T
+\mathbf J_{e_i}^{m+1,k}\left(\mathbf L_{e_i^+}\mathbf T_N\right).
+\end{aligned}
+\label{eq:linear-ecm-sampled-normal-equations}
+\end{equation}
+The online sampled update is consequently
+\begin{equation}
+\widehat{\mathbf A}_N^{m+1,k}\Delta\q_N^{m+1,k}
+=-\widehat{\mathbf g}_N^{m+1,k},\qquad
+\q_N^{m+1,k+1}=\q_N^{m+1,k}+\Delta\q_N^{m+1,k}.
+\label{eq:linear-hprom-gn-update}
+\end{equation}
+
+\paragraph{Offline cubature construction.}
+For every selected parameter--time training state $s$, the linear coordinate
+$\q_{N,s}$ and its LSPG test basis $\mathbf W_{N,s}$ define the contribution
+of entity $e_i$ to the projected residual,
 \begin{equation}
 \mathbf c_{N,e_i}^{(s)}=(\mathbf L_{e_i}\mathbf W_{N,s})^T
 \mathbf r_{e_i}(\mathbf L_{e_i^+}\boldsymbol\phi_N(\q_{N,s});\mub_s).
 \label{eq:linear-ecm-contribution}
 \end{equation}
-Stacking these vectors gives $\mathbf C_N$ and
-$\mathbf b_N=\mathbf C_N\mathbf1$.  ECM seeks
+Stacking all $n_{\mathrm{tot}}$-component contributions over
+$N_{\mathrm{ECM}}$ selected states gives
+\begin{equation}
+\mathbf C_N=
+\begin{bmatrix}
+\mathbf c_{N,e_1}^{(1)} & \cdots & \mathbf c_{N,e_{N_e}}^{(1)}\\
+\vdots & & \vdots\\
+\mathbf c_{N,e_1}^{(N_{\mathrm{ECM}})} & \cdots &
+\mathbf c_{N,e_{N_e}}^{(N_{\mathrm{ECM}})}
+\end{bmatrix}
+\in\mathbb R^{n_{\mathrm{tot}}N_{\mathrm{ECM}}\times N_e},
+\qquad \mathbf b_N=\mathbf C_N\mathbf1.
+\label{eq:linear-ecm-training-matrix}
+\end{equation}
+ECM seeks a sparse nonnegative approximation of the full projected-residual
+data,
 \begin{equation}
 \boldsymbol\xi_N=\arg\min_{\boldsymbol\zeta\geq\mathbf0}
 \norm{\mathbf C_N\boldsymbol\zeta-\mathbf b_N}_2^2,\qquad
 \widetilde{\mathcal E}_N=\{e_i\in\mathcal E:\xi_{N,e_i}>0\}.
 \label{eq:linear-ecm}
 \end{equation}
-We use ECM in the sense of empirical cubature
+In the present implementation, a direct SVD removes numerically null
+directions of $\mathbf C_N$ before the nonnegative cubature solve.  The rule
+is therefore tied to the affine trial manifold and its LSPG test basis.  In
+particular, replacing $\boldsymbol\phi_N$ by a learned closure or decoder
+also changes the tangent, the test basis, and the projected contributions;
+the corresponding ECM rule must be constructed for that map.
+
+\paragraph{Relation to other hyperreduction methods.}
+The common step is to approximate an entity-wise sum of \emph{projected}
+residual contributions, rather than the state reconstruction or a learned
+map.  We use ECM in the sense of empirical cubature
 \cite{hernandez2017dimensional,hernandez2020multiscale}.  ECSW is another
 project--then--approximate hyperreduction strategy
-\cite{farhat2015structure}; it is not the rule used here.
+\cite{farhat2015structure}.  It could be used with the same LSPG and trial
+manifold formulations, but ECM is the rule used in this work.
 
 \section{Learned Reduced Representations}
 \label{sec:learned-representations}

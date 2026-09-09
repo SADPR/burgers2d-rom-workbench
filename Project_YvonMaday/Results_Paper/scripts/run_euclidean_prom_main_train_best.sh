@@ -24,6 +24,9 @@ VALIDATION_DATASET_DIR="${VALIDATION_DATASET_DIR:-$PAPER_ROOT/Stage2/prom_coeff_
 STAGE3_DIR="$PAPER_ROOT/Stage3"
 MODELS_DIR="$STAGE3_DIR/models"
 LOG_ROOT="$PAPER_ROOT/logs/train_best_external_validation"
+CAMPAIGN_LABEL="${CAMPAIGN_LABEL:-$PAPER_TAG}"
+EXPECTED_TRAIN_TRAJECTORIES="${EXPECTED_TRAIN_TRAJECTORIES:-9}"
+export EXPECTED_TRAIN_TRAJECTORIES
 
 TRAIN_NUM_THREADS="${TRAIN_NUM_THREADS:-24}"
 FORCE="${FORCE:-0}"
@@ -62,7 +65,7 @@ import numpy as np
 from stage3_dataset_utils import read_dataset_meta
 
 expected = (
-    ("training", Path(os.environ["DATASET_DIR"]), 9),
+    ("training", Path(os.environ["DATASET_DIR"]), int(os.environ["EXPECTED_TRAIN_TRAJECTORIES"])),
     ("external validation", Path(os.environ["VALIDATION_DATASET_DIR"]), 2),
 )
 for label, dataset, expected_mu in expected:
@@ -211,8 +214,9 @@ train_pod_dl() {
 print_plan() {
   cat <<EOF
 [euclidean-prom-train] selected-architecture training with external parameter validation
+[euclidean-prom-train] label:        $CAMPAIGN_LABEL
 [euclidean-prom-train] campaign:     $PAPER_ROOT
-[euclidean-prom-train] training:     $DATASET_DIR
+[euclidean-prom-train] training:     $DATASET_DIR ($EXPECTED_TRAIN_TRAJECTORIES trajectories)
 [euclidean-prom-train] validation:   $VALIDATION_DATASET_DIR
 [euclidean-prom-train] stage3:       $STAGE3_DIR
 [euclidean-prom-train] logs:         $LOG_ROOT
