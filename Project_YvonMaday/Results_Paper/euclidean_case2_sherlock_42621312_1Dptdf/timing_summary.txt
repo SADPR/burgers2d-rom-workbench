@@ -1,0 +1,35 @@
+Euclidean Case-2 Sherlock benchmark
+
+Times: full 500-step online rollout, including initialization and adaptive directions.
+Excludes model/data loading, accuracy scoring and output-array saving.
+Full-trajectory warmups per method/point: 0 (excluded from statistics).
+Standard deviation: sample standard deviation; blank when only one sample exists.
+With one trajectory per point, timing variability is not estimated.
+No HDM speed-up claimed: no matched HDM timing is measured by this job.
+Points 0,1,2: in-domain; point 3: extrapolation.
+
+method | point | repetitions | mean seconds | std seconds | state error (%)
+case2_known_initial | 0 | 1 | 116.660831 |  | 1.161789815
+case2_known_initial | 1 | 1 | 84.495978 |  | 1.946573858
+case2_known_initial | 2 | 1 | 83.897016 |  | 1.743320925
+case2_known_initial | 3 | 1 | 88.190355 |  | 2.642831390
+adaptive3_known_initial | 0 | 1 | 199.804010 |  | 0.411544753
+adaptive3_known_initial | 1 | 1 | 162.632874 |  | 0.445662241
+adaptive3_known_initial | 2 | 1 | 161.933198 |  | 0.483145004
+adaptive3_known_initial | 3 | 1 | 165.291085 |  | 0.850250478
+case1_known_initial | 0 | 1 | 463.806267 |  | 0.417705113
+case1_known_initial | 1 | 1 | 429.952422 |  | 0.542528968
+case1_known_initial | 2 | 1 | 497.255677 |  | 0.736463719
+case1_known_initial | 3 | 1 | 432.901365 |  | 1.672863301
+case3_known_initial | 0 | 1 | 539.576433 |  | 0.407577050
+case3_known_initial | 1 | 1 | 459.108821 |  | 0.511755333
+case3_known_initial | 2 | 1 | 436.284995 |  | 0.562765395
+case3_known_initial | 3 | 1 | 438.561897 |  | 1.520756700
+
+In-domain mean time (equal weights on points 0,1,2):
+case2_known_initial: 95.017942 s
+adaptive3_known_initial: 174.790027 s
+case1_known_initial: 463.671455 s
+case3_known_initial: 478.323416 s
+
+Status: COMPLETE

@@ -1,0 +1,36 @@
+{
+  "config": {
+    "model_sha256": "f4b9aed731e5559449cea9e7df6490409358366f670cb8bc15ba684fc5ec38db",
+    "basis_sha256": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+    "reference_sha256": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "solver_sha256": "2e308bc97bd87ac61c872371dbf3979f741c105a55464e7b9dc856123239f148",
+    "runner_sha256": "11463fc06a1c157b3ceb9ff5b8c959419bb050394df00946bceabf8cc24a0a76",
+    "dt": 0.05,
+    "steps": 500,
+    "nprimary": 10,
+    "ntot": 151,
+    "threads": 24,
+    "numpy": "1.24.4",
+    "torch": "2.5.0+cu124",
+    "initialization": "linear",
+    "validation_only_selection": true,
+    "mu": [
+      4.0,
+      0.033
+    ],
+    "method": "krylov3",
+    "stage": "reporting",
+    "reference_path": "/scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/_case2_krylov3/Project_YvonMaday/Results_Paper/euclidean_prom_main/Runs/Linear/linear_prom_mu1_4.000_mu2_0.0330_ntot151/qN.npy",
+    "reference_q_sha256": "28b8d61680c4599280a4be5f6bd65b0d82eccb0d86d1388b65f0b32e9ff013e6"
+  },
+  "online_seconds": 165.2910852720961,
+  "direction_seconds": 66.38561317604035,
+  "iterations": 1526,
+  "min_rank": 3,
+  "max_rank": 3,
+  "mean_residual_norm": 0.5863669433337662,
+  "coefficient_error_percent": 0.4413454872313862,
+  "primary_error_percent": 0.10781662857969157,
+  "secondary_error_percent": 2.307452894089426,
+  "state_error_percent": 0.8502504776064158
+}
