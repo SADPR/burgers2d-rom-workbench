@@ -1,0 +1,23 @@
+{
+  "selection_metric": "mean full-trajectory coefficient error vs linear PROM at the two validation parameters",
+  "candidate_values_percent": {
+    "krylov1": 1.9884243799718346,
+    "krylov3": 1.0927821908141448,
+    "krylov5": 1.1230649096745373
+  },
+  "selected_method": "krylov3",
+  "reporting_variants": [
+    "original ANN initial representation",
+    "known initial condition projected onto the full Euclidean trial space"
+  ],
+  "reporting_policy": "four existing manuscript parameters; no tuning on these results",
+  "validation_sources_sha256": {
+    "/home/sares/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_case2_local_corrections/validation_0_krylov1_steps500/summary.json": "5577aaf4ca7ac23b3cebb80dd2bbfd8761b67974ecf54257efcc81f3bdf549b9",
+    "/home/sares/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_case2_local_corrections/validation_1_krylov1_steps500/summary.json": "4185b08eaa9062e38313074f0f5430b0af99c2c36498f9032fc4487a4b02746d",
+    "/home/sares/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_case2_local_corrections/validation_0_krylov3_steps500/summary.json": "bc3831afea038d78c34b584b001d10e2268c96e9399ec87ea85aca34b9043136",
+    "/home/sares/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_case2_local_corrections/validation_1_krylov3_steps500/summary.json": "12272f05b115640ab33320c772add6fa0b1b499eec029e2a2b24615712021499",
+    "/home/sares/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_case2_local_corrections/validation_0_krylov5_steps500/summary.json": "8992a5d6c2d810ece5ac3852b253fb4a5c282503914c6aebbe42320e9de3da5d",
+    "/home/sares/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_case2_local_corrections/validation_1_krylov5_steps500/summary.json": "a62c3896a853e566433b2a2c08def6379646a42d02fd4ecf6e958b20c6c5ce43"
+  },
+  "initial_condition_ablation": "compare baseline and selected correction at both validation points before reporting"
+}

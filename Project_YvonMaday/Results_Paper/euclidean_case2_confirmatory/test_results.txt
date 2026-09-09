@@ -1,0 +1,8 @@
+.......................                                                  [100%]
+=============================== warnings summary ===============================
+tests/test_ecm_consistency.py::EcmPredecessorProjectionTests::test_case3_projects_the_immediate_predecessor_at_previous_time
+  /home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+23 passed, 1 warning in 2.23s

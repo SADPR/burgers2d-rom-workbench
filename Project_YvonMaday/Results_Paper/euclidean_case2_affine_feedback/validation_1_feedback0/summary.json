@@ -1,0 +1,28 @@
+{
+  "config": {
+    "method": "affine_feedback",
+    "mu": [
+      5.1875,
+      0.01875
+    ],
+    "ridge": 0.0,
+    "steps": 500,
+    "stage": "validation",
+    "threads": 2,
+    "model_sha256": "f4b9aed731e5559449cea9e7df6490409358366f670cb8bc15ba684fc5ec38db",
+    "basis_sha256": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+    "gain_sha256": "609dab5d584aae361dacfdf340d44dccba5830eb5e44984278a19e8480129ad5",
+    "runner_sha256": "8843b499ff1c0fcaef1d86beff0f503f696c28f9786c05c32777de07f898b1f2",
+    "rollout_sha256": "a1a334792d63be3e91b7439b88b3cd926d2fc7397ef98e2fe45a2763fcea4fe2",
+    "initialization": "least-squares fit of initial condition on the feedback manifold"
+  },
+  "online_seconds": 33.8920192271471,
+  "direction_seconds": 0.0009424686431884766,
+  "iterations": 1500,
+  "min_rank": 0,
+  "max_rank": 0,
+  "mean_residual_norm": 3.9409186536564182,
+  "coefficient_error_percent": 4.234837063863729,
+  "primary_error_percent": 1.8824923454039326,
+  "secondary_error_percent": 17.708792982074286
+}

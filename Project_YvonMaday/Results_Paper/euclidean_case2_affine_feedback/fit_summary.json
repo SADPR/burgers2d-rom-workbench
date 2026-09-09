@@ -1,0 +1,12 @@
+{
+  "0.0": {
+    "gain_spectral_norm": 1.7068177110837945,
+    "train_tail_error_ratio": 0.9827485290480398,
+    "validation_teacher_primary_tail_error_ratio": 1.1777061106645
+  },
+  "1.0": {
+    "gain_spectral_norm": 0.6014880034543011,
+    "train_tail_error_ratio": 0.9885640219115348,
+    "validation_teacher_primary_tail_error_ratio": 1.0295496371388329
+  }
+}

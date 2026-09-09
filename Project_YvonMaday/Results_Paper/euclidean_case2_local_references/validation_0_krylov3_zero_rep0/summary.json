@@ -1,0 +1,25 @@
+{
+  "config": {
+    "method": "krylov3_zero",
+    "stage": "validation",
+    "mu": [
+      4.5625,
+      0.02625
+    ],
+    "steps": 500,
+    "threads": 2,
+    "model_sha256": "f4b9aed731e5559449cea9e7df6490409358366f670cb8bc15ba684fc5ec38db",
+    "basis_sha256": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+    "runner_sha256": "a19017afccaebd3c869a0acf1e225cc8f012f3b70b2b391b0f2dc13e31506400",
+    "production_solver_sha256": "7c4c0f5d9e85465d9b10a76fcd1d0ec5e35a8a81c3146a4884c78cad57b5e43a"
+  },
+  "online_seconds": 90.31401556544006,
+  "direction_seconds": 35.2528317887336,
+  "iterations": 1997,
+  "min_rank": 3,
+  "max_rank": 3,
+  "mean_residual_norm": 0.9467889029535264,
+  "coefficient_error_percent": 3.5803014553317176,
+  "primary_error_percent": 1.2708560835053067,
+  "secondary_error_percent": 16.40207745646489
+}

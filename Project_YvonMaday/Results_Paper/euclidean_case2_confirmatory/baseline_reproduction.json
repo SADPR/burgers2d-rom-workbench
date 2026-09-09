@@ -1,0 +1,34 @@
+[
+  {
+    "mu": [
+      4.875,
+      0.0225
+    ],
+    "max_absolute_coefficient_difference": 6.222724914550781e-05,
+    "relative_frobenius_difference": 1.4694209960617601e-07
+  },
+  {
+    "mu": [
+      4.56,
+      0.019
+    ],
+    "max_absolute_coefficient_difference": 9.1552734375e-05,
+    "relative_frobenius_difference": 1.461794052335368e-07
+  },
+  {
+    "mu": [
+      5.19,
+      0.026
+    ],
+    "max_absolute_coefficient_difference": 8.678436279296875e-05,
+    "relative_frobenius_difference": 1.4357336087195223e-07
+  },
+  {
+    "mu": [
+      4.0,
+      0.033
+    ],
+    "max_absolute_coefficient_difference": 6.29425048828125e-05,
+    "relative_frobenius_difference": 1.2543875120901206e-07
+  }
+]

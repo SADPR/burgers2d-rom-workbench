@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""Local, non-destructive Euclidean Case-2 correction experiments.
+
+Uses existing baseline ANN and linear PROM data. Never trains on reporting
+points, loads HDM data only for scoring, and never uses a reference predecessor
+in a rollout. Outputs are separate from all manuscript campaigns.
+"""
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+os.environ.setdefault("MPLCONFIGDIR", "/tmp/case2-mpl")
+
+import numpy as np
+import torch
+from threadpoolctl import threadpool_limits
+
+from burgers.case2_residual_correction import residual_krylov_space, solve_affine_step
+from burgers.config import DT, NUM_STEPS, GRID_X, GRID_Y, W0
+from burgers.core import get_ops, inviscid_burgers_res2D, inviscid_burgers_exact_jac2D
+from Project_YvonMaday.run_prom_ann_case_2 import _load_case2_model
+
+PAPER = ROOT / "Project_YvonMaday/Results_Paper"
+CAMPAIGN = PAPER / "euclidean_prom_main"
+BASIS = PAPER / "MetricStudy/euclidean/Stage1"
+MODEL = CAMPAIGN / "Stage3/models/master_ann_mu_t_to_qtot_ntot151_best.pt"
+VALIDATION = [(4.5625, 0.02625), (5.1875, 0.01875)]
+REPORTING = [(4.875, 0.0225), (4.56, 0.019), (5.19, 0.026), (4.0, 0.033)]
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def atomic_json(path, payload):
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(payload, indent=2, allow_nan=False) + "\n")
+    temporary.replace(path)
+
+
+def predict(model, mu, steps):
+    times = DT * np.arange(steps + 1)
+    inputs = np.column_stack((np.tile(mu, (times.size, 1)), times))
+    with torch.no_grad():
+        # Match the production runner's single-time prediction arithmetic.
+        values = [model(torch.tensor(x[None], dtype=torch.float32)).numpy()[0]
+                  for x in inputs]
+    return np.asarray(values, dtype=np.float64).T
+
+
+def global_error_space(model, nprimary, output):
+    errors = []
+    dataset = CAMPAIGN / "Stage2/prom_coeff_dataset_ntot151/per_mu"
+    for path in sorted(dataset.iterdir()):
+        q = np.load(path / "qN.npy")
+        mu = np.load(path / "mu.npy").reshape(-1)
+        errors.append((q - predict(model, mu, q.shape[1] - 1))[nprimary:, 1:])
+    errors = np.hstack(errors)
+    vectors, singular, _ = np.linalg.svd(errors, full_matrices=False)
+    np.save(output / "global_tail_basis.npy", vectors)
+    atomic_json(output / "global_tail_basis.json", {
+        "construction": "SVD of in-sample tail prediction errors; nine training parameters only",
+        "captured_energy": {str(r): float(np.sum(singular[:r]**2) / np.sum(singular**2))
+                            for r in (1, 3, 5, 10)},
+        "training_parameters": [np.load(p / "mu.npy").reshape(-1).tolist()
+                                for p in sorted(dataset.iterdir())],
+    })
+    return vectors
+
+
+def ann_tangent_space(model, mu, step, nprimary):
+    point = torch.tensor([*mu, DT * step], dtype=torch.float32)
+    with torch.enable_grad():
+        derivative = torch.func.jacfwd(lambda x: model(x[None])[0])(point)
+    derivative = derivative.detach().numpy()[nprimary:].astype(float)
+    # Nondimensional input scales; all three independent directions retained.
+    derivative *= np.array([0.625, 0.0075, 25.0])[None, :]
+    u, s, _ = np.linalg.svd(derivative, full_matrices=False)
+    return u[:, s > 1e-10 * max(s[0], 1e-30)]
+
+
+def rollout(model, v, uref, mu, method, steps, nprimary, fixed=None, progress=None):
+    vp = np.asfortranarray(v[:, :nprimary])
+    vs = np.asfortranarray(v[:, nprimary:])
+    start = time.perf_counter()
+    predictions = predict(model, mu, steps)
+    offsets = np.asfortranarray(uref[:, None] + vs @ predictions[nprimary:])
+    primary = np.linalg.lstsq(vp, W0 - offsets[:, 0], rcond=None)[0]
+    current = offsets[:, 0] + vp @ primary
+    q = predictions.copy()
+    q[:nprimary, 0] = primary
+    dx, dy, jdx, jdy, eye = get_ops(GRID_X, GRID_Y)
+    iterations, ranks, residuals = [], [], []
+    direction_seconds = 0.0
+    for k in range(1, steps + 1):
+        previous = current.copy()
+
+        def residual(w):
+            return inviscid_burgers_res2D(w, GRID_X, GRID_Y, DT, previous, mu, dx, dy)
+
+        def jacobian(w):
+            return inviscid_burgers_exact_jac2D(w, DT, jdx, jdy, eye)
+
+        offset = offsets[:, k]
+        direction_start = time.perf_counter()
+        if method == "baseline":
+            b = np.empty((vs.shape[1], 0))
+        elif method.startswith("krylov"):
+            candidate = offset + vp @ primary
+            b = residual_krylov_space(jacobian(candidate), vp, vs,
+                                     residual(candidate), int(method[6:]))
+        elif method.startswith("global"):
+            b = fixed[:, :int(method[6:])]
+        elif method == "ann_tangent3":
+            b = ann_tangent_space(model, mu, k, nprimary)
+        else:
+            raise ValueError(method)
+        tangent = np.asfortranarray(np.column_stack((vp, vs @ b))) if b.size else vp
+        direction_seconds += time.perf_counter() - direction_start
+        initial = np.concatenate((primary, np.zeros(b.shape[1])))
+        z, current, count, norm = solve_affine_step(offset, tangent, initial, residual, jacobian)
+        primary = z[:nprimary]
+        q[:nprimary, k] = primary
+        q[nprimary:, k] += b @ z[nprimary:]
+        iterations.append(count)
+        ranks.append(b.shape[1])
+        residuals.append(norm)
+        if k % 50 == 0 or k == steps:
+            elapsed = time.perf_counter() - start
+            print(f"{method} mu={mu} step={k}/{steps} elapsed={elapsed:.1f}s", flush=True)
+            if progress:
+                atomic_json(progress, {"method": method, "mu": mu, "step": k,
+                                       "steps": steps, "elapsed_s": elapsed})
+    return q, {"online_seconds": time.perf_counter() - start,
+               "direction_seconds": direction_seconds, "iterations": int(sum(iterations)),
+               "min_rank": int(min(ranks)), "max_rank": int(max(ranks)),
+               "mean_residual_norm": float(np.mean(residuals))}
+
+
+def reference(mu, stage):
+    if stage == "validation":
+        paths = (CAMPAIGN / "Stage2/prom_coeff_dataset_ntot151_validation2/per_mu").iterdir()
+    else:
+        paths = (CAMPAIGN / "Runs/Linear").iterdir()
+    for path in paths:
+        if np.allclose(np.load(path / "mu.npy").reshape(-1), mu, rtol=0, atol=1e-10):
+            return path / "qN.npy"
+    raise FileNotFoundError(f"No linear PROM reference for {mu}")
+
+
+def score(q, v, uref, mu, refpath):
+    teacher = np.load(refpath)[:, :q.shape[1]]
+    difference = q - teacher
+    result = {"coefficient_error_percent": float(100 * np.linalg.norm(difference) / np.linalg.norm(teacher)),
+              "primary_error_percent": float(100 * np.linalg.norm(difference[:10]) / np.linalg.norm(teacher[:10])),
+              "secondary_error_percent": float(100 * np.linalg.norm(difference[10:]) / np.linalg.norm(teacher[10:]))}
+    hdmpath = ROOT / f"Project_YvonMaday/Results/param_snaps/mu1_{mu[0]}+mu2_{mu[1]}.npy"
+    if hdmpath.exists():
+        hdm = np.load(hdmpath, mmap_mode="r")
+        numerator = denominator = 0.0
+        for first in range(0, q.shape[1], 32):
+            sl = slice(first, min(first + 32, q.shape[1]))
+            truth = hdm[:, sl]
+            error = uref[:, None] + v @ q[:, sl] - truth
+            numerator += np.sum(error**2)
+            denominator += np.sum(truth**2)
+        result["state_error_percent"] = float(100 * np.sqrt(numerator / denominator))
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--stage", choices=("validation", "reporting"), default="validation")
+    parser.add_argument("--methods", nargs="+", default=["baseline", "global3", "global10", "ann_tangent3", "krylov1", "krylov3"])
+    parser.add_argument("--steps", type=int, default=NUM_STEPS)
+    parser.add_argument("--point-indices", type=int, nargs="+")
+    parser.add_argument("--threads", type=int, default=2)
+    parser.add_argument("--output", type=Path, default=PAPER / "euclidean_case2_local_corrections")
+    args = parser.parse_args()
+    if not 1 <= args.steps <= NUM_STEPS:
+        parser.error("steps must be between 1 and 500")
+    allowed = {"baseline", "ann_tangent3"} | {f"{prefix}{r}" for prefix in ("global", "krylov") for r in (1, 3, 5, 10)}
+    if not set(args.methods) <= allowed:
+        parser.error(f"Allowed methods: {sorted(allowed)}")
+    args.output.mkdir(parents=True, exist_ok=True)
+    torch.set_num_threads(args.threads)
+    model, ntot, kind, _ = _load_case2_model(MODEL, "cpu")
+    if kind != "q_tot" or ntot != 151:
+        raise ValueError("Expected the Euclidean 151-coordinate master ANN")
+    v = np.asfortranarray(np.load(BASIS / "basis.npy"))
+    uref = np.load(BASIS / "u_ref.npy").reshape(-1)
+    if not np.allclose(v.T @ v, np.eye(ntot), rtol=0, atol=1e-10):
+        raise ValueError("This experiment requires Euclidean-orthonormal POD modes")
+    manifest = {"model_sha256": sha256(MODEL), "basis_sha256": sha256(BASIS / "basis.npy"),
+                "reference_sha256": sha256(BASIS / "u_ref.npy"),
+                "solver_sha256": sha256(ROOT / "burgers/case2_residual_correction.py"),
+                "runner_sha256": sha256(__file__), "dt": DT, "steps": args.steps,
+                "nprimary": 10, "ntot": ntot, "threads": args.threads,
+                "numpy": np.__version__, "torch": str(torch.__version__),
+                "initialization": "identical ANN-offset initial state for every method",
+                "validation_only_selection": True}
+    points = VALIDATION if args.stage == "validation" else REPORTING
+    selected = args.point_indices if args.point_indices is not None else range(len(points))
+    fixed = global_error_space(model, 10, args.output) if any(m.startswith("global") for m in args.methods) else None
+    for index in selected:
+        mu = points[index]
+        refpath = reference(mu, args.stage)
+        for method in args.methods:
+            folder = args.output / f"{args.stage}_{index}_{method}_steps{args.steps}"
+            folder.mkdir(exist_ok=True)
+            summary = folder / "summary.json"
+            config = {**manifest, "mu": mu, "method": method, "stage": args.stage,
+                      "reference_path": str(refpath), "reference_q_sha256": sha256(refpath)}
+            if summary.exists():
+                previous = json.loads(summary.read_text())
+                if json.dumps(previous["config"], sort_keys=True) != json.dumps(config, sort_keys=True):
+                    raise RuntimeError(f"Configuration changed; use a new output root: {folder}")
+                print(f"Completed, skipping {folder.name}", flush=True)
+                continue
+            q, stats = rollout(model, v, uref, mu, method, args.steps, 10, fixed, folder / "progress.json")
+            np.save(folder / "qN.npy", q)
+            result = {"config": config, **stats, **score(q, v, uref, mu, refpath)}
+            atomic_json(summary, result)
+            print(json.dumps({k: value for k, value in result.items() if k != "config"}), flush=True)
+
+
+if __name__ == "__main__":
+    with threadpool_limits(limits=int(sys.argv[sys.argv.index("--threads") + 1]) if "--threads" in sys.argv else 2):
+        main()

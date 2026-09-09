@@ -1,0 +1,26 @@
+{
+  "config": {
+    "method": "case2_n20",
+    "stage": "reporting",
+    "mu": [
+      4.56,
+      0.019
+    ],
+    "steps": 500,
+    "threads": 2,
+    "model_sha256": "f4b9aed731e5559449cea9e7df6490409358366f670cb8bc15ba684fc5ec38db",
+    "basis_sha256": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+    "runner_sha256": "b9348a5a1794920339af1fcfacdeda7339b3ee40d20fbe39fd2e9acef8ab003a",
+    "production_solver_sha256": "7c4c0f5d9e85465d9b10a76fcd1d0ec5e35a8a81c3146a4884c78cad57b5e43a"
+  },
+  "online_seconds": 51.13653379492462,
+  "direction_seconds": 0.0009193196892738342,
+  "iterations": 1500,
+  "min_rank": 0,
+  "max_rank": 0,
+  "mean_residual_norm": 2.675807705904767,
+  "coefficient_error_percent": 3.5401417736353458,
+  "primary_error_percent": 0.3212739803494135,
+  "secondary_error_percent": 16.479799727173837,
+  "state_error_percent": 1.5564878259415014
+}

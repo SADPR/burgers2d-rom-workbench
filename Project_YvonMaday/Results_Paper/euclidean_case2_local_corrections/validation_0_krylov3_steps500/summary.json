@@ -1,0 +1,35 @@
+{
+  "config": {
+    "model_sha256": "f4b9aed731e5559449cea9e7df6490409358366f670cb8bc15ba684fc5ec38db",
+    "basis_sha256": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+    "reference_sha256": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "solver_sha256": "2e308bc97bd87ac61c872371dbf3979f741c105a55464e7b9dc856123239f148",
+    "runner_sha256": "a1a334792d63be3e91b7439b88b3cd926d2fc7397ef98e2fe45a2763fcea4fe2",
+    "dt": 0.05,
+    "steps": 500,
+    "nprimary": 10,
+    "ntot": 151,
+    "threads": 2,
+    "numpy": "2.5.3",
+    "torch": "2.14.0+cpu",
+    "initialization": "identical ANN-offset initial state for every method",
+    "validation_only_selection": true,
+    "mu": [
+      4.5625,
+      0.02625
+    ],
+    "method": "krylov3",
+    "stage": "validation",
+    "reference_path": "/home/sares/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2/per_mu/mu1_4.562_mu2_0.0262/qN.npy",
+    "reference_q_sha256": "135acb118e0da5fa7a2a109fee02c2ad55a00c2a270d4ddb916ab32b4b0861c3"
+  },
+  "online_seconds": 66.80330983549356,
+  "direction_seconds": 32.408406583592296,
+  "iterations": 1505,
+  "min_rank": 3,
+  "max_rank": 3,
+  "mean_residual_norm": 0.8916093305160111,
+  "coefficient_error_percent": 0.9611967440329247,
+  "primary_error_percent": 0.25081358840659884,
+  "secondary_error_percent": 4.5402310599510285
+}
