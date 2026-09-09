@@ -1,0 +1,2 @@
+n_primary,retained_ranks,err_4.56_0.019,err_4.75_0.020,err_5.19_0.026,max_err_percent,num_nonzero_weights,status,note
+9,"[97, 60, 79]",0.5903194092755211,0.7863577895202133,0.7654168504467395,0.7863577895202133,811,ok,nc=3 eps2=0.0001

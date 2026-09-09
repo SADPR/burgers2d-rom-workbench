@@ -136,41 +136,10 @@
 \headcommand {\beamer@framepages {56}{56}}
 \headcommand {\slideentry {6}{0}{18}{57/57}{}{1}}
 \headcommand {\beamer@framepages {57}{57}}
-\headcommand {\beamer@sectionpages {40}{57}}
+\headcommand {\beamer@partpages {28}{57}}
 \headcommand {\beamer@subsectionpages {40}{57}}
-\headcommand {\sectionentry {7}{Burgers $N_c=10$}{58}{Burgers $N_c=10$}{1}}
-\headcommand {\slideentry {7}{0}{1}{58/58}{}{1}}
-\headcommand {\beamer@framepages {58}{58}}
-\headcommand {\slideentry {7}{0}{2}{59/59}{}{1}}
-\headcommand {\beamer@framepages {59}{59}}
-\headcommand {\slideentry {7}{0}{3}{60/60}{}{1}}
-\headcommand {\beamer@framepages {60}{60}}
-\headcommand {\slideentry {7}{0}{4}{61/61}{}{1}}
-\headcommand {\beamer@framepages {61}{61}}
-\headcommand {\slideentry {7}{0}{5}{62/62}{}{1}}
-\headcommand {\beamer@framepages {62}{62}}
-\headcommand {\slideentry {7}{0}{6}{63/63}{}{1}}
-\headcommand {\beamer@framepages {63}{63}}
-\headcommand {\slideentry {7}{0}{7}{64/64}{}{1}}
-\headcommand {\beamer@framepages {64}{64}}
-\headcommand {\slideentry {7}{0}{8}{65/65}{}{1}}
-\headcommand {\beamer@framepages {65}{65}}
-\headcommand {\slideentry {7}{0}{9}{66/66}{}{1}}
-\headcommand {\beamer@framepages {66}{66}}
-\headcommand {\slideentry {7}{0}{10}{67/67}{}{1}}
-\headcommand {\beamer@framepages {67}{67}}
-\headcommand {\slideentry {7}{0}{11}{68/68}{}{1}}
-\headcommand {\beamer@framepages {68}{68}}
-\headcommand {\slideentry {7}{0}{12}{69/69}{}{1}}
-\headcommand {\beamer@framepages {69}{69}}
-\headcommand {\slideentry {7}{0}{13}{70/70}{}{1}}
-\headcommand {\beamer@framepages {70}{70}}
-\headcommand {\slideentry {7}{0}{14}{71/71}{}{1}}
-\headcommand {\beamer@framepages {71}{71}}
-\headcommand {\beamer@partpages {28}{71}}
-\headcommand {\beamer@subsectionpages {58}{71}}
-\headcommand {\beamer@sectionpages {58}{71}}
-\headcommand {\beamer@documentpages {71}}
-\headcommand {\gdef \inserttotalframenumber {44}}
+\headcommand {\beamer@sectionpages {40}{57}}
+\headcommand {\beamer@documentpages {57}}
+\headcommand {\gdef \inserttotalframenumber {30}}
 \headcommand {\gdef \inserttotalframenumber {27}}
-\headcommand {\gdef \appendixtotalframenumber {44}}
+\headcommand {\gdef \appendixtotalframenumber {30}}

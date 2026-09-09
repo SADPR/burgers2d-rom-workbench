@@ -1,0 +1,33 @@
+[run]
+timestamp: 2026-09-08T23:04:16
+script: stage2_local_pod_per_cluster.py
+
+[configuration]
+clusters_file: LocalPOD-GPRSweep/nc5/base/clusters.npz
+snap_folder: Results/param_snaps
+eps2_pod: 1.00000000e-04
+center_local_snapshots_for_svd: True
+centering_source: stage1_centers_w
+dt: 5.00000000e-02
+num_steps: 500
+time_subsample: 1
+
+[clusters]
+K: 5
+S_w_shape: (125000, 4509)
+total_snapshots_used: 5237
+retained_ranks: [41, 68, 65, 47, 54]
+min_rank: 41
+max_rank: 68
+
+[timings_seconds]
+build_local_matrices: 2.10734110e+01
+svd_total: 6.58655581e+01
+total: 1.25720589e+02
+
+[outputs]
+pod_npz: LocalPOD-GPRSweep/nc5/base/pod_per_cluster.npz
+rank_plot_png: LocalPOD-GPRSweep/nc5/base/stage2_ranks.png
+sv_loss_plot_count: 5
+sv_loss_plot_dir: LocalPOD-GPRSweep/nc5/base/stage2_plots
+summary_txt: LocalPOD-GPRSweep/nc5/base/stage2_summary.txt

@@ -1,0 +1,42 @@
+[run]
+timestamp: 2026-09-09T00:30:55
+script: stage4_local_pod_gpr_training.py
+
+[configuration]
+q_file: LocalPOD-GPRSweep/nc5/base/q_per_cluster.npz
+n_primary: 7
+delta_duplicates: 1.00000000e-03
+n_splits_max: 5
+kernel_candidates: ['matern15']
+alpha_values: [1e-10, 1e-08]
+constant_value: 1.00000000e+00
+length_scale: 1.00000000e+00
+constant_value_bounds: [0.001, 1000.0]
+length_scale_bounds: [0.01, 5.0]
+optimize_hyperparameters: True
+n_restarts_optimizer: 5
+normalize_y: False
+random_seed: 42
+dt: 5.00000000e-02
+num_steps: 500
+
+[clusters]
+K: 5
+r_list: [41, 68, 65, 47, 54]
+has_gpr: [True, True, True, True, True]
+best_kernel: ['matern15', 'matern15', 'matern15', 'matern15', 'matern15']
+best_alpha: [1e-08, 1e-10, 1e-10, 1e-10, 1e-10]
+cv_rpe_percent: [1.968906400869616, 1.158203182828248, 1.0428740204888414, 1.3754646353465128, 1.01987233342115]
+train_rpe_percent: [2.511342013826248e-06, 2.961243561488616e-08, 3.012372448590789e-08, 1.4525351737235665e-08, 2.0506531051929203e-08]
+analytic_jacobian_compatible: [True, True, True, True, True]
+
+[timings_seconds]
+training: 9.36580178e+02
+total: 9.41046417e+02
+
+[outputs]
+models_pkl: LocalPOD-GPRSweep/nc5/nprimary7/models.pkl
+switching_npz: LocalPOD-GPRSweep/nc5/nprimary7/switching.npz
+all_in_one_npz: LocalPOD-GPRSweep/nc5/nprimary7/all_offline.npz
+training_error_png: LocalPOD-GPRSweep/nc5/nprimary7/stage4_train_err.png
+summary_txt: LocalPOD-GPRSweep/nc5/nprimary7/stage4_summary.txt

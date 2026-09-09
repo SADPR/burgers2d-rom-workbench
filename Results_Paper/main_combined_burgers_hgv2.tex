@@ -12,7 +12,7 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{appendixnumberbeamer}
-\graphicspath{{Figures/}{/home/kratos/Documents/HGV2/figures/}{/home/kratos/Documents/HGV2/figures/validation_final_rbf363/}{/home/kratos/Documents/HGV2/figures/validation_final_rbf363/error_maps/}{/home/kratos/Documents/HGV2/figures/validation_final_rbf363/coefficients/}}
+\graphicspath{{Figures/}{/home/sares/Documents/HGV2/figures/}{/home/sares/Documents/HGV2/figures/validation_final_rbf363/}{/home/sares/Documents/HGV2/figures/validation_final_rbf363/error_maps/}{/home/sares/Documents/HGV2/figures/validation_final_rbf363/coefficients/}}
 
 %------------------------------------------------
 % Stanford Colors
@@ -427,26 +427,34 @@ Gauss--Newton at iterate $\mathbf q^{(j)}$:
 \hline
 \textbf{Computational model} & $n$ ($N$ for HDM) & $\bar{n}$ & $N_e$ & avg $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & max $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & Wall-clock time (min) & Speedup \\
 \hline
-HDM & 125\,000 & -- & 62\,500 & -- & -- & 12.512 & -- \\
+HDM & 125\,000 & -- & 62\,500 & -- & -- & 12.517 & -- \\
 \addlinespace[0.35em]
-HPROM & 96 & -- & 4\,824 & 1.030 & 1.096 & 0.743 & 16.841 \\
-HQPROM & 39 & -- & 3\,505 & 0.871 & 0.933 & 0.888 & 14.084 \\
-HPROM-GPR & 20 & 131 & 1\,801 & 0.691 & 0.845 & 0.371 & 33.698 \\
+HPROM & 96 & -- & 4\,824 & 1.030 & 1.096 & 0.905 & 13.8 \\
+HQPROM & 39 & -- & 3\,505 & 0.871 & 0.933 & 0.967 & 12.9 \\
+HPROM-GPR & 20 & 131 & 1\,801 & 0.691 & 0.845 & 0.407 & 30.8 \\
 \addlinespace[0.35em]
-Local HPROM ($N_c=3$) & 35--48 & -- & 3\,649 & 0.827 & 0.854 & 0.377 & 33.168 \\
-Local HQPROM ($N_c=3$) & 11--15 & -- & 1\,164 & 0.716 & 0.844 & 0.311 & 40.259 \\
-Local HPROM-GPR ($N_c=3$) & 9 & 60--97 & 811 & 0.713 & 0.789 & 0.282 & 44.379 \\
+Local HPROM ($N_c=3$) & 35--48 & -- & 3\,405 & 0.897 & 0.933 & 0.364 & 34.4 \\
+Local HQPROM ($N_c=3$) & 21--27 & -- & 2\,152 & 0.888 & 1.025 & 0.504 & 24.8 \\
+Local HPROM-GPR ($N_c=3$) & 9 & 60--97 & 811 & 0.714 & 0.786 & 0.284 & 44.1 \\
+\addlinespace[0.35em]
+Local HPROM ($N_c=5$) & 23--31 & -- & 2\,384 & 0.915 & 0.943 & 0.265 & 47.3 \\
+Local HQPROM ($N_c=5$) & 15--20 & -- & 1\,593 & 0.760 & 0.878 & 0.380 & 33.0 \\
+Local HPROM-GPR ($N_c=5$) & 7 & 41--68 & 631 & 0.673 & 0.880 & 0.251 & 49.8 \\
+\addlinespace[0.35em]
+Local HPROM ($N_c=8$) & 16--26 & -- & 1\,781 & 0.787 & 0.900 & 0.220 & 56.9 \\
+Local HQPROM ($N_c=8$) & 10--15 & -- & 1\,075 & 0.787 & 0.890 & 0.296 & 42.3 \\
+Local HPROM-GPR ($N_c=8$) & 6 & 28--54 & 541 & 0.801 & 1.156 & 0.243 & 51.4 \\
 \hline
 \end{tabular}}
 \vspace{0.2em}
 
-{\tiny Speedup is computed with respect to the HDM runtime, $t_{\mathrm{HDM}}=750.702$ s.}
+{\tiny Speedup is computed with respect to the HDM runtime, $t_{\mathrm{HDM}}=751.043$ s, averaged over the three test points.}
 
 {\tiny Online timings were measured on Sherlock using one node, 24 MPI ranks, and 24 cores.}
 
 {\tiny $N_e$ denotes the number of sampled ECSW elements ($N_e=62{,}500$ for HDM/full mesh).}
 
-{\tiny Local ROM results shown here use $N_c=3$ clusters; the $N_c=10$ results are reproduced in the appendix.}
+{\tiny All models are reported at a matched accuracy target of $1\% \pm 0.2\%$ in max $\mathbb{RE}_{2,\mathbf{u}}$: for each $N_c$ the accuracy knob is tuned into that window ($\mathtt{pod\_tol}$ for Local HPROM, $\zeta_{\mathrm{qua}}$ for Local HQPROM, $n$ for Local HPROM-GPR), so differences in $n$, $N_e$ and speedup are read at constant accuracy.}
 \end{frame}
 
 \begin{frame}{Global Reduced Meshes (ECSW)}
@@ -475,12 +483,12 @@ Local HPROM-GPR ($N_c=3$) & 9 & 60--97 & 811 & 0.713 & 0.789 & 0.282 & 44.379 \\
 \column{0.33\textwidth}
 \centering
 \includegraphics[width=\linewidth]{local_hprom_reduced_mesh.png}\\
-{\tiny Local HPROM ($N_e=3{,}649$)}
+{\tiny Local HPROM ($N_e=3{,}405$)}
 
 \column{0.33\textwidth}
 \centering
 \includegraphics[width=\linewidth]{local_hqprom_reduced_mesh.png}\\
-{\tiny Local HQPROM ($N_e=1{,}164$)}
+{\tiny Local HQPROM ($N_e=2{,}152$)}
 
 \column{0.33\textwidth}
 \centering
@@ -491,9 +499,10 @@ Local HPROM-GPR ($N_c=3$) & 9 & 60--97 & 811 & 0.713 & 0.789 & 0.282 & 44.379 \\
 
 \begin{frame}{Burgers Conclusions}
 \begin{itemize}
-  \item All local ROMs improve runtime performance relative to their global counterparts.
-  \item Local HPROM--GPR is the fastest model: 0.282 min and 44.379$\times$ speedup.
-  \item Its speed comes primarily from the smaller ECSW mesh, with 811 selected elements versus 1,801 for global HPROM--GPR. Local GPR evaluation is also cheaper because the active-cluster regressor is trained with fewer data than the global regressor.
+  \item All local ROMs improve runtime performance relative to their global counterparts, at every $N_c$ and at matched accuracy: $13.8\times\!\to\!56.9\times$ (HPROM), $12.9\times\!\to\!42.3\times$ (HQPROM), $30.8\times\!\to\!51.4\times$ (HPROM--GPR).
+  \item Increasing $N_c$ monotonically improves speedup within every family, so clustering, not the choice of local manifold, is the dominant lever.
+  \item Local HPROM at $N_c=8$ is the fastest model: 0.220 min and $56.9\times$ speedup.
+  \item Compactness and wall-clock time rank differently. At $N_c=8$, HPROM--GPR is the most compact ($n=6$, $N_e=541$) and HQPROM next ($n=10$--$15$, $N_e=1{,}075$), yet plain HPROM is fastest despite $n=16$--$26$: the per-iteration cost of the quadratic term and its Jacobian, and of the GPR evaluation, offsets their dimensional advantage.
   \item Reported local-model runtimes include cluster selection and any cluster-transfer cost. The decision and transfer rules are formulation-specific and are defined in the appendix.
 \end{itemize}
 \end{frame}
@@ -625,25 +634,27 @@ Local HPROM-GPR ($N_c=3$) & 9 & 60--97 & 811 & 0.713 & 0.789 & 0.282 & 44.379 \\
 Coefficient errors are global relative $L^2$ values over 100 independent validation cases. Online times are means over 10 validation cases on Sherlock: one node, 24 MPI ranks, and 24 cores.
 
 \vspace{0.12cm}
-\renewcommand{\arraystretch}{1.18}
-\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.08}
+\setlength{\tabcolsep}{1pt}
+\tiny
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lccrrrrr}
+\begin{tabular}{lccrrr|rr|rr}
 \toprule
-\textbf{Model} & $n$ & $\bar n$ & $C_D$ [\%] & $C_L$ [\%] & $C_M$ [\%] & \textbf{Online time [s]} & \textbf{Speedup} \\
+\textbf{Model} & $n$ & $\bar n$ & $C_D$ [\%] & $C_L$ [\%] & $C_M$ [\%] & \multicolumn{2}{c|}{\textbf{Online time [s]}} & \multicolumn{2}{c}{\textbf{Speedup}} \\
+ & & & & & & \texttt{True} & \texttt{False} & \texttt{True} & \texttt{False} \\
 \midrule
-Global linear HPROM & 362 & -- & \textbf{0.975} & 0.554 & 6.620 & 24.03 & 1.00 \\
-Local linear HPROM, $N_c=4$ & 95--168 & -- & 1.101 & \textbf{0.444} & \textbf{6.242} & 6.80 & 3.53 \\
-Global HPROM--RBF & 8 & 354 & 1.388 & 1.335 & 7.004 & 6.00 & 4.00 \\
-Local HPROM--RBF, $N_c=4$ & 8 & 117--140 & 1.978 & 2.183 & 7.117 & \textbf{2.28} & \textbf{10.54} \\
+Global linear HPROM & 362 & -- & \textbf{0.975} & 0.554 & 6.620 & 24.03 & -- & 1.00 & -- \\
+Local linear HPROM, $N_c=4$ & 95--168 & -- & 1.101 & \textbf{0.444} & \textbf{6.242} & 6.80 & -- & 3.53 & -- \\
+Global HPROM--RBF & 8 & 354 & 1.388 & 1.335 & 7.004 & 6.00 & 1.15 & 4.00 & 20.97 \\
+Local HPROM--RBF, $N_c=4$ & 8 & 117--140 & 1.978 & 2.183 & 7.117 & \textbf{2.28} & \textbf{0.62} & \textbf{10.54} & \textbf{38.88} \\
 \bottomrule
 \end{tabular}}
 
 \vspace{0.15cm}
-\footnotesize For linear HPROM, $n$ is the full POD rank. For RBF, $n$ and $\bar n$ are the primary and secondary dimensions; local $\bar n$ values are ranges across the four cluster bases. Speedup is relative to global linear HPROM.
+\footnotesize \texttt{True}/\texttt{False} denotes \texttt{IncludeAllLiftDragFaces}. For linear HPROM, $n$ is the full POD rank. For RBF, $n$ and $\bar n$ are the primary and secondary dimensions; local $\bar n$ values are ranges across the four cluster bases. Each speedup is relative to global linear HPROM with \texttt{True}.
 
 \vspace{0.08cm}
-\footnotesize Online time is the reported Aero-F nonlinear-ROM timer, including the I/O and postprocessing used to evaluate the $C_L$, $C_D$, and $C_M$ integrals. Fully optimized timings without this I/O remain to be measured.
+\footnotesize The RBF \texttt{False} runs omit the postprocessing-only lift/drag faces and their $C_L$, $C_D$, $C_M$ output. The accuracy entries come from the matching \texttt{True} runs. All timing values are means of the maximum-rank \emph{Nonlinear ROM Online} timer over validation cases 000--009.
 \end{frame}
 
 \begin{frame}{HGV2 Validation Error Comparison}
@@ -852,241 +863,5 @@ Local HPROM--RBF, 4 clusters, $n=8$ & 1,113 & 10,516 & 175,813 & 20,602 & 208,04
 
 \section{Burgers Solution Comparisons}
 \BurgersSolutionFigureFrames
-
-\section{Burgers $N_c=10$}
-
-\begin{frame}{Appendix: Local ROM Results at $N_c=10$}
-\scriptsize
-\centering
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lrrrrrrr}
-\hline
-\textbf{Computational model} & $n$ & $\bar{n}$ & $N_e$ & avg $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & max $\mathbb{RE}_{2,\mathbf{u}}$ (\%) & Wall-clock time (min) & Speedup \\
-\hline
-Local HPROM ($N_c=10$) & 14--23 & -- & 1\,522 & 0.867 & 0.956 & 0.198 & 63.257 \\
-Local HQPROM ($N_c=10$) & 8--12 & -- & 871 & 0.572 & 0.929 & 0.263 & 47.497 \\
-Local HPROM-GPR ($N_c=10$) & 6 & 24--47 & 541 & 0.604 & 0.801 & 0.244 & 51.261 \\
-\hline
-\end{tabular}}
-\vspace{0.2em}
-
-{\tiny Speedup is computed with respect to the HDM runtime, $t_{\mathrm{HDM}}=750.702$ s.}
-
-{\tiny Global-model rows are unaffected by $N_c$ and are reproduced in the main results table.}
-\end{frame}
-
-\begin{frame}{Appendix: Local Reduced Meshes (ECSW), $N_c=10$}
-\centering
-\begin{columns}[T]
-\column{0.33\textwidth}
-\centering
-\includegraphics[width=\linewidth]{local_hprom_reduced_mesh_nc10.png}\\
-{\tiny Local HPROM ($N_e=1{,}522$)}
-
-\column{0.33\textwidth}
-\centering
-\includegraphics[width=\linewidth]{local_hqprom_reduced_mesh_nc10.png}\\
-{\tiny Local HQPROM ($N_e=871$)}
-
-\column{0.33\textwidth}
-\centering
-\includegraphics[width=\linewidth]{local_hprom_gpr_reduced_mesh_nc10.png}\\
-{\tiny Local HPROM-GPR ($N_e=541$)}
-\end{columns}
-\end{frame}
-
-\begin{frame}{Appendix: Local HPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
-\centering
-\includegraphics[width=0.82\textwidth,height=0.70\textheight,keepaspectratio]{Figures/local_hprom_vs_hdm_mu1_4.56_mu2_0.019_nc10.png}
-\end{frame}
-
-\begin{frame}{Appendix: Local HPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
-\centering
-\includegraphics[width=0.82\textwidth,height=0.70\textheight,keepaspectratio]{Figures/local_hprom_vs_hdm_mu1_4.75_mu2_0.020_nc10.png}
-\end{frame}
-
-\begin{frame}{Appendix: Local HPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
-\centering
-\includegraphics[width=0.82\textwidth,height=0.70\textheight,keepaspectratio]{Figures/local_hprom_vs_hdm_mu1_5.19_mu2_0.026_nc10.png}
-\end{frame}
-
-\begin{frame}{Appendix: Local HQPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
-\centering
-\includegraphics[width=0.82\textwidth,height=0.70\textheight,keepaspectratio]{Figures/local_hqprom_vs_hdm_mu1_4.56_mu2_0.019_nc10.png}
-\end{frame}
-
-\begin{frame}{Appendix: Local HQPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
-\centering
-\includegraphics[width=0.82\textwidth,height=0.70\textheight,keepaspectratio]{Figures/local_hqprom_vs_hdm_mu1_4.75_mu2_0.020_nc10.png}
-\end{frame}
-
-\begin{frame}{Appendix: Local HQPROM ($N_c=10$) vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
-\centering
-\includegraphics[width=0.82\textwidth,height=0.70\textheight,keepaspectratio]{Figures/local_hqprom_vs_hdm_mu1_5.19_mu2_0.026_nc10.png}
-\end{frame}
-
-\begin{frame}{Appendix: Local HPROM-GPR ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.56,\,0.019)$}
-\centering
-\includegraphics[width=0.82\textwidth,height=0.70\textheight,keepaspectratio]{Figures/local_hprom_gpr_vs_hdm_mu1_4.56_mu2_0.019_nc10.png}
-\end{frame}
-
-\begin{frame}{Appendix: Local HPROM-GPR ($N_c=10$) vs HDM: $\boldsymbol\mu=(4.75,\,0.020)$}
-\centering
-\includegraphics[width=0.82\textwidth,height=0.70\textheight,keepaspectratio]{Figures/local_hprom_gpr_vs_hdm_mu1_4.75_mu2_0.020_nc10.png}
-\end{frame}
-
-\begin{frame}{Appendix: Local HPROM-GPR ($N_c=10$) vs HDM: $\boldsymbol\mu=(5.19,\,0.026)$}
-\centering
-\includegraphics[width=0.82\textwidth,height=0.70\textheight,keepaspectratio]{Figures/local_hprom_gpr_vs_hdm_mu1_5.19_mu2_0.026_nc10.png}
-\end{frame}
-
-\begin{frame}{Appendix: Linear Selector Expansion}
-\scriptsize
-\[
-\mathbf u^s=\mathbf u_{0,k^-}+\mathbf V_{k^-}\mathbf q_{k^-},
-\qquad
-k^+=\arg\min_{\ell}\|\mathbf u^s-\mathbf u_{c,\ell}\|_2^2.
-\]
-\[
-\text{Let }\mathbf a_\ell:=\mathbf u_{0,k^-}-\mathbf u_{c,\ell},\quad
-\mathbf b:=\mathbf V_{k^-}\mathbf q_{k^-}.
-\]
-\[
-\|\mathbf u^s-\mathbf u_{c,\ell}\|_2^2
-=\|\mathbf a_\ell+\mathbf b\|_2^2
-=\|\mathbf a_\ell\|_2^2+\|\mathbf b\|_2^2+2\,\mathbf a_\ell^T\mathbf b.
-\]
-\[
-\|\mathbf b\|_2^2=\|\mathbf V_{k^-}\mathbf q_{k^-}\|_2^2
-\ \text{is independent of }\ell.
-\]
-\[
-\Rightarrow\
-k^+=\arg\min_{\ell}
-\Big[
-\|\mathbf u_{0,k^-}-\mathbf u_{c,\ell}\|_2^2
-+2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf V_{k^-}\mathbf q_{k^-}
-\Big].
-\]
-Precompute
-\[
-\mathbf g_{k^-,\ell}:=\mathbf V_{k^-}^T(\mathbf u_{0,k^-}-\mathbf u_{c,\ell}),
-\qquad
-d_{k^-,\ell}:=\|\mathbf u_{0,k^-}-\mathbf u_{c,\ell}\|_2^2,
-\]
-which yields
-\[
-k^+=\arg\min_{\ell}\left(2\,\mathbf g_{k^-,\ell}^T\mathbf q_{k^-}+d_{k^-,\ell}\right).
-\]
-\end{frame}
-
-\begin{frame}{Appendix: HQPROM Selector Expansion}
-\scriptsize
-\[
-\mathbf u^s=\mathbf u_{0,k^-}+\mathbf V_{k^-}\mathbf q_{k^-}
-+\mathbf H_{k^-}(\mathbf q_{k^-}\otimes\mathbf q_{k^-}).
-\]
-\[
-\text{Let }\mathbf a_\ell:=\mathbf u_{0,k^-}-\mathbf u_{c,\ell},\quad
-\mathbf b:=\mathbf V_{k^-}\mathbf q_{k^-},\quad
-\mathbf c:=\mathbf H_{k^-}(\mathbf q_{k^-}\otimes\mathbf q_{k^-}).
-\]
-\[
-k^+=\arg\min_{\ell}\|\mathbf u^s-\mathbf u_{c,\ell}\|_2^2
-=
-\arg\min_{\ell}
-\|\mathbf a_\ell+\mathbf b+\mathbf c\|_2^2.
-\]
-\[
-\|\mathbf a_\ell+\mathbf b+\mathbf c\|_2^2
-=\|\mathbf a_\ell\|_2^2+\|\mathbf b\|_2^2+\|\mathbf c\|_2^2
-+2\,\mathbf a_\ell^T\mathbf b
-+2\,\mathbf a_\ell^T\mathbf c
-+2\,\mathbf b^T\mathbf c.
-\]
-\[
-\|\mathbf b\|_2^2,\ \|\mathbf c\|_2^2,\ 2\,\mathbf b^T\mathbf c
-\ \text{are independent of }\ell.
-\]
-\[
-\Rightarrow\
-k^+=\arg\min_{\ell}
-\Big[
-\|\mathbf u_{0,k^-}-\mathbf u_{c,\ell}\|_2^2
-\]
-\[
-\quad
-+2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf V_{k^-}\mathbf q_{k^-}
-+2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf H_{k^-}(\mathbf q_{k^-}\otimes\mathbf q_{k^-})
-\Big].
-\]
-Define
-\[
-\mathbf m_{k^-,\ell}^T(\mathbf q\otimes\mathbf q)
-:=
-(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf H_{k^-}(\mathbf q\otimes\mathbf q),
-\]
-then
-\[
-k^+=\arg\min_{\ell}
-\left(
-2\,\mathbf g_{k^-,\ell}^T\mathbf q_{k^-}
-+2\,\mathbf m_{k^-,\ell}^T(\mathbf q_{k^-}\otimes\mathbf q_{k^-})
-+d_{k^-,\ell}
-\right).
-\]
-\end{frame}
-
-\begin{frame}{Appendix: HPROM-GPR Selector Expansion}
-\scriptsize
-\[
-\mathbf u^s=
-\mathbf u_{0,k^-}
-+\mathbf V_{k^-}\mathbf q_{k^-}
-+\bar{\mathbf V}_{k^-}\bar{\mathbf q}_{k^-},
-\qquad
-\bar{\mathbf q}_{k^-}=\mathcal N_{\mathrm{GPR},k^-}(\mathbf q_{k^-}).
-\]
-\[
-\text{Let }\mathbf a_\ell:=\mathbf u_{0,k^-}-\mathbf u_{c,\ell},\quad
-\mathbf b:=\mathbf V_{k^-}\mathbf q_{k^-},\quad
-\mathbf c:=\bar{\mathbf V}_{k^-}\bar{\mathbf q}_{k^-}.
-\]
-\[
-\|\mathbf u^s-\mathbf u_{c,\ell}\|_2^2
-=\|\mathbf a_\ell+\mathbf b+\mathbf c\|_2^2
-\]
-\[
-\ =\ \|\mathbf a_\ell\|_2^2+\|\mathbf b\|_2^2+\|\mathbf c\|_2^2
-+2\,\mathbf a_\ell^T\mathbf b
-+2\,\mathbf a_\ell^T\mathbf c
-+2\,\mathbf b^T\mathbf c.
-\]
-\[
-\|\mathbf b\|_2^2,\ \|\mathbf c\|_2^2,\ 2\,\mathbf b^T\mathbf c
-\ \text{are independent of }\ell.
-\]
-\[
-\Rightarrow\
-k^+=\arg\min_{\ell}
-\Big[
-\|\mathbf u_{0,k^-}-\mathbf u_{c,\ell}\|_2^2
-+2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\mathbf V_{k^-}\mathbf q_{k^-}
-+2(\mathbf u_{0,k^-}-\mathbf u_{c,\ell})^T\bar{\mathbf V}_{k^-}\bar{\mathbf q}_{k^-}
-\Big].
-\]
-Hence, with
-\[
-\bar{\mathbf g}_{k^-,\ell}:=\bar{\mathbf V}_{k^-}^T(\mathbf u_{0,k^-}-\mathbf u_{c,\ell}),
-\]
-\[
-k^+=\arg\min_{\ell}
-\left(
-2\,\mathbf g_{k^-,\ell}^T\mathbf q_{k^-}
-+2\,\bar{\mathbf g}_{k^-,\ell}^T\bar{\mathbf q}_{k^-}
-+d_{k^-,\ell}
-\right).
-\]
-\end{frame}
 
 \end{document}
