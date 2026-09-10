@@ -6,6 +6,7 @@ from typing import Sequence, Tuple
 
 import numpy as np
 import scipy.sparse as sp
+from scipy.linalg import lstsq as scipy_lstsq, solve_triangular
 import torch
 
 from .quadratic_manifold_utils import u_qm, J_qm
@@ -66,26 +67,56 @@ def _call_decode(decode, y, with_grad=False):
             return decode(y)
 
 
-def _solve_reduced_update(JV, r, linear_solver="lstsq", normal_eq_reg=1e-12):
+# Above this condition number of the reduced normal matrix, "normal_eq" hands
+# the system over to the SVD. cond(JV^T JV) = cond(JV)^2, so 1e10 corresponds
+# to cond(JV) ~ 1e5, i.e. giving up at most ten of the sixteen digits.
+NORMAL_EQ_COND_MAX = 1e10
+
+
+def _solve_reduced_update(
+    JV, r, linear_solver="normal_eq", normal_eq_reg=1e-12,
+    normal_eq_cond_max=NORMAL_EQ_COND_MAX,
+):
     """
     Solve the reduced Gauss-Newton update:
 
         JV * dy ~= -r
 
+    The reduced system is tall and thin: a few thousand rows (2*N_e on a
+    hyperreduced mesh) and a few tens of columns.
+
     Parameters
     ----------
     JV : ndarray, shape (n_res, n_red)
     r : ndarray, shape (n_res,)
-    linear_solver : {"lstsq", "normal_eq"}
-        - "lstsq": robust SVD-based least-squares.
-        - "normal_eq": solve (JV^T JV) dy = -JV^T r with optional ridge regularization.
+    linear_solver : {"normal_eq", "lstsq", "qr"}
+        - "normal_eq": solve (JV^T JV) dy = -JV^T r by Cholesky. An order of
+          magnitude cheaper than the alternatives. It squares the condition
+          number, which is why `normal_eq_cond_max` below checks cond(JV^T JV)
+          -- on the n x n reduced matrix that check is nearly free -- and
+          falls back to the SVD when the squaring would actually cost digits.
+          This is the default: for an LSPG projection JV is close to
+          orthonormal (V is orthonormal and J is I + O(dt)), so in practice
+          cond(JV) stays of order 1.
+        - "lstsq": LAPACK gelsd (SVD). The reference, and the right choice if
+          JV can be genuinely rank deficient, since it returns the
+          minimum-norm solution.
+        - "qr": LAPACK gelsy, a rank-revealing QR. Backward stable like the
+          SVD, but measurably *slower* here: scipy's per-call wrapper overhead
+          dominates at these shapes. Kept for comparison only.
     normal_eq_reg : float
-        Non-negative ridge term for normal equations.
+        Non-negative ridge term for the normal equations.
+    normal_eq_cond_max : float
+        Condition number of JV^T JV above which "normal_eq" defers to the SVD.
     """
     mode = str(linear_solver).strip().lower()
+
     if mode == "lstsq":
         dy, *_ = np.linalg.lstsq(JV, -r, rcond=None)
         return dy
+
+    if mode == "qr":
+        return scipy_lstsq(JV, -r, lapack_driver="gelsy")[0]
 
     if mode == "normal_eq":
         reg = float(normal_eq_reg)
@@ -98,20 +129,19 @@ def _solve_reduced_update(JV, r, linear_solver="lstsq", normal_eq_reg=1e-12):
         if reg > 0.0:
             ata = ata + reg * np.eye(ata.shape[0], dtype=ata.dtype)
 
-        try:
-            chol = np.linalg.cholesky(ata)
-            y = np.linalg.solve(chol, atb)
-            dy = np.linalg.solve(chol.T, y)
-            return dy
-        except np.linalg.LinAlgError:
+        if np.linalg.cond(ata) <= normal_eq_cond_max:
             try:
-                return np.linalg.solve(ata, atb)
+                chol = np.linalg.cholesky(ata)
+                y = solve_triangular(chol, atb, lower=True)
+                return solve_triangular(chol.T, y)
             except np.linalg.LinAlgError:
-                dy, *_ = np.linalg.lstsq(JV, -r, rcond=None)
-                return dy
+                pass
+
+        dy, *_ = np.linalg.lstsq(JV, -r, rcond=None)
+        return dy
 
     raise ValueError(
-        "linear_solver must be one of: 'lstsq', 'normal_eq'. "
+        "linear_solver must be one of: 'normal_eq', 'lstsq', 'qr'. "
         f"Got: {linear_solver}"
     )
 

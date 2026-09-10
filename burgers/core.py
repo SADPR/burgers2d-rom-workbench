@@ -364,9 +364,14 @@ def inviscid_burgers_res2D_ecsw(
     augmented_sample,
     lbc=None,
     src=None,
+    overlap=None,
 ):
     """
     Residual on the ECSW sampled mesh.
+
+    `lbc`, `src` and `overlap` depend only on the mesh, dt and mu, so they are
+    constant for a whole run. Pass them in to avoid rebuilding them on every
+    residual evaluation.
     """
     try:
         import torch
@@ -387,11 +392,8 @@ def inviscid_burgers_res2D_ecsw(
     shp = (dy.size, dx.size)
 
     if lbc is None:
-        lbc = np.zeros(sample_inds.size, dtype=np.float64)
-        rows, cols = np.unravel_index(sample_inds, shp)
-        for i, c in enumerate(cols):
-            if c == 0:
-                lbc[i] = 0.5 * dt * mu[0] ** 2 / dx[0]
+        _, cols = np.unravel_index(sample_inds, shp)
+        lbc = np.where(cols == 0, 0.5 * dt * mu[0] ** 2 / dx[0], 0.0)
 
     if src is None:
         src = dt * 0.02 * np.exp(mu[1] * xc)
@@ -426,7 +428,8 @@ def inviscid_burgers_res2D_ecsw(
         Fuv = 0.5 * u * v
         Fpuv = 0.5 * up * vp
 
-        overlap = np.isin(augmented_sample, sample_inds)
+        if overlap is None:
+            overlap = np.isin(augmented_sample, sample_inds)
 
         u_s = u[overlap]
         v_s = v[overlap]
@@ -468,6 +471,134 @@ def inviscid_burgers_exact_jac2D(w, dt, JDxec, JDyec, Eye):
     lr = JDyec @ vd + 0.5 * JDxec @ ud
 
     return sp.bmat([[ul, ur], [ll, lr]]) + Eye
+
+
+def _pattern_of(M):
+    """Return M's sparsity pattern as a CSR matrix of ones."""
+    M = sp.csr_matrix(M)
+    return sp.csr_matrix(
+        (np.ones(M.nnz), M.indices, M.indptr), shape=M.shape
+    )
+
+
+def _data_on_pattern(M, pattern):
+    """Lay M's values out on `pattern`'s index layout, which must be a superset.
+
+    Both matrices are traversed row by row with sorted column indices, so a
+    single global key (row * n_cols + column) is increasing and the positions
+    can be found with one searchsorted.
+    """
+    M = sp.csr_matrix(M)
+    M.sort_indices()
+    n_cols = M.shape[1]
+
+    rows_p = np.repeat(np.arange(pattern.shape[0]), np.diff(pattern.indptr))
+    rows_m = np.repeat(np.arange(M.shape[0]), np.diff(M.indptr))
+    key_p = rows_p.astype(np.int64) * n_cols + pattern.indices
+    key_m = rows_m.astype(np.int64) * n_cols + M.indices
+
+    pos = np.searchsorted(key_p, key_m)
+    if not np.array_equal(key_p[pos], key_m):
+        raise ValueError("pattern does not contain every entry of M.")
+
+    data = np.zeros(pattern.nnz, dtype=np.float64)
+    data[pos] = M.data
+    return data
+
+
+class EcswJacobianAssembler:
+    """Reusable assembler for the ECSW Jacobian.
+
+    `inviscid_burgers_exact_jac2D_ecsw` rebuilds the sparsity structure on
+    every call -- four scaled products, two hstacks, a vstack and a matrix
+    addition. That bookkeeping dominates the cost: with only a few thousand
+    nonzeros per block, the arithmetic itself is negligible. The pattern is
+    fixed for a whole run, so this class builds it once and afterwards only
+    refills the data array.
+
+    The Jacobian of the implicit step on the sampled mesh is
+
+        J = [[ a*Dx.u + b*Dy.v ,      b*Dy.u      ]]  +  I
+            [[     b*Dx.v      , a*Dy.v + b*Dx.u  ]]
+
+    with a = dt/2, b = dt/4, where "Dx.u" is Dx with column j scaled by u[j].
+    All four blocks live on the union of the Dx, Dy and I patterns, which is
+    what makes one precomputed layout enough.
+
+    Note that the returned matrix is reused across calls; copy it if you need
+    to keep a previous Jacobian.
+    """
+
+    def __init__(self, dt, JDxec, JDyec, Eye, augmented_inds):
+        JDx = sp.csr_matrix(JDxec)
+        JDy = sp.csr_matrix(JDyec)
+        n_rows, n_cols = JDx.shape
+
+        self.a = 0.5 * dt
+        self.b = 0.25 * dt
+        self.augmented_inds = np.asarray(augmented_inds)
+
+        # Eye spans both diagonal blocks; recover the single-block identity.
+        eye_block = sp.csr_matrix(Eye)[:n_rows, :n_cols]
+
+        pattern = (
+            _pattern_of(JDx) + _pattern_of(JDy) + _pattern_of(eye_block)
+        ).tocsr()
+        pattern.sort_indices()
+        nnz = pattern.nnz
+
+        self.cols = pattern.indices
+        self.dx = _data_on_pattern(JDx, pattern)
+        self.dy = _data_on_pattern(JDy, pattern)
+        self.eye = _data_on_pattern(eye_block, pattern)
+
+        # Positions of each block's entries inside the assembled data array.
+        # Within a row the left block's columns all precede the right block's,
+        # so concatenating them keeps the CSR indices sorted.
+        row_nnz = np.diff(pattern.indptr)
+        rows = np.repeat(np.arange(n_rows), row_nnz)
+        local = np.arange(nnz) - pattern.indptr[rows]
+
+        indptr = np.zeros(2 * n_rows + 1, dtype=np.int32)
+        indptr[1:] = np.cumsum(np.concatenate((2 * row_nnz, 2 * row_nnz)))
+
+        self.pos_ul = indptr[rows] + local
+        self.pos_ur = indptr[rows] + row_nnz[rows] + local
+        self.pos_ll = indptr[n_rows + rows] + local
+        self.pos_lr = indptr[n_rows + rows] + row_nnz[rows] + local
+
+        indices = np.empty(4 * nnz, dtype=np.int32)
+        indices[self.pos_ul] = self.cols
+        indices[self.pos_ur] = self.cols + n_cols
+        indices[self.pos_ll] = self.cols
+        indices[self.pos_lr] = self.cols + n_cols
+
+        self.J = sp.csr_matrix(
+            (np.zeros(4 * nnz), indices, indptr),
+            shape=(2 * n_rows, 2 * n_cols),
+        )
+
+    def __call__(self, w):
+        w = np.asarray(w, dtype=np.float64).reshape(-1)
+        u, v = np.split(w, 2)
+        if u.size > self.augmented_inds.size:
+            u = u[self.augmented_inds]
+            v = v[self.augmented_inds]
+
+        a, b = self.a, self.b
+        uc = u[self.cols]
+        vc = v[self.cols]
+        dx_u = self.dx * uc
+        dx_v = self.dx * vc
+        dy_u = self.dy * uc
+        dy_v = self.dy * vc
+
+        data = self.J.data
+        data[self.pos_ul] = a * dx_u + b * dy_v + self.eye
+        data[self.pos_ur] = b * dy_u
+        data[self.pos_ll] = b * dx_v
+        data[self.pos_lr] = a * dy_v + b * dx_u + self.eye
+        return self.J
 
 
 def inviscid_burgers_exact_jac2D_ecsw(w, dt, JDxec, JDyec, Eye, sample_inds, augmented_inds):

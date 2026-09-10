@@ -12,9 +12,24 @@ where Q(q) collects all symmetric products q_i q_j with i <= j.
 import numpy as np
 
 
+_TRIU_CACHE = {}
+
+
 def get_triu_indices(n):
-    """Return (i_triu, j_triu) indices for the upper triangle including diagonal."""
-    return np.triu_indices(n)
+    """Return (i_triu, j_triu) indices for the upper triangle including diagonal.
+
+    The indices depend only on n and are needed on every Gauss-Newton
+    iteration, so they are built once per n and cached. The cached arrays are
+    read-only to make it explicit that callers must not modify them in place.
+    """
+    idx = _TRIU_CACHE.get(n)
+    if idx is None:
+        i_triu, j_triu = np.triu_indices(n)
+        i_triu.flags.writeable = False
+        j_triu.flags.writeable = False
+        idx = (i_triu, j_triu)
+        _TRIU_CACHE[n] = idx
+    return idx
 
 
 def build_Q_symmetric(q):
@@ -45,14 +60,16 @@ def build_D_symmetric(q):
     q = np.asarray(q, dtype=float)
     n = q.size
     i_triu, j_triu = get_triu_indices(n)
-    m = len(i_triu)
+    m = i_triu.size
 
+    # Row k holds one entry at column i_triu[k] and one at j_triu[k]. The row
+    # indices are distinct, so the two scatters below cannot collide with each
+    # other; on the diagonal pairs (i == j) the "+=" accumulates them into the
+    # required 2*q_i.
     D = np.zeros((m, n), dtype=float)
-    for k, (i, j) in enumerate(zip(i_triu, j_triu)):
-        # ∂(q_i q_j)/∂q_i = q_j
-        D[k, i] += q[j]
-        # ∂(q_i q_j)/∂q_j = q_i  (for i == j this effectively becomes 2*q_i)
-        D[k, j] += q[i]
+    rows = np.arange(m)
+    D[rows, i_triu] = q[j_triu]
+    D[rows, j_triu] += q[i_triu]
     return D
 
 

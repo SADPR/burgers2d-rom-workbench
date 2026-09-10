@@ -1,0 +1,37 @@
+model_name: case1_ann_ntot151_best.pt
+model_path: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_enrichment_lhs8/Stage3/models/case1_ann_ntot151_best.pt
+dataset_dir: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_enrichment_lhs8/Stage2/prom_coeff_dataset_ntot151_enriched_lhs8
+dataset_root: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_enrichment_lhs8/Stage2/prom_coeff_dataset_ntot151_enriched_lhs8/per_mu
+dataset_ntot: 151
+dataset_backend: prom
+validation_dataset_dir: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2
+validation_dataset_root: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151_validation2/per_mu
+validation_dataset_backend: prom
+primary_modes: 10
+secondary_modes: 141
+samples_M: 9519
+train_samples: 8517
+val_samples: 1002
+n_p: 10
+n_s: 141
+epochs_ran: 6000
+best_val_mse: 0.00708750681951642
+seed: 42
+device: cpu
+hidden_dims: (256, 512, 512, 256)
+activation: silu
+dropout: 0.0
+architecture: q_p -> [256, 512, 512, 256] SILU -> q_s
+optimizer: AdamW
+lr: 0.0005
+weight_decay: 1e-06
+batch_size: 128
+trainable_parameters: 564621
+lr_scheduler: ReduceLROnPlateau
+lr_scheduler_factor: 0.5
+lr_scheduler_patience: 50
+lr_scheduler_min_lr: 1e-06
+val_split: external_dataset
+val_frac: None
+train_rel_frob_percent: 0.8297610096633434
+val_rel_frob_percent: 1.2075691483914852

@@ -92,7 +92,7 @@ def main(
     mu_samples=None,
     ecsw_snapshot_percent=2.0,
     ecsw_random_seed=42,
-    linear_solver="lstsq",
+    linear_solver="normal_eq",
     normal_eq_reg=1e-12,
 ):
     """
@@ -312,6 +312,7 @@ def main(
                 grid_y,
                 dt,
                 mu_train,
+                u_ref=u_ref,
             )
             Clist.append(Ci)
 

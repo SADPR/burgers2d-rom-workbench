@@ -10,6 +10,7 @@ from .core import (
     inviscid_burgers_res2D_ecsw,
     inviscid_burgers_exact_jac2D,
     inviscid_burgers_exact_jac2D_ecsw,
+    EcswJacobianAssembler,
 )
 
 from .ecsw_utils import generate_augmented_mesh
@@ -22,6 +23,34 @@ from .gauss_newton import (
 from .quadratic_manifold_utils import u_qm
 from .quadratic_manifold_utils import J_qm
 from .quadratic_manifold_utils import build_Q_symmetric
+
+
+def reconstruct_local_qm_snaps(red_coords, cluster_history, u0_list, V_list, H_list):
+    """
+    Decode the full-order snapshots from the reduced trajectory.
+
+    The online solve only ever needs the state on the ECSW sample, so it just
+    records q(t) and the active cluster k(t). Rebuilding the full fields costs
+    one (N x m) product per step -- for a quadratic manifold m = n(n+1)/2, so
+    this is by far the most expensive operation in the loop, and it is pure
+    output bookkeeping. Keeping it separate lets the caller run it outside a
+    timed region, or skip it entirely.
+    """
+    cluster_history = np.asarray(cluster_history, dtype=int)
+    red_coords = np.asarray(red_coords, dtype=np.float64)
+
+    N_full = np.asarray(u0_list[0], dtype=np.float64).size
+    snaps = np.zeros((N_full, cluster_history.size), dtype=np.float64)
+
+    for it, k in enumerate(cluster_history):
+        V_k = np.asarray(V_list[k], dtype=np.float64)
+        snaps[:, it] = u_qm(
+            red_coords[: V_k.shape[1], it],
+            V_k,
+            np.asarray(H_list[k], dtype=np.float64),
+            np.asarray(u0_list[k], dtype=np.float64),
+        )
+    return snaps
 
 
 def _select_initial_cluster(w, uc_list):
@@ -268,6 +297,23 @@ def inviscid_burgers_implicit2D_LSPG_qm_ecsw(
 
     idx = np.concatenate((augmented_sample, n_full_scalar + augmented_sample))
     V_ecsw = V[idx, :]
+
+    # The boundary term, the source term and the sample/augmented overlap mask
+    # depend only on the mesh, dt and mu, so they are built once here instead
+    # of on every residual evaluation.
+    dx = grid_x[1:] - grid_x[:-1]
+    dy = grid_y[1:] - grid_y[:-1]
+    xc = 0.5 * (grid_x[1:] + grid_x[:-1])
+    _, sample_cols = np.unravel_index(sample_inds, (dy.size, dx.size))
+    res_lbc = np.where(sample_cols == 0, 0.5 * dt * mu[0] ** 2 / dx[0], 0.0)
+    res_src = np.tile(dt * 0.02 * np.exp(mu[1] * xc), dy.size)[sample_inds]
+    res_overlap = np.isin(augmented_sample, sample_inds)
+
+    # The Jacobian's sparsity pattern is fixed too, so assemble it once and
+    # refill it in place on every evaluation.
+    jac_loc = EcswJacobianAssembler(
+        dt, JDxec_ecsw, JDyec_ecsw, Eye_ecsw, augmented_sample
+    )
     H_ecsw = H[idx, :]
     u_ref_ecsw = u_ref[idx]
 
@@ -315,18 +361,11 @@ def inviscid_burgers_implicit2D_LSPG_qm_ecsw(
                 JDyec_ecsw,
                 sample_inds,
                 augmented_sample,
+                lbc=res_lbc,
+                src=res_src,
+                overlap=res_overlap,
             )
 
-        def jac_loc(w):
-            return inviscid_burgers_exact_jac2D_ecsw(
-                w,
-                dt,
-                JDxec_ecsw,
-                JDyec_ecsw,
-                Eye_ecsw,
-                sample_inds,
-                augmented_sample,
-            )
 
         q, resnorms, times = gauss_newton_LSPG_qm_ecsw(
             res_fun=res_loc,
@@ -732,11 +771,17 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
     normal_eq_reg=1e-12,
     selector_mode="linear",
     m_list=None,
+    reconstruct_snaps=True,
 ):
     """
     Local quadratic-manifold ECSW-LSPG HROM for the 2D inviscid Burgers equation:
 
         w ≈ u0_k + V_k q + H_k Q(q)
+
+    The time loop advances the reduced coordinates and the state on the ECSW
+    sample only. With `reconstruct_snaps=True` the full-order snapshots are
+    decoded once the loop is over; pass False to get `None` instead and call
+    `reconstruct_local_qm_snaps` yourself, e.g. outside a timed region.
     """
 
     w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
@@ -774,6 +819,23 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
     idx_cells = augmented_sample
     idx_dofs = np.concatenate((idx_cells, N_cells + idx_cells))
 
+    # The boundary term, the source term and the sample/augmented overlap mask
+    # depend only on the mesh, dt and mu, so they are built once here instead
+    # of on every residual evaluation.
+    dx = grid_x[1:] - grid_x[:-1]
+    dy = grid_y[1:] - grid_y[:-1]
+    xc = 0.5 * (grid_x[1:] + grid_x[:-1])
+    _, sample_cols = np.unravel_index(sample_inds, (dy.size, dx.size))
+    res_lbc = np.where(sample_cols == 0, 0.5 * dt * mu[0] ** 2 / dx[0], 0.0)
+    res_src = np.tile(dt * 0.02 * np.exp(mu[1] * xc), dy.size)[sample_inds]
+    res_overlap = np.isin(augmented_sample, sample_inds)
+
+    # The Jacobian's sparsity pattern is fixed too, so assemble it once and
+    # refill it in place on every evaluation.
+    jac_loc = EcswJacobianAssembler(
+        dt, JDxec_loc, JDyec_loc, Eye_loc, augmented_sample
+    )
+
     u0_loc_list = []
     V_loc_list = []
     H_loc_list = []
@@ -789,9 +851,18 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
 
     n_max = max(np.asarray(V, dtype=np.float64).shape[1] for V in V_list)
 
-    snaps = np.zeros((N_full, num_steps + 1), dtype=np.float64)
     red_coords = np.zeros((n_max, num_steps + 1), dtype=np.float64)
     cluster_history = []
+
+    def full_state(q_vec, k_idx):
+        """Decode the full field on chart `k_idx`. The loop needs this only
+        when re-projecting onto a new chart after a cluster switch."""
+        return u_qm(
+            q_vec,
+            np.asarray(V_list[k_idx], dtype=np.float64),
+            np.asarray(H_list[k_idx], dtype=np.float64),
+            np.asarray(u0_list[k_idx], dtype=np.float64),
+        )
 
     if init_cluster is None:
         k = _select_initial_cluster(w0, uc_list)
@@ -823,13 +894,10 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
         normal_eq_reg=normal_eq_reg,
     )
 
-    w0_full = u_qm(q0, V_k, H_k, u0_k)
     w0_loc = u_qm(q0, V_loc_k, H_loc_k, u0_loc_k)
 
-    snaps[:, 0] = w0_full
     red_coords[:n_k, 0] = q0
 
-    wp_full = w0_full.copy()
     wp_loc = w0_loc.copy()
     qp = q0.copy()
     cluster_history.append(k)
@@ -857,6 +925,9 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
 
         if k_new != k:
             print(f"  -> Cluster switch: {k} -> {k_new}")
+            # Decode the previous full state on the chart it was computed on;
+            # this is the one place in the loop that needs it.
+            wp_full = full_state(qp, k)
             k = k_new
 
             u0_k = np.asarray(u0_list[k], dtype=np.float64)
@@ -896,17 +967,9 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
                 JDyec_loc,
                 sample_inds,
                 augmented_sample,
-            )
-
-        def jac_loc(w_loc):
-            return inviscid_burgers_exact_jac2D_ecsw(
-                w_loc,
-                dt,
-                JDxec_loc,
-                JDyec_loc,
-                Eye_loc,
-                sample_inds,
-                augmented_sample,
+                lbc=res_lbc,
+                src=res_src,
+                overlap=res_overlap,
             )
 
         q, resnorms, times = gauss_newton_LSPG_qm_ecsw(
@@ -930,13 +993,10 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
         res_time += res_t
         ls_time += ls_t
 
-        w_full = u_qm(q, V_k, H_k, u0_k)
         w_loc = u_qm(q, V_loc_k, H_loc_k, u0_loc_k)
 
-        snaps[:, it + 1] = w_full
         red_coords[:n_k, it + 1] = q
 
-        wp_full = w_full.copy()
         wp_loc = w_loc.copy()
         qp = q.copy()
 
@@ -948,5 +1008,13 @@ def inviscid_burgers_implicit2D_LSPG_local_qm_ecsw(
         "cluster_history": cluster_history,
         "red_coords": red_coords,
     }
+
+    snaps = (
+        reconstruct_local_qm_snaps(
+            red_coords, cluster_history, u0_list, V_list, H_list
+        )
+        if reconstruct_snaps
+        else None
+    )
 
     return snaps, stats

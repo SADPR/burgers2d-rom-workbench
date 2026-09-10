@@ -241,7 +241,7 @@ def main(
     max_its=20,
     max_its_ic=20,
     tol_ic=1e-12,
-    linear_solver="lstsq",
+    linear_solver="normal_eq",
     normal_eq_reg=1e-12,
 ):
     if mu_samples is None:

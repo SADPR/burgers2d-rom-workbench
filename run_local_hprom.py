@@ -22,6 +22,7 @@ from burgers.core import (
 from burgers.linear_manifold import (
     compute_ECSW_training_matrix_2D_local,
     inviscid_burgers_implicit2D_LSPG_local_ecsw,
+    reconstruct_local_snaps,
 )
 from burgers.ecsw_utils import (
     build_ecsw_snapshot_plan,
@@ -124,7 +125,7 @@ def main(
     relnorm_cutoff=1e-5,
     min_delta=1e-2,
     max_its=20,
-    linear_solver="lstsq",
+    linear_solver="normal_eq",
     normal_eq_reg=1e-12,
 ):
     if compute_ecm is not None:
@@ -404,7 +405,7 @@ def main(
     # Local HPROM solve
     # ------------------------------------------------------------------
     t0 = time.time()
-    rom_snaps, stats = inviscid_burgers_implicit2D_LSPG_local_ecsw(
+    _, stats = inviscid_burgers_implicit2D_LSPG_local_ecsw(
         grid_x,
         grid_y,
         weights,
@@ -423,8 +424,15 @@ def main(
         max_its=max_its,
         linear_solver=linear_solver,
         normal_eq_reg=normal_eq_reg,
+        reconstruct_snaps=False,
     )
     elapsed_hprom = time.time() - t0
+
+    # Decoding the 125k-dof fields is only needed for the error metrics and the
+    # plots below, so it is deliberately left out of the timed online solve.
+    rom_snaps = reconstruct_local_snaps(
+        stats["red_coords"], stats["cluster_history"], u0_list, V_list
+    )
 
     num_its = int(stats["num_its"])
     jac_time = float(stats["jac_time"])

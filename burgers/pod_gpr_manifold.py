@@ -11,6 +11,7 @@ from .core import (
     inviscid_burgers_res2D_ecsw,
     inviscid_burgers_exact_jac2D,
     inviscid_burgers_exact_jac2D_ecsw,
+    EcswJacobianAssembler,
 )
 from .cluster_utils import select_cluster_reduced
 from .ecsw_utils import generate_augmented_mesh
@@ -1747,6 +1748,44 @@ def jac_gpr_local_ecsw(
     raise ValueError(f"Unsupported local ECSW jacobian mode: {mode}")
 
 
+
+def reconstruct_local_gpr_snaps(
+    red_coords,
+    cluster_history,
+    u0_list,
+    V_list,
+    models,
+    n_primary,
+    use_custom_predict=True,
+):
+    """
+    Decode the full-order snapshots from the reduced trajectory.
+
+    Mirrors the linear and quadratic reconstructions: the online solve only
+    needs the state on the ECSW sample, so it records q_p(t) and the active
+    cluster k(t). Rebuilding the full fields streams the whole local basis
+    (N x r_k) once per step, which is pure output bookkeeping.
+    """
+    cluster_history = np.asarray(cluster_history, dtype=int)
+    red_coords = np.asarray(red_coords, dtype=np.float64)
+
+    N_full = np.asarray(u0_list[0], dtype=np.float64).size
+    snaps = np.zeros((N_full, cluster_history.size), dtype=np.float64)
+
+    for it, k in enumerate(cluster_history):
+        r_k = np.asarray(V_list[k], dtype=np.float64).shape[1]
+        n_dof_k = _cluster_primary_dim(models[k], r_k, n_primary)
+        snaps[:, it] = decode_gpr_local(
+            k,
+            red_coords[:n_dof_k, it],
+            u0_list,
+            V_list,
+            models,
+            n_primary,
+            use_custom_predict=use_custom_predict,
+        )
+    return snaps
+
 def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
     grid_x,
     grid_y,
@@ -1774,9 +1813,16 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
     selector_mode="linear",
+    reconstruct_snaps=True,
 ):
     """
     ECSW local POD-GPR manifold ROM for the 2D inviscid Burgers equation.
+
+    The time loop advances the primary reduced coordinates and the state on
+    the ECSW sample only. With `reconstruct_snaps=True` the full-order
+    snapshots are decoded once the loop is over; pass False to get `None`
+    instead and call `reconstruct_local_gpr_snaps` yourself, e.g. outside a
+    timed region.
     """
     w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
     weights = np.asarray(weights, dtype=np.float64).reshape(-1)
@@ -1810,22 +1856,27 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
     xc = 0.5 * (grid_x[1:] + grid_x[:-1])
     shp = (dy.size, dx.size)
 
-    lbc = np.zeros(sample_inds.shape[0], dtype=np.float64)
-    rows, cols = np.unravel_index(sample_inds, shp)
-    for i, (r, c) in enumerate(zip(rows, cols)):
-        if c == 0:
-            lbc[i] = 0.5 * dt * mu[0] ** 2 / dx[0]
+    _, cols = np.unravel_index(sample_inds, shp)
+    lbc = np.where(cols == 0, 0.5 * dt * mu[0] ** 2 / dx[0], 0.0)
 
     src_line = dt * 0.02 * np.exp(mu[1] * xc)
     src_full = np.tile(src_line, dy.size)
     src = src_full[sample_inds]
+
+    # Constant for the whole run, like lbc and src above.
+    overlap = np.isin(augmented_sample, sample_inds)
+
+    # The Jacobian's sparsity pattern is fixed too, so assemble it once and
+    # refill it in place on every evaluation.
+    jac_loc_res = EcswJacobianAssembler(
+        dt, JDxec_loc, JDyec_loc, Eye_loc, augmented_sample
+    )
 
     n_max = 0
     for k in range(K):
         V_k = np.asarray(V_list[k], dtype=np.float64)
         n_max = max(n_max, _cluster_primary_dim(models[k], V_k.shape[1], n_primary))
 
-    snaps = np.zeros((N_full, num_steps + 1), dtype=np.float64)
     red_coords = np.zeros((n_max, num_steps + 1), dtype=np.float64)
     cluster_hist = []
 
@@ -1866,6 +1917,20 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
             use_custom_predict=use_custom_predict,
         )
 
+    def full_state(k_idx, q_vec):
+        """Decode the full field on chart `k_idx`. The loop needs this only
+        when re-projecting after a cluster switch (and, in "linear" selector
+        mode, to build the selector coordinates)."""
+        return decode_gpr_local(
+            k_idx,
+            q_vec,
+            u0_list,
+            V_list,
+            models,
+            n_primary,
+            use_custom_predict=use_custom_predict,
+        )
+
     def jac_loc(q):
         return jac_gpr_local_ecsw(
             k,
@@ -1890,20 +1955,9 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
         tag="LOCAL-POD-GPR-ECSW-IC",
     )
 
-    w_init = decode_gpr_local(
-        k,
-        q0,
-        u0_list,
-        V_list,
-        models,
-        n_primary,
-        use_custom_predict=use_custom_predict,
-    )
-
-    snaps[:, 0] = w_init
     red_coords[:n_dof_k, 0] = q0
 
-    wp_full = w_init.copy()
+    wp_loc = decode_loc(q0)
     qp = q0.copy()
     cluster_hist.append(k)
 
@@ -1919,9 +1973,13 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
         if verbose and (it % 10 == 0 or it == num_steps - 1):
             print(f"[LOCAL-POD-GPR-ECSW] Timestep {it}/{num_steps}")
 
+        # The nonlinear selector is driven by q_primary_hint and never reads
+        # `state`; only the linear one needs the full field.
+        selector_state = full_state(k, qp) if selector_mode == "linear" else None
+
         q_full_k = _build_local_selector_coords_gpr(
             k=k,
-            state=wp_full,
+            state=selector_state,
             u0_k=u0_k,
             V_k=V_k,
             model_k=models[k],
@@ -1936,6 +1994,10 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
         if k_new != k:
             if verbose:
                 print(f"  [LOCAL-POD-GPR-ECSW] Cluster switch: {k} -> {k_new}")
+
+            # Decode the previous full state on the chart it was computed on;
+            # re-projecting onto the new chart is the one place it is needed.
+            wp_full = full_state(k, qp)
 
             k = k_new
             u0_k = np.asarray(u0_list[k], dtype=np.float64)
@@ -1956,8 +2018,6 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
 
         cluster_hist.append(k)
 
-        wp_loc = wp_full[idx_dofs]
-
         def res_loc(w_loc):
             return inviscid_burgers_res2D_ecsw(
                 w_loc,
@@ -1972,17 +2032,7 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
                 augmented_sample,
                 lbc,
                 src,
-            )
-
-        def jac_loc_res(w_loc):
-            return inviscid_burgers_exact_jac2D_ecsw(
-                w_loc,
-                dt,
-                JDxec_loc,
-                JDyec_loc,
-                Eye_loc,
-                sample_inds,
-                augmented_sample,
+                overlap,
             )
 
         q, resnorms, times = gauss_newton_pod_gpr_ecsw(
@@ -2008,20 +2058,9 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
         res_time += res_t
         ls_time += ls_t
 
-        w_full = decode_gpr_local(
-            k,
-            q,
-            u0_list,
-            V_list,
-            models,
-            n_primary,
-            use_custom_predict=use_custom_predict,
-        )
-
-        snaps[:, it + 1] = w_full
         red_coords[:n_dof_k, it + 1] = q
 
-        wp_full = w_full.copy()
+        wp_loc = decode_loc(q)
         qp = q.copy()
 
     stats = {
@@ -2032,6 +2071,20 @@ def inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
         "cluster_history": cluster_hist,
         "red_coords": red_coords,
     }
+
+    snaps = (
+        reconstruct_local_gpr_snaps(
+            red_coords,
+            cluster_hist,
+            u0_list,
+            V_list,
+            models,
+            n_primary,
+            use_custom_predict=use_custom_predict,
+        )
+        if reconstruct_snaps
+        else None
+    )
 
     return snaps, stats
 
@@ -2102,15 +2155,19 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr_ecsw(
     xc = 0.5 * (grid_x[1:] + grid_x[:-1])
     shp = (dy.size, dx.size)
 
-    lbc = np.zeros(sample_inds.shape[0], dtype=np.float64)
-    rows, cols = np.unravel_index(sample_inds, shp)
-    for i, (r, c) in enumerate(zip(rows, cols)):
-        if c == 0:
-            lbc[i] = 0.5 * dt * mu[0] ** 2 / dx[0]
+    _, cols = np.unravel_index(sample_inds, shp)
+    lbc = np.where(cols == 0, 0.5 * dt * mu[0] ** 2 / dx[0], 0.0)
 
     src_line = dt * 0.02 * np.exp(mu[1] * xc)
     src_full = np.tile(src_line, dy.size)
     src = src_full[sample_inds]
+
+    # Constant for the whole run, like lbc and src above.
+    overlap = np.isin(augmented_sample, sample_inds)
+
+    # The Jacobian's sparsity pattern is fixed too, so assemble it once and
+    # refill it in place on every evaluation.
+    jac_loc = EcswJacobianAssembler(dt, JDxec_loc, JDyec_loc, Eye_loc, augmented_sample)
 
     basis_loc = basis[idx_dofs, :]
     basis2_loc = basis2[idx_dofs, :]
@@ -2215,18 +2272,9 @@ def inviscid_burgers_implicit2D_LSPG_pod_gpr_ecsw(
                 augmented_sample,
                 lbc,
                 src,
+                overlap,
             )
 
-        def jac_loc(w_loc):
-            return inviscid_burgers_exact_jac2D_ecsw(
-                w_loc,
-                dt,
-                JDxec_loc,
-                JDyec_loc,
-                Eye_loc,
-                sample_inds,
-                augmented_sample,
-            )
 
         q, resnorms, times = gauss_newton_pod_gpr_ecsw(
             func=res_loc,

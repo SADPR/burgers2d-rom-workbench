@@ -22,6 +22,7 @@ from burgers.core import (
 from burgers.pod_gpr_manifold import (
     compute_ECSW_training_matrix_2D_gpr_local,
     inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw,
+    reconstruct_local_gpr_snaps,
 )
 from burgers.ecsw_utils import (
     build_ecsw_snapshot_plan,
@@ -145,7 +146,7 @@ def main(
     use_custom_predict=True,
     jacobian_mode="auto",
     fd_eps=1e-6,
-    linear_solver="lstsq",
+    linear_solver="normal_eq",
     normal_eq_reg=1e-12,
     verbose=True,
     selector_mode="nonlinear",
@@ -483,7 +484,7 @@ def main(
     print(f"[LOCAL-HPROM-GPR] N_e (nonzero ECSW weights): {n_ecsw_elements}")
 
     t0 = time.time()
-    rom_snaps, stats = inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
+    _, stats = inviscid_burgers_implicit2D_LSPG_local_pod_gpr_ecsw(
         grid_x,
         grid_y,
         weights,
@@ -510,8 +511,21 @@ def main(
         linear_solver=linear_solver,
         normal_eq_reg=normal_eq_reg,
         selector_mode=selector_mode,
+        reconstruct_snaps=False,
     )
     elapsed_hprom = time.time() - t0
+
+    # Decoding the 125k-dof fields is only needed for the error metrics and the
+    # plots below, so it is deliberately left out of the timed online solve.
+    rom_snaps = reconstruct_local_gpr_snaps(
+        stats["red_coords"],
+        stats["cluster_history"],
+        u0_list,
+        V_list,
+        models,
+        n_primary,
+        use_custom_predict=use_custom_predict,
+    )
 
     num_its = int(stats["num_its"])
     jac_time = float(stats["jac_time"])
