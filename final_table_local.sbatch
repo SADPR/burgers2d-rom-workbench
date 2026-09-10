@@ -7,17 +7,13 @@
 # bases, quadratic manifolds, GPR models and clustering are reused untouched;
 # only the cubature is rebuilt, with the current assembly code.
 #
-# The largest local ECSW training matrix seen so far is 4320 x 62500 (2.2 GB)
-# and the slowest took 4928 s, so 32 GB and 8 h leave ample headroom.
-
 #SBATCH --job-name=ft-local
+#SBATCH --partition=cfarhat
 #SBATCH --array=0-8
 #SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24
-#SBATCH --hint=nomultithread
-#SBATCH --mem=32G
-#SBATCH --time=08:00:00
+#SBATCH --ntasks-per-node=24
+#SBATCH --exclusive
+#SBATCH --time=24:00:00
 #SBATCH --output=ft-local-%A_%a.log
 
 set -euo pipefail
@@ -28,13 +24,13 @@ ROWS=("Local HPROM (Nc=3)"     "Local HPROM (Nc=5)"     "Local HPROM (Nc=8)"
       "Local HPROM-GPR (Nc=3)" "Local HPROM-GPR (Nc=5)" "Local HPROM-GPR (Nc=8)")
 ROW="${ROWS[$SLURM_ARRAY_TASK_ID]}"
 
-PYTHON_BIN="${PYTHON_BIN:-python3}"
-NT="${SLURM_CPUS_PER_TASK:-24}"
-export OMP_NUM_THREADS=$NT OPENBLAS_NUM_THREADS=$NT MKL_NUM_THREADS=$NT NUMEXPR_NUM_THREADS=$NT
-export OMP_DYNAMIC=FALSE MKL_DYNAMIC=FALSE MPLBACKEND=Agg
-export MPLCONFIGDIR="${TMPDIR:-/tmp}/ft-mpl-${SLURM_JOB_ID}"
+module load python/3.9.0
+source ~/myenv/bin/activate
 
-echo "=== $ROW | $NT threads | $(date) ==="
-srun --cpu-bind=cores "$PYTHON_BIN" -u rerun_table_timings.py \
+export OMP_NUM_THREADS=24 OPENBLAS_NUM_THREADS=24 MKL_NUM_THREADS=24 NUMEXPR_NUM_THREADS=24
+export MPLBACKEND=Agg
+
+echo "=== $ROW | 24 threads | $(date) ==="
+python3 -u rerun_table_timings.py \
     --only "$ROW" --rebuild-ecsw --repeats 3
 echo "=== done $(date) ==="
