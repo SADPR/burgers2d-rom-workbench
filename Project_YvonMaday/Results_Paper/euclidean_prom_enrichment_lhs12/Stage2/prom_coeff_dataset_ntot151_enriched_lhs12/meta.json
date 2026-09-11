@@ -1,0 +1,162 @@
+{
+  "basis_path": "/scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/basis.npy",
+  "coefficient_storage": "direct_solver_qN_only",
+  "coordinate_recovery": "solver_coordinates",
+  "coordinate_source": "solver_coordinates",
+  "dt": 0.05,
+  "ecsw_ensure_mu_coverage": true,
+  "ecsw_num_candidates_total": null,
+  "ecsw_num_selected_per_mu": null,
+  "ecsw_num_selected_total": null,
+  "ecsw_num_training_mu": 9,
+  "ecsw_random_seed": 42,
+  "ecsw_residual": NaN,
+  "ecsw_snap_time_offset": 3,
+  "ecsw_snapshot_mode": "global_param_time_stratified",
+  "ecsw_snapshot_percent": 2.0,
+  "ecsw_svd_method": "direct_dense_svd",
+  "ecsw_svd_relative_tolerance": 1e-08,
+  "ecsw_weights_path": null,
+  "ecsw_weights_source": null,
+  "linear_solver": "lstsq",
+  "make_plots": false,
+  "max_its": 20,
+  "min_delta": 0.01,
+  "mu_list": [
+    [
+      4.25,
+      0.015
+    ],
+    [
+      4.25,
+      0.0225
+    ],
+    [
+      4.25,
+      0.03
+    ],
+    [
+      4.875,
+      0.015
+    ],
+    [
+      4.875,
+      0.0225
+    ],
+    [
+      4.875,
+      0.03
+    ],
+    [
+      5.5,
+      0.015
+    ],
+    [
+      5.5,
+      0.0225
+    ],
+    [
+      5.5,
+      0.03
+    ]
+  ],
+  "mu_source": "configured_training_grid",
+  "n_available_modes": 151,
+  "n_ecsw_elements": null,
+  "normal_eq_reg": 1e-12,
+  "num_steps": 500,
+  "num_traj": 21,
+  "pod_dir": "/scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1",
+  "rebuild_ecsw_weights": true,
+  "reduced_size": 151,
+  "relnorm_cutoff": 1e-05,
+  "save_rom_snaps": false,
+  "snap_folder": "/scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Results/param_snaps",
+  "solve_backend": "prom",
+  "state_size": 125000,
+  "total_modes": 151,
+  "u_ref_path": "/scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/u_ref.npy",
+  "is_enrichment_dataset": true,
+  "is_nested_subset_dataset": true,
+  "enrichment_protocol": "euclidean_prom_baseline_9_plus_nested_12_from_fixed_lhs36_candidate_pool",
+  "subset_level": "lhs12",
+  "source_enrichment_dataset": "/scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_enrichment_lhs18/Stage2/prom_coeff_dataset_ntot151_enriched_lhs18",
+  "base_dataset_dir": "/scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151",
+  "base_dataset_meta_path": "/scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_main/Stage2/prom_coeff_dataset_ntot151/meta.json",
+  "num_base_traj_copied": 9,
+  "num_lhs_traj": 12,
+  "num_interior_lhs_traj": 6,
+  "num_exterior_lhs_traj": 6,
+  "lhs_seed": 42,
+  "margin_fraction": 0.25,
+  "original_mu1_range": [
+    4.25,
+    5.5
+  ],
+  "original_mu2_range": [
+    0.015,
+    0.03
+  ],
+  "expanded_mu1_range": [
+    3.9375,
+    5.8125
+  ],
+  "expanded_mu2_range": [
+    0.01125,
+    0.03375
+  ],
+  "exterior_region_labels": [
+    "left_margin",
+    "right_margin",
+    "top_margin",
+    "bottom_margin",
+    "right_margin",
+    "left_margin"
+  ],
+  "selected_interior_source_indices": [
+    1,
+    10,
+    0,
+    16,
+    2,
+    4
+  ],
+  "selected_exterior_source_indices": [
+    1,
+    6,
+    12,
+    17,
+    9,
+    3
+  ],
+  "basis_sha256": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+  "u_ref_sha256": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+  "evaluation_points_excluded_from_lhs": [
+    [
+      4.875,
+      0.0225
+    ],
+    [
+      4.56,
+      0.019
+    ],
+    [
+      5.19,
+      0.026
+    ],
+    [
+      4.0,
+      0.033
+    ]
+  ],
+  "parameter_validation_points_excluded_from_lhs": [
+    [
+      4.5625,
+      0.02625
+    ],
+    [
+      5.1875,
+      0.01875
+    ]
+  ]
+}

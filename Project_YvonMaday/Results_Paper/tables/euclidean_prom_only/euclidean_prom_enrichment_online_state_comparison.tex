@@ -1,15 +1,15 @@
-\begin{tabular}{lrr|rr|rr}
+\begin{tabular}{lrr|rr|rr|rr}
 \toprule
-& \multicolumn{2}{c|}{Baseline (9)} & \multicolumn{2}{c|}{Early (9+8)} & \multicolumn{2}{c}{Intermediate (9+18)} \\
-Model & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ \\
+& \multicolumn{2}{c|}{Baseline (9)} & \multicolumn{2}{c|}{Nested (9+8)} & \multicolumn{2}{c|}{Nested (9+12)} & \multicolumn{2}{c}{Nested (9+18)} \\
+Model & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ \\
 \midrule
-Linear PROM & 0.441 & 0.850 & 0.441 & 0.850 & 0.441 & 0.850 \\
-PROM--ANN Case 1 & 0.566 & 1.673 & 0.460 & 1.129 & 0.439 & 0.850 \\
-PROM--ANN Case 2 ($n=10$) & 1.607 & 2.696 & 0.702 & 3.270 & 0.481 & 0.876 \\
-PROM--ANN Case 3 & 0.494 & 1.521 & 0.442 & 1.054 & 0.440 & 0.848 \\
-PROM--POD--AE ($n_z=10$) & 0.551 & 1.754 & 0.454 & 1.183 & 0.441 & 0.859 \\
+Linear PROM & 0.441 & 0.850 & 0.441 & 0.850 & 0.441 & 0.850 & 0.441 & 0.850 \\
+PROM--ANN Case 1 & 0.566 & 1.673 & 0.460 & 1.129 & 0.442 & 0.853 & 0.439 & 0.850 \\
+PROM--ANN Case 2 ($n=10$) & 1.607 & 2.696 & 0.702 & 3.270 & 0.602 & 0.935 & 0.481 & 0.876 \\
+PROM--ANN Case 3 & 0.494 & 1.521 & 0.442 & 1.054 & 0.440 & 0.851 & 0.440 & 0.848 \\
+PROM--POD--AE ($n_z=10$) & 0.551 & 1.754 & 0.454 & 1.183 & 0.442 & 0.853 & 0.441 & 0.859 \\
 \midrule
-POD--NN--ROM & 1.698 & 4.351 & 0.735 & 19.465 & 0.484 & 0.938 \\
-POD--DL--ROM ($n_z=10$) & 1.125 & 2.267 & 0.461 & 1.103 & 0.444 & 0.858 \\
+POD--NN--ROM & 1.698 & 4.351 & 0.735 & 19.465 & 0.609 & 1.083 & 0.484 & 0.938 \\
+POD--DL--ROM ($n_z=10$) & 1.125 & 2.267 & 0.461 & 1.103 & 0.456 & 0.868 & 0.444 & 0.858 \\
 \bottomrule
 \end{tabular}

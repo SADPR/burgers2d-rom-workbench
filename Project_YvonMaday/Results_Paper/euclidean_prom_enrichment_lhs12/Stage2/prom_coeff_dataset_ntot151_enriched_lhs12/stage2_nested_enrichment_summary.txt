@@ -1,0 +1,11 @@
+dataset_dir: /scratch/users/sadpr/Code3Aug/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_prom_enrichment_lhs12/Stage2/prom_coeff_dataset_ntot151_enriched_lhs12
+solve_backend: prom
+subset_level: lhs12
+candidate_pool: fixed seed 18 interior + 18 margin LHS; no full 9+36 solve
+num_base_traj_copied: 9
+num_interior_lhs_traj: 6
+num_exterior_lhs_traj: 6
+num_lhs_traj: 12
+num_traj_total: 21
+selected_interior_source_indices: [1, 10, 0, 16, 2, 4]
+selected_exterior_source_indices: [1, 6, 12, 17, 9, 3]

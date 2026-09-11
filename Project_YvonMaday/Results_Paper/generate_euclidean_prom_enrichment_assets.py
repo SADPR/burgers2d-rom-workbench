@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Generate the Euclidean-POD PROM enrichment tables and figures.
 
-The three compared campaigns use the same Euclidean basis, model
+The four compared campaigns use the same Euclidean basis, model
 architectures, validation trajectories, and online evaluation points.  Only
-the PROM coefficient-training trajectories change: 9, 9+8, and 9+18.
+the PROM coefficient-training trajectories change: 9, 9+8, 9+12, and 9+18.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ import generate_prom_enrichment_assets as shared
 PAPER = Path(__file__).resolve().parent
 BASE = PAPER / "euclidean_prom_main"
 EARLY = PAPER / "euclidean_prom_enrichment_lhs8"
+MIDDLE = PAPER / "euclidean_prom_enrichment_lhs12"
 INTERMEDIATE = PAPER / "euclidean_prom_enrichment_lhs18"
 FIG_DIR = PAPER / "Figures" / "euclidean_prom_only"
 TAB_DIR = PAPER / "tables" / "euclidean_prom_only"
@@ -36,6 +37,12 @@ EARLY_MANIFEST = (
     / "prom_coeff_dataset_ntot151_enriched_lhs8"
     / "parameter_manifest.csv"
 )
+MIDDLE_MANIFEST = (
+    MIDDLE
+    / "Stage2"
+    / "prom_coeff_dataset_ntot151_enriched_lhs12"
+    / "parameter_manifest.csv"
+)
 INTERMEDIATE_MANIFEST = (
     INTERMEDIATE
     / "Stage2"
@@ -45,9 +52,10 @@ INTERMEDIATE_MANIFEST = (
 
 CAMPAIGNS = (
     ("Baseline (9 trajectories)", "baseline 9", BASE, "#9ecae9", "#376795"),
-    ("Early (9+8 trajectories)", "nested 9+8", EARLY, "#fdd0a2", "#e6550d"),
+    ("Nested (9+8 trajectories)", "nested 9+8", EARLY, "#fdd0a2", "#e6550d"),
+    ("Nested (9+12 trajectories)", "nested 9+12", MIDDLE, "#9dd9d2", "#258f83"),
     (
-        "Intermediate (9+18 trajectories)",
+        "Nested (9+18 trajectories)",
         "nested 9+18",
         INTERMEDIATE,
         "#a1d99b",
@@ -61,14 +69,14 @@ def configure_shared_generator() -> None:
 
     shared.BASE = BASE
     shared.EARLY = EARLY
-    shared.MID = INTERMEDIATE
+    shared.MID = MIDDLE
     shared.ENR = INTERMEDIATE
     shared.FIG_DIR = FIG_DIR
     shared.TAB_DIR = TAB_DIR
     shared.BASIS_PATH = BASIS_PATH
     shared.UREF_PATH = U_REF_PATH
     shared.EARLY_PARAMETER_MANIFEST = EARLY_MANIFEST
-    shared.MID_PARAMETER_MANIFEST = INTERMEDIATE_MANIFEST
+    shared.MID_PARAMETER_MANIFEST = MIDDLE_MANIFEST
     shared.PARAMETER_MANIFEST = INTERMEDIATE_MANIFEST
     shared.CAMPAIGNS = CAMPAIGNS
     shared.POINTS = (
@@ -124,8 +132,27 @@ def read_manifest(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     return np.asarray(baseline), np.asarray(interior), np.asarray(margin)
 
 
+def verify_nested_designs() -> None:
+    """Require identical baselines and strict 8/12/18 subset nesting."""
+
+    manifests = [read_manifest(path) for path in
+                 (EARLY_MANIFEST, MIDDLE_MANIFEST, INTERMEDIATE_MANIFEST)]
+    baseline_sets = [{tuple(point) for point in values[0]} for values in manifests]
+    if not baseline_sets[0] == baseline_sets[1] == baseline_sets[2]:
+        raise ValueError("The enrichment campaigns do not share one baseline grid")
+    enrichment_sets = [
+        {tuple(point) for point in np.vstack((interior, margin))}
+        for _baseline, interior, margin in manifests
+    ]
+    if tuple(map(len, enrichment_sets)) != (8, 12, 18):
+        raise ValueError("Unexpected enrichment budgets")
+    if not enrichment_sets[0] < enrichment_sets[1] < enrichment_sets[2]:
+        raise ValueError("The 9+8, 9+12, and 9+18 designs are not strictly nested")
+
+
 def plot_sampling_figures() -> list[Path]:
     baseline, early_interior, early_margin = read_manifest(EARLY_MANIFEST)
+    _, middle_interior, middle_margin = read_manifest(MIDDLE_MANIFEST)
     _, intermediate_interior, intermediate_margin = read_manifest(INTERMEDIATE_MANIFEST)
     validation = np.asarray(shared.PARAMETER_VALIDATION_POINTS)
     configurations = (
@@ -134,22 +161,36 @@ def plot_sampling_figures() -> list[Path]:
             np.empty((0, 2)),
             np.empty((0, 2)),
             "prom_enrichment_sampling_baseline.png",
+            "#e6550d",
+            "#d7301f",
         ),
         (
-            "Early nested enrichment and parameter validation",
+            "Nested 9+8 enrichment and parameter validation",
             early_interior,
             early_margin,
             "prom_enrichment_sampling_early.png",
+            "#e6550d",
+            "#d7301f",
         ),
         (
-            "Intermediate nested enrichment and parameter validation",
+            "Nested 9+12 enrichment and parameter validation",
+            middle_interior,
+            middle_margin,
+            "prom_enrichment_sampling_middle.png",
+            "#258f83",
+            "#176b62",
+        ),
+        (
+            "Nested 9+18 enrichment and parameter validation",
             intermediate_interior,
             intermediate_margin,
             "prom_enrichment_sampling_intermediate.png",
+            "#2b7bba",
+            "#1b9e77",
         ),
     )
     outputs: list[Path] = []
-    for title, interior, margin, filename in configurations:
+    for title, interior, margin, filename, interior_color, margin_color in configurations:
         figure, axis = plt.subplots(figsize=(7.3, 7.8))
         shared._setup_parameter_axis(axis, title)
         axis.scatter(
@@ -163,21 +204,20 @@ def plot_sampling_figures() -> list[Path]:
             zorder=4,
         )
         if len(interior):
-            count = len(interior)
             axis.scatter(
                 interior[:, 0],
                 interior[:, 1],
                 s=58,
-                color="#e6550d" if count == 4 else "#2b7bba",
+                color=interior_color,
                 alpha=0.90,
-                label=f"{count} nested interior LHS points",
+                label=f"{len(interior)} nested interior LHS points",
                 zorder=3,
             )
             axis.scatter(
                 margin[:, 0],
                 margin[:, 1],
                 s=62,
-                color="#d7301f" if count == 4 else "#1b9e77",
+                color=margin_color,
                 alpha=0.90,
                 label=f"{len(margin)} nested margin LHS points",
                 zorder=3,
@@ -202,7 +242,7 @@ def plot_sampling_figures() -> list[Path]:
 
 
 def plot_comparison_bar(metric: str) -> Path:
-    """Plot the three-level comparison without hiding the large 9+8 outlier."""
+    """Plot the four-level comparison without hiding the large 9+8 outlier."""
 
     if metric not in {"state", "coefficient"}:
         raise ValueError(metric)
@@ -218,7 +258,7 @@ def plot_comparison_bar(metric: str) -> Path:
             extrapolations.append(values[3])
 
     x_locations = np.arange(len(shared.ENRICHMENT_BAR_LABELS))
-    width = 0.22
+    width = 0.18
     offsets = width * (np.arange(len(CAMPAIGNS)) - 0.5 * (len(CAMPAIGNS) - 1))
     all_values = [
         value
@@ -326,7 +366,7 @@ def plot_case2_coefficient_curves() -> Path:
         axis.grid(True, which="both", alpha=0.25)
         axis.set_ylim(lower, upper)
     handles, labels = axes.ravel()[0].get_legend_handles_labels()
-    figure.legend(handles, labels, loc="upper center", ncol=3, frameon=False)
+    figure.legend(handles, labels, loc="upper center", ncol=4, frameon=False)
     figure.tight_layout(rect=(0, 0, 1, 0.93))
     output = FIG_DIR / "prom_enrichment_case2_coeff_rel_errors.png"
     figure.savefig(output, dpi=220, bbox_inches="tight")
@@ -414,6 +454,9 @@ def write_dataset_table() -> Path:
     early_meta = json.loads(
         (EARLY / "Stage2" / "prom_coeff_dataset_ntot151_enriched_lhs8" / "meta.json").read_text()
     )
+    middle_meta = json.loads(
+        (MIDDLE / "Stage2" / "prom_coeff_dataset_ntot151_enriched_lhs12" / "meta.json").read_text()
+    )
     intermediate_meta = json.loads(
         (
             INTERMEDIATE
@@ -423,19 +466,19 @@ def write_dataset_table() -> Path:
         ).read_text()
     )
     lines = [
-        r"\begin{tabular}{lrrr}",
+        r"\begin{tabular}{lrrrr}",
         r"\toprule",
-        "Quantity & Baseline & Early & Intermediate \\\\",
+        r"Quantity & Baseline & $9+8$ & $9+12$ & $9+18$ \\",
         r"\midrule",
-        f"Baseline grid trajectories & {base_meta['num_traj']} & {early_meta['num_base_traj_copied']} & {intermediate_meta['num_base_traj_copied']} \\\\",
-        f"Interior LHS trajectories & 0 & {early_meta['num_interior_lhs_traj']} & {intermediate_meta['num_interior_lhs_traj']} \\\\",
-        f"Margin LHS trajectories & 0 & {early_meta['num_exterior_lhs_traj']} & {intermediate_meta['num_exterior_lhs_traj']} \\\\",
-        f"Total training trajectories & {base_meta['num_traj']} & {early_meta['num_traj']} & {intermediate_meta['num_traj']} \\\\",
-        f"Training samples & {base_meta['num_traj'] * 501} & {early_meta['num_traj'] * 501} & {intermediate_meta['num_traj'] * 501} \\\\",
-        "Held-out parameter-validation trajectories & 2 & 2 & 2 \\\\",
-        "Held-out parameter-validation samples & 1002 & 1002 & 1002 \\\\",
-        f"LHS seed & -- & {early_meta['lhs_seed']} & {intermediate_meta['lhs_seed']} \\\\",
-        f"Margin fraction & -- & {early_meta['margin_fraction']} & {intermediate_meta['margin_fraction']} \\\\",
+        f"Baseline grid trajectories & {base_meta['num_traj']} & {early_meta['num_base_traj_copied']} & {middle_meta['num_base_traj_copied']} & {intermediate_meta['num_base_traj_copied']} \\\\",
+        f"Interior LHS trajectories & 0 & {early_meta['num_interior_lhs_traj']} & {middle_meta['num_interior_lhs_traj']} & {intermediate_meta['num_interior_lhs_traj']} \\\\",
+        f"Margin LHS trajectories & 0 & {early_meta['num_exterior_lhs_traj']} & {middle_meta['num_exterior_lhs_traj']} & {intermediate_meta['num_exterior_lhs_traj']} \\\\",
+        f"Total training trajectories & {base_meta['num_traj']} & {early_meta['num_traj']} & {middle_meta['num_traj']} & {intermediate_meta['num_traj']} \\\\",
+        f"Training samples & {base_meta['num_traj'] * 501} & {early_meta['num_traj'] * 501} & {middle_meta['num_traj'] * 501} & {intermediate_meta['num_traj'] * 501} \\\\",
+        "Held-out parameter-validation trajectories & 2 & 2 & 2 & 2 \\\\",
+        "Held-out parameter-validation samples & 1002 & 1002 & 1002 & 1002 \\\\",
+        f"LHS seed & -- & {early_meta['lhs_seed']} & {middle_meta['lhs_seed']} & {intermediate_meta['lhs_seed']} \\\\",
+        f"Margin fraction & -- & {early_meta['margin_fraction']} & {middle_meta['margin_fraction']} & {intermediate_meta['margin_fraction']} \\\\",
         r"\bottomrule",
         r"\end{tabular}",
     ]
@@ -445,10 +488,14 @@ def write_dataset_table() -> Path:
 
 def main() -> None:
     configure_shared_generator()
-    required = (BASE, EARLY, INTERMEDIATE, BASIS_PATH, U_REF_PATH, EARLY_MANIFEST, INTERMEDIATE_MANIFEST)
+    required = (
+        BASE, EARLY, MIDDLE, INTERMEDIATE, BASIS_PATH, U_REF_PATH,
+        EARLY_MANIFEST, MIDDLE_MANIFEST, INTERMEDIATE_MANIFEST,
+    )
     for path in required:
         if not path.exists():
             raise FileNotFoundError(path)
+    verify_nested_designs()
     FIG_DIR.mkdir(parents=True, exist_ok=True)
     TAB_DIR.mkdir(parents=True, exist_ok=True)
 
