@@ -207,7 +207,7 @@ def resolve_kwargs(modname, extra, work, rebuild):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--work", default=os.path.join(REPO, "FinalTable"),
+    ap.add_argument("--work", default=os.path.join(REPO, "Results_Paper", "FinalTable"),
                     help="Root for the per-row working directories.")
     ap.add_argument("--out", default=None,
                     help="Output CSV (default: <work>/<slug>.csv, or "

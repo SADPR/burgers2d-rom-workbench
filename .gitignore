@@ -67,3 +67,9 @@ Results/**
 # Local backup folder (optional, usually not for git)
 # -----------------------------
 HYPERNET_BACK_UP/
+
+# Timing campaigns: per-row working trees with rebuilt cubatures and the ROM
+# snapshot matrices (~17 GB each). The numbers they produce live in the decks
+# and in Results_Paper/model_hyperparameters.md; the trees are local archives.
+Results_Paper/FinalTable*/
+FinalTable/
