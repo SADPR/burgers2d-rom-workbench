@@ -429,21 +429,21 @@ Gauss--Newton at iterate $\mathbf q^{(j)}$:
 \hline
 HDM & 125\,000 & -- & 62\,500 & -- & -- & 12.517 & -- \\
 \addlinespace[0.35em]
-HPROM & 96 & -- & 4\,824 & 1.030 & 1.096 & 0.905 & 13.8 \\
-HQPROM & 39 & -- & 3\,505 & 0.871 & 0.933 & 0.967 & 12.9 \\
-HPROM-GPR & 20 & 131 & 1\,801 & 0.691 & 0.845 & 0.407 & 30.8 \\
+HPROM & 96 & -- & 4\,241 & 1.030 & 1.096 & 0.366 & 34.2 \\
+HQPROM & 39 & -- & 3\,460 & 0.818 & 0.861 & 0.641 & 19.5 \\
+HPROM-GPR & 20 & 131 & 1\,799 & 0.666 & 0.785 & 0.236 & 53.1 \\
 \addlinespace[0.35em]
-Local HPROM ($N_c=3$) & 35--48 & -- & 3\,405 & 0.897 & 0.933 & 0.364 & 34.4 \\
-Local HQPROM ($N_c=3$) & 21--27 & -- & 2\,152 & 0.888 & 1.025 & 0.504 & 24.8 \\
-Local HPROM-GPR ($N_c=3$) & 9 & 60--97 & 811 & 0.714 & 0.786 & 0.284 & 44.1 \\
+Local HPROM ($N_c=3$) & 35--48 & -- & 3\,405 & 0.897 & 0.933 & 0.154 & 81.4 \\
+Local HQPROM ($N_c=3$) & 21--27 & -- & 2\,152 & 0.888 & 1.025 & 0.215 & 58.3 \\
+Local HPROM-GPR ($N_c=3$) & 9 & 60--97 & 811 & 0.714 & 0.786 & 0.113 & 110.5 \\
 \addlinespace[0.35em]
-Local HPROM ($N_c=5$) & 23--31 & -- & 2\,384 & 0.915 & 0.943 & 0.265 & 47.3 \\
-Local HQPROM ($N_c=5$) & 15--20 & -- & 1\,593 & 0.760 & 0.878 & 0.380 & 33.0 \\
-Local HPROM-GPR ($N_c=5$) & 7 & 41--68 & 631 & 0.673 & 0.880 & 0.251 & 49.8 \\
+Local HPROM ($N_c=5$) & 23--31 & -- & 2\,384 & 0.915 & 0.943 & 0.095 & 132.0 \\
+Local HQPROM ($N_c=5$) & 15--20 & -- & 1\,593 & 0.760 & 0.878 & 0.128 & 97.9 \\
+Local HPROM-GPR ($N_c=5$) & 7 & 41--68 & 631 & 0.673 & 0.880 & 0.094 & 133.2 \\
 \addlinespace[0.35em]
-Local HPROM ($N_c=8$) & 16--26 & -- & 1\,781 & 0.787 & 0.900 & 0.220 & 56.9 \\
-Local HQPROM ($N_c=8$) & 10--15 & -- & 1\,075 & 0.787 & 0.890 & 0.296 & 42.3 \\
-Local HPROM-GPR ($N_c=8$) & 6 & 28--54 & 541 & 0.801 & 1.156 & 0.243 & 51.4 \\
+Local HPROM ($N_c=8$) & 16--26 & -- & 1\,781 & 0.787 & 0.900 & 0.070 & 179.7 \\
+Local HQPROM ($N_c=8$) & 10--15 & -- & 1\,075 & 0.787 & 0.890 & 0.082 & 151.9 \\
+Local HPROM-GPR ($N_c=8$) & 6 & 28--54 & 541 & 0.801 & 1.156 & 0.085 & 147.9 \\
 \hline
 \end{tabular}}
 \vspace{0.2em}
@@ -463,17 +463,17 @@ Local HPROM-GPR ($N_c=8$) & 6 & 28--54 & 541 & 0.801 & 1.156 & 0.243 & 51.4 \\
 \column{0.33\textwidth}
 \centering
 \includegraphics[width=\linewidth]{hprom_reduced_mesh.png}\\
-{\tiny HPROM ($N_e=4{,}824$)}
+{\tiny HPROM ($N_e=4{,}241$)}
 
 \column{0.33\textwidth}
 \centering
 \includegraphics[width=\linewidth]{hqprom_reduced_mesh.png}\\
-{\tiny HQPROM ($N_e=3{,}505$)}
+{\tiny HQPROM ($N_e=3{,}460$)}
 
 \column{0.33\textwidth}
 \centering
 \includegraphics[width=\linewidth]{hprom_gpr_reduced_mesh.png}\\
-{\tiny HPROM-GPR ($N_e=1{,}801$)}
+{\tiny HPROM-GPR ($N_e=1{,}799$)}
 \end{columns}
 \end{frame}
 
@@ -499,9 +499,9 @@ Local HPROM-GPR ($N_c=8$) & 6 & 28--54 & 541 & 0.801 & 1.156 & 0.243 & 51.4 \\
 
 \begin{frame}{Burgers Conclusions}
 \begin{itemize}
-  \item All local ROMs improve runtime performance relative to their global counterparts, at every $N_c$ and at matched accuracy: $13.8\times\!\to\!56.9\times$ (HPROM), $12.9\times\!\to\!42.3\times$ (HQPROM), $30.8\times\!\to\!51.4\times$ (HPROM--GPR).
+  \item All local ROMs improve runtime performance relative to their global counterparts, at every $N_c$ and at matched accuracy: $34.2\times\!\to\!179.7\times$ (HPROM), $19.5\times\!\to\!151.9\times$ (HQPROM), $53.1\times\!\to\!147.9\times$ (HPROM--GPR).
   \item Increasing $N_c$ monotonically improves speedup within every family, so clustering, not the choice of local manifold, is the dominant lever.
-  \item Local HPROM at $N_c=8$ is the fastest model: 0.220 min and $56.9\times$ speedup.
+  \item Local HPROM at $N_c=8$ is the fastest model: 0.070 min and $179.7\times$ speedup.
   \item Compactness and wall-clock time rank differently. At $N_c=8$, HPROM--GPR is the most compact ($n=6$, $N_e=541$) and HQPROM next ($n=10$--$15$, $N_e=1{,}075$), yet plain HPROM is fastest despite $n=16$--$26$: the per-iteration cost of the quadratic term and its Jacobian, and of the GPR evaluation, offsets their dimensional advantage.
   \item Reported local-model runtimes include cluster selection and any cluster-transfer cost. The decision and transfer rules are formulation-specific and are defined in the appendix.
 \end{itemize}
