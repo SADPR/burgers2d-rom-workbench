@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Train the fixed Euclidean architectures on the 9+8 and/or 9+18 datasets.
+# Train the fixed Euclidean architectures on the 9+8, 9+12, and/or 9+18 datasets.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,8 +8,8 @@ cd "$PROJECT_DIR"
 
 LEVEL="${1:-all}"
 case "$LEVEL" in
-  all|lhs8|lhs18) ;;
-  *) echo "Usage: $0 [all|lhs8|lhs18]" >&2; exit 2 ;;
+  all|lhs8|lhs12|lhs18) ;;
+  *) echo "Usage: $0 [all|lhs8|lhs12|lhs18]" >&2; exit 2 ;;
 esac
 
 PAPER_RESULTS_ROOT="${PAPER_RESULTS_ROOT:-$PROJECT_DIR/Results_Paper}"
@@ -21,6 +21,7 @@ run_level() {
   local level="$1" expected tag dataset
   case "$level" in
     lhs8) expected=17 ;;
+    lhs12) expected=21 ;;
     lhs18) expected=27 ;;
   esac
   tag="euclidean_prom_enrichment_${level}"
@@ -40,6 +41,7 @@ run_level() {
 [[ -d "$VALIDATION_DATASET_DIR" ]] || { echo "[error] Missing validation data: $VALIDATION_DATASET_DIR" >&2; exit 1; }
 if [[ "$LEVEL" == "all" ]]; then
   run_level lhs8
+  run_level lhs12
   run_level lhs18
 else
   run_level "$LEVEL"

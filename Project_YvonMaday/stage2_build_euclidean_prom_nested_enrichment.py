@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Build the nested Euclidean-POD PROM enrichment datasets used in the paper.
 
-The study has two levels only: nine baseline trajectories plus eight or
-eighteen additional trajectories.  Both are selected from the same fixed
-18-interior/18-margin LHS candidate design.  The eight-point level is a strict
-subset of the eighteen-point level, so its PROM coordinates need not be
+The study uses nine baseline trajectories plus eight, twelve, or eighteen
+additional trajectories.  All levels are selected from the same fixed
+18-interior/18-margin LHS candidate design.  The smaller levels are strict
+subsets of the eighteen-point level, so their PROM coordinates need not be
 solved independently.  No 9+36 coefficient dataset is generated.
 """
 
@@ -65,10 +65,12 @@ PARAMETER_VALIDATION_MU = np.asarray(
     dtype=np.float64,
 )
 
-# The two prefixes define the reported nested levels.  Four margin points at
-# the first level preserve representation of all four margin directions.
+# The prefixes define the nested levels.  Four margin points at the first
+# level preserve representation of all four margin directions.  The sixth
+# margin point provides local coverage near the extrapolatory evaluation.
 LEVELS = {
     "lhs8": (4, 4),
+    "lhs12": (6, 6),
     "lhs18": (9, 9),
 }
 
@@ -416,10 +418,11 @@ def _solve_lhs18(
         _validate_trajectory(target, total_modes)
 
 
-def _copy_lhs8_from_lhs18(
+def _copy_nested_from_lhs18(
     dataset: Path,
     source: Path,
     *,
+    level: str,
     baseline: np.ndarray,
     interior: np.ndarray,
     exterior: np.ndarray,
@@ -443,7 +446,7 @@ def _copy_lhs8_from_lhs18(
         if target_dir.is_dir():
             try:
                 _validate_trajectory(target_dir, total_modes)
-                print(f"[euclidean-nested-stage2] reuse copied LHS8 trajectory: {tag}")
+                print(f"[euclidean-nested-stage2] reuse copied {level.upper()} trajectory: {tag}")
                 continue
             except (OSError, ValueError):
                 shutil.rmtree(target_dir)
@@ -492,7 +495,6 @@ def main() -> None:
         return
 
     lhs18 = _dataset_dir(results_root, "lhs18", args.total_modes)
-    lhs8 = _dataset_dir(results_root, "lhs8", args.total_modes)
     interior18, exterior18, labels18, indices_i18, indices_e18 = level_data["lhs18"]
     expected18 = _expected_tags(baseline, interior18, exterior18)
     if not _is_complete(lhs18, total_modes=args.total_modes, expected_tags=expected18, level="lhs18"):
@@ -533,49 +535,58 @@ def main() -> None:
     else:
         print(f"[euclidean-nested-stage2] reusing complete LHS18 dataset: {lhs18}")
 
-    interior8, exterior8, labels8, indices_i8, indices_e8 = level_data["lhs8"]
-    expected8 = _expected_tags(baseline, interior8, exterior8)
-    if not _is_complete(lhs8, total_modes=args.total_modes, expected_tags=expected8, level="lhs8"):
-        _copy_lhs8_from_lhs18(
-            lhs8,
-            lhs18,
-            baseline=baseline,
-            interior=interior8,
-            exterior=exterior8,
-            total_modes=args.total_modes,
-            expected_tags=expected8,
-            force=args.force,
-        )
-        _write_subset_metadata(
-            lhs8,
-            base_meta=base_meta,
-            base_meta_path=Path(base_meta_path),
-            baseline=baseline,
-            interior=interior8,
-            exterior=exterior8,
-            exterior_labels=labels8,
-            candidate_interior=interior_pool,
-            candidate_exterior=exterior_pool,
-            candidate_labels=labels_pool,
-            interior_order=interior_order,
-            exterior_order=exterior_order,
-            selected_interior=indices_i8,
-            selected_exterior=indices_e8,
-            level="lhs8",
-            basis_path=basis_path,
-            u_ref_path=u_ref_path,
-            expanded_mu1=expanded_mu1,
-            expanded_mu2=expanded_mu2,
-            args=args,
-        )
-    else:
-        print(f"[euclidean-nested-stage2] reusing complete LHS8 dataset: {lhs8}")
+    nested_datasets: dict[str, tuple[Path, set[str]]] = {}
+    for level in ("lhs8", "lhs12"):
+        dataset = _dataset_dir(results_root, level, args.total_modes)
+        interior, exterior, labels, indices_i, indices_e = level_data[level]
+        expected = _expected_tags(baseline, interior, exterior)
+        nested_datasets[level] = (dataset, expected)
+        if not _is_complete(dataset, total_modes=args.total_modes, expected_tags=expected, level=level):
+            _copy_nested_from_lhs18(
+                dataset,
+                lhs18,
+                level=level,
+                baseline=baseline,
+                interior=interior,
+                exterior=exterior,
+                total_modes=args.total_modes,
+                expected_tags=expected,
+                force=args.force,
+            )
+            _write_subset_metadata(
+                dataset,
+                base_meta=base_meta,
+                base_meta_path=Path(base_meta_path),
+                baseline=baseline,
+                interior=interior,
+                exterior=exterior,
+                exterior_labels=labels,
+                candidate_interior=interior_pool,
+                candidate_exterior=exterior_pool,
+                candidate_labels=labels_pool,
+                interior_order=interior_order,
+                exterior_order=exterior_order,
+                selected_interior=indices_i,
+                selected_exterior=indices_e,
+                level=level,
+                basis_path=basis_path,
+                u_ref_path=u_ref_path,
+                expanded_mu1=expanded_mu1,
+                expanded_mu2=expanded_mu2,
+                args=args,
+            )
+        else:
+            print(f"[euclidean-nested-stage2] reusing complete {level.upper()} dataset: {dataset}")
 
     if not _is_complete(lhs18, total_modes=args.total_modes, expected_tags=expected18, level="lhs18"):
         raise RuntimeError("LHS18 dataset failed validation after construction.")
-    if not _is_complete(lhs8, total_modes=args.total_modes, expected_tags=expected8, level="lhs8"):
-        raise RuntimeError("LHS8 dataset failed validation after construction.")
-    print("[euclidean-nested-stage2] done. New full PROM solves: 18; LHS8 copied from the LHS18 prefix.")
+    for level, (dataset, expected) in nested_datasets.items():
+        if not _is_complete(dataset, total_modes=args.total_modes, expected_tags=expected, level=level):
+            raise RuntimeError(f"{level.upper()} dataset failed validation after construction.")
+    print(
+        "[euclidean-nested-stage2] done. LHS8 and LHS12 are copied prefixes of LHS18; "
+        "no additional PROM solve is needed when LHS18 already exists."
+    )
 
 
 if __name__ == "__main__":

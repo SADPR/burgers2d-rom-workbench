@@ -73,3 +73,6 @@ HYPERNET_BACK_UP/
 # and in Results_Paper/model_hyperparameters.md; the trees are local archives.
 Results_Paper/FinalTable*/
 FinalTable/
+
+# Euclidean PROM enrichment campaigns: large, reproducible per-run outputs.
+Project_YvonMaday/Results_Paper/euclidean_prom_enrichment_lhs*/Runs/

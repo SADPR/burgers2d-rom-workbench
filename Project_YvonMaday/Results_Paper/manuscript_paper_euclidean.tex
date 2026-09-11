@@ -42,7 +42,9 @@ but over different learned trial maps.  A shared parameter--time map gives a
 controlled sweep from a non-intrusive POD--NN--ROM endpoint to the
 full-coordinate linear PROM.  A complementary tail-perturbation diagnostic
 quantifies how a prescribed Case--2 secondary-coordinate error transfers to
-the residual-solved primary coordinates.  We also state the empirical
+the residual-solved primary coordinates.  A nested coefficient-data study
+with 9, $9+8$, and $9+18$ PROM trajectories separates in-domain improvement
+from extrapolation behaviour.  We also state the empirical
 cubature method (ECM) formulation required for a future HPROM extension; all
 numerical results reported here are full-residual PROM results.
 \end{abstract}
@@ -459,20 +461,65 @@ four online evaluations are
 The first three are in-domain and $\mub^{(3)}$ is extrapolatory.  The
 validation locations are neither training nor online evaluation points.
 
+\subsection{Nested coefficient-data enrichment}
+To isolate data coverage from architecture and online formulation, we use a
+fixed seed--42 Latin-hypercube candidate design over the original parameter
+box and a $25\%$ coordinate-wise margin.  Two deterministic nested subsets are
+retained: $9+8$ contains the baseline grid, four interior points, and four
+margin points; $9+18$ contains the same baseline and early points plus five
+additional interior and five additional margin points.  The complete
+$9+36$ candidate design defines the nested ordering only; no $9+36$ PROM
+coefficient campaign is used in this study.  All online evaluation and
+parameter-validation locations are excluded from the enrichment sets.
+
+The word ``margin'' denotes the union of the left, right, top, and bottom
+strips of the expanded rectangle.  It does not enforce coverage of their
+intersections.  This distinction matters for the upper-left extrapolation
+point $\mub^{(3)}$ and will be revisited with the online results.
+
+\begin{table}[H]
+\centering
+\caption{Nested Euclidean-POD PROM coefficient data.  The same two complete
+linear-PROM trajectories are held out for parameter validation at every
+level.}
+\label{tab:euclidean-enrichment-dataset}
+\resizebox{0.82\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_enrichment_dataset_summary.tex}}
+\end{table}
+
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.66\textwidth]{Figures/euclidean_prom_only/euclidean_prom_parameter_space.png}
-\caption{Euclidean-POD PROM data layout.  Black circles are the nine HDM and
-linear-PROM training parameters; purple diamonds are the two held-out
+\includegraphics[width=0.66\textwidth]{Figures/euclidean_prom_only/prom_enrichment_sampling_baseline.png}
+\caption{Baseline Euclidean-POD PROM data layout.  Black circles are the nine
+HDM and linear-PROM training parameters; diamonds are the two held-out
 linear-PROM parameter-validation trajectories; red stars are the four online
-evaluation points.  Validation targets are used only for regression model
-selection and are unrelated to the reported online tests.}
+evaluation points.}
 \label{fig:parameter-space}
 \end{figure}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.66\textwidth]{Figures/euclidean_prom_only/prom_enrichment_sampling_early.png}
+\caption{Early $9+8$ nested design.  Four interior and four margin locations
+are added to the baseline grid.  The extrapolatory point $\mub^{(3)}$ lies in
+the upper-left corner, whereas the early subset samples its left and top
+margins separately.}
+\label{fig:euclidean-enrichment-sampling-early}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.66\textwidth]{Figures/euclidean_prom_only/prom_enrichment_sampling_intermediate.png}
+\caption{Intermediate $9+18$ nested design.  The added upper-left margin point
+near $(3.980,0.03173)$ gives direct coverage close to
+$\mub^{(3)}=(4.000,0.0330)$.}
+\label{fig:euclidean-enrichment-sampling-intermediate}
+\end{figure}
+
 \subsection{Model training and shared Case--2 map}
-All networks use the same $4509$ training and $1002$ external-validation
-parameter--time samples.  Case~1 and Case~3 use $n=10$ primary coordinates;
+The baseline networks use $4509$ training samples, and the $9+8$ and $9+18$
+networks use $8517$ and $13527$, respectively.  Every network uses the same
+$1002$ external-validation parameter--time samples.  Case~1 and Case~3 use
+$n=10$ primary coordinates;
 PROM--POD--AE and POD--DL--ROM use $n_z=10$.  The architectures and reduced
 coordinate errors are reported in Table~\ref{tab:training}.
 \begin{table}[H]
@@ -664,6 +711,183 @@ linear PROM.}
 \label{fig:tail-perturbation}
 \end{figure}
 
+\section{Effect of PROM Coefficient-Data Enrichment}
+\label{sec:euclidean-prom-enrichment}
+The nested campaign tests whether the baseline discrepancies are primarily
+caused by the learned architecture or by parameter-space coverage.  The
+Euclidean basis, network architectures, two parameter-validation trajectories,
+four online evaluation points, and full-residual PROM formulations are fixed.
+Only the number and location of linear-PROM coefficient-training trajectories
+change through the nested budgets $9$, $9+8$, and $9+18$.
+
+\subsection{Offline regression accuracy}
+Table~\ref{tab:euclidean-prom-enrichment-training} reports errors in the
+reduced coordinates used to train and select the networks.  All five learned
+families improve on the same external parameter-validation set as data are
+added.  The validation error of the master parameter--time map shared by
+Case~2 and POD--NN--ROM decreases from $4.261\%$ to $1.607\%$ with $9+8$ and
+to $0.990\%$ with $9+18$.  This monotone held-out improvement does not,
+however, imply monotone accuracy at a more distant extrapolation point.
+The three Euclidean master maps use the same wide SiLU architecture, raw MSE
+objective, external validation data, and random seed.  Their selected
+checkpoints occur at epochs 1010, 1634, and 1731 for the baseline, $9+8$, and
+$9+18$ data, respectively, under the same validation-based early-stopping
+rule; none is the result of a wall-time interruption.
+
+\begin{table}[H]
+\centering
+\caption{Training and held-out parameter-validation coefficient errors across
+the Euclidean-POD PROM enrichment ladder.  The master map supplies both the
+Case--2 secondary tail and the POD--NN--ROM direct prediction.}
+\label{tab:euclidean-prom-enrichment-training}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_enrichment_training_comparison.tex}}
+\end{table}
+
+\subsection{Online state accuracy}
+Table~\ref{tab:euclidean-prom-enrichment-state} and
+Fig.~\ref{fig:euclidean-prom-enrichment-state} show a clear in-domain benefit.
+For Case~2 with $n=10$, the mean state error falls from $1.607\%$ to
+$0.702\%$ with $9+8$ and to $0.481\%$ with $9+18$.  The direct POD--NN--ROM
+endpoint follows the same in-domain trend, from $1.698\%$ to $0.735\%$ and
+$0.484\%$.  At $9+18$, both are close to the fixed linear-PROM mean of
+$0.441\%$.  Case~1, Case~3, PROM--POD--AE, and POD--DL--ROM improve more
+smoothly and are also close to the linear reference at the intermediate
+budget.
+
+\begin{table}[H]
+\centering
+\caption{Online state errors across the nested Euclidean-POD PROM
+coefficient-data ladder.  Values are percentages.  Each in-domain mean
+averages $\mub^{(v)},\mub^{(1)},\mub^{(2)}$; $\mub^{(3)}$ is extrapolatory.
+The linear PROM is unchanged, and the horizontal rule separates intrusive
+residual-minimizing models from non-intrusive direct maps.}
+\label{tab:euclidean-prom-enrichment-state}
+{\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.05}
+\input{tables/euclidean_prom_only/euclidean_prom_enrichment_online_state_comparison.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enrichment_state_error_comparison.png}
+\caption{Effect of the three-level nested PROM coefficient-data ladder on
+online state error.  Left: in-domain mean.  Right: extrapolatory point.  The
+two panels use exactly the same logarithmic ordinate limits, exposing the
+$9+8$ extrapolation anomaly without hiding the near-linear results.  The
+dashed vertical rule separates intrusive PROMs from non-intrusive ROMs; the
+solid black horizontal level is the fixed linear PROM.}
+\label{fig:euclidean-prom-enrichment-state}
+\end{figure}
+
+The extrapolatory result at $9+8$ is non-monotone and is retained rather than
+smoothed over.  Case~2 changes from $2.696\%$ at baseline to $3.270\%$, and
+POD--NN--ROM changes from $4.351\%$ to $19.465\%$.  Because these two models
+share the same parameter--time master map, while the other learned families
+improve at the same point, the degradation is specific to the extrapolation
+of that map rather than a uniform failure of the enriched data or the PROM
+solver.  Residual minimization still provides substantial correction: using
+the same predicted 151-coordinate vector, Case~2 reduces the direct-map state
+error from $19.465\%$ to $3.270\%$ by solving the first ten coordinates.
+
+The sampling geometry is consistent with this behaviour.  The $9+8$ subset
+contains a left-margin point at approximately $(3.949,0.0187)$ and a top-margin
+point at $(4.783,0.0325)$, but no sample in their upper-left intersection near
+$\mub^{(3)}=(4.000,0.0330)$.  The $9+18$ subset adds
+$(3.980,0.03173)$, after which the Case--2 and POD--NN--ROM extrapolatory state
+errors fall to $0.876\%$ and $0.938\%$, respectively.  This geometric
+observation explains why counting ``margin'' points alone is insufficient,
+but it does not establish that the particular $9+8$ deterioration is
+independent of optimization seed or stopping time.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enriched_solution_overlays.png}
+\caption{$9+18$ Euclidean-POD PROM solution cut-plane comparison against the
+HDM.  The model order, colours, state range, and time slices are identical to
+the baseline Fig.~\ref{fig:solution-overlays}; all curves are solid.}
+\label{fig:euclidean-prom-enriched-solution-overlays}
+\end{figure}
+
+\subsection{Coefficient diagnostics}
+The coefficient results localize the non-monotone state behaviour before the
+online reconstruction.  As shown in Table~\ref{tab:euclidean-prom-enrichment-coeff},
+the Case--2 extrapolatory coefficient error changes from $6.234\%$ to
+$7.387\%$ at $9+8$, while the shared direct POD--NN--ROM error changes from
+$10.214\%$ to $45.677\%$.  The latter therefore already contains a severe
+coefficient-space extrapolation error.  At $9+18$, these errors fall to
+$0.589\%$ and $1.005\%$.  The state and coefficient evidence consistently
+identify the master-map extrapolation, rather than the Case--2 residual solve,
+as the source of the early-subset anomaly.
+
+\begin{table}[H]
+\centering
+\caption{Online coefficient-history errors against the fixed
+$n_{\mathrm{tot}}=151$ linear PROM across the nested data ladder.  Values are
+relative Frobenius percentages over all coefficients and time steps.  The
+horizontal rule separates intrusive and non-intrusive models.}
+\label{tab:euclidean-prom-enrichment-coeff}
+{\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.05}
+\input{tables/euclidean_prom_only/euclidean_prom_enrichment_online_coefficient_comparison.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enrichment_coeff_error_comparison.png}
+\caption{Effect of coefficient-data enrichment on global coefficient error.
+The logarithmic ordinate keeps both the $9+8$ POD--NN--ROM extrapolation error
+and the near-linear $9+18$ results visible.  The dashed vertical rule separates
+intrusive PROMs from direct ROM maps.}
+\label{fig:euclidean-prom-enrichment-coeff}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enriched_coeff_abs_rel_errors.png}
+\caption{$9+18$ per-coefficient absolute and relative trajectory errors
+against the linear PROM.  The plotted set and fixed ordinate limits are
+identical to the baseline Fig.~\ref{fig:coefficient-curves}.  The dotted
+vertical line marks the ten-coordinate primary/secondary split.}
+\label{fig:euclidean-prom-enriched-coeff-errors}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enriched_coeff_abs_heatmaps.png}
+\caption{$9+18$ time-by-coefficient absolute errors against the linear PROM.
+Rows contain the four intrusive models followed by POD--NN--ROM and
+POD--DL--ROM; the colour range matches the baseline diagnostic.}
+\label{fig:euclidean-prom-enriched-coeff-abs-heatmaps}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enriched_coeff_rel_heatmaps.png}
+\caption{$9+18$ time-by-coefficient relative errors, with the same common
+$0$--$20\%$ colour range and model ordering as the baseline diagnostic.}
+\label{fig:euclidean-prom-enriched-coeff-rel-heatmaps}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{Figures/euclidean_prom_only/prom_enrichment_case2_coeff_rel_errors.png}
+\caption{Case--2 per-coefficient relative error for the baseline, $9+8$, and
+$9+18$ master maps.  Each panel is one online evaluation point.  The dotted
+vertical line separates the ten residual-solved primary coordinates from the
+141 ANN-injected secondary coordinates.}
+\label{fig:euclidean-prom-enrichment-case2-coeff}
+\end{figure}
+
+The nested experiment therefore supports two distinct conclusions.  First,
+coefficient-data coverage is the dominant limitation in domain: already
+$9+8$ substantially improves every model, and $9+18$ brings all reported
+models close to the fixed linear-PROM reference.  Second, enrichment size by
+itself does not control extrapolation.  A small nested subset can reduce
+held-out in-domain validation error while worsening a corner extrapolation if
+its geometry does not cover the relevant joint parameter direction.
+
 \section{Conclusions}
 The Euclidean-POD PROM campaign gives a common full-residual comparison of
 three learned closures, an intrusive decoder, and two direct
@@ -674,6 +898,11 @@ variable.  The Case--2/POD--NN shared-map study gives a precise interpretation
 of intrusive correction: solving progressively more coordinates through the
 residual moves the result from the direct-map endpoint toward linear PROM, but
 the prescribed tail can still transfer its error into the solved block.
+The nested enrichment study shows that $9+18$ trajectories are sufficient to
+bring all learned models close to the linear-PROM reference at the reported
+points.  The $9+8$ campaign improves every in-domain result but exposes a
+strong, localized master-map extrapolation failure, demonstrating that the
+geometry of added samples matters in addition to their number.
 
 The results intentionally do not mix PROM evidence with an unavailable HPROM
 data set.  The ECM derivation establishes the required model-specific
@@ -695,7 +924,11 @@ sufficient to justify making that metric the main experimental variable.  For
 clarity and reproducibility, every reported result therefore uses the standard
 Euclidean POD basis of \eqref{eq:euclidean-pod}.  The metric-aware
 construction is retained as an exploratory direction, not as a contribution
-or as a source of the numerical comparisons in this paper.
+or as a source of the numerical comparisons in this paper.  The historical
+LSPG-sensitive enrichment campaign also selected an ELU master map, whereas
+the Euclidean campaign uses SiLU.  Its earlier extrapolation trend is therefore
+not an architecture-controlled metric comparison and cannot be attributed to
+the basis choice alone.
 
 \bibliographystyle{unsrt}
 \bibliography{bibliography}

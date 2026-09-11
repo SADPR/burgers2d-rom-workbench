@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Evaluate all PROM and direct-ROM models for the two nested Euclidean campaigns.
+# Evaluate all PROM and direct-ROM models for the nested Euclidean campaigns.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,8 +8,8 @@ cd "$PROJECT_DIR"
 
 LEVEL="${1:-all}"
 case "$LEVEL" in
-  all|lhs8|lhs18) ;;
-  *) echo "Usage: $0 [all|lhs8|lhs18]" >&2; exit 2 ;;
+  all|lhs8|lhs12|lhs18) ;;
+  *) echo "Usage: $0 [all|lhs8|lhs12|lhs18]" >&2; exit 2 ;;
 esac
 
 PAPER_RESULTS_ROOT="${PAPER_RESULTS_ROOT:-$PROJECT_DIR/Results_Paper}"
@@ -31,6 +31,7 @@ run_level() {
 
 if [[ "$LEVEL" == "all" ]]; then
   run_level lhs8
+  run_level lhs12
   run_level lhs18
 else
   run_level "$LEVEL"

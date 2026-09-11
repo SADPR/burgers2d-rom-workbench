@@ -1,0 +1,15 @@
+\begin{tabular}{lrr|rr|rr}
+\toprule
+& \multicolumn{2}{c|}{Baseline (9)} & \multicolumn{2}{c|}{Early (9+8)} & \multicolumn{2}{c}{Intermediate (9+18)} \\
+Model & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ & \shortstack{in-domain\\mean} & $\mu^{(3)}$ \\
+\midrule
+Linear PROM & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\
+PROM--ANN Case 1 & 0.822 & 3.304 & 0.317 & 1.571 & 0.122 & 0.208 \\
+PROM--ANN Case 2 ($n=10$) & 3.652 & 6.234 & 1.361 & 7.387 & 0.573 & 0.589 \\
+PROM--ANN Case 3 & 0.577 & 2.644 & 0.133 & 1.282 & 0.064 & 0.137 \\
+PROM--POD--AE ($n_z=10$) & 0.803 & 3.664 & 0.329 & 2.004 & 0.130 & 0.283 \\
+\midrule
+POD--NN--ROM & 3.861 & 10.214 & 1.438 & 45.677 & 0.579 & 1.005 \\
+POD--DL--ROM ($n_z=10$) & 2.484 & 5.127 & 0.354 & 1.819 & 0.189 & 0.331 \\
+\bottomrule
+\end{tabular}

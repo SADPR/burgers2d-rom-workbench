@@ -22,92 +22,132 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Linear HPROM and ECM formulation}{2}{subsection.13}\protected@file@percent }
 \newlabel{sec:linear-hprom}{{2.3}{2}{Linear HPROM and ECM formulation}{subsection.13}{}}
 \newlabel{eq:entity-residual}{{9}{2}{Linear HPROM and ECM formulation}{equation.14}{}}
-\newlabel{eq:linear-entity-normal-equations}{{10}{2}{Linear HPROM and ECM formulation}{equation.15}{}}
 \citation{hernandez2017dimensional}
 \citation{hernandez2020multiscale}
 \citation{farhat2015structure}
+\newlabel{eq:linear-projected-residual}{{10}{3}{Linear HPROM and ECM formulation}{equation.15}{}}
+\newlabel{eq:linear-projected-jacobian}{{11}{3}{Linear HPROM and ECM formulation}{equation.16}{}}
+\newlabel{eq:linear-ecm-sampled-normal-equations}{{12}{3}{Linear HPROM and ECM formulation}{equation.17}{}}
+\newlabel{eq:linear-hprom-gn-update}{{13}{3}{Linear HPROM and ECM formulation}{equation.18}{}}
+\@writefile{toc}{\contentsline {paragraph}{Offline cubature construction.}{3}{section*.19}\protected@file@percent }
+\newlabel{eq:linear-ecm-contribution}{{14}{3}{Offline cubature construction}{equation.20}{}}
+\newlabel{eq:linear-ecm-training-matrix}{{15}{3}{Offline cubature construction}{equation.21}{}}
+\newlabel{eq:linear-ecm}{{16}{3}{Offline cubature construction}{equation.22}{}}
+\@writefile{toc}{\contentsline {paragraph}{Relation to other hyperreduction methods.}{3}{section*.23}\protected@file@percent }
 \citation{barnett2023neural}
 \citation{ares2026closure}
-\newlabel{eq:linear-ecm-contribution}{{11}{3}{Linear HPROM and ECM formulation}{equation.16}{}}
-\newlabel{eq:linear-ecm}{{12}{3}{Linear HPROM and ECM formulation}{equation.17}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {3}Learned Reduced Representations}{3}{section.18}\protected@file@percent }
-\newlabel{sec:learned-representations}{{3}{3}{Learned Reduced Representations}{section.18}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}PROM--ANN closures}{3}{subsection.19}\protected@file@percent }
-\newlabel{eq:partition}{{13}{3}{PROM--ANN closures}{equation.20}{}}
-\newlabel{eq:closure-manifold}{{14}{3}{PROM--ANN closures}{equation.21}{}}
-\newlabel{eq:closure-cases}{{15}{3}{PROM--ANN closures}{equation.22}{}}
-\newlabel{eq:closure-lspg}{{16}{3}{PROM--ANN closures}{equation.23}{}}
-\newlabel{eq:closure-tangent}{{17}{3}{PROM--ANN closures}{equation.24}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}PROM--POD--AE and intrusive trial maps}{3}{subsection.25}\protected@file@percent }
-\newlabel{eq:podae-manifold}{{19}{3}{PROM--POD--AE and intrusive trial maps}{equation.27}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Learned Reduced Representations}{4}{section.24}\protected@file@percent }
+\newlabel{sec:learned-representations}{{3}{4}{Learned Reduced Representations}{section.24}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}PROM--ANN closures}{4}{subsection.25}\protected@file@percent }
+\newlabel{eq:partition}{{17}{4}{PROM--ANN closures}{equation.26}{}}
+\newlabel{eq:closure-manifold}{{18}{4}{PROM--ANN closures}{equation.27}{}}
+\newlabel{eq:closure-cases}{{19}{4}{PROM--ANN closures}{equation.28}{}}
+\newlabel{eq:closure-lspg}{{20}{4}{PROM--ANN closures}{equation.29}{}}
+\newlabel{eq:closure-tangent}{{21}{4}{PROM--ANN closures}{equation.30}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}PROM--POD--AE and intrusive trial maps}{4}{subsection.31}\protected@file@percent }
+\newlabel{eq:podae-manifold}{{23}{4}{PROM--POD--AE and intrusive trial maps}{equation.33}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Trial decoders and tangent bases of the intrusive models. Every row minimizes the same time-discrete residual over its displayed online variable.}}{4}{table.35}\protected@file@percent }
+\newlabel{tab:trial-maps}{{1}{4}{Trial decoders and tangent bases of the intrusive models. Every row minimizes the same time-discrete residual over its displayed online variable}{table.35}{}}
 \citation{hernandez2017dimensional}
 \citation{hernandez2020multiscale}
 \citation{de2023hyper}
 \citation{fresca2022pod}
 \citation{barnett2023neural}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Trial decoders and tangent bases of the intrusive models. Every row minimizes the same time-discrete residual over its displayed online variable.}}{4}{table.29}\protected@file@percent }
-\newlabel{tab:trial-maps}{{1}{4}{Trial decoders and tangent bases of the intrusive models. Every row minimizes the same time-discrete residual over its displayed online variable}{table.29}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Model-specific ECM construction}{4}{subsection.30}\protected@file@percent }
-\newlabel{sec:nonlinear-ecm}{{3.3}{4}{Model-specific ECM construction}{subsection.30}{}}
-\newlabel{eq:nonlinear-manifold-fit}{{20}{4}{Model-specific ECM construction}{equation.31}{}}
-\newlabel{eq:case2-ecm-fit}{{21}{4}{Model-specific ECM construction}{equation.32}{}}
-\newlabel{eq:nonlinear-manifold-fit-gn}{{22}{4}{Model-specific ECM construction}{equation.33}{}}
-\newlabel{eq:nonlinear-ecm-contribution}{{23}{4}{Model-specific ECM construction}{equation.34}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Non-intrusive reference models}{4}{subsection.35}\protected@file@percent }
-\newlabel{eq:podnn}{{24}{4}{Non-intrusive reference models}{equation.36}{}}
-\newlabel{eq:poddl}{{25}{4}{Non-intrusive reference models}{equation.37}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Benchmark and PROM Protocol}{5}{section.38}\protected@file@percent }
-\newlabel{sec:benchmark}{{4}{5}{Benchmark and PROM Protocol}{section.38}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Burgers problem and discretization}{5}{subsection.39}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Data, validation, and online points}{5}{subsection.42}\protected@file@percent }
-\newlabel{eq:validation-points}{{28}{5}{Data, validation, and online points}{equation.43}{}}
-\newlabel{eq:evaluation-points}{{29}{5}{Data, validation, and online points}{equation.44}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Euclidean-POD PROM data layout. Black circles are the nine HDM and linear-PROM training parameters; purple diamonds are the two held-out linear-PROM parameter-validation trajectories; red stars are the four online evaluation points. Validation targets are used only for regression model selection and are unrelated to the reported online tests.}}{6}{figure.46}\protected@file@percent }
-\newlabel{fig:parameter-space}{{1}{6}{Euclidean-POD PROM data layout. Black circles are the nine HDM and linear-PROM training parameters; purple diamonds are the two held-out linear-PROM parameter-validation trajectories; red stars are the four online evaluation points. Validation targets are used only for regression model selection and are unrelated to the reported online tests}{figure.46}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Model training and shared Case--2 map}{6}{subsection.47}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Training and held-out parameter-validation errors in reduced coordinates. The master map is shared between the Case--2 tail and the POD--NN--ROM direct endpoint.}}{6}{table.49}\protected@file@percent }
-\newlabel{tab:training}{{2}{6}{Training and held-out parameter-validation errors in reduced coordinates. The master map is shared between the Case--2 tail and the POD--NN--ROM direct endpoint}{table.49}{}}
-\newlabel{eq:master-map}{{30}{6}{Model training and shared Case--2 map}{equation.50}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Reported errors}{6}{subsection.51}\protected@file@percent }
-\newlabel{eq:state-error}{{31}{6}{Reported errors}{equation.52}{}}
-\newlabel{eq:coefficient-error}{{32}{7}{Reported errors}{equation.53}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Euclidean-POD PROM Results}{7}{section.54}\protected@file@percent }
-\newlabel{sec:prom-results}{{5}{7}{Euclidean-POD PROM Results}{section.54}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Baseline state accuracy and solution fields}{7}{subsection.55}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Online state errors $100\left \lVert \mathbf  u_{\mathrm  {HDM}}-\mathbf  u_{\mathrm  {ROM}} \right \rVert _F/ \left \lVert \mathbf  u_{\mathrm  {HDM}} \right \rVert _F$. The mean averages the three in-domain points. The horizontal rule separates intrusive residual-minimizing models from non-intrusive maps.}}{7}{table.57}\protected@file@percent }
-\newlabel{tab:online-state}{{3}{7}{Online state errors $100\norm {\uvec _{\mathrm {HDM}}-\uvec _{\mathrm {ROM}}}_F/ \norm {\uvec _{\mathrm {HDM}}}_F$. The mean averages the three in-domain points. The horizontal rule separates intrusive residual-minimizing models from non-intrusive maps}{table.57}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Final-time solution cut-plane overlays for the Euclidean-POD PROM campaign. Fainter solid curves show two intermediate times. Every intrusive curve uses the full residual; the two non-intrusive curves are direct reduced coordinate predictions.}}{8}{figure.59}\protected@file@percent }
-\newlabel{fig:solution-overlays}{{2}{8}{Final-time solution cut-plane overlays for the Euclidean-POD PROM campaign. Fainter solid curves show two intermediate times. Every intrusive curve uses the full residual; the two non-intrusive curves are direct reduced coordinate predictions}{figure.59}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Coefficient diagnostics}{8}{subsection.60}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Relative coefficient-history errors $e_q$ against the corresponding linear PROM. The horizontal rule separates intrusive and non-intrusive models, consistently with Table~\ref {tab:online-state}.}}{9}{table.62}\protected@file@percent }
-\newlabel{tab:online-coefficients}{{4}{9}{Relative coefficient-history errors $e_q$ against the corresponding linear PROM. The horizontal rule separates intrusive and non-intrusive models, consistently with Table~\ref {tab:online-state}}{table.62}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Per-coefficient absolute (top) and relative (bottom) errors against the 151-coordinate linear PROM. All panels in each row share the same logarithmic ordinate range. The dotted vertical line marks coefficient 10; all model curves are solid.}}{9}{figure.64}\protected@file@percent }
-\newlabel{fig:coefficient-curves}{{3}{9}{Per-coefficient absolute (top) and relative (bottom) errors against the 151-coordinate linear PROM. All panels in each row share the same logarithmic ordinate range. The dotted vertical line marks coefficient 10; all model curves are solid}{figure.64}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Absolute coefficient errors over time. Complete model names distinguish the intrusive PROM--POD--AE model from the non-intrusive POD--DL--ROM. The dotted white line marks the $n=10$ primary split.}}{10}{figure.66}\protected@file@percent }
-\newlabel{fig:coefficient-absolute-heatmaps}{{4}{10}{Absolute coefficient errors over time. Complete model names distinguish the intrusive PROM--POD--AE model from the non-intrusive POD--DL--ROM. The dotted white line marks the $n=10$ primary split}{figure.66}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Relative coefficient errors over time, using the same ordering and coordinate split as Fig.~\ref {fig:coefficient-absolute-heatmaps}.}}{11}{figure.68}\protected@file@percent }
-\newlabel{fig:coefficient-relative-heatmaps}{{5}{11}{Relative coefficient errors over time, using the same ordering and coordinate split as Fig.~\ref {fig:coefficient-absolute-heatmaps}}{figure.68}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Case--2 solved-dimension sweep}{11}{subsection.69}\protected@file@percent }
-\newlabel{sec:case2-sweep}{{5.3}{11}{Case--2 solved-dimension sweep}{subsection.69}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Case--2 state errors as the number of residual-solved primary coordinates is varied. The $n=0$ and $n=151$ endpoints are respectively the shared-map POD--NN--ROM and the linear PROM.}}{12}{table.71}\protected@file@percent }
-\newlabel{tab:case2-sweep}{{5}{12}{Case--2 state errors as the number of residual-solved primary coordinates is varied. The $n=0$ and $n=151$ endpoints are respectively the shared-map POD--NN--ROM and the linear PROM}{table.71}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Case--2 state error versus the solved primary dimension. The black curve is the in-domain mean and the dotted line marks the baseline $n=10$ split.}}{12}{figure.73}\protected@file@percent }
-\newlabel{fig:case2-sweep-state}{{6}{12}{Case--2 state error versus the solved primary dimension. The black curve is the in-domain mean and the dotted line marks the baseline $n=10$ split}{figure.73}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Case--2 coefficient trajectories in the shared-master-map sweep. Top: absolute error against linear PROM. Bottom: the corresponding relative error. The $n=151$ linear-PROM reference has zero coefficient error and is therefore omitted.}}{13}{figure.75}\protected@file@percent }
-\newlabel{fig:case2-sweep-coefficients}{{7}{13}{Case--2 coefficient trajectories in the shared-master-map sweep. Top: absolute error against linear PROM. Bottom: the corresponding relative error. The $n=151$ linear-PROM reference has zero coefficient error and is therefore omitted}{figure.75}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Controlled Case--2 tail perturbation}{13}{subsection.76}\protected@file@percent }
-\newlabel{sec:tail-perturbation}{{5.4}{13}{Controlled Case--2 tail perturbation}{subsection.76}{}}
-\newlabel{eq:tail-perturbation}{{33}{13}{Controlled Case--2 tail perturbation}{equation.77}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Primary-coordinate error induced by a controlled secondary-tail perturbation in Case~2 with $n=10$. Each entry is relative to the corresponding linear-PROM primary history.}}{14}{table.79}\protected@file@percent }
-\newlabel{tab:tail-perturbation}{{6}{14}{Primary-coordinate error induced by a controlled secondary-tail perturbation in Case~2 with $n=10$. Each entry is relative to the corresponding linear-PROM primary history}{table.79}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Euclidean-POD Case--2 sensitivity to a prescribed secondary-tail error, restricted to perturbations up to $50\%$. Left: state error against the HDM. Right: error in the ten residual-solved primary coordinates against linear PROM.}}{14}{figure.81}\protected@file@percent }
-\newlabel{fig:tail-perturbation}{{8}{14}{Euclidean-POD Case--2 sensitivity to a prescribed secondary-tail error, restricted to perturbations up to $50\%$. Left: state error against the HDM. Right: error in the ten residual-solved primary coordinates against linear PROM}{figure.81}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions}{14}{section.82}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Model-specific ECM construction}{5}{subsection.36}\protected@file@percent }
+\newlabel{sec:nonlinear-ecm}{{3.3}{5}{Model-specific ECM construction}{subsection.36}{}}
+\newlabel{eq:nonlinear-manifold-fit}{{24}{5}{Model-specific ECM construction}{equation.37}{}}
+\newlabel{eq:case2-ecm-fit}{{25}{5}{Model-specific ECM construction}{equation.38}{}}
+\newlabel{eq:nonlinear-manifold-fit-gn}{{26}{5}{Model-specific ECM construction}{equation.39}{}}
+\newlabel{eq:nonlinear-ecm-contribution}{{27}{5}{Model-specific ECM construction}{equation.40}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Non-intrusive reference models}{5}{subsection.41}\protected@file@percent }
+\newlabel{eq:podnn}{{28}{5}{Non-intrusive reference models}{equation.42}{}}
+\newlabel{eq:poddl}{{29}{5}{Non-intrusive reference models}{equation.43}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Benchmark and PROM Protocol}{5}{section.44}\protected@file@percent }
+\newlabel{sec:benchmark}{{4}{5}{Benchmark and PROM Protocol}{section.44}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Burgers problem and discretization}{5}{subsection.45}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Data, validation, and online points}{6}{subsection.48}\protected@file@percent }
+\newlabel{eq:validation-points}{{32}{6}{Data, validation, and online points}{equation.49}{}}
+\newlabel{eq:evaluation-points}{{33}{6}{Data, validation, and online points}{equation.50}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Nested coefficient-data enrichment}{6}{subsection.51}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Nested Euclidean-POD PROM coefficient data. The same two complete linear-PROM trajectories are held out for parameter validation at every level.}}{6}{table.53}\protected@file@percent }
+\newlabel{tab:euclidean-enrichment-dataset}{{2}{6}{Nested Euclidean-POD PROM coefficient data. The same two complete linear-PROM trajectories are held out for parameter validation at every level}{table.53}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Baseline Euclidean-POD PROM data layout. Black circles are the nine HDM and linear-PROM training parameters; diamonds are the two held-out linear-PROM parameter-validation trajectories; red stars are the four online evaluation points.}}{7}{figure.55}\protected@file@percent }
+\newlabel{fig:parameter-space}{{1}{7}{Baseline Euclidean-POD PROM data layout. Black circles are the nine HDM and linear-PROM training parameters; diamonds are the two held-out linear-PROM parameter-validation trajectories; red stars are the four online evaluation points}{figure.55}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Early $9+8$ nested design. Four interior and four margin locations are added to the baseline grid. The extrapolatory point $\bm  {\mu }^{(3)}$ lies in the upper-left corner, whereas the early subset samples its left and top margins separately.}}{8}{figure.57}\protected@file@percent }
+\newlabel{fig:euclidean-enrichment-sampling-early}{{2}{8}{Early $9+8$ nested design. Four interior and four margin locations are added to the baseline grid. The extrapolatory point $\mub ^{(3)}$ lies in the upper-left corner, whereas the early subset samples its left and top margins separately}{figure.57}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Intermediate $9+18$ nested design. The added upper-left margin point near $(3.980,0.03173)$ gives direct coverage close to $\bm  {\mu }^{(3)}=(4.000,0.0330)$.}}{9}{figure.59}\protected@file@percent }
+\newlabel{fig:euclidean-enrichment-sampling-intermediate}{{3}{9}{Intermediate $9+18$ nested design. The added upper-left margin point near $(3.980,0.03173)$ gives direct coverage close to $\mub ^{(3)}=(4.000,0.0330)$}{figure.59}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Model training and shared Case--2 map}{9}{subsection.60}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Training and held-out parameter-validation errors in reduced coordinates. The master map is shared between the Case--2 tail and the POD--NN--ROM direct endpoint.}}{9}{table.62}\protected@file@percent }
+\newlabel{tab:training}{{3}{9}{Training and held-out parameter-validation errors in reduced coordinates. The master map is shared between the Case--2 tail and the POD--NN--ROM direct endpoint}{table.62}{}}
+\newlabel{eq:master-map}{{34}{9}{Model training and shared Case--2 map}{equation.63}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Reported errors}{10}{subsection.64}\protected@file@percent }
+\newlabel{eq:state-error}{{35}{10}{Reported errors}{equation.65}{}}
+\newlabel{eq:coefficient-error}{{36}{10}{Reported errors}{equation.66}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Euclidean-POD PROM Results}{10}{section.67}\protected@file@percent }
+\newlabel{sec:prom-results}{{5}{10}{Euclidean-POD PROM Results}{section.67}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Baseline state accuracy and solution fields}{10}{subsection.68}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Online state errors $100\left \lVert \mathbf  u_{\mathrm  {HDM}}-\mathbf  u_{\mathrm  {ROM}} \right \rVert _F/ \left \lVert \mathbf  u_{\mathrm  {HDM}} \right \rVert _F$. The mean averages the three in-domain points. The horizontal rule separates intrusive residual-minimizing models from non-intrusive maps.}}{10}{table.70}\protected@file@percent }
+\newlabel{tab:online-state}{{4}{10}{Online state errors $100\norm {\uvec _{\mathrm {HDM}}-\uvec _{\mathrm {ROM}}}_F/ \norm {\uvec _{\mathrm {HDM}}}_F$. The mean averages the three in-domain points. The horizontal rule separates intrusive residual-minimizing models from non-intrusive maps}{table.70}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Final-time solution cut-plane overlays for the Euclidean-POD PROM campaign. Fainter solid curves show two intermediate times. Every intrusive curve uses the full residual; the two non-intrusive curves are direct reduced coordinate predictions.}}{11}{figure.72}\protected@file@percent }
+\newlabel{fig:solution-overlays}{{4}{11}{Final-time solution cut-plane overlays for the Euclidean-POD PROM campaign. Fainter solid curves show two intermediate times. Every intrusive curve uses the full residual; the two non-intrusive curves are direct reduced coordinate predictions}{figure.72}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Coefficient diagnostics}{11}{subsection.73}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Relative coefficient-history errors $e_q$ against the corresponding linear PROM. The horizontal rule separates intrusive and non-intrusive models, consistently with Table~\ref {tab:online-state}.}}{12}{table.75}\protected@file@percent }
+\newlabel{tab:online-coefficients}{{5}{12}{Relative coefficient-history errors $e_q$ against the corresponding linear PROM. The horizontal rule separates intrusive and non-intrusive models, consistently with Table~\ref {tab:online-state}}{table.75}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Per-coefficient absolute (top) and relative (bottom) errors against the 151-coordinate linear PROM. All panels in each row share the same logarithmic ordinate range. The dotted vertical line marks coefficient 10; all model curves are solid.}}{12}{figure.77}\protected@file@percent }
+\newlabel{fig:coefficient-curves}{{5}{12}{Per-coefficient absolute (top) and relative (bottom) errors against the 151-coordinate linear PROM. All panels in each row share the same logarithmic ordinate range. The dotted vertical line marks coefficient 10; all model curves are solid}{figure.77}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Absolute coefficient errors over time. Complete model names distinguish the intrusive PROM--POD--AE model from the non-intrusive POD--DL--ROM. The dotted white line marks the $n=10$ primary split.}}{13}{figure.79}\protected@file@percent }
+\newlabel{fig:coefficient-absolute-heatmaps}{{6}{13}{Absolute coefficient errors over time. Complete model names distinguish the intrusive PROM--POD--AE model from the non-intrusive POD--DL--ROM. The dotted white line marks the $n=10$ primary split}{figure.79}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Relative coefficient errors over time, using the same ordering and coordinate split as Fig.~\ref {fig:coefficient-absolute-heatmaps}.}}{14}{figure.81}\protected@file@percent }
+\newlabel{fig:coefficient-relative-heatmaps}{{7}{14}{Relative coefficient errors over time, using the same ordering and coordinate split as Fig.~\ref {fig:coefficient-absolute-heatmaps}}{figure.81}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Case--2 solved-dimension sweep}{14}{subsection.82}\protected@file@percent }
+\newlabel{sec:case2-sweep}{{5.3}{14}{Case--2 solved-dimension sweep}{subsection.82}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Case--2 state errors as the number of residual-solved primary coordinates is varied. The $n=0$ and $n=151$ endpoints are respectively the shared-map POD--NN--ROM and the linear PROM.}}{15}{table.84}\protected@file@percent }
+\newlabel{tab:case2-sweep}{{6}{15}{Case--2 state errors as the number of residual-solved primary coordinates is varied. The $n=0$ and $n=151$ endpoints are respectively the shared-map POD--NN--ROM and the linear PROM}{table.84}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Case--2 state error versus the solved primary dimension. The black curve is the in-domain mean and the dotted line marks the baseline $n=10$ split.}}{15}{figure.86}\protected@file@percent }
+\newlabel{fig:case2-sweep-state}{{8}{15}{Case--2 state error versus the solved primary dimension. The black curve is the in-domain mean and the dotted line marks the baseline $n=10$ split}{figure.86}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Case--2 coefficient trajectories in the shared-master-map sweep. Top: absolute error against linear PROM. Bottom: the corresponding relative error. The $n=151$ linear-PROM reference has zero coefficient error and is therefore omitted.}}{16}{figure.88}\protected@file@percent }
+\newlabel{fig:case2-sweep-coefficients}{{9}{16}{Case--2 coefficient trajectories in the shared-master-map sweep. Top: absolute error against linear PROM. Bottom: the corresponding relative error. The $n=151$ linear-PROM reference has zero coefficient error and is therefore omitted}{figure.88}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Controlled Case--2 tail perturbation}{16}{subsection.89}\protected@file@percent }
+\newlabel{sec:tail-perturbation}{{5.4}{16}{Controlled Case--2 tail perturbation}{subsection.89}{}}
+\newlabel{eq:tail-perturbation}{{37}{16}{Controlled Case--2 tail perturbation}{equation.90}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Primary-coordinate error induced by a controlled secondary-tail perturbation in Case~2 with $n=10$. Each entry is relative to the corresponding linear-PROM primary history.}}{17}{table.92}\protected@file@percent }
+\newlabel{tab:tail-perturbation}{{7}{17}{Primary-coordinate error induced by a controlled secondary-tail perturbation in Case~2 with $n=10$. Each entry is relative to the corresponding linear-PROM primary history}{table.92}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Euclidean-POD Case--2 sensitivity to a prescribed secondary-tail error, restricted to perturbations up to $50\%$. Left: state error against the HDM. Right: error in the ten residual-solved primary coordinates against linear PROM.}}{17}{figure.94}\protected@file@percent }
+\newlabel{fig:tail-perturbation}{{10}{17}{Euclidean-POD Case--2 sensitivity to a prescribed secondary-tail error, restricted to perturbations up to $50\%$. Left: state error against the HDM. Right: error in the ten residual-solved primary coordinates against linear PROM}{figure.94}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Effect of PROM Coefficient-Data Enrichment}{17}{section.95}\protected@file@percent }
+\newlabel{sec:euclidean-prom-enrichment}{{6}{17}{Effect of PROM Coefficient-Data Enrichment}{section.95}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Offline regression accuracy}{17}{subsection.96}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Training and held-out parameter-validation coefficient errors across the Euclidean-POD PROM enrichment ladder. The master map supplies both the Case--2 secondary tail and the POD--NN--ROM direct prediction.}}{18}{table.98}\protected@file@percent }
+\newlabel{tab:euclidean-prom-enrichment-training}{{8}{18}{Training and held-out parameter-validation coefficient errors across the Euclidean-POD PROM enrichment ladder. The master map supplies both the Case--2 secondary tail and the POD--NN--ROM direct prediction}{table.98}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Online state accuracy}{18}{subsection.99}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Online state errors across the nested Euclidean-POD PROM coefficient-data ladder. Values are percentages. Each in-domain mean averages $\bm  {\mu }^{(v)},\bm  {\mu }^{(1)},\bm  {\mu }^{(2)}$; $\bm  {\mu }^{(3)}$ is extrapolatory. The linear PROM is unchanged, and the horizontal rule separates intrusive residual-minimizing models from non-intrusive direct maps.}}{18}{table.101}\protected@file@percent }
+\newlabel{tab:euclidean-prom-enrichment-state}{{9}{18}{Online state errors across the nested Euclidean-POD PROM coefficient-data ladder. Values are percentages. Each in-domain mean averages $\mub ^{(v)},\mub ^{(1)},\mub ^{(2)}$; $\mub ^{(3)}$ is extrapolatory. The linear PROM is unchanged, and the horizontal rule separates intrusive residual-minimizing models from non-intrusive direct maps}{table.101}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Effect of the three-level nested PROM coefficient-data ladder on online state error. Left: in-domain mean. Right: extrapolatory point. The two panels use exactly the same logarithmic ordinate limits, exposing the $9+8$ extrapolation anomaly without hiding the near-linear results. The dashed vertical rule separates intrusive PROMs from non-intrusive ROMs; the solid black horizontal level is the fixed linear PROM.}}{19}{figure.103}\protected@file@percent }
+\newlabel{fig:euclidean-prom-enrichment-state}{{11}{19}{Effect of the three-level nested PROM coefficient-data ladder on online state error. Left: in-domain mean. Right: extrapolatory point. The two panels use exactly the same logarithmic ordinate limits, exposing the $9+8$ extrapolation anomaly without hiding the near-linear results. The dashed vertical rule separates intrusive PROMs from non-intrusive ROMs; the solid black horizontal level is the fixed linear PROM}{figure.103}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces $9+18$ Euclidean-POD PROM solution cut-plane comparison against the HDM. The model order, colours, state range, and time slices are identical to the baseline Fig.~\ref {fig:solution-overlays}; all curves are solid.}}{20}{figure.105}\protected@file@percent }
+\newlabel{fig:euclidean-prom-enriched-solution-overlays}{{12}{20}{$9+18$ Euclidean-POD PROM solution cut-plane comparison against the HDM. The model order, colours, state range, and time slices are identical to the baseline Fig.~\ref {fig:solution-overlays}; all curves are solid}{figure.105}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}Coefficient diagnostics}{20}{subsection.106}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Online coefficient-history errors against the fixed $n_{\mathrm  {tot}}=151$ linear PROM across the nested data ladder. Values are relative Frobenius percentages over all coefficients and time steps. The horizontal rule separates intrusive and non-intrusive models.}}{21}{table.108}\protected@file@percent }
+\newlabel{tab:euclidean-prom-enrichment-coeff}{{10}{21}{Online coefficient-history errors against the fixed $n_{\mathrm {tot}}=151$ linear PROM across the nested data ladder. Values are relative Frobenius percentages over all coefficients and time steps. The horizontal rule separates intrusive and non-intrusive models}{table.108}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Effect of coefficient-data enrichment on global coefficient error. The logarithmic ordinate keeps both the $9+8$ POD--NN--ROM extrapolation error and the near-linear $9+18$ results visible. The dashed vertical rule separates intrusive PROMs from direct ROM maps.}}{21}{figure.110}\protected@file@percent }
+\newlabel{fig:euclidean-prom-enrichment-coeff}{{13}{21}{Effect of coefficient-data enrichment on global coefficient error. The logarithmic ordinate keeps both the $9+8$ POD--NN--ROM extrapolation error and the near-linear $9+18$ results visible. The dashed vertical rule separates intrusive PROMs from direct ROM maps}{figure.110}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces $9+18$ per-coefficient absolute and relative trajectory errors against the linear PROM. The plotted set and fixed ordinate limits are identical to the baseline Fig.~\ref {fig:coefficient-curves}. The dotted vertical line marks the ten-coordinate primary/secondary split.}}{22}{figure.112}\protected@file@percent }
+\newlabel{fig:euclidean-prom-enriched-coeff-errors}{{14}{22}{$9+18$ per-coefficient absolute and relative trajectory errors against the linear PROM. The plotted set and fixed ordinate limits are identical to the baseline Fig.~\ref {fig:coefficient-curves}. The dotted vertical line marks the ten-coordinate primary/secondary split}{figure.112}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces $9+18$ time-by-coefficient absolute errors against the linear PROM. Rows contain the four intrusive models followed by POD--NN--ROM and POD--DL--ROM; the colour range matches the baseline diagnostic.}}{22}{figure.114}\protected@file@percent }
+\newlabel{fig:euclidean-prom-enriched-coeff-abs-heatmaps}{{15}{22}{$9+18$ time-by-coefficient absolute errors against the linear PROM. Rows contain the four intrusive models followed by POD--NN--ROM and POD--DL--ROM; the colour range matches the baseline diagnostic}{figure.114}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces $9+18$ time-by-coefficient relative errors, with the same common $0$--$20\%$ colour range and model ordering as the baseline diagnostic.}}{23}{figure.116}\protected@file@percent }
+\newlabel{fig:euclidean-prom-enriched-coeff-rel-heatmaps}{{16}{23}{$9+18$ time-by-coefficient relative errors, with the same common $0$--$20\%$ colour range and model ordering as the baseline diagnostic}{figure.116}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Case--2 per-coefficient relative error for the baseline, $9+8$, and $9+18$ master maps. Each panel is one online evaluation point. The dotted vertical line separates the ten residual-solved primary coordinates from the 141 ANN-injected secondary coordinates.}}{23}{figure.118}\protected@file@percent }
+\newlabel{fig:euclidean-prom-enrichment-case2-coeff}{{17}{23}{Case--2 per-coefficient relative error for the baseline, $9+8$, and $9+18$ master maps. Each panel is one online evaluation point. The dotted vertical line separates the ten residual-solved primary coordinates from the 141 ANN-injected secondary coordinates}{figure.118}{}}
 \bibstyle{unsrt}
 \bibdata{bibliography}
 \bibcite{antoulas2005approximation}{1}
 \bibcite{quarteroni2014reduced}{2}
 \bibcite{barnett2023neural}{3}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusions}{24}{section.119}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {A}LSPG-Sensitive Basis Exploration}{24}{appendix.120}\protected@file@percent }
+\newlabel{app:lspg-sensitive}{{A}{24}{LSPG-Sensitive Basis Exploration}{appendix.120}{}}
 \bibcite{cohen2023nonlinear}{4}
 \bibcite{aghili2026nonlinear}{5}
 \bibcite{hernandez2017dimensional}{6}
@@ -115,7 +155,5 @@
 \bibcite{farhat2015structure}{8}
 \bibcite{ares2026closure}{9}
 \bibcite{de2023hyper}{10}
-\@writefile{toc}{\contentsline {section}{\numberline {A}LSPG-Sensitive Basis Exploration}{15}{appendix.83}\protected@file@percent }
-\newlabel{app:lspg-sensitive}{{A}{15}{LSPG-Sensitive Basis Exploration}{appendix.83}{}}
 \bibcite{fresca2022pod}{11}
-\gdef \@abspage@last{16}
+\gdef \@abspage@last{25}

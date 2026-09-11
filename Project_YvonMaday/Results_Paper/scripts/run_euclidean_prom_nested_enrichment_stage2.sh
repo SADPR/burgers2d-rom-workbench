@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the two nested Euclidean-POD PROM coefficient datasets: 9+8 and 9+18.
+# Build the nested Euclidean-POD PROM coefficient datasets: 9+8, 9+12, and 9+18.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -47,12 +47,12 @@ args=(
 
 echo "[euclidean-nested-stage2] source:  $BASE_DATASET"
 echo "[euclidean-nested-stage2] results: $PAPER_RESULTS_ROOT"
-echo "[euclidean-nested-stage2] levels:  baseline 9; nested 9+8; nested 9+18"
-echo "[euclidean-nested-stage2] solves:  18 new full-residual PROM trajectories only"
+echo "[euclidean-nested-stage2] levels:  baseline 9; nested 9+8; nested 9+12; nested 9+18"
+echo "[euclidean-nested-stage2] solves:  0 when LHS18 is complete; LHS12 is copied from it"
 echo "[euclidean-nested-stage2] threads: $PROM_NUM_THREADS"
 echo "[euclidean-nested-stage2] force:   $FORCE"
 echo "[euclidean-nested-stage2] plan:    $PLAN_ONLY"
 
-log_name="stage2_euclidean_nested_lhs8_lhs18.log"
-[[ "$PLAN_ONLY" == "1" ]] && log_name="stage2_euclidean_nested_lhs8_lhs18_plan.log"
+log_name="stage2_euclidean_nested_lhs8_lhs12_lhs18.log"
+[[ "$PLAN_ONLY" == "1" ]] && log_name="stage2_euclidean_nested_lhs8_lhs12_lhs18_plan.log"
 python3 -u stage2_build_euclidean_prom_nested_enrichment.py "${args[@]}" 2>&1 | tee "$LOG_ROOT/$log_name"

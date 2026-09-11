@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Execute the reproducible Euclidean 9+8 and 9+18 PROM enrichment campaign.
+# Execute the reproducible Euclidean 9+8, 9+12, and 9+18 PROM enrichment campaign.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,7 +11,7 @@ case "$STAGE" in
 esac
 
 echo "[euclidean-nested-campaign] stage: $STAGE"
-echo "[euclidean-nested-campaign] levels: 9+8 (4 interior + 4 margin), 9+18 (9 interior + 9 margin)"
+echo "[euclidean-nested-campaign] levels: 9+8 (4+4), 9+12 (6+6), 9+18 (9+9)"
 echo "[euclidean-nested-campaign] no 9+36 PROM dataset or solve is created."
 
 if [[ "$STAGE" == "all" || "$STAGE" == "stage2" ]]; then

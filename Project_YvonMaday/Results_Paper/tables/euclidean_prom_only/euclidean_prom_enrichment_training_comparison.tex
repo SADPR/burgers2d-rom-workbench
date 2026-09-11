@@ -1,0 +1,12 @@
+\begin{tabular}{lrr|rr|rr}
+\toprule
+& \multicolumn{2}{c|}{Baseline (9)} & \multicolumn{2}{c|}{Early (9+8)} & \multicolumn{2}{c}{Intermediate (9+18)} \\
+Model & train $e_q$ (\%) & val. $e_q$ (\%) & train $e_q$ (\%) & val. $e_q$ (\%) & train $e_q$ (\%) & val. $e_q$ (\%) \\
+\midrule
+PROM--ANN Case 1 & 1.422 & 3.590 & 0.830 & 1.208 & 0.504 & 0.634 \\
+Master POD--NN--ROM (Case 2 tail source) & 2.888 & 4.261 & 0.882 & 1.607 & 0.577 & 0.990 \\
+PROM--ANN Case 3 & 0.572 & 3.482 & 0.255 & 0.610 & 0.284 & 0.452 \\
+PROM--POD--AE ($n_z=10$) & 0.194 & 2.673 & 0.164 & 1.192 & 0.144 & 0.488 \\
+POD--DL--ROM ($n_z=10$) & 1.843 & 2.981 & 0.224 & 0.433 & 0.211 & 0.249 \\
+\bottomrule
+\end{tabular}
