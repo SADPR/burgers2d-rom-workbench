@@ -76,3 +76,6 @@ FinalTable/
 
 # Euclidean PROM enrichment campaigns: large, reproducible per-run outputs.
 Project_YvonMaday/Results_Paper/euclidean_prom_enrichment_lhs*/Runs/
+
+# Reproducible Case-2+B3 cubature fits, audits, and rollout outputs.
+Project_YvonMaday/Results_Paper/euclidean_case2_hyperreduction/

@@ -174,7 +174,12 @@ def score(q, v, uref, mu, refpath):
     result = {"coefficient_error_percent": float(100 * np.linalg.norm(difference) / np.linalg.norm(teacher)),
               "primary_error_percent": float(100 * np.linalg.norm(difference[:10]) / np.linalg.norm(teacher[:10])),
               "secondary_error_percent": float(100 * np.linalg.norm(difference[10:]) / np.linalg.norm(teacher[10:]))}
-    hdmpath = ROOT / f"Project_YvonMaday/Results/param_snaps/mu1_{mu[0]}+mu2_{mu[1]}.npy"
+    filename = f"mu1_{mu[0]}+mu2_{mu[1]}.npy"
+    candidates = (
+        ROOT / "Results/param_snaps" / filename,
+        ROOT / "Project_YvonMaday/Results/param_snaps" / filename,
+    )
+    hdmpath = next((path for path in candidates if path.exists()), candidates[0])
     if hdmpath.exists():
         hdm = np.load(hdmpath, mmap_mode="r")
         numerator = denominator = 0.0

@@ -49,6 +49,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repeats", type=int, default=10)
     parser.add_argument("--warmup", type=int, default=3)
     parser.add_argument("--summary-path", type=Path, required=True)
+    parser.add_argument("--podnn-model-name", default=MODEL_NAMES["podnn"])
+    parser.add_argument("--poddl-model-name", default=MODEL_NAMES["poddl"])
     return parser.parse_args()
 
 
@@ -168,7 +170,8 @@ def main() -> None:
     inputs = make_inputs(device)
 
     records: dict[str, dict[str, object]] = {}
-    for kind, filename in MODEL_NAMES.items():
+    model_names = {"podnn": args.podnn_model_name, "poddl": args.poddl_model_name}
+    for kind, filename in model_names.items():
         model_path = models_dir / filename
         if kind == "podnn":
             model, _, _ = _load_rom_data_driven_model(str(model_path), device)

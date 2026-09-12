@@ -14,8 +14,10 @@ def residual_krylov_space(jacobian, primary, secondary, residual, rank):
     A = J Vp, P = I - Q Q.T, C = P J Vs, where Q spans range(A).
     Eliminating the primary increment leaves min_b ||P r + C b||_2.
     A small Krylov space restricts that secondary correction, rather than
-    selecting a fixed subset of POD coordinates. Vp and Vs must be Euclidean
-    orthonormal; the experiment runner verifies that assumption once.
+    selecting a fixed subset of POD coordinates. The coefficient metric is
+    Euclidean. For cubature, J and r must both carry sqrt(weights); Vp/Vs
+    are then stencil restrictions of the original basis, without renormalizing
+    them. Full-state POD orthonormality is checked by the experiment runner.
     """
     if rank < 0 or rank > secondary.shape[1]:
         raise ValueError("rank must be between zero and the tail dimension")
