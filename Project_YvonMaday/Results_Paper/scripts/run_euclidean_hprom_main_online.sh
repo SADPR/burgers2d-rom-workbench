@@ -70,19 +70,19 @@ build_rule() {
   set_threads "$RULE_THREADS"
   local args
   mapfile -t args < <(common_ecm_args)
-  local basis_args=()
-  local method_args=()
+  local command=("$PYTHON_BIN" -u "$runner" "${args[@]}")
   if [[ "$runner" != run_prom_pod_ae.py ]]; then
-    basis_args=(--basis-path "$BASIS" --u-ref-path "$UREF")
+    command+=(--basis-path "$BASIS" --u-ref-path "$UREF")
   fi
   if [[ "$runner" == run_prom_ann_case_2.py ]]; then
-    method_args=(--target-primary-modes 10)
+    command+=(--target-primary-modes 10)
   fi
-  "$PYTHON_BIN" -u "$runner" "${args[@]}" "${basis_args[@]}" "${method_args[@]}" \
+  command+=( \
     --mu1 4.875 --mu2 0.0225 --model-path "$model" \
     --output-root "$output" --ecsw-weights-dir "$weights" \
     --rebuild-ecsw --ecsw-only \
-    2>&1 | tee "$LOGS/$family/ecm_build.log"
+  )
+  "${command[@]}" 2>&1 | tee "$LOGS/$family/ecm_build.log"
   find "$weights" -maxdepth 1 -type f -name '*.npy' -print -quit | grep -q . || {
     echo "[error] ECM build did not create a weight file for $family." >&2; exit 1;
   }
@@ -102,20 +102,20 @@ run_intrusive_point() {
   set_threads "$ONLINE_THREADS"
   local args
   mapfile -t args < <(common_ecm_args)
-  local basis_args=()
-  local method_args=()
+  local command=("$PYTHON_BIN" -u "$runner" "${args[@]}")
   if [[ "$runner" != run_prom_pod_ae.py ]]; then
-    basis_args=(--basis-path "$BASIS" --u-ref-path "$UREF")
+    command+=(--basis-path "$BASIS" --u-ref-path "$UREF")
   fi
   if [[ "$runner" == run_prom_ann_case_2.py ]]; then
-    method_args=(--target-primary-modes 10)
+    command+=(--target-primary-modes 10)
   fi
-  "$PYTHON_BIN" -u "$runner" "${args[@]}" "${basis_args[@]}" "${method_args[@]}" \
+  command+=( \
     --mu1 "$mu1" --mu2 "$mu2" --model-path "$model" \
     --output-root "$output" --ecsw-weights-dir "$weights" \
     --max-its 20 --relnorm-cutoff 1e-5 --min-delta 1e-2 \
     --linear-solver lstsq --normal-eq-reg 1e-12 \
-    2>&1 | tee "$LOGS/$family/mu1_${mu1_tag}_mu2_${mu2_tag}.log"
+  )
+  "${command[@]}" 2>&1 | tee "$LOGS/$family/mu1_${mu1_tag}_mu2_${mu2_tag}.log"
 }
 
 run_intrusive_family() {
