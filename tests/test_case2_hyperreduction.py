@@ -98,6 +98,18 @@ def test_invalid_rules_rejected(weights):
         SampledBurgers(gx, gy, .02, weights)
 
 
+def test_completed_rollout_requires_explicit_overwrite(tmp_path):
+    from Project_YvonMaday.run_case2_hyperreduction import skip_existing_run
+
+    target = tmp_path / "run" / "summary.json"
+    target.parent.mkdir()
+    target.write_text('{"config": {"threads": 24}}')
+    assert skip_existing_run(target, {"threads": 24}, overwrite=False)
+    with pytest.raises(ValueError, match="Run configuration changed"):
+        skip_existing_run(target, {"threads": 1}, overwrite=False)
+    assert not skip_existing_run(target, {"threads": 1}, overwrite=True)
+
+
 @pytest.mark.parametrize("rank", [0, 3])
 def test_full_mesh_trajectory_recovers_own_predecessor_prom(monkeypatch, rank):
     import torch

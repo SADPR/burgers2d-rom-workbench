@@ -242,6 +242,20 @@ def hyper_rollout(model, v, uref, mu, mesh, rank, steps):
                    mean_weighted_residual_norm=float(np.mean(norms)))
 
 
+def skip_existing_run(target, config, overwrite):
+    """Return whether an identical run may be reused; require consent to replace it."""
+    if not target.exists():
+        return False
+    previous = json.loads(target.read_text())["config"]
+    if previous == config and not overwrite:
+        print(f"Completed run, skipping: {target.parent.name}", flush=True)
+        return True
+    if not overwrite:
+        raise ValueError(f"Run configuration changed: {target.parent}")
+    print(f"Explicitly overwriting completed run: {target.parent.name}", flush=True)
+    return False
+
+
 def evaluate(args, model, v, uref, fingerprints):
     points = VALIDATION if args.stage == "validation" else REPORTING
     for kind in args.methods:
@@ -261,10 +275,7 @@ def evaluate(args, model, v, uref, fingerprints):
                               Path(__file__), ROOT / "burgers/case2_hyperreduction.py",
                               ROOT / "burgers/case2_residual_correction.py")})
             target = folder / "summary.json"
-            if target.exists():
-                if json.loads(target.read_text())["config"] != config:
-                    raise ValueError(f"Run configuration changed: {folder}")
-                print(f"Completed run, skipping: {folder.name}", flush=True)
+            if skip_existing_run(target, config, args.overwrite_existing):
                 continue
             if mesh:
                 q, stats = hyper_rollout(model, v, uref, mu, mesh, int(kind[-1]), args.steps)
@@ -290,6 +301,10 @@ def main():
     parser.add_argument("--steps", type=int, default=500)
     parser.add_argument("--methods", nargs="+", choices=("hprom0", "hprom3", "prom0", "prom3"), default=["hprom0", "hprom3"])
     parser.add_argument("--point-indices", type=int, nargs="+")
+    parser.add_argument(
+        "--overwrite-existing", action="store_true",
+        help="Explicitly replace completed evaluation runs whose configuration changed",
+    )
     args = parser.parse_args()
     if not (1 <= args.steps <= 500 and args.threads > 0 and 1 <= args.sketch_rank <= 2000
             and all(1 <= k <= 500 for k in args.training_steps)):

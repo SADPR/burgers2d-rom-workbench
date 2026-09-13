@@ -19,6 +19,7 @@ OUT="$CASE2_HYPER_OUTPUT"
 RULE="$OUT/positive_fit4096/weights.npy"
 RULE_THREADS="${CASE2_B3_RULE_THREADS:-${CASE2_B3_THREADS:-24}}"
 ONLINE_THREADS="${CASE2_B3_ONLINE_THREADS:-1}"
+OVERWRITE_REPORTING="${OVERWRITE_REPORTING:-0}"
 
 export MPLBACKEND=Agg MPLCONFIGDIR="${MPLCONFIGDIR:-$PAPER_ROOT/.mplcache}"
 mkdir -p "$OUT" "$MPLCONFIGDIR" "$PAPER_ROOT/logs/case2_b3"
@@ -65,8 +66,15 @@ if selection.get("selection_uses_reporting_points", True):
     raise SystemExit("Invalid selection manifest: reporting data were used")
 PY
   set_threads "$ONLINE_THREADS"
-  "$PYTHON_BIN" -u run_case2_hyperreduction.py reporting --output "$OUT" --rule-file "$RULE" \
-    --threads "$ONLINE_THREADS" --methods hprom3 \
+  local command=(
+    "$PYTHON_BIN" -u run_case2_hyperreduction.py reporting
+    --output "$OUT" --rule-file "$RULE"
+    --threads "$ONLINE_THREADS" --methods hprom3
+  )
+  if [[ "$OVERWRITE_REPORTING" == 1 ]]; then
+    command+=(--overwrite-existing)
+  fi
+  "${command[@]}" \
     2>&1 | tee "$PAPER_ROOT/logs/case2_b3/reporting_rollout.log"
 }
 

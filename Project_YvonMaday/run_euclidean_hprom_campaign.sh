@@ -4,8 +4,8 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 STAGE="${1:-all}"
-case "$STAGE" in check|prepare|train|rules|b3|online|timing|retime|summary|all) ;;
-  *) echo "Usage: $0 [check|prepare|train|rules|b3|online|timing|retime|summary|all]" >&2; exit 2;; esac
+case "$STAGE" in check|prepare|train|rules|b3|online|timing|retime|retime-finish|summary|all) ;;
+  *) echo "Usage: $0 [check|prepare|train|rules|b3|online|timing|retime|retime-finish|summary|all]" >&2; exit 2;; esac
 
 PYTHON_BIN="${PYTHON_BIN:-$(command -v python)}"
 export PYTHON_BIN
@@ -159,6 +159,49 @@ if not thread_recorded:
 print("Existing baselines verified: HDM=24 threads; linear HPROM=24 threads.")
 PY
 }
+validate_existing_learned_retime() {
+  "$PYTHON_BIN" - "$EUCLIDEAN_HPROM_ROOT" <<'PY'
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+logs = sorted((root / "logs").glob("retime*.log"))
+start = "[euclidean-hprom-online] ECM=2.0% rule_threads=24 online_threads=1 device=cpu"
+done = "[euclidean-hprom-online] completed stage=reporting family=all"
+certified = False
+for path in logs:
+    text = path.read_text(encoding="utf-8", errors="replace")
+    begin = text.rfind(start)
+    if begin >= 0 and text.find(done, begin) >= 0:
+        certified = True
+        print(f"Existing one-thread learned HPROM runs certified by: {path}")
+        break
+if not certified:
+    raise SystemExit("No retime log certifies completion of all conventional learned HPROMs with one thread.")
+
+specs = {
+    "HPROM_ANN_C1": "case1_hprom_ann*_summary.txt",
+    "HPROM_ANN_C2": "case2_hprom_ann*_summary.txt",
+    "HPROM_ANN_C3": "case3_hprom_ann*_summary.txt",
+    "HPROM_POD_AE": "podae_hprom*_summary.txt",
+}
+for family, pattern in specs.items():
+    files = list((root / "Runs" / family).glob(pattern))
+    if len(files) != 4:
+        raise SystemExit(f"Expected four completed {family} summaries, found {len(files)}.")
+PY
+}
+complete_retime() {
+  local baseline_threads=24 learned_threads=1
+  OVERWRITE_REPORTING=1 CASE2_B3_ONLINE_THREADS="$learned_threads" \
+    bash Results_Paper/scripts/run_euclidean_hprom_case2_b3.sh reporting
+  FORCE_TIMING=1 DIRECT_TIMING_THREADS="$learned_threads" \
+    bash Results_Paper/scripts/benchmark_euclidean_hprom.sh direct
+  write_timing_protocol \
+    "$baseline_threads" "$baseline_threads" "$learned_threads" \
+    "$learned_threads" "$learned_threads"
+  summary
+}
 retime() {
   # The baselines use the full allocation. Small learned online solves are
   # single-threaded to avoid nested BLAS/PyTorch overhead.
@@ -169,14 +212,12 @@ retime() {
   validate_existing_baselines
   FORCE=1 ONLINE_THREADS="$learned_threads" \
     bash Results_Paper/scripts/run_euclidean_hprom_main_online.sh reporting all
-  CASE2_B3_ONLINE_THREADS="$learned_threads" \
-    bash Results_Paper/scripts/run_euclidean_hprom_case2_b3.sh reporting
-  FORCE_TIMING=1 DIRECT_TIMING_THREADS="$learned_threads" \
-    bash Results_Paper/scripts/benchmark_euclidean_hprom.sh direct
-  write_timing_protocol \
-    "$baseline_threads" "$baseline_threads" "$learned_threads" \
-    "$learned_threads" "$learned_threads"
-  summary
+  complete_retime
+}
+finish_retime() {
+  validate_existing_baselines
+  validate_existing_learned_retime
+  complete_retime
 }
 
 case "$STAGE" in
@@ -188,6 +229,7 @@ case "$STAGE" in
   online) online ;;
   timing) timing ;;
   retime) retime ;;
+  retime-finish) finish_retime ;;
   summary) summary ;;
   all)
     check

@@ -71,6 +71,10 @@ thread for every learned online method. It writes
 `timing/online_thread_protocol.json` and is not affected by stale thread-count
 environment variables.
 
+If `retime` stops after the conventional learned HPROMs are complete, use
+`retime-finish`. It verifies their one-thread completion from the retime log,
+then runs only Case 2+B3, the direct-map benchmark, and the final summary.
+
 ## Sherlock execution
 
 Use the already active `myenv` inside an allocated compute node. The runner
@@ -89,7 +93,8 @@ fi
 ```
 
 Every stage is resumable. To restart only one stage, replace `all` by one of
-`prepare`, `train`, `rules`, `b3`, `online`, `timing`, `retime`, or `summary`.
+`prepare`, `train`, `rules`, `b3`, `online`, `timing`, `retime`,
+`retime-finish`, or `summary`.
 
 The final machine-readable and LaTeX tables are written under
 `Results_Paper/euclidean_hprom_main/reporting`.
