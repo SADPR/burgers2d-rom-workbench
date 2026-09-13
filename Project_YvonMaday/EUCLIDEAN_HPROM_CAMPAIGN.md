@@ -36,6 +36,13 @@ non-intrusive comparison methods, not as HPROMs.
 
 ## Timing protocol
 
+The fresh HDM reference and the linear HPROM use the 24 CPUs available in the
+allocation. The learned intrusive methods, Case 2+B3, and both direct maps use
+one numerical thread. This avoids severe nested BLAS/PyTorch overhead in their
+many small reduced linear-algebra operations while retaining the parallel
+configuration used by the two baselines. Training and ECM construction also
+use 24 CPUs.
+
 All intrusive `online_solve_elapsed_s` values are obtained from one measured
 solve per reporting point and exclude ECM construction, HDM evaluation,
 plotting, and output. The two non-intrusive maps are timed after
@@ -49,6 +56,20 @@ mean fresh-HDM time / mean online-model time
 
 over the same three in-domain parameters. Offline training and rule
 construction are excluded.
+
+After a completed campaign, use the dedicated `retime` stage to reuse the
+basis, checkpoints, frozen ECM rules, and already-correct 24-thread HDM and
+linear-HPROM baselines. It overwrites only the learned online reporting
+trajectories and direct-map timing summary:
+
+```bash
+bash Project_YvonMaday/run_euclidean_hprom_campaign.sh retime
+```
+
+`retime` hard-codes 24 threads for the HDM and linear-HPROM baselines and one
+thread for every learned online method. It writes
+`timing/online_thread_protocol.json` and is not affected by stale thread-count
+environment variables.
 
 ## Sherlock execution
 
@@ -68,7 +89,7 @@ fi
 ```
 
 Every stage is resumable. To restart only one stage, replace `all` by one of
-`prepare`, `train`, `rules`, `b3`, `online`, `timing`, or `summary`.
+`prepare`, `train`, `rules`, `b3`, `online`, `timing`, `retime`, or `summary`.
 
 The final machine-readable and LaTeX tables are written under
 `Results_Paper/euclidean_hprom_main/reporting`.

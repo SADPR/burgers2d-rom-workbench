@@ -17,32 +17,38 @@ export CASE2_MODEL_PATH="$PAPER_ROOT/Stage3/models/master_ann_mu_t_to_qtot_ntot1
 export CASE2_HYPER_OUTPUT="$PAPER_ROOT/Stage4/case2_b3"
 OUT="$CASE2_HYPER_OUTPUT"
 RULE="$OUT/positive_fit4096/weights.npy"
-THREADS="${CASE2_B3_THREADS:-24}"
+RULE_THREADS="${CASE2_B3_RULE_THREADS:-${CASE2_B3_THREADS:-24}}"
+ONLINE_THREADS="${CASE2_B3_ONLINE_THREADS:-1}"
 
-export OMP_NUM_THREADS="$THREADS" OPENBLAS_NUM_THREADS="$THREADS" MKL_NUM_THREADS="$THREADS"
-export BLIS_NUM_THREADS="$THREADS" GOTO_NUM_THREADS="$THREADS" NUMEXPR_NUM_THREADS="$THREADS"
 export MPLBACKEND=Agg MPLCONFIGDIR="${MPLCONFIGDIR:-$PAPER_ROOT/.mplcache}"
 mkdir -p "$OUT" "$MPLCONFIGDIR" "$PAPER_ROOT/logs/case2_b3"
 
 require_file() { [[ -f "$1" ]] || { echo "[error] Missing required file: $1" >&2; exit 1; }; }
+set_threads() {
+  export OMP_NUM_THREADS="$1" OPENBLAS_NUM_THREADS="$1" MKL_NUM_THREADS="$1"
+  export BLIS_NUM_THREADS="$1" GOTO_NUM_THREADS="$1" NUMEXPR_NUM_THREADS="$1"
+}
 require_file "$CASE2_MODEL_PATH"
 require_file "$CASE2_BASIS_DIR/basis.npy"
 require_file "$CASE2_BASIS_DIR/u_ref.npy"
 
 build_rule() {
+  set_threads "$RULE_THREADS"
   "$PYTHON_BIN" -u build_case2_leverage_rule.py --draws 4096 --output "$OUT"
   "$PYTHON_BIN" -u fit_case2_positive_cubature.py --output "$OUT" --draws 4096 \
-    --threads "$THREADS" --maxiter 1500 \
+    --threads "$RULE_THREADS" --maxiter 1500 \
     2>&1 | tee "$PAPER_ROOT/logs/case2_b3/positive_fit4096.log"
   require_file "$RULE"
 }
 
 validate_rule() {
   require_file "$RULE"
-  "$PYTHON_BIN" -u audit_case2_hyperreduction.py --output "$OUT" --rule-file "$RULE" --threads "$THREADS" \
+  set_threads "$RULE_THREADS"
+  "$PYTHON_BIN" -u audit_case2_hyperreduction.py --output "$OUT" --rule-file "$RULE" --threads "$RULE_THREADS" \
     2>&1 | tee "$PAPER_ROOT/logs/case2_b3/operator_audit.log"
+  set_threads "$ONLINE_THREADS"
   "$PYTHON_BIN" -u run_case2_hyperreduction.py validation --output "$OUT" --rule-file "$RULE" \
-    --threads "$THREADS" --methods hprom3 \
+    --threads "$ONLINE_THREADS" --methods hprom3 \
     2>&1 | tee "$PAPER_ROOT/logs/case2_b3/validation_rollout.log"
   "$PYTHON_BIN" -u validate_case2_hyper_rule.py --output "$OUT" --rule-file "$RULE" \
     2>&1 | tee "$PAPER_ROOT/logs/case2_b3/selection.log"
@@ -58,8 +64,9 @@ if not selection.get("accepted", False):
 if selection.get("selection_uses_reporting_points", True):
     raise SystemExit("Invalid selection manifest: reporting data were used")
 PY
+  set_threads "$ONLINE_THREADS"
   "$PYTHON_BIN" -u run_case2_hyperreduction.py reporting --output "$OUT" --rule-file "$RULE" \
-    --threads "$THREADS" --methods hprom3 \
+    --threads "$ONLINE_THREADS" --methods hprom3 \
     2>&1 | tee "$PAPER_ROOT/logs/case2_b3/reporting_rollout.log"
 }
 
@@ -69,4 +76,4 @@ case "$STAGE" in
   reporting) report_rule ;;
   all) build_rule; validate_rule; report_rule ;;
 esac
-echo "[euclidean-hprom-case2-b3] completed stage=$STAGE output=$OUT"
+echo "[euclidean-hprom-case2-b3] completed stage=$STAGE output=$OUT rule_threads=$RULE_THREADS online_threads=$ONLINE_THREADS"

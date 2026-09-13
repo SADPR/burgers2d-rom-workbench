@@ -66,9 +66,25 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
 
     direct_summary = unique((root / "timing").glob("direct_inference_repeat*_summary.txt"), "direct timing summary")
+    direct_metadata = kv(direct_summary)
     direct = direct_times(direct_summary)
     hdm = json.loads((root / "timing/hdm/hdm_timing.json").read_text())
     hdm_time = float(hdm["mean_in_domain_seconds"])
+    protocol_path = root / "timing/online_thread_protocol.json"
+    if not protocol_path.is_file():
+        raise FileNotFoundError(
+            f"Missing online timing protocol: {protocol_path}. Run the campaign retime stage first."
+        )
+    protocol = json.loads(protocol_path.read_text())
+    hdm_threads = int(protocol["hdm_threads"])
+    linear_threads = int(protocol["linear_hprom_threads"])
+    learned_threads = int(protocol["learned_intrusive_online_threads"])
+    b3_threads = int(protocol["case2_b3_online_threads"])
+    direct_threads = int(protocol["direct_inference_threads"])
+    if int(hdm.get("threads", -1)) != hdm_threads:
+        raise ValueError("HDM timing and online-thread protocol disagree.")
+    if int(direct_metadata.get("numerical_threads", -1)) != direct_threads:
+        raise ValueError("Direct-map timing and online-thread protocol disagree.")
 
     rows = []
     method_specs = (
@@ -113,6 +129,12 @@ def main():
             if ncell is not None: cells.append(ncell)
         row = {
             "model": method,
+            "online_threads": (
+                linear_threads if kind == "linear"
+                else b3_threads if kind == "b3"
+                else direct_threads if kind in ("direct", "direct_dl")
+                else learned_threads
+            ),
             "state_verification_percent": errors[0],
             "state_offgrid1_percent": errors[1],
             "state_offgrid2_percent": errors[2],
@@ -135,18 +157,23 @@ def main():
         lines.append(
             f"{row['model']}: state mean={row['state_in_domain_mean_percent']:.4f}%, "
             f"extrap={row['state_extrapolation_percent']:.4f}%, "
-            f"time={row['online_in_domain_mean_seconds']:.6f}s, speedup={row['speedup_vs_hdm']:.2f}x"
+            f"threads={row['online_threads']}, time={row['online_in_domain_mean_seconds']:.6f}s, "
+            f"speedup={row['speedup_vs_hdm']:.2f}x"
         )
     (output / "hprom_accuracy_timing.txt").write_text("\n".join(lines) + "\n")
 
     latex = [
-        r"\begin{tabular}{lrrrr}", r"\toprule",
-        r"Model & In-domain error (\%) & $\mu^{(3)}$ error (\%) & Mean time (s) & Speed-up \\",
+        r"\begin{tabular}{lrrrrr}", r"\toprule",
+        r"Model & Threads & In-domain error (\%) & $\mu^{(3)}$ error (\%) & Mean time (s) & Speed-up \\",
         r"\midrule",
     ]
     for row in rows:
         name = row["model"].replace("+", r"$+$")
-        latex.append(f"{name} & {row['state_in_domain_mean_percent']:.3f} & {row['state_extrapolation_percent']:.3f} & {row['online_in_domain_mean_seconds']:.4g} & {row['speedup_vs_hdm']:.1f} \\")
+        latex.append(
+            f"{name} & {row['online_threads']} & {row['state_in_domain_mean_percent']:.3f} & "
+            f"{row['state_extrapolation_percent']:.3f} & "
+            f"{row['online_in_domain_mean_seconds']:.4g} & {row['speedup_vs_hdm']:.1f} \\\\"
+        )
     latex += [r"\bottomrule", r"\end{tabular}"]
     (output / "hprom_accuracy_timing_table.tex").write_text("\n".join(latex) + "\n")
     print("\n".join(lines))

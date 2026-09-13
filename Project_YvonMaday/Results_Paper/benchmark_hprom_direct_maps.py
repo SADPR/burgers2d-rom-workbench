@@ -114,6 +114,7 @@ def write_summary(
     path: Path,
     campaign_root: Path,
     device: torch.device,
+    threads: int,
     repeats: int,
     warmup: int,
     records: dict[str, dict[str, object]],
@@ -123,6 +124,7 @@ def write_summary(
         "benchmark: repeated loaded direct-map forward inference",
         f"campaign_root: {campaign_root}",
         f"device: {device}",
+        f"numerical_threads: {threads}",
         f"repeats_per_point: {repeats}",
         f"warmup_per_point: {warmup}",
         f"time_steps_per_trajectory: {NUM_STEPS + 1}",
@@ -191,7 +193,10 @@ def main() -> None:
             f"params={parameter_count(model)}"
         )
 
-    write_summary(args.summary_path.resolve(), campaign_root, device, args.repeats, args.warmup, records)
+    write_summary(
+        args.summary_path.resolve(), campaign_root, device, args.threads,
+        args.repeats, args.warmup, records,
+    )
     print(f"[direct-timing] summary: {args.summary_path.resolve()}")
 
 

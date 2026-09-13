@@ -33,6 +33,7 @@ LINEAR_RUNS="$PROM_ROOT/Runs/Linear"
 
 FORCE="${FORCE:-0}"
 PROM_NUM_THREADS="${PROM_NUM_THREADS:-24}"
+LINEAR_REPORT_THREADS="${LINEAR_REPORT_THREADS:-24}"
 ALLOW_CLEAN="${ALLOW_CLEAN:-0}"
 
 TRAIN_MU=(
@@ -234,7 +235,7 @@ build_linear4() {
     mu1_tag="$(printf '%.3f' "$mu1")"
     mu2_tag="$(printf '%.4f' "$mu2")"
     echo "[run] Linear HPROM $label at mu=($mu1,$mu2)."
-    set_threads "$PROM_NUM_THREADS"
+    set_threads "$LINEAR_REPORT_THREADS"
     "$PYTHON_BIN" -u run_prom.py \
       --backend hprom --mu1 "$mu1" --mu2 "$mu2" --total-modes 151 \
       --basis-path "$BASIS" --u-ref-path "$UREF" \
@@ -251,7 +252,8 @@ export PYTHONPATH="$PROJECT_DIR${PYTHONPATH:+:$PYTHONPATH}"
 echo "[euclidean-hprom-prepare] stage:       $STAGE"
 echo "[euclidean-hprom-prepare] campaign:    $PROM_ROOT"
 echo "[euclidean-hprom-prepare] metric root: $METRIC_ROOT"
-echo "[euclidean-hprom-prepare] threads:     $PROM_NUM_THREADS"
+echo "[euclidean-hprom-prepare] offline threads:       $PROM_NUM_THREADS"
+echo "[euclidean-hprom-prepare] linear online threads: $LINEAR_REPORT_THREADS"
 echo "[euclidean-hprom-prepare] force:       $FORCE"
 
 case "$STAGE" in

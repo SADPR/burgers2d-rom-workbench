@@ -4,16 +4,25 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 STAGE="${1:-all}"
-case "$STAGE" in check|prepare|train|rules|b3|online|timing|summary|all) ;;
-  *) echo "Usage: $0 [check|prepare|train|rules|b3|online|timing|summary|all]" >&2; exit 2;; esac
+case "$STAGE" in check|prepare|train|rules|b3|online|timing|retime|summary|all) ;;
+  *) echo "Usage: $0 [check|prepare|train|rules|b3|online|timing|retime|summary|all]" >&2; exit 2;; esac
 
 PYTHON_BIN="${PYTHON_BIN:-$(command -v python)}"
 export PYTHON_BIN
 PAPER_ROOT="$PWD/Results_Paper/euclidean_hprom_main"
 export EUCLIDEAN_HPROM_ROOT="${EUCLIDEAN_HPROM_ROOT:-$PAPER_ROOT}"
-THREADS="${HPROM_THREADS:-24}"
-export PROM_NUM_THREADS="$THREADS" TRAIN_NUM_THREADS="$THREADS" RULE_THREADS="$THREADS"
-export ONLINE_THREADS="$THREADS" CASE2_B3_THREADS="$THREADS" TIMING_THREADS="$THREADS"
+OFFLINE_THREADS="${HPROM_THREADS:-24}"
+BASELINE_THREADS="${HPROM_BASELINE_THREADS:-24}"
+LEARNED_ONLINE_THREADS="${HPROM_LEARNED_THREADS:-1}"
+export PROM_NUM_THREADS="${PROM_NUM_THREADS:-$OFFLINE_THREADS}"
+export TRAIN_NUM_THREADS="${TRAIN_NUM_THREADS:-$OFFLINE_THREADS}"
+export RULE_THREADS="${RULE_THREADS:-$OFFLINE_THREADS}"
+export CASE2_B3_RULE_THREADS="${CASE2_B3_RULE_THREADS:-$OFFLINE_THREADS}"
+export LINEAR_REPORT_THREADS="${LINEAR_REPORT_THREADS:-$BASELINE_THREADS}"
+export ONLINE_THREADS="${ONLINE_THREADS:-$LEARNED_ONLINE_THREADS}"
+export CASE2_B3_ONLINE_THREADS="${CASE2_B3_ONLINE_THREADS:-$LEARNED_ONLINE_THREADS}"
+export HDM_TIMING_THREADS="${HDM_TIMING_THREADS:-$BASELINE_THREADS}"
+export DIRECT_TIMING_THREADS="${DIRECT_TIMING_THREADS:-$LEARNED_ONLINE_THREADS}"
 export ONLINE_DEVICE="${ONLINE_DEVICE:-cpu}"
 export MPLBACKEND=Agg MPLCONFIGDIR="${MPLCONFIGDIR:-$EUCLIDEAN_HPROM_ROOT/.mplcache}"
 mkdir -p "$EUCLIDEAN_HPROM_ROOT/logs" "$MPLCONFIGDIR"
@@ -66,6 +75,109 @@ summary() {
   "$PYTHON_BIN" -u summarize_euclidean_hprom_campaign.py \
     --campaign-root "$EUCLIDEAN_HPROM_ROOT"
 }
+write_timing_protocol() {
+  local hdm_threads="$1" linear_threads="$2" learned_threads="$3"
+  local b3_threads="$4" direct_threads="$5"
+  mkdir -p "$EUCLIDEAN_HPROM_ROOT/timing"
+  "$PYTHON_BIN" - "$EUCLIDEAN_HPROM_ROOT/timing/online_thread_protocol.json" \
+    "$hdm_threads" "$linear_threads" "$learned_threads" "$b3_threads" \
+    "$direct_threads" "$OFFLINE_THREADS" <<'PY'
+import datetime
+import json
+import os
+import socket
+import sys
+
+(
+    path,
+    hdm_threads,
+    linear_threads,
+    learned_threads,
+    b3_threads,
+    direct_threads,
+    offline_threads,
+) = sys.argv[1:]
+payload = {
+    "protocol": "method-appropriate thread-count online comparison",
+    "created_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    "hostname": socket.gethostname(),
+    "cpu_affinity": sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None,
+    "hdm_threads": int(hdm_threads),
+    "linear_hprom_threads": int(linear_threads),
+    "learned_intrusive_online_threads": int(learned_threads),
+    "case2_b3_online_threads": int(b3_threads),
+    "direct_inference_threads": int(direct_threads),
+    "offline_training_threads": int(offline_threads),
+    "ecm_construction_threads": int(offline_threads),
+    "reused_artifacts": [
+        "Euclidean basis",
+        "trained checkpoints",
+        "frozen ECM rules",
+        "24-thread HDM timing",
+        "24-thread linear-HPROM reporting runs",
+    ],
+    "overwritten_artifacts": ["learned reporting-point online runs", "direct-map timing"],
+}
+with open(path, "w", encoding="utf-8") as stream:
+    json.dump(payload, stream, indent=2)
+    stream.write("\n")
+print(f"Online timing protocol: {path}")
+PY
+}
+validate_existing_baselines() {
+  "$PYTHON_BIN" - "$EUCLIDEAN_HPROM_ROOT" <<'PY'
+import json
+import re
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+hdm_path = root / "timing/hdm/hdm_timing.json"
+if not hdm_path.is_file():
+    raise SystemExit(f"Missing existing HDM timing: {hdm_path}")
+hdm = json.loads(hdm_path.read_text(encoding="utf-8"))
+if int(hdm.get("threads", -1)) != 24:
+    raise SystemExit(f"Existing HDM timing did not use 24 threads: {hdm_path}")
+
+points = ((4.875, 0.0225), (4.560, 0.0190), (5.190, 0.0260), (4.000, 0.0330))
+for mu1, mu2 in points:
+    tag = f"linear_hprom_mu1_{mu1:.3f}_mu2_{mu2:.4f}_ntot151"
+    summary = root / "Runs/Linear" / tag / "summary.txt"
+    if not summary.is_file():
+        raise SystemExit(f"Missing existing linear-HPROM run: {summary}")
+
+log_path = root / "logs/campaign_driver.log"
+if not log_path.is_file():
+    raise SystemExit(f"Missing campaign log needed to verify the linear-HPROM thread count: {log_path}")
+log = log_path.read_text(encoding="utf-8", errors="replace")
+thread_recorded = (
+    re.search(r"\[euclidean-hprom-prepare\] threads:\s+24\b", log)
+    or re.search(r"linear online threads:\s+24\b", log)
+)
+if not thread_recorded:
+    raise SystemExit("The campaign log does not certify a 24-thread linear-HPROM run.")
+print("Existing baselines verified: HDM=24 threads; linear HPROM=24 threads.")
+PY
+}
+retime() {
+  # The baselines use the full allocation. Small learned online solves are
+  # single-threaded to avoid nested BLAS/PyTorch overhead.
+  local baseline_threads=24 learned_threads=1
+  echo "[euclidean-hprom-retime] Reusing basis, checkpoints, and frozen ECM rules."
+  echo "[euclidean-hprom-retime] Reusing HDM and linear HPROM measured with $baseline_threads threads."
+  echo "[euclidean-hprom-retime] Learned HPROMs and direct maps: $learned_threads thread."
+  validate_existing_baselines
+  FORCE=1 ONLINE_THREADS="$learned_threads" \
+    bash Results_Paper/scripts/run_euclidean_hprom_main_online.sh reporting all
+  CASE2_B3_ONLINE_THREADS="$learned_threads" \
+    bash Results_Paper/scripts/run_euclidean_hprom_case2_b3.sh reporting
+  FORCE_TIMING=1 DIRECT_TIMING_THREADS="$learned_threads" \
+    bash Results_Paper/scripts/benchmark_euclidean_hprom.sh direct
+  write_timing_protocol \
+    "$baseline_threads" "$baseline_threads" "$learned_threads" \
+    "$learned_threads" "$learned_threads"
+  summary
+}
 
 case "$STAGE" in
   check) check ;;
@@ -75,6 +187,7 @@ case "$STAGE" in
   b3) b3 ;;
   online) online ;;
   timing) timing ;;
+  retime) retime ;;
   summary) summary ;;
   all)
     check
@@ -84,6 +197,9 @@ case "$STAGE" in
     b3
     online
     timing
+    write_timing_protocol \
+      "$HDM_TIMING_THREADS" "$LINEAR_REPORT_THREADS" "$ONLINE_THREADS" \
+      "$CASE2_B3_ONLINE_THREADS" "$DIRECT_TIMING_THREADS"
     summary
     ;;
 esac

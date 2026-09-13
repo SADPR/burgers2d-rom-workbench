@@ -13,7 +13,7 @@ def write_kv(path, values):
 
 def test_complete_eight_method_summary(tmp_path, monkeypatch):
     root = tmp_path / "campaign"
-    direct_lines = []
+    direct_lines = ["numerical_threads: 1"]
     for point, (label, mu1, mu2) in enumerate(summary.POINTS):
         tag = f"mu1_{mu1:.3f}_mu2_{mu2:.4f}"
         teacher = np.full((3, 4), point + 1.0)
@@ -68,7 +68,17 @@ def test_complete_eight_method_summary(tmp_path, monkeypatch):
     (timing / "direct_inference_repeat10_summary.txt").write_text("\n".join(direct_lines) + "\n")
     hdm = timing / "hdm"
     hdm.mkdir()
-    (hdm / "hdm_timing.json").write_text(json.dumps({"mean_in_domain_seconds": 100.0}))
+    (hdm / "hdm_timing.json").write_text(json.dumps({
+        "mean_in_domain_seconds": 100.0,
+        "threads": 24,
+    }))
+    (timing / "online_thread_protocol.json").write_text(json.dumps({
+        "hdm_threads": 24,
+        "linear_hprom_threads": 24,
+        "learned_intrusive_online_threads": 1,
+        "case2_b3_online_threads": 1,
+        "direct_inference_threads": 1,
+    }))
 
     monkeypatch.setattr(sys, "argv", ["summary", "--campaign-root", str(root)])
     summary.main()
@@ -80,3 +90,4 @@ def test_complete_eight_method_summary(tmp_path, monkeypatch):
     ]
     assert float(rows[0]["speedup_vs_hdm"]) == 25.0
     assert float(rows[6]["speedup_vs_hdm"]) == 10000.0
+    assert [int(row["online_threads"]) for row in rows] == [24, 1, 1, 1, 1, 1, 1, 1]
