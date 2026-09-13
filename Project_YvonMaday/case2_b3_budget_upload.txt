@@ -1,0 +1,11 @@
+burgers/case2_hyperreduction.py
+burgers/case2_residual_correction.py
+Project_YvonMaday/run_case2_hyperreduction.py
+Project_YvonMaday/run_case2_local_corrections.py
+Project_YvonMaday/study_case2_b3_cubature_budget.py
+Project_YvonMaday/benchmark_case2_b3_selected_rule.py
+Project_YvonMaday/run_case2_b3_selected_rule_benchmark.sh
+Project_YvonMaday/B3_CUBATURE_BUDGET.md
+Project_YvonMaday/Results_Paper/euclidean_b3_budget_local/protocol.json
+Project_YvonMaday/Results_Paper/euclidean_b3_budget_local/selection.json
+Project_YvonMaday/Results_Paper/euclidean_b3_budget_local/draws2048/weights.npy

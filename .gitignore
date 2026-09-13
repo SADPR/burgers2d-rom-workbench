@@ -85,3 +85,6 @@ Project_YvonMaday/Results_Paper/euclidean_hprom_main/
 
 # Local and Sherlock artifacts from the paired B3 predictor-reuse benchmark.
 Project_YvonMaday/Results_Paper/euclidean_b3_reuse_*/
+
+# Local study outputs and Sherlock comparisons for B3 cubature budgets.
+Project_YvonMaday/Results_Paper/euclidean_b3_budget_*/
