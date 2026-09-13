@@ -1,0 +1,66 @@
+{
+  "selected_draws": 2048,
+  "smaller_rule_accepted": true,
+  "uses_reporting_points": false,
+  "thresholds": {
+    "min_gram": 0.8,
+    "max_gram": 1.2,
+    "max_gradient_error": 0.05,
+    "max_linearized_ratio": 1.05,
+    "max_validation_error_ratio": 1.05
+  },
+  "candidates": [
+    {
+      "draws": 3072,
+      "candidates": 2987,
+      "sampled_cells": 2472,
+      "stencil_cells": 7061,
+      "objective": 0.010687498367504291,
+      "optimizer_success": false,
+      "optimizer_message": "STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT",
+      "optimizer_iterations": 1500,
+      "projected_gradient_inf": 2.0535897186704814e-05,
+      "fit_seconds": 57.40955154038966,
+      "weights_sha256": "8fb1aa94b3a09054bb50c4a445cb3dc3771bb586c3da203afc4784564df01901",
+      "min_gram": 0.9525640956139659,
+      "max_gram": 1.0326289374493527,
+      "max_gradient_error": 0.008738243481891136,
+      "max_linearized_ratio": 1.004897478982066,
+      "validation_error_ratios": [
+        1.0240621788790891,
+        0.996776554042582
+      ],
+      "validation_coefficient_errors": [
+        0.2512642690336456,
+        0.3112508805960323
+      ],
+      "accepted": true
+    },
+    {
+      "draws": 2048,
+      "candidates": 2007,
+      "sampled_cells": 1506,
+      "stencil_cells": 4385,
+      "objective": 0.08316211524537577,
+      "optimizer_success": false,
+      "optimizer_message": "STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT",
+      "optimizer_iterations": 1500,
+      "projected_gradient_inf": 4.092842929422914e-05,
+      "fit_seconds": 37.58250343427062,
+      "weights_sha256": "599c85a3aa270986a5faa2a573fead1662900284d8a0cb07e04924d80afe466d",
+      "min_gram": 0.8446304712255428,
+      "max_gram": 1.0851264108558873,
+      "max_gradient_error": 0.020804947685996486,
+      "max_linearized_ratio": 1.0061329838428406,
+      "validation_error_ratios": [
+        1.0474163837130537,
+        1.032686310836164
+      ],
+      "validation_coefficient_errors": [
+        0.25699446523412556,
+        0.32246396880387773
+      ],
+      "accepted": true
+    }
+  ]
+}
