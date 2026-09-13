@@ -57,14 +57,19 @@ def residual_krylov_space(jacobian, primary, secondary, residual, rank):
 
 
 def solve_affine_step(offset, tangent, initial, residual, jacobian,
-                      max_its=20, min_delta=1e-2, relnorm_cutoff=1e-5):
-    """Original Case-2 Gauss-Newton stopping rule on a frozen affine space."""
+                      max_its=20, min_delta=1e-2, relnorm_cutoff=1e-5,
+                      initial_evaluation=None):
+    """Original stopping rule, optionally reusing (state, residual, Jacobian).
+
+    The supplied evaluation must belong to offset + tangent @ initial.
+    It is valid only for the first iteration; later Jacobians remain fresh.
+    """
     z = initial.copy()
-    state = offset + tangent @ z
+    state = offset + tangent @ z if initial_evaluation is None else initial_evaluation[0].copy()
     previous_norm = None
     first_norm = None
     for iteration in range(max_its):
-        f = residual(state)
+        f = initial_evaluation[1] if iteration == 0 and initial_evaluation is not None else residual(state)
         norm = np.linalg.norm(f)
         if not np.isfinite(norm):
             raise FloatingPointError("Non-finite residual")
@@ -76,7 +81,8 @@ def solve_affine_step(offset, tangent, initial, residual, jacobian,
             if abs(previous_norm - norm) / (previous_norm + 1e-30) < min_delta:
                 break
         previous_norm = norm
-        update = np.linalg.lstsq(jacobian(state) @ tangent, -f, rcond=None)[0]
+        j = initial_evaluation[2] if iteration == 0 and initial_evaluation is not None else jacobian(state)
+        update = np.linalg.lstsq(j @ tangent, -f, rcond=None)[0]
         z += update
         state = offset + tangent @ z
     return z, state, iteration + 1, float(np.linalg.norm(residual(state)))

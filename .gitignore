@@ -82,3 +82,6 @@ Project_YvonMaday/Results_Paper/euclidean_case2_hyperreduction/
 
 # Resumable Euclidean HPROM campaign checkpoints, rules, runs, and timings.
 Project_YvonMaday/Results_Paper/euclidean_hprom_main/
+
+# Local and Sherlock artifacts from the paired B3 predictor-reuse benchmark.
+Project_YvonMaday/Results_Paper/euclidean_b3_reuse_*/

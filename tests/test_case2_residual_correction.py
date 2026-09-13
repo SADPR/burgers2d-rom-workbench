@@ -53,6 +53,35 @@ def test_affine_step_recovers_linear_least_squares():
     np.testing.assert_allclose(z, np.linalg.lstsq(j @ vp, -f, rcond=None)[0], atol=1e-12)
 
 
+@pytest.mark.parametrize("max_its", [1, 20])
+def test_cached_predictor_saves_one_evaluation_and_keeps_later_jacobians_fresh(max_its):
+    j, vp, _, f = problem()
+    initial = np.array([.1, -.2, .3])
+    state = vp @ initial
+    calls = {"residual": 0, "jacobian": 0}
+
+    def residual(w):
+        calls["residual"] += 1
+        return j @ w + .01 * w**2 + f
+
+    def jacobian(w):
+        calls["jacobian"] += 1
+        return j + np.diag(.02 * w)
+
+    cached = (state, residual(state), jacobian(state))
+    calls.update(residual=0, jacobian=0)
+    old = solve_affine_step(np.zeros(32), vp, initial, residual, jacobian, max_its=max_its)
+    original_calls = calls.copy()
+    calls.update(residual=0, jacobian=0)
+    new = solve_affine_step(np.zeros(32), vp, initial, residual, jacobian,
+                            max_its=max_its, initial_evaluation=cached)
+    np.testing.assert_array_equal(new[0], old[0])
+    np.testing.assert_array_equal(new[1], old[1])
+    assert new[2:] == old[2:]
+    assert calls["residual"] == original_calls["residual"] - 1
+    assert calls["jacobian"] == original_calls["jacobian"] - 1
+
+
 def test_rank_zero_matches_production_case2():
     import torch
     from burgers.core import make_2D_grid, get_ops, inviscid_burgers_res2D, inviscid_burgers_exact_jac2D

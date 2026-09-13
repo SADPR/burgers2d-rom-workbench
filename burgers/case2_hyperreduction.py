@@ -5,6 +5,7 @@ construction of the Krylov space. Only stencil states are reconstructed.
 """
 
 import numpy as np
+from time import perf_counter
 from scipy import sparse
 
 from burgers.core import (
@@ -60,21 +61,40 @@ class SampledBurgers:
 
 
 def sampled_affine_step(mesh, primary, secondary, offset, previous, mu,
-                        previous_primary, rank, **solver_options):
+                        previous_primary, rank, *, reuse_predictor=False,
+                        profile=None, **solver_options):
     """Freeze B_r at the predictor, then solve the single weighted objective.
 
     primary/secondary are restrictions of the full Euclidean POD basis. They
     must NOT be reorthonormalized on the stencil: that would change the meaning
     of the coefficients and the Euclidean secondary-coordinate Krylov metric.
     """
+    start = perf_counter() if profile is not None else 0.
     residual, jacobian = mesh.step_operators(previous, mu)
     candidate = offset + primary @ previous_primary
-    b = residual_krylov_space(jacobian(candidate), primary, secondary,
-                             residual(candidate), rank)
+    predictor_j = jacobian(candidate)
+    predictor_f = residual(candidate)
+    after_predictor = perf_counter() if profile is not None else 0.
+    b = residual_krylov_space(predictor_j, primary, secondary, predictor_f, rank)
+    after_krylov = perf_counter() if profile is not None else 0.
     tangent = np.asfortranarray(np.column_stack((primary, secondary @ b)))
     initial = np.r_[previous_primary, np.zeros(b.shape[1])]
+    # The secondary increment starts at zero: candidate is exactly the same
+    # mathematical state as offset + tangent @ initial, up to summation order.
+    if reuse_predictor:
+        solver_options["initial_evaluation"] = (candidate, predictor_f, predictor_j)
+    after_tangent = perf_counter() if profile is not None else 0.
     z, state, iterations, norm = solve_affine_step(
         offset, tangent, initial, residual, jacobian, **solver_options)
+    if profile is not None:
+        end = perf_counter()
+        for name, elapsed in (
+            ("predictor_seconds", after_predictor - start),
+            ("krylov_seconds", after_krylov - after_predictor),
+            ("tangent_seconds", after_tangent - after_krylov),
+            ("solve_seconds", end - after_tangent),
+        ):
+            profile[name] = profile.get(name, 0.) + elapsed
     return z, b, state, iterations, norm
 
 

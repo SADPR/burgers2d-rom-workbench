@@ -71,6 +71,27 @@ def test_weighted_krylov_recovers_full_weighted_linearized_solve():
     np.testing.assert_allclose(reduced, direct, atol=1e-11)
 
 
+@pytest.mark.parametrize("rank", [0, 3, 7])
+def test_sampled_predictor_reuse_preserves_weighted_solution(rank):
+    rng, gx, gy, v, state, previous = problem()
+    weights = rng.uniform(.1, 10, 36)
+    weights[[2, 4, 6, 11]] = 0
+    mesh = SampledBurgers(gx, gy, .02, weights)
+    vp, vs = v[mesh.state_indices, :3], v[mesh.state_indices, 3:]
+    primary = np.array([.1, -.2, .3])
+    offset = state[mesh.state_indices] - vp @ primary
+    args = (mesh, vp, vs, offset, previous[mesh.state_indices], [1.5, .02], primary, rank)
+    old = sampled_affine_step(*args)
+    profile = {}
+    new = sampled_affine_step(*args, reuse_predictor=True, profile=profile)
+    for actual, expected in zip(new[:3], old[:3]):
+        np.testing.assert_allclose(actual, expected, rtol=1e-10, atol=1e-11)
+    assert new[3] == old[3]
+    assert new[4] == pytest.approx(old[4], rel=1e-12)
+    assert set(profile) == {"predictor_seconds", "krylov_seconds", "tangent_seconds", "solve_seconds"}
+    assert all(value >= 0 for value in profile.values())
+
+
 def test_cell_moments_preserve_gradient_gram_and_energy():
     rng, _, _, v, state, _ = problem()
     transform = rng.normal(size=(10, 4))

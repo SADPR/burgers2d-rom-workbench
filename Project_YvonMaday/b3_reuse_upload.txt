@@ -1,0 +1,7 @@
+burgers/case2_hyperreduction.py
+burgers/case2_residual_correction.py
+Project_YvonMaday/run_case2_hyperreduction.py
+Project_YvonMaday/benchmark_case2_b3_reuse.py
+Project_YvonMaday/run_case2_b3_reuse_benchmark.sh
+Project_YvonMaday/B3_PREDICTOR_REUSE.md
+Project_YvonMaday/euclidean_hprom_upload.sha256

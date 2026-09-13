@@ -212,7 +212,8 @@ def train(args, model, v, uref, fingerprints):
     print(json.dumps(summary, indent=2), flush=True)
 
 
-def hyper_rollout(model, v, uref, mu, mesh, rank, steps):
+def hyper_rollout(model, v, uref, mu, mesh, rank, steps, *,
+                  reuse_predictor=False, profile=None):
     idx = mesh.state_indices
     vp, vs = np.asfortranarray(v[idx, :10]), np.asfortranarray(v[idx, 10:])
     # Fixed deployment data; the full-dimensional operations stop here.
@@ -228,7 +229,8 @@ def hyper_rollout(model, v, uref, mu, mesh, rank, steps):
     iterations, ranks, norms = [], [], []
     for k in range(1, steps + 1):
         z, b, current, count, norm = sampled_affine_step(
-            mesh, vp, vs, offsets[:, k], current, mu, primary, rank)
+            mesh, vp, vs, offsets[:, k], current, mu, primary, rank,
+            reuse_predictor=reuse_predictor, profile=profile)
         primary = z[:10]
         q[:10, k] = primary
         q[10:, k] += b @ z[10:]
