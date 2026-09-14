@@ -12,5 +12,7 @@ export EUCLIDEAN_HPROM_ROOT="$PROJECT_DIR/Results_Paper/euclidean_hprom_enrichme
 export BASELINE_EUCLIDEAN_HPROM_ROOT="$PROJECT_DIR/Results_Paper/euclidean_hprom_main"
 export CASE2_B3_RULE_THREADS="${CASE2_B3_RULE_THREADS:-24}"
 export CASE2_B3_ONLINE_THREADS="${CASE2_B3_ONLINE_THREADS:-1}"
+export CASE2_B3_DRAWS="${CASE2_B3_DRAWS:-2048}"
+export CASE2_B3_REUSE_PREDICTOR="${CASE2_B3_REUSE_PREDICTOR:-1}"
 
 bash "$SCRIPT_DIR/run_euclidean_hprom_case2_b3.sh" all

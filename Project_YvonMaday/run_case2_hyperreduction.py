@@ -281,11 +281,14 @@ def evaluate(args, model, v, uref, fingerprints):
                           implementation={str(p.relative_to(ROOT)): sha256(p) for p in (
                               Path(__file__), ROOT / "burgers/case2_hyperreduction.py",
                               ROOT / "burgers/case2_residual_correction.py")})
+            if args.reuse_predictor and mesh is not None:
+                config["reuse_predictor"] = True
             target = folder / "summary.json"
             if skip_existing_run(target, config, args.overwrite_existing):
                 continue
             if mesh:
-                q, stats = hyper_rollout(model, v, uref, mu, mesh, int(kind[-1]), args.steps)
+                q, stats = hyper_rollout(model, v, uref, mu, mesh, int(kind[-1]), args.steps,
+                                         reuse_predictor=args.reuse_predictor)
                 stats.update(sampled_cells=len(mesh.samples), stencil_cells=len(mesh.augmented))
             else:
                 q, stats = rollout(model, v, uref, mu, "baseline" if kind == "prom0" else "krylov3",
@@ -308,6 +311,10 @@ def main():
     parser.add_argument("--steps", type=int, default=500)
     parser.add_argument("--methods", nargs="+", choices=("hprom0", "hprom3", "prom0", "prom3"), default=["hprom0", "hprom3"])
     parser.add_argument("--point-indices", type=int, nargs="+")
+    parser.add_argument(
+        "--reuse-predictor", action="store_true",
+        help="Reuse the initial sampled operators in the first correction iteration",
+    )
     parser.add_argument(
         "--overwrite-existing", action="store_true",
         help="Explicitly replace completed evaluation runs whose configuration changed",
