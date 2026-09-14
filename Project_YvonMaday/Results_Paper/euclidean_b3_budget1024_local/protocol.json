@@ -1,0 +1,43 @@
+{
+  "budgets": [
+    1024
+  ],
+  "parent_draws": 4096,
+  "seed": 418,
+  "thresholds": {
+    "min_gram": 0.8,
+    "max_gram": 1.2,
+    "max_gradient_error": 0.05,
+    "max_linearized_ratio": 1.05,
+    "max_validation_error_ratio": 1.05
+  },
+  "maxiter": 1500,
+  "rank": 3,
+  "reuse_predictor": true,
+  "inputs": {
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage3/models/master_ann_mu_t_to_qtot_ntot151_best.pt": "3e25d26aca9da2f0e71cfb00019393023194f82ed3603187d120c1c06998ab10",
+    "Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/basis.npy": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+    "Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/meta.json": "6d1b19098d09ba9fd42b1e5f0f2a22d0c929dca1df3ce405b1b30c271e016098"
+  },
+  "training_sources": {
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu/mu1_4.250_mu2_0.0150": "471b5130f71f545476344e09afb3feff8167bff9ee8032a652391c00a10f6858",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu/mu1_4.250_mu2_0.0225": "2b28a40b235e08aa48683a24a8679efa78f77880f38dea94eeab659946d0704c",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu/mu1_4.250_mu2_0.0300": "b760131d123fdc1854cd3230b5dfca027777ff9442188e0e53cdbebac1cdf583",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu/mu1_4.875_mu2_0.0150": "801c0f7134af7c5b6489dc082a8f1f0fee798239450fbe1e4a6561c3d992b353",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu/mu1_4.875_mu2_0.0225": "4357c221dd1d8df81a5c8107ca8eb6a92067b7e172eae0145148789c7e98f1ab",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu/mu1_4.875_mu2_0.0300": "8abbc10ed274991bec8c256179731e49f7cb756d746b9f291eb88ba4c5974322",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu/mu1_5.500_mu2_0.0150": "bcd332b6d8ec4d64e531895f8c7aad4f0e85062fc382e16319a7cedbe7fa848a",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu/mu1_5.500_mu2_0.0225": "d1623c0130c8b19af5253d9f148a38df6042887660459c605c2e4944ce05ae38",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/per_mu/mu1_5.500_mu2_0.0300": "a2c22c495d4e80b161e323e24a387ed7b7af22550e60d9ff80e6f89edb21f50e"
+  },
+  "matrix_sha256": "0960b251b011e2f7e1b22fd853bf1aa1458094062a296e1bb0f7c81be31ae5cc",
+  "target_sha256": "a1e79cd8225a26420542e263a45a7cbd264f42d1b969a5ba19adbcad27536c72",
+  "parent_weights_sha256": "34d3ae0749573de748b97a73780b19ee0e64744d1e2a7d4866dc05ed5770f78a",
+  "validation_sources": {
+    "/home/sares/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151_validation2/per_mu/mu1_4.562_mu2_0.0262/qN.npy": "0d597fde3efaccaf79b2c9ec8d82a4c345f6d1861a4fe8ce7cd6412b09b622e5",
+    "/home/sares/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151_validation2/per_mu/mu1_5.188_mu2_0.0187/qN.npy": "f25e7f1f854a65f4d9807241494c9b058ee92fa449a61f218cdde7cb2397af43"
+  },
+  "selection": "fewest retained cells among rules passing all validation checks",
+  "reporting_used_for_selection": false
+}

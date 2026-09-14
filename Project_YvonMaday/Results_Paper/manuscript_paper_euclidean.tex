@@ -18,7 +18,7 @@
 \newcommand{\z}{\mathbf z}
 \newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
 
-\title{\vspace{-1.5em}Learned closures and nonlinear manifolds for parametric projection-based reduced models}
+\title{\vspace{-1.5em}Residual-adaptive correction of parameter--time closures for hyperreduced projection-based models}
 \author{S. Ares de Parga, H. Ballout, Y. Maday, H. Hassan}
 \date{\today}
 
@@ -30,35 +30,31 @@
 We compare learned closures and nonlinear manifolds for parametric
 projection-based reduced-order models of a nonlinear time-dependent system.
 All models use a common Euclidean proper-orthogonal-decomposition (POD)
-coordinate system and are trained from full-residual linear
-projection-based reduced-order model (PROM) trajectories.  The comparison
-includes state-conditioned, parameter--time-conditioned, and hybrid
-\textsc{PROM-ANN} closures; an intrusive \textsc{PROM-POD-AE} decoder
-manifold; a non-intrusive \textsc{POD-NN-ROM} direct coefficient map; and a
-non-intrusive latent \textsc{POD-DL-ROM}.
+coordinate system.  The learned families comprise \textsc{PROM-ANN} closures,
+an intrusive \textsc{PROM-POD-AE} decoder manifold, and the non-intrusive
+\textsc{POD-NN-ROM} and \textsc{POD-DL-ROM} maps.  Their main numerical
+comparison uses hyperreduced PROMs (HPROMs), with linear-HPROM-generated
+training targets and model-specific positive cubature rules.
 
-The numerical study uses a parametric two-dimensional inviscid Burgers
-benchmark.  The intrusive models all minimize the same time-discrete residual,
-but over different learned trial maps.  A shared parameter--time map gives a
-controlled sweep from a non-intrusive POD--NN--ROM endpoint to the
-full-coordinate linear PROM.  A complementary tail-perturbation diagnostic
-quantifies how a prescribed Case--2 secondary-coordinate error transfers to
-the residual-solved primary coordinates.  We then augment the prescribed
-tail with a small residual-adaptive correction space.  Its directions follow
-from eliminating the primary increment in the linearized LSPG problem and
-are held fixed during each nonlinear time-step solve.  With three correction
-directions and the unchanged baseline network, the mean in-domain state error
-decreases from $1.617\%$ to $0.447\%$ in a common-initialization comparison.
-A Case--2 control that instead frees the first 13 POD coordinates gives
-$1.513\%$, showing that the recovery is associated with the selected
-secondary patterns rather than only with three additional online unknowns.
-A nested coefficient-data study
-with 9, $9+8$, $9+12$, and $9+18$ PROM trajectories separates in-domain
-    improvement from extrapolation behaviour.  We also state the empirical
-    cubature method (ECM) formulation needed to equip these trial maps with
-    hyperreduction.  The numerical evidence in this draft deliberately isolates
-    the full-residual PROM setting so that correction-space effects are not
-    conflated with cubature effects.
+A parameter--time closure prescribes secondary coordinates without responding
+to the current residual.  We augment that tail with a small residual-adaptive
+space obtained by eliminating the primary increment in the linearized
+least-squares Petrov--Galerkin problem.  The correction directions are rebuilt
+at each time step and frozen during its nonlinear solve.  In the hyperreduced
+realization, both their construction and the solve use the same weighted
+sampled residual.  On a two-dimensional inviscid Burgers benchmark, three
+correction directions give a mean in-domain state error of $0.455\%$ with
+nine training trajectories, near the $0.441\%$ linear-HPROM reference;
+the conventional parameter--time closure gives $1.620\%$.  A separate
+common-initialization, equal-dimensional full-residual control supports the
+role of direction selection.  Nested HPROM data sets with $9$, $9+8$,
+$9+12$, and $9+18$ trajectories show that enrichment improves in-domain
+accuracy but need not improve extrapolation monotonically.  The corrected
+model remains near the linear reference at every tested data budget.
+Validation-based reduction of its cubature support from 3532 to 1506 cells
+approximately halves its measured online time.  These observations establish
+a practical recovery mechanism for this benchmark, not a general state-error
+or extrapolation guarantee.
 \end{abstract}
 
 \vspace{-0.8em}
@@ -83,22 +79,28 @@ residual online.  Likewise, the HPROM formulation below is a sampled-residual
 extension of PROM, not a second name for the same computation.
 
 The reported campaign uses a standard Euclidean POD basis and a common
-full-residual linear PROM teacher.  This permits a direct comparison between
+linear HPROM teacher.  This permits a direct comparison between
 a parameter--time-conditioned closure, introduced below as Case~2, which
 prescribes a learned secondary-coordinate tail but solves a primary
 coordinate block, and POD--NN--ROM, which predicts the full coordinate
-vector from the same parameter--time map.  Hyperreduction is developed
-explicitly because an ECM rule must be tied to the trial manifold and its LSPG
-tangent; HPROM numerical results are deliberately deferred until the
-corresponding campaign is available.
+vector from the same parameter--time map.  Model-specific ECM rules equip
+the conventional intrusive trial maps with hyperreduction.  For the adaptive
+correction, a positive moment-fitted rule additionally represents secondary
+directions that are selected online rather than prescribed offline.  These
+rules approximate the same governing residual but define different weighted
+sampled objectives; they are not assumed to be identical optimality problems.
 
 Two responses to limited regression accuracy are examined separately.  The
 first adds a small number of residual-solved secondary correction amplitudes
 to Case~2, using the existing trained map.  The second enriches the
-linear-PROM coefficient data and retrains all learned families.  The former
+linear-HPROM coefficient data and retrains all learned families.  The former
 spends additional work online; the latter spends additional work offline.
 Their separate assessment identifies what can be recovered from the
 governing equations before generating further training trajectories.
+Full-residual PROM experiments are retained as diagnostic controls in the
+appendices.  They isolate correction rank and equal-dimensional trial-space
+selection before introducing cubature.  The main results instead assess
+HPROM accuracy, hyperreduction, online work, and coefficient-data enrichment.
 
 \section{Projection Framework}
 \label{sec:projection-framework}
@@ -382,8 +384,9 @@ from POD--DL--ROM, which is non-intrusive.
 
 \begin{table}[H]
 \centering
-\caption{Trial decoders and tangent bases of the intrusive models.  Every row
-minimizes the same time-discrete residual over its displayed online variable.}
+\caption{Trial decoders and tangent bases of the intrusive models.  PROMs
+minimize the full time-discrete residual; their HPROM counterparts use
+map-specific weighted sampled residuals with these same decoders and tangents.}
 \label{tab:trial-maps}
 \small
 \setlength{\tabcolsep}{4pt}
@@ -439,8 +442,9 @@ Stacking these vectors produces $\mathbf C_c$ and
 $\mathbf b_c=\mathbf C_c\mathbf1$ as in \eqref{eq:linear-ecm}; a positive
 ECM rule is then computed for each map.  The trained closure or decoder, its
 tangent, and the parameter--time sample set are therefore part of a rule.  A
-linear-HPROM rule, or one built for a different nonlinear map, cannot be
-reused \cite{hernandez2017dimensional,hernandez2020multiscale,de2023hyper}.
+linear-HPROM rule, or one built for a different nonlinear map, is not assumed
+valid without an additional consistency assessment
+\cite{hernandez2017dimensional,hernandez2020multiscale,de2023hyper}.
 
 \subsection{Non-intrusive reference models}
 POD--NN--ROM is a direct map
@@ -757,13 +761,146 @@ involving all $\bar n$ secondary modes.  The final nonlinear solves use
 $\mathbf J\mathbf T_r$, whose width is only $n+r_m$, and need no
 network derivative with respect to the primary coordinates.  Both the
 direction-construction cost and the nonlinear solve must be included in
-online timings.  The numerical evidence reported in the present study uses
-the full residual; its HPROM realization and cubature effects are assessed
-separately.
+online timings.  The next subsection gives a weighted sampled realization
+of this construction.  It reduces the number of residual rows and state
+stencil entries, but still acts on all secondary coordinate directions when
+building the correction space.
 
-\section{Benchmark and PROM Protocol}
+\subsection{Weighted sampled realization}
+\label{sec:adaptive-sampling}
+Let a fixed positive cubature rule select residual rows and scale them by
+square roots of its weights.  Denote this operation by
+$\mathbf S_\xi\in\mathbb R^{N_\xi\times N}$ and set
+$\mathbf D_\xi=\mathbf S_\xi^T\mathbf S_\xi$.  The HPROM time-step
+objective is
+\begin{equation}
+\min_{\q,\mathbf a}
+\norm{\mathbf S_\xi\mathbf r^{m+1}
+(\boldsymbol\phi_r^{m+1}(\q,\mathbf a;\mub);\mub)}_2^2.
+\label{eq:adaptive-sampled-objective}
+\end{equation}
+Each selected Burgers cell contributes both field residuals, so
+$N_\xi=2|\widetilde{\mathcal E}_\xi|$.  Computing these residual rows
+requires state values on their finite-volume stencil, not the complete
+mesh.  The rule remains fixed throughout a trajectory.
+
+The elimination must now be performed in the \emph{weighted sampled}
+residual space.  At the predictor \eqref{eq:adaptive-predictor}, define
+\begin{equation}
+\mathbf r_{\xi,*}=\mathbf S_\xi\mathbf r_*,\qquad
+\mathbf J_{\xi,*}=\mathbf S_\xi\mathbf J_*,\qquad
+\mathbf A_\xi=\mathbf J_{\xi,*}\mathbf V.
+\label{eq:adaptive-weighted-operators}
+\end{equation}
+If $\mathbf A_\xi$ has full column rank, take its thin QR factorization
+$\mathbf A_\xi=\mathbf Q_\xi\mathbf R_\xi$ and form
+\begin{equation}
+\begin{aligned}
+\mathbf P_\xi&=\mathbf I_{N_\xi}-\mathbf Q_\xi\mathbf Q_\xi^T,\\
+\mathbf C_\xi&=\mathbf P_\xi\mathbf J_{\xi,*}\overline{\mathbf V},\\
+\mathbf H_\xi&=\mathbf C_\xi^T\mathbf C_\xi,\qquad
+\mathbf g_\xi=\mathbf C_\xi^T\mathbf P_\xi\mathbf r_{\xi,*}.
+\end{aligned}
+\label{eq:adaptive-sampled-schur}
+\end{equation}
+The implementation checks primary rank and rejects a rank-deficient action
+rather than adding arbitrary QR directions.  The reported computations
+pass that check and attain the requested correction ranks.
+
+The secondary patterns are an orthonormal basis of
+\begin{equation}
+\mathcal K_r(\mathbf H_\xi,\mathbf g_\xi)
+=\operatorname{span}\{\mathbf g_\xi,\mathbf H_\xi\mathbf g_\xi,
+\ldots,\mathbf H_\xi^{r-1}\mathbf g_\xi\},\qquad
+\mathbf B_{r,\xi}^T\mathbf B_{r,\xi}=\mathbf I_{r_m}.
+\label{eq:adaptive-sampled-krylov}
+\end{equation}
+Here $r_m\leq r$ allows numerical breakdown.  No dense secondary Hessian is
+required: the implementation applies the sampled Jacobian, its adjoint, and
+$\mathbf P_\xi$ to form the Krylov actions.  Once the basis is frozen, the
+Gauss--Newton increment solves
+\begin{equation}
+\min_{\Delta\mathbf x\in\mathbb R^{n+r_m}}
+\norm{\mathbf S_\xi\mathbf r+
+\mathbf S_\xi\mathbf J
+[\mathbf V\quad\overline{\mathbf V}\mathbf B_{r,\xi}]
+\Delta\mathbf x}_2^2,
+\qquad \mathbf x=\begin{bmatrix}\q\\\mathbf a\end{bmatrix}.
+\label{eq:adaptive-sampled-gn}
+\end{equation}
+Thus both direction selection and the nonlinear correction solve the same
+sampled problem.  Constructing directions from unweighted residual rows,
+then inserting them into a weighted solve, would be a different method.
+Likewise, a full-residual $\mathbf B_r$ is not simply reused as
+$\mathbf B_{r,\xi}$.
+
+Global Euclidean orthogonality of the trial basis still gives
+\eqref{eq:adaptive-tangent}; restricting its rows does not give an identity
+weighted Gram matrix.  The fitted rule must represent this geometry and the
+residual actions sufficiently well.  With unit weights and every cell
+retained, \eqref{eq:adaptive-sampled-schur} reduces to the full-residual
+construction.  For a reduced rule, the nested linearized residual bound
+holds for the \emph{sampled} objective, not automatically for the full
+residual or HDM state error.
+
+\subsection{Positive moment fitting for an adaptive trial space}
+\label{sec:adaptive-positive-rule}
+An ordinary closure ECM rule is fitted to a prescribed tangent.  Here the
+secondary tangent changes with the online residual, so fitting only the ten
+primary projected contributions would leave the new actions uncontrolled.
+We therefore use an additional positive moment fit for the adaptive model.
+At an offline anchor $s$, set
+$\mathbf Z_s=\mathbf J_s\mathbf V_{\mathrm{tot}}$ and
+$\mathbf Y_s=\mathbf J_s[\mathbf V\quad\overline{\mathbf V}\mathbf B_{3,s}]$,
+with the full-residual correction directions at that anchor.
+For cell $e$, let $\mathbf Z_{s,e}$, $\mathbf Y_{s,e}$, and
+$\mathbf r_{s,e}$ contain its two field rows.  The dynamic cell moments are
+\begin{equation}
+\mathbf h_{s,e}=\left[
+\mathbf Z_{s,e}^T\mathbf r_{s,e};\quad
+\operatorname{svec}(\mathbf Y_{s,e}^T\mathbf Y_{s,e});\quad
+\norm{\mathbf r_{s,e}}_2^2\right].
+\label{eq:adaptive-cell-moments}
+\end{equation}
+The operator $\operatorname{svec}$ stores the upper triangle, multiplying
+its off-diagonal entries by $\sqrt{2}$, so its Euclidean norm equals the
+Frobenius norm of the symmetric matrix.  Summing these cell contributions
+recovers the complete coordinate gradient, the adaptive normal matrix, and
+the residual energy.  A shared mass block additionally fits
+\begin{equation}
+\sum_e\xi_e\mathbf V_{\mathrm{tot},e}^T
+\mathbf V_{\mathrm{tot},e}\approx\mathbf I_{151}.
+\label{eq:adaptive-mass-moment}
+\end{equation}
+This is a cubature consistency condition in the standard Euclidean basis,
+not a change of POD metric.
+
+The implementation first draws a candidate support using
+\begin{equation}
+p_e=0.9\frac{\ell_e}{\sum_j\ell_j}+\frac{0.1}{N_e},\qquad
+\ell_e=\norm{\mathbf V_{\mathrm{tot},e}}_F^2.
+\label{eq:adaptive-support-probability}
+\end{equation}
+Independent draws with replacement give counts $c_e$ and initial weights
+$\xi_e^{(0)}=c_e/(L p_e)$.  The draw count $L$ is neither an SVD tolerance
+nor the number of positive fitted cells.  Duplicate draws produce a smaller
+support.  On that support, nonnegative multipliers $\mathbf x$ are fitted by
+\begin{equation}
+\min_{\mathbf x\geq\mathbf0}
+\frac12\norm{\mathbf A_{\mathrm{mom}}\mathbf x-
+\mathbf b_{\mathrm{mom}}}_2^2,\qquad
+\xi_e=\xi_e^{(0)}x_e.
+\label{eq:adaptive-positive-fit}
+\end{equation}
+The matrix stacks the scaled dynamic and complete mass moments, and the
+target stacks their full-mesh sums.  This convex moment fit is distinct from
+the SVD-compressed ECM selection in Section~\ref{sec:nonlinear-ecm}.
+Its numerical quality is checked on held-out parameters before deployment;
+optimizer termination alone is not taken as proof of cubature accuracy.
+
+\section{Benchmark and HPROM Protocol}
 \label{sec:benchmark}
-\subsection{Burgers problem and discretization}
+\subsection{Burgers problem and fixed Euclidean basis}
 We use the two-dimensional parametric inviscid Burgers benchmark of
 \cite{barnett2023neural},
 \begin{equation}
@@ -778,301 +915,800 @@ where
 \quad\mathbf G(\mathbf U)=\begin{bmatrix}\tfrac12u_xu_y\\\tfrac12u_y^2\end{bmatrix},
 \quad\mathbf S(x;\mub)=\begin{bmatrix}0.02\exp(\mu_2x)\\0\end{bmatrix}.
 \end{equation}
-The domain is $[0,100]^2$, $T_f=25$, and
-$\mathcal D=[4.25,5.50]\times[0.015,0.03]$.  The HDM uses a cell-centered
-finite-volume Godunov discretization on a $250\times250$ grid
-($N=125{,}000$) and $500$ uniform time steps with $\Delta t=0.05$.
+The domain is $[0,100]^2$, $T_f=25$, and the original parameter box is
+$\mathcal D=[4.25,5.50]\times[0.015,0.03]$.
+The HDM uses a cell-centered finite-volume Godunov discretization on a
+$250\times250$ grid: $N_e=62{,}500$ cells and $N=125{,}000$ unknowns.
+Backward Euler uses 500 uniform steps with $\Delta t=0.05$.
+Nine HDM trajectories on the $3\times3$ grid
+$\{4.25,4.875,5.50\}\times\{0.015,0.0225,0.03\}$ define the centered
+Euclidean POD basis.  Its retained 151 modes capture $99.9900\%$ of the
+snapshot energy.  The basis and mean state are fixed in every reported
+campaign; enrichment does not recompute them.
 
-\subsection{Data, validation, and online points}
-Nine HDM trajectories on a $3\times3$ tensor grid define the centered
-snapshot matrix for the Euclidean POD.  We retain $n_{\mathrm{tot}}=151$
-modes, which capture $99.9900\%$ of its energy.  At these same nine parameters
-we solve the full-residual linear PROM.  The resulting PROM-generated
-trajectories, rather than HDM snapshots orthogonally projected after the fact,
-are the learning targets for every model.  This comparison-control choice
-aligns every learned model with the reduced optimality problem used as its
-teacher; it is not the conventional purely non-intrusive workflow, which
-typically uses projected HDM labels.
+\subsection{Training targets, validation, and reporting parameters}
+The main campaigns train on complete trajectories generated by the
+151-coordinate linear HPROM of Section~\ref{sec:projection-framework},
+not on orthogonal projections of HDM snapshots.  Its positive rule is
+constructed once from the baseline data and frozen thereafter.  The same
+linear-HPROM teacher generates baseline and enriched labels for every learned
+family, including the direct non-intrusive maps.  This is an experimental
+control linking their labels to a reduced dynamical solve, not a claim that
+they become intrusive models.
 
-Two complete 151-coordinate linear-PROM trajectories are reserved before
-training,
+Two complete linear-HPROM trajectories are reserved for regression validation,
 \begin{equation}
 \mub^{\mathrm{val},1}=(4.5625,0.02625),\qquad
 \mub^{\mathrm{val},2}=(5.1875,0.01875).
 \label{eq:validation-points}
 \end{equation}
-Because each held-out parameter contains all time samples, this is a
-parameter-generalization test rather than a random time-snapshot split.  The
-four online evaluations are
+Holding out complete parameters rather than randomly selected time samples
+checks parameter generalization of the regression.  These two trajectories
+are never added to the training loss, but are used for checkpoint selection
+and adaptive-rule validation.  They are therefore validation data, not an
+independent test set.  The reporting parameters are
 \begin{equation}
 \begin{aligned}
-\mub^{(v)}&=(4.875,0.0225),&
-\mub^{(1)}&=(4.560,0.0190),\\
-\mub^{(2)}&=(5.190,0.0260),&
-\mub^{(3)}&=(4.000,0.0330).
+\mub^{(v)}&=(4.875,0.0225),&\mub^{(1)}&=(4.560,0.0190),\\
+\mub^{(2)}&=(5.190,0.0260),&\mub^{(3)}&=(4.000,0.0330).
 \end{aligned}
 \label{eq:evaluation-points}
 \end{equation}
-The first three are in-domain and $\mub^{(3)}$ is extrapolatory.  The
-validation locations are neither training nor online evaluation points.
+Verification $\mub^{(v)}$ belongs to the baseline grid and is not an unseen
+training parameter.  The two off-grid reporting parameters are in-domain;
+$\mub^{(3)}$ is outside the original box.  None of the reporting errors
+is used to select adaptive cubature support or weights.  Verification
+nevertheless participates in offline training and moment construction
+through its membership in the nine-point grid.
 
-\subsection{Nested coefficient-data enrichment}
-To isolate data coverage from architecture and online formulation, we use a
-fixed seed--42 Latin-hypercube candidate design over the original parameter
-box and a $25\%$ coordinate-wise margin.  Three deterministic nested subsets
-are retained.  The $9+8$ level contains the baseline grid, four interior
-points, and four margin points.  The $9+12$ level adds two interior and two
-margin points to that set, and the $9+18$ level adds another three of each.
-The complete
-$9+36$ candidate design defines the nested ordering only; no $9+36$ PROM
-coefficient campaign is used in this study.  All online evaluation and
-parameter-validation locations are excluded from the enrichment sets.
-
-The word ``margin'' denotes the union of the left, right, top, and bottom
-strips of the expanded rectangle.  It does not enforce coverage of their
-intersections.  This distinction matters for the upper-left extrapolation
-point $\mub^{(3)}$ and will be revisited with the online results.
+\subsection{Nested enrichment and unchanged regression families}
+A fixed seed--42 Latin-hypercube design supplies nested interior and margin
+locations.  The margin is the union of four strips in a rectangle enlarged
+by $25\%$ of each original side length.  The retained budgets are
+$9$, $9+8$, $9+12$, and $9+18$, with equal counts of added interior and
+margin points.  The larger 36-point candidate design fixes the ordering
+only; a $9+36$ campaign is not part of the reported Euclidean study.
+The largest HPROM data set contains all smaller sets, and the repeated
+trajectories are exact copies, not newly generated labels.  The two
+validation parameters remain unchanged.
 
 \begin{table}[H]
 \centering
-\caption{Nested Euclidean-POD PROM coefficient data.  The same two complete
-linear-PROM trajectories are held out for parameter validation at every
-level.}
+\caption{Nested linear-HPROM coefficient data.  Totals count complete
+trajectories; the two validation trajectories are excluded from training.}
 \label{tab:euclidean-enrichment-dataset}
-\resizebox{0.82\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_enrichment_dataset_summary.tex}}
+\input{tables/euclidean_hprom/datasets.tex}
 \end{table}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.66\textwidth]{Figures/euclidean_prom_only/prom_enrichment_sampling_baseline.png}
-\caption{Baseline Euclidean-POD PROM data layout.  Black circles are the nine
-HDM and linear-PROM training parameters; diamonds are the two held-out
-linear-PROM parameter-validation trajectories; red stars are the four online
-evaluation points.}
+\includegraphics[width=\textwidth]{Figures/euclidean_hprom/sampling.pdf}
+\caption{HPROM training layouts in the order baseline, $9+8$, $9+12$,
+$9+18$.  Black circles mark baseline parameters, coloured points the added
+interior and margin parameters, diamonds the two held-out linear-HPROM
+regression-validation parameters, and stars the four reporting parameters.
+The original parameter box is outlined.  Margin sampling does not guarantee
+corner coverage: the $9+12$ subset adds a location near
+$(3.980,0.03173)$ in the upper-left region close to $\mub^{(3)}$.
+Validation points concern regression and rule auditing, not HDM test data.}
 \label{fig:parameter-space}
 \end{figure}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.66\textwidth]{Figures/euclidean_prom_only/prom_enrichment_sampling_early.png}
-\caption{$9+8$ nested design.  Four interior and four margin locations
-are added to the baseline grid.  The extrapolatory point $\mub^{(3)}$ lies in
-the upper-left corner, whereas the $9+8$ subset samples its left and top
-margins separately.}
-\label{fig:euclidean-enrichment-sampling-early}
-\end{figure}
+The training sets contain 4509, 8517, 10521, and 13527 parameter--time samples,
+including their initial states; validation contains 1002 samples.
+Cases~1--3 retain $n=10$, and the intrusive autoencoder and POD--DL--ROM
+retain $n_z=10$.  Architectures, activations, and nominal optimization
+settings are unchanged across enrichment budgets; each family is retrained
+and its checkpoint selected using the same validation parameters.
+Cases~1--3 and the intrusive autoencoder use coordinate mean-squared error,
+with scaling embedded in their networks.  POD--DL--ROM combines prediction,
+latent consistency, and reconstruction losses with respective weights
+$1$, $0.03$, and $0.01$.  None uses a sensitivity-aware POD metric.
+Table~\ref{tab:training} records the baseline
+regression accuracy and parameter counts.  Its errors refer to each family's
+complete output coordinates: the secondary block for Cases~1 and~3 and the
+complete vector for the master map, autoencoder, and POD--DL--ROM.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.66\textwidth]{Figures/euclidean_prom_only/prom_enrichment_sampling_middle.png}
-\caption{$9+12$ nested design.  Relative to $9+8$, two interior and two margin
-locations are added.  One of the latter, near $(3.980,0.03173)$, samples the
-upper-left parameter-space region close to
-$\mub^{(3)}=(4.000,0.0330)$.}
-\label{fig:euclidean-enrichment-sampling-middle}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.66\textwidth]{Figures/euclidean_prom_only/prom_enrichment_sampling_intermediate.png}
-\caption{$9+18$ nested design.  It retains all $9+12$ locations and adds
-three interior and three margin points, providing the largest parameter-space
-coverage used in the reported PROM campaign.}
-\label{fig:euclidean-enrichment-sampling-intermediate}
-\end{figure}
-
-\subsection{Model training and shared Case--2 map}
-The baseline networks use $4509$ training samples, and the $9+8$, $9+12$,
-and $9+18$ networks use $8517$, $10521$, and $13527$, respectively.  Every
-network uses the same
-$1002$ external-validation parameter--time samples.  Case~1 and Case~3 use
-$n=10$ primary coordinates;
-PROM--POD--AE and POD--DL--ROM use $n_z=10$.  The architectures and reduced
-coordinate errors are reported in Table~\ref{tab:training}.
 \begin{table}[H]
 \centering
-\caption{Training and held-out parameter-validation errors in reduced
-coordinates.  The master map is shared between the Case--2 tail and the
-POD--NN--ROM direct endpoint.}
+\caption{Baseline regression architectures and relative Frobenius errors
+(\%) on training and held-out parameter-validation coordinates.
+The Case--2 master map also supplies POD--NN--ROM and Case~2+$\mathbf B_3$;
+it is trained once, not separately for these deployments.}
 \label{tab:training}
-\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_training_errors.tex}}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/training_baseline.tex}}
 \end{table}
 
-For the controlled Case--2 comparison, one master map is trained as
+The controlled parameter--time master map predicts the entire vector,
 \begin{equation}
-\mathcal G_q:(\mub,t)\longmapsto\widehat{\q}_N\in\mathbb R^{n_{\mathrm{tot}}}.
+\mathcal G_q:(\mub,t)\longmapsto\widehat{\q}_N\in\mathbb R^{151},\qquad
+\mathcal M(\mub,t)=\mathbf P_{>10}\mathcal G_q(\mub,t).
 \label{eq:master-map}
 \end{equation}
-For primary dimension $n$, Case~2 inserts
-$\qs=\mathbf P_{>n}\mathcal G_q(\mub,t)$ into the residual solve, whereas
-POD--NN--ROM uses the entire vector directly.  Thus $n=0$ is exactly the
-POD--NN--ROM endpoint from this same trained map, and $n=151$ is the linear
-PROM endpoint.  The shared-map construction is a diagnostic control, not a
-restriction of the general Case--2 formulation.
+POD--NN--ROM uses $\mathcal G_q$ directly.  Case~2 injects only its last
+141 entries and determines the first ten by a sampled residual solve.
+Case~2+$\mathbf B_3$ retains that same injected tail and solves three extra
+amplitudes.  Sharing the map isolates deployment from regression quality.
 
-\subsection{Protocol for the residual-adaptive comparison}
+\begin{figure}[H]
+\centering
+\fbox{\begin{minipage}{0.94\textwidth}
+\centering
+\textbf{One parameter--time prediction, three deployments}\\[0.5em]
+$\mathcal G_q(\mub,t)=[\widehat{\q};\widehat{\qbar}]
+\in\mathbb R^{151}$, with blocks of sizes 10 and 141.\\[0.5em]
+\begin{tabular}{l|c|c}
+Deployment & Complete output $\q_N$ & Residual-solved unknowns\\
+\hline
+POD--NN--ROM & $[\widehat{\q};\widehat{\qbar}]$ & none\\[0.3em]
+HPROM--ANN Case 2 & $[\q;\widehat{\qbar}]$ & $\q\in\mathbb R^{10}$\\[0.3em]
+Case 2+$\mathbf B_3$ & $[\q;\widehat{\qbar}+\mathbf B_3\mathbf a]$
+& $(\q,\mathbf a)\in\mathbb R^{13}$
+\end{tabular}\\[0.5em]
+$\mathbf B_3\in\mathbb R^{141\times3}$ contains three residual-selected
+patterns; each amplitude can change all 141 secondary coordinates.
+\end{minipage}}
+\caption{Coordinate-level interpretation of the controlled comparison.
+The same trained network is used in all three rows.  Only deployment changes;
+the adaptive patterns are constructed online from the computed predictor,
+not from reference trajectories at the reporting parameters.}
+\label{fig:shared-map-deployments}
+\end{figure}
+
+\subsection{Cubature protocol and initialization}
+\label{sec:hprom-protocol}
+The conventional nonlinear ECM rules use selected HDM states from the nine
+baseline parameters, fitted onto the corresponding trained trial map as in
+\eqref{eq:nonlinear-manifold-fit}.  The state-sampling fraction is $2\%$,
+with seed 42 and coverage of all nine parameters.  This fraction selects
+training states; it is not a residual tolerance.  The contribution SVD uses
+a relative singular-value cutoff of $10^{-8}$.  A separate rule is built
+for every trained closure or decoder at every enrichment budget.  Equal
+cardinalities in Table~\ref{tab:hprom-cubature} do not mean equal weights
+or equal sampled optimality problems.  The linear HPROM rule alone is frozen.
+
+For B3 moment fitting, ten time indices
+$\{1,2,5,10,25,50,100,200,350,500\}$ are retained at each of the nine
+baseline linear-HPROM parameters.  At an offline anchor the predecessor and
+primary predictor are taken from its stored teacher trajectory, and the tail
+from the corresponding trained master map.  This use of teacher states is
+\emph{offline only}.  Deployment uses the computed predecessor, not a future
+HDM or linear-HPROM state.  The enriched B3 rules change with their master
+maps, but moment fitting still uses only these nine baseline trajectories;
+it does not generate additional training simulations.
+
+All four main B3 rules use $L=4096$ candidate draws with seed 418.
+The three dynamic moment blocks are separately normalized before fitting;
+the complete mass block is scaled to have a comparable aggregate weight.
+The positive fit uses exact objective gradients with at most 1500
+L-BFGS-B iterations.  Rule acceptance uses seven anchors at each of the two
+held-out validation parameters.  For the complete coordinate Jacobian action
+$\mathbf Z=\mathbf J_*\mathbf V_{\mathrm{tot}}$, the generalized eigenvalues
+of $(\mathbf Z^T\mathbf D_\xi\mathbf Z,\mathbf Z^T\mathbf Z)$ must lie
+in $[0.8,1.2]$.  This checks preservation of Jacobian-action geometry, not
+only the mass moment in \eqref{eq:adaptive-mass-moment}.
+The relative gradient discrepancy
+$\norm{\mathbf Z^T\mathbf D_\xi\mathbf r_*-\mathbf Z^T\mathbf r_*}_2/
+\norm{\mathbf Z^T\mathbf r_*}_2$ must not exceed $0.05$.
+Finally, full and sampled B3 linearized updates are computed using their
+respective direction spaces.  The ratio of their residual norms, both
+evaluated in the full residual, must not exceed $1.05$.
+Its denominator is the full-residual B3 update at 13 unknowns, not the
+unrestricted 151-coordinate optimum.  These are empirical operator audits,
+not a uniform nonlinear error bound.
+Table~\ref{tab:b3-validation} records their extrema.
+
+\begin{table}[H]
+\centering
+\caption{Validation-only acceptance of the four 4096-draw B3 rules.
+Eigenvalues compare sampled and full complete-coordinate Jacobian Grams.
+Gradient error is a ratio, not a percentage.  ``LS ratio'' evaluates the
+sampled B3 linearized update in the full residual norm and divides by the
+full-residual B3 linearized value.  Reporting points do not enter acceptance.}
+\label{tab:b3-validation}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/b3_validation.tex}}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Positive cubature cell counts at each data budget.
+B3 has a dedicated moment-fitted rule; the other nonlinear models use
+map-specific ECM.  State stencil sizes can exceed retained residual-cell
+counts because of neighbour dependencies.}
+\label{tab:hprom-cubature}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/cubature.tex}}
+\end{table}
+
+The adaptive computations use the known initial condition represented in the
+complete linear space,
+\begin{equation}
+\q_N^0=\mathbf V_{\mathrm{tot}}^T(\uvec_0-\uvec_{\mathrm{ref}}),\qquad
+\uvec_r^0=\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\q_N^0.
+\label{eq:adaptive-common-initial}
+\end{equation}
+This predecessor need not belong to the learned manifold at $t=0$.
+The conventional learned HPROM campaign instead reconstructs its initial
+state on the corresponding trained closure or decoder manifold;
+direct maps predict their initial
+coordinates.  These existing outputs are retained without reinterpretation.
+Consequently the main B3-versus-Case--2 comparison includes an initialization
+difference as well as a trial-space change.  The matched-initialization,
+equal-dimensional PROM control in Appendix~\ref{sec:adaptive-results}
+addresses direction selection separately.  An equivalent matched HPROM
+rank/control study has not been run and is not claimed here.
+All requested B3 ranks were three throughout the 500-step reporting runs.
+Its nonlinear solver permits 20 Gauss--Newton iterations, with relative
+residual cutoff $10^{-5}$ and relative residual-change threshold $10^{-2}$.
+
+\subsection{Errors and scope of online measurements}
+For every reporting parameter we reconstruct the complete state and use
+\begin{align}
+e_u(\mub)=100\frac{\norm{\uvec_{\mathrm{HDM}}-\uvec_{\mathrm{ROM}}}_F}
+{\norm{\uvec_{\mathrm{HDM}}}_F},\label{eq:state-error}\\
+e_q(\mub)=100\frac{\norm{\q_N^{\mathrm{lin,H}}-\widehat{\q}_N}_F}
+{\norm{\q_N^{\mathrm{lin,H}}}_F}.
+\label{eq:coefficient-error}
+\end{align}
+The histories contain all 501 saved states.  The coefficient reference is
+always the frozen full-coordinate \emph{linear HPROM}, even for non-intrusive
+maps.  The mean averages $\mub^{(v)},\mub^{(1)},\mub^{(2)}$ only;
+extrapolation is reported separately.  This reference is not a strict
+HDM-error lower bound: other trajectories can have slightly smaller state
+error while differing from its coefficient history.
+Per-coordinate absolute errors are
+$\norm{\widehat q_{N,i}-q_{N,i}^{\mathrm{lin,H}}}_2$ over time; relative
+plots divide by $\norm{q_{N,i}^{\mathrm{lin,H}}}_2$ and multiply by 100.
+Their logarithmic limits are shared across all four data budgets and include
+all positive plotted values.  Pointwise coefficient heat maps use the same
+reference and the same complete-history denominator for each coordinate,
+not division by an instantaneous coefficient that might cross zero.
+
+Baseline timings are measured on the same Sherlock node.  The fresh HDM and
+linear HPROM use 24 numerical threads; all learned models use one CPU
+numerical thread.  This is the declared execution protocol, not an
+identical-thread scaling experiment.  Intrusive solve times exclude model
+loading, cubature fitting, plotting, and file I/O, but include B3 construction
+when present.  One trajectory measurement per reporting parameter is retained,
+without an estimate of timing variability.  Direct maps use ten repeated
+\emph{loaded-network coefficient-history predictions}; they exclude
+high-dimensional reconstruction and loading.  Their HDM/time ratios are thus
+coefficient-inference ratios, not end-to-end simulator speedups.
+No PROM timing is reported.  Enrichment jobs need not share this timing node,
+so their times are not mixed into the baseline speedup comparison.
+
+\section{Baseline HPROM Results}
+\label{sec:hprom-results}
+\subsection{State accuracy and solution profiles}
+Table~\ref{tab:online-state} compares the baseline models in a fixed order:
+linear reference, Cases~1 and~2, corrected Case~2, Case~3, intrusive decoder,
+and the two non-intrusive maps.  This order is retained in every subsequent
+accuracy table and comparison figure.  Horizontal rules separate the
+residual-solving models from the direct regressors.
+
+\begin{table}[H]
+\centering
+\caption{Baseline HPROM state-history errors $e_u$ (\%).
+The mean averages the three in-domain points; the last column is
+extrapolatory.  B3 uses the known full-space initial representation, unlike
+the conventional learned runners; see Section~\ref{sec:hprom-protocol}.}
+\label{tab:online-state}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/baseline_state.tex}}
+\end{table}
+
+The linear HPROM has mean state error $0.441\%$.  Cases~1 and~3 and the
+intrusive decoder give $0.553\%$, $0.494\%$, and $0.583\%$, respectively.
+Case~2 gives $1.620\%$, close to the $1.701\%$ direct master-map error.
+Solving the ten primary coordinates therefore improves the mean only modestly
+when the tail remains prescribed.  It does not improve every point:
+at $\mub^{(1)}$ its error exceeds that of POD--NN--ROM.
+At extrapolation, however, Case~2 gives $2.801\%$ rather than the direct
+map's $5.102\%$.  Residual minimization supplies useful correction without
+making the learned secondary block accurate by itself.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=.72\textheight,keepaspectratio]{Figures/euclidean_hprom/baseline_solutions.pdf}
+\caption{Baseline solution cut-plane overlays.  Each row is one reporting
+parameter; columns show $u_x(x,y_{\mathrm{mid}})$ and
+$u_x(x_{\mathrm{mid}},y)$.  Increasing opacity denotes $t=5,15,25$;
+all model curves are solid.  All panels and enrichment counterparts share
+state ordinate limits.  Overlapping profiles should be read with the
+space--time errors, not as evidence of identical trajectories.}
+\label{fig:hprom-baseline-solutions}
+\end{figure}
+
+\subsection{Complete coefficient recovery}
+\begin{table}[H]
+\centering
+\caption{Baseline complete 151-coordinate trajectory errors $e_q$ (\%)
+against the frozen linear HPROM.  Parameter and model ordering match
+Table~\ref{tab:online-state}.  The direct maps have the same teacher but
+perform no sampled-residual solve.}
+\label{tab:online-coefficients}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/baseline_coefficient.tex}}
+\end{table}
+
+The mean coefficient errors of Case~2 and POD--NN--ROM are $3.667\%$ and
+$3.859\%$, compared with $0.774\%$ and $0.575\%$ for Cases~1 and~3.
+The difference therefore appears in the reduced trajectories themselves,
+not only in state reconstruction.  Figure~\ref{fig:coefficient-curves}
+resolves it by coordinate.  Large relative errors in high-index coefficients
+can coexist with a small total state error because those coefficient
+histories have smaller absolute magnitudes.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_hprom/baseline_coefficients.pdf}
+\caption{Baseline per-coordinate trajectory errors against the linear HPROM:
+absolute errors above, relative errors (\%) below.  Columns follow
+$\mub^{(v)},\mub^{(1)},\mub^{(2)},\mub^{(3)}$.
+All model curves are solid; the dotted vertical line marks coordinate ten.
+Each row uses common data-derived logarithmic limits across all baseline
+and enriched plots.  The zero-error linear reference is omitted.}
+\label{fig:coefficient-curves}
+\end{figure}
+
+\section{Secondary Recovery and Hyperreduced Online Work}
+\label{sec:hprom-b3-results}
+\subsection{What three correction amplitudes recover}
+Case~2+$\mathbf B_3$ gives mean state error $0.455\%$ and extrapolation
+error $0.845\%$, close to the frozen linear HPROM's $0.441\%$ and
+$0.850\%$.  Its mean coefficient error is $0.243\%$, and the extrapolation
+coefficient error is $0.336\%$.  The unchanged baseline master map supplies
+the initial tail prediction.  Recovery uses neither extra ANN training
+parameters nor online access to future reference states.
+With $n=10$ and $\bar n=141$, each $141\times3$ matrix contains three
+patterns over the \emph{entire} secondary block; the solve has 13 independent
+amplitudes while the reconstructed $\q_N$ still has 151 entries.
+
+These results establish the performance of the tested hyperreduced algorithm,
+not a clean estimate of the correction's isolated causal effect, because the
+main conventional initial states differ.  Appendix~\ref{sec:adaptive-results}
+provides the corresponding full-residual matched experiment: at 13 unknowns,
+three adaptive secondary patterns give mean state error $0.447\%$, whereas
+freeing the next three POD coordinates gives $1.513\%$.  That diagnostic
+supports the mechanism, but its numbers are PROM results and are not
+substituted into the HPROM tables.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_hprom/b3_histories.pdf}
+\caption{Instantaneous HDM-relative state errors.  Top: baseline linear
+HPROM, Cases~1--3, and corrected Case~2.  Bottom: corrected Case~2 at all
+four data budgets.  Columns follow the four reporting parameters; all
+panels share ordinate limits and all model curves are solid.  Instantaneous
+norm ratios differ from the space--time Frobenius ratios in the tables.}
+\label{fig:hprom-b3-histories}
+\end{figure}
+
+\subsection{Baseline timings and measured cost}
+\begin{table}[H]
+\centering
+\caption{Baseline online measurements on one Sherlock node.  Times average
+only the three in-domain parameters.  The fresh HDM reference is
+$736.729$ s using 24 threads.  HDM/time divides this fixed HDM time by model time;
+linear HPROM uses 24 threads and learned models one.
+$\dagger$: direct-map time is loaded-network coefficient inference only,
+excluding full-state reconstruction, so its ratio is not an end-to-end
+simulator speedup.  Intrusive rows use one measurement per point.}
+\label{tab:hprom-timing}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/timing_baseline.tex}}
+\end{table}
+
+The 4096-draw B3 implementation costs $19.597$ s on average, including
+its online direction construction.  Its smaller nonlinear tangent alone
+does not make it cheaper than Case~3 ($18.856$ s): the correction construction
+acts on all secondary modes and its retained cell count is larger.
+The nonlinear ECM models retain 901 cells, whereas this B3 rule retains
+3532.  Accuracy and total online work must therefore be evaluated together,
+not inferred from the 13 versus ten online unknowns.
+
+\subsection{Reducing support without changing the correction model}
+A separate baseline-only budget study keeps $r=3$ and the baseline network
+fixed.  Predictor residual/Jacobian evaluations are reused in both compared
+variants, without changing the sampled equations.  Validation then selects a
+smaller positive support before any reporting-point evaluation.  The
+2048-draw rule retains 1506 positive cells.  This choice passes the operator
+audits and an additional trajectory check: at each validation parameter
+its complete coefficient error may be at most $1.05$ times that of the
+4096-draw parent rule.  These are validation comparisons, not reporting-point
+acceptance criteria.  A local
+1024-draw stress test fails acceptance and is not deployed at reporting
+points.  Thus support reduction is controlled by validation rather than by
+choosing an arbitrary cell count after observing test errors.
+
+\begin{table}[H]
+\centering
+\caption{Separate baseline B3 support comparison with predictor reuse in
+both variants, one CPU thread, and one trajectory measurement per point.
+The HDM reference is the same $736.729$ s.  Draw count is not positive
+cell count.  These timings must not be interchanged with the unreused
+4096-draw campaign row in Table~\ref{tab:hprom-timing}.  The smaller rule
+is not the rule used in the enrichment study.}
+\label{tab:hprom-b3-budget}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/b3_budget.tex}}
+\end{table}
+
+Reducing positive support from 3532 to 1506 cells decreases the mean measured
+time from $17.477$ s to $8.433$ s, a $51.7\%$ reduction, with nearly
+unchanged state error.  The selected variant is cheaper than the conventional
+Cases~1 and~3 under this execution protocol.  Its $87.36$ HDM/time ratio
+is a single-measurement observation, not a timing-confidence estimate or a
+claim of optimal support.  The additional fitting and validation are offline
+costs, not included in the solve time.
+
+\section{Effect of HPROM Coefficient-Data Enrichment}
+\label{sec:hprom-enrichment}
+\subsection{Regression accuracy at fixed model families}
+Enrichment changes the linear-HPROM coefficient labels supplied to regression,
+not the POD basis or the held-out validation and reporting parameters.
+Each trained intrusive trial map receives a newly built positive rule.
+The comparison consequently assesses the complete enriched HPROM workflow;
+it is not a cubature-frozen ablation of the regression alone.  B3 uses the
+4096-draw fit at every budget, with the same nine baseline moment-anchor
+trajectories and the newly trained master map.
+
+\begin{table}[H]
+\centering
+\caption{Relative coordinate regression errors (\%) at the four HPROM data
+budgets.  Each vertical rule separates complete training/validation pairs.
+The master-map row is shared by conventional Case~2, B3, and POD--NN--ROM.
+These family-specific coordinate errors are not state-history errors.}
+\label{tab:hprom-enrichment-training}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/training_enrichment.tex}}
+\end{table}
+
+\subsection{In-domain improvement and extrapolation are different tests}
+\begin{table}[H]
+\centering
+\caption{HPROM state-history errors $e_u$ (\%) across nested data budgets.
+Each budget has the in-domain mean followed by extrapolation.
+Vertical rules separate budgets; the horizontal rule separates intrusive
+residual solves from direct maps.  The linear HPROM is unchanged.}
+\label{tab:hprom-enrichment-state}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/enrichment_state.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_hprom/enrichment_state.pdf}
+\caption{Effect of the nested HPROM coefficient-data ladder on state errors.
+Left: mean of the three in-domain parameters.  Right: extrapolation.
+Both panels use exactly the same state-error limits, including the largest
+plotted bar.  Black horizontal lines denote the fixed linear HPROM;
+dashed vertical lines separate intrusive models from direct maps.
+B3 uses the 4096-draw rules at all four budgets.}
+\label{fig:hprom-enrichment-state}
+\end{figure}
+
+Case~2's in-domain mean decreases from $1.620\%$ to $0.719\%$,
+$0.573\%$, and $0.488\%$ as 8, 12, and 18 trajectories are added.
+The corresponding direct master-map errors are $1.701\%$, $0.754\%$,
+$0.585\%$, and $0.490\%$.  Hence conventional Case~2 behaves as a
+partially residual-corrected direct map: its mean advantage is real but
+modest, and shrinks as regression improves.  At $9+18$ it is near, but
+not identical to, the $0.441\%$ linear reference.
+Cases~1 and~3 and the intrusive decoder already approach that reference
+at $9+8$; their largest-budget means are $0.438\%$, $0.439\%$,
+and $0.441\%$.  Small values below the linear reference do not violate an
+optimality bound, because the minimized residual is not the HDM state error.
+
+Extrapolation is not monotone in the number of labels.  From baseline to
+$9+8$, Case~2 worsens from $2.801\%$ to $3.621\%$ and POD--NN--ROM
+from $5.102\%$ to $10.836\%$, despite improved in-domain regression.
+At $9+12$ these errors become $1.471\%$ and $3.296\%$; at $9+18$,
+$0.886\%$ and $0.982\%$.  The extra $9+12$ point near the upper-left
+corner supplies coverage absent from the smaller subset
+(Fig.~\ref{fig:parameter-space}).  The trend is consistent with a coverage
+explanation, but does not prove that this single point causes the recovery:
+other locations, retraining, checkpoint selection, and rule fitting also
+change.  Adding margin points is not an extrapolation guarantee.
+
+The adaptive means remain $0.455\%$, $0.441\%$, $0.443\%$, and
+$0.443\%$ across the four budgets, with extrapolation errors
+$0.845\%$, $0.871\%$, $0.849\%$, and $0.849\%$.
+Its primary benefit is recovery \emph{before} extensive regression enrichment.
+This does not make new data unnecessary: enrichment further reduces its
+coefficient discrepancy and can improve other deployment families without
+an adaptive online construction.
+
+\subsection{Coordinate consistency and enriched solution fields}
+\begin{table}[H]
+\centering
+\caption{Complete coefficient-history errors $e_q$ (\%) against the frozen
+linear HPROM, in the same budget and model order as
+Table~\ref{tab:hprom-enrichment-state}.}
+\label{tab:hprom-enrichment-coefficients}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/enrichment_coefficient.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_hprom/enrichment_coefficient.pdf}
+\caption{Coefficient-history counterpart of
+Fig.~\ref{fig:hprom-enrichment-state}.  Both panels share coefficient-error
+limits; all errors use the same fixed linear-HPROM reference.  Dashed
+vertical separators distinguish residual-solving and direct models.}
+\label{fig:hprom-enrichment-coefficients}
+\end{figure}
+
+B3's mean complete-coordinate discrepancy decreases from $0.243\%$ to
+$0.063\%$, $0.039\%$, and $0.034\%$ across the ladder.  Thus its nearly
+constant HDM state errors do not mean that enrichment has no effect: the
+trajectory approaches the fixed teacher more closely while its state error
+is already dominated by that teacher's discrepancy from the HDM.
+Conventional Case~2 gives means $3.667\%$, $1.434\%$, $0.920\%$,
+and $0.607\%$; the direct master-map means remain close at
+$3.859\%$, $1.514\%$, $0.944\%$, and $0.607\%$.
+At extrapolation their $9+8$ coefficient discrepancies grow to
+$8.278\%$ and $25.405\%$, whereas B3 remains at $0.443\%$.
+This supports an actual recovery of the reduced trajectory, not only
+fortuitous cancellation in a total HDM state norm.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=.72\textheight,keepaspectratio]{Figures/euclidean_hprom/lhs18_solutions.pdf}
+\caption{$9+18$ HPROM solution overlays, with exactly the same model order,
+cut planes, times, and ordinate limits as
+Fig.~\ref{fig:hprom-baseline-solutions}.  Initializations follow the campaign
+protocol in Section~\ref{sec:hprom-protocol}.}
+\label{fig:hprom-enriched-solutions}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_hprom/lhs18_coefficients.pdf}
+\caption{$9+18$ per-coordinate HPROM trajectory errors, with the same
+reference, model colours, coordinate split, and shared logarithmic limits as
+Fig.~\ref{fig:coefficient-curves}.  All models, including both non-intrusive
+maps and B3, are shown.}
+\label{fig:hprom-enriched-coefficients}
+\end{figure}
+
+Appendix~\ref{app:hprom-details} gives the pointwise tables and the matching
+solution and coefficient figures for the intermediate budgets.
+The data budgets remain in this report rather than selecting a preferred
+subset solely from the reporting errors.  The study is limited to one
+Burgers discretization, two validation parameters, four reporting parameters,
+and one training realization per family and budget.
+
+\section{Conclusions}
+\label{sec:conclusions}
+The main comparison now uses HPROM-generated training trajectories and
+model-specific positive cubature in a fixed Euclidean POD basis.
+Conventional parameter--time Case~2 improves the shared direct map modestly
+in mean accuracy but remains exposed to its prescribed secondary errors.
+State-conditioned and hybrid closures are more accurate with sparse labels
+for the tested Burgers problem.
+
+A small residual-adaptive secondary space provides a different response to
+limited regression accuracy.  Its algebra follows from primary elimination
+in the current weighted sampled linearized residual problem; its directions
+remain fixed during each nonlinear solve.  With three patterns over 141
+secondary coordinates, the tested 13-unknown HPROM is close to the
+151-coordinate linear HPROM before enrichment.  The full-residual
+matched-initialization, equal-dimensional appendix supports the importance
+of direction selection, but does not replace the still-missing matched HPROM
+rank study.  No nested-space argument guarantees a nonlinear trajectory's
+HDM error.
+
+Enrichment and online correction are complementary, not interchangeable.
+The $9+8$ set improves in-domain means yet worsens extrapolation for the
+master-map-based uncorrected deployments.  The $9+12$ and $9+18$ sets
+recover extrapolation as coverage changes.  B3 stays near the fixed reference
+at all tested budgets and becomes increasingly coefficient-consistent.
+The separate validated support reduction approximately halves its online
+time without changing the network or correction rank.  Timing conclusions
+remain specific to the declared thread protocol and single-trajectory
+measurements; direct inference ratios exclude full-state reconstruction.
+A second transport benchmark, independent validation parameters, repeated
+training, and matched HPROM rank/initialization controls are needed before
+claiming general robustness or optimality.
+
+\appendix
+\section{Full-Residual PROM Direction-Selection Controls}
+\label{sec:adaptive-results}
+\subsection{Diagnostic protocol}
 \label{sec:adaptive-protocol}
-The correction experiment uses the unchanged baseline master ANN trained
-from the nine linear-PROM trajectories, with the two validation parameters
-in \eqref{eq:validation-points}.  It neither generates additional training
-trajectories nor retrains the network.  In particular, the online directions
-are constructed from the current computed state, residual, and Jacobian,
-not from HDM or linear-PROM solutions at the evaluation parameters.
-
-To isolate direction selection from online dimension, we use the requested
-ranks
+These previously completed experiments use full-residual PROM trajectories
+and a master ANN trained on nine linear-PROM trajectories, with the two
+validation parameters in \eqref{eq:validation-points}.  They are not HPROM
+runs, do not use the HPROM-trained master network, and report no timings.
+Their purpose is to isolate trial-space orientation before cubature.
+All compared trajectories use the known initial representation
+\eqref{eq:adaptive-common-initial}, the same full residual, and the same
+nominal nonlinear solver settings.  The tested ranks are
 \begin{equation}
 r\in\{0,1,2,3,5,10\}.
 \label{eq:adaptive-tested-ranks}
 \end{equation}
-Each rank is paired with a conventional Case--2 control having $d=10+r$
-primary coordinates.  Because the common map
-\eqref{eq:master-map} predicts all 151 coordinates, the control trial map is
+The $n=10$ adaptive model is paired at every rank with conventional Case~2
+having $d=10+r$ primary coordinates and trial map
 \begin{equation}
 \boldsymbol\phi_d^{\mathrm{C2}}(\mathbf x;\mub,t)
-=\uvec_{\mathrm{ref}}+\mathbf V_{1:d}\mathbf x
-+\mathbf V_{d+1:n_{\mathrm{tot}}}
-\mathbf P_{>d}\mathcal G_q(\mub,t),
-\qquad \mathbf x\in\mathbb R^d.
+=\uvec_{\mathrm{ref}}+\mathbf V_{1:d}\mathbf x+
+\mathbf V_{d+1:151}\mathbf P_{>d}\mathcal G_q^{\mathrm{PROM}}(\mub,t),
+\qquad\mathbf x\in\mathbb R^d.
 \label{eq:case2-equal-dimension-control}
 \end{equation}
-Its tangent is $\mathbf V_{1:d}$.  The paired adaptive map retains
-$n=10$ and uses the tangent in
-\eqref{eq:adaptive-equal-dimension-space}; both models consequently solve
-for exactly $d$ amplitudes.  They also share the master ANN, full residual,
-initial representation, nonlinear solver settings, and validation
-parameters.  Hence their difference is the orientation of the $r$ added
-directions, not the amount of coefficient data or the number of online
-unknowns.
+Thus each pair has the same number of unknowns and the same network.
+A preliminary validation-only screening had frozen $r=3$ before reporting
+parameters were evaluated; the subsequent expanded characterization does
+not reselect that rank.  These validation locations also serve network
+selection, so the rank sweep is diagnostic rather than an independent
+accuracy test.  Only the frozen $r=3$ and its $n=13$ conventional control
+were evaluated at all four reporting parameters.
 
-A preliminary screening compared $r=1,3,5$ at the two validation
-parameters.  Their mean full-trajectory coefficient errors against the
-linear PROM were $1.988\%$, $1.093\%$, and $1.123\%$, respectively.
-The resulting choice $r=3$ was frozen before evaluation at the four reporting
-parameters.  These two validation parameters also serve network selection;
-they are not an independent test set.  The rank screening used the original
-ANN-offset initial representation.  The subsequent common-initialization
-comparison below retained the selected rank rather than selecting it again.
-Thus $r=3$ is the tested configuration, not a claim of optimal rank for every
-initialization or parameter.
+The initial choice $r=3$ was frozen by the preliminary validation screening
+described in Appendix~\ref{sec:adaptive-protocol}.  After that selection, we
+expanded the validation-only characterization to
+$r\in\{0,1,2,3,5,10\}$.  This additional sweep does not reselect the rank and
+does not use any reporting parameter.  Every run uses the same master ANN,
+$n=10$, the complete residual and Jacobian, and the common initial
+representation \eqref{eq:adaptive-common-initial}.  Thus $r=0$ is the
+matched uncorrected Case~2 trajectory.  For every $r$, the comparison also
+includes the plain Case--2 map \eqref{eq:case2-equal-dimension-control} with
+$n=10+r$.  In particular, $\mathbf B_5$ and $\mathbf B_{10}$ are compared
+with Case~2 at $n=15$ and $n=20$, respectively.
 
-The dedicated comparison isolates the online correction using a
-common initial state for all compared trajectories.  Specifically,
-\begin{equation}
-\q_N^0=\mathbf V_{\mathrm{tot}}^T
-\left(\uvec_0-\uvec_{\mathrm{ref}}\right),\qquad
-\uvec_{\mathrm{ROM}}^0=\uvec_{\mathrm{ref}}+
-\mathbf V_{\mathrm{tot}}\q_N^0.
-\label{eq:adaptive-common-initial}
-\end{equation}
-This state need not belong to each learned trial manifold at $t=0$; it is
-used as the predecessor for the first time step.  Subsequent states are
-computed on the respective trial maps.  This uses the prescribed initial
-condition, not future reference snapshots.  The uncorrected Case--2
-trajectory is therefore recomputed with this initialization and is not
-interchanged with the ANN-initialized baseline in
-Section~\ref{sec:prom-results}.
+\begin{table}[H]
+\centering
+\caption{Validation-only, equal-dimensional full-residual PROM comparison.
+All six error columns report percentages for the complete 151-coordinate
+trajectory against the corresponding linear PROM.  At each row both models
+have $d=10+r$ online unknowns: the adaptive model retains $n=10$ and adds
+$r$ residual-selected secondary directions, whereas the control directly
+solves the first $10+r$ POD coordinates.  All requested ranks were attained
+at every time step.}
+\label{tab:adaptive-rank-validation}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_case2_rank_validation.tex}}
+\end{table}
 
-Here $n_{\mathrm{tot}}=151$, $n=10$, and $\bar n=141$.  Consequently,
-$\mathbf B_3^{m+1}$ has size $141\times3$ and the nonlinear solve has
-$10+3=13$ unknowns, while $\q_N$ still has 151 entries.  The attained rank
-was three at every step of all four reported trajectories.  All methods use
-500 time steps and the same nominal Gauss--Newton settings: at most 20
-iterations, a relative residual-norm threshold of $10^{-5}$, and a
-relative residual-change stopping threshold of $10^{-2}$.  The present PROM
-experiment isolates approximation properties of the correction space, so no
-timing comparison is reported in this section.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{Figures/euclidean_prom_only/euclidean_case2_rank_validation.png}
+\caption{Validation-only comparison at equal online dimension
+$d=10+r$.  Left: mean complete coefficient-history error against linear PROM.
+Right: residual norm at termination of each nonlinear solve, averaged over
+time steps and the two validation parameters, then normalized by the common
+$r=0$, $n=10$ value.  The star identifies the previously frozen $r=3$ rather
+than a rank selected from this expanded sweep.}
+\label{fig:adaptive-rank-validation}
+\end{figure}
 
-\subsection{Reported errors}
-For each evaluation parameter, the state error is
-\begin{equation}
-e_u(\mub)=100\frac{\norm{\uvec_{\mathrm{HDM}}-\uvec_{\mathrm{ROM}}}_F}
-{\norm{\uvec_{\mathrm{HDM}}}_F},
-\label{eq:state-error}
-\end{equation}
-and the coefficient error against the full linear PROM trajectory is
-\begin{equation}
-e_q(\mub)=100\frac{\norm{\q_N^{\mathrm{lin}}-\widehat{\q}_N}_F}
-{\norm{\q_N^{\mathrm{lin}}}_F}.
-\label{eq:coefficient-error}
-\end{equation}
-The linear PROM is an accuracy reference for the fixed basis and full
-residual, not a universal lower bound with respect to the HDM.
+For the residual-adaptive model, the mean coefficient error decreases from
+$3.873\%$ at $r=0$ to $1.937\%$, $0.557\%$, and $0.231\%$ at
+$r=1,2,3$, respectively.  Increasing the rank to five and ten further
+reduces that error to $0.124\%$ and $0.111\%$.  The equal-dimensional
+conventional controls do not exhibit this recovery: their means are
+$3.809\%$, $3.677\%$, $3.720\%$, $3.643\%$, and $3.542\%$ for
+$n=11,12,13,15,20$.  At 13 unknowns, for example, the adaptive and
+conventional validation errors are $0.231\%$ and $3.720\%$; at 20 unknowns
+they are $0.111\%$ and $3.542\%$.
 
-\section{Euclidean-POD PROM Results}
+The residual data give the same qualitative distinction.  The adaptive
+mean converged-residual ratio decreases from one to $0.361$ by $r=3$ and
+then remains essentially unchanged.  The corresponding conventional ratio
+remains above $0.982$ even at $n=20$.  Therefore the observed improvement
+cannot be explained by online dimension alone.  For this benchmark, the
+Krylov directions in \eqref{eq:adaptive-krylov} capture combinations of the
+secondary coordinates that are much more effective for the local LSPG
+problem than the next POD modes selected by snapshot energy.
+
+This comparison remains diagnostic rather than an error theorem.  The
+nested-space result \eqref{eq:adaptive-nested-bound} concerns a fixed
+linearization, whereas the table reports complete nonlinear trajectories.
+Moreover, the two parameters used here also served for network validation.
+The expanded sweep therefore documents rank dependence and the mechanism of
+the recovery, but it neither supplies an independent generalization estimate
+nor changes the previously frozen reporting choice $r=3$.  Consequently,
+only $\mathbf B_3$ and its $n=13$ equal-dimensional control are evaluated at
+the four reporting parameters below.
+
+\subsection{Equal-dimensional control and state accuracy}
+We now assess the residual-adaptive construction of
+Section~\ref{sec:adaptive-case2} under the dedicated protocol of
+Appendix~\ref{sec:adaptive-protocol}.  The notation ``Case~2 + $\mathbf B_3$''
+denotes three directions rebuilt at every time step, not a fixed offline
+basis.  All learned models in this comparison retain their baseline
+training data; enriched HPROMs are examined in Section~\ref{sec:hprom-enrichment}.
+
+\begin{table}[H]
+\centering
+\caption{Common-initialization full-residual comparison: state-history error
+$e_u$ (\%).  Every learned model uses baseline training data.  The mean
+averages the three in-domain points; the final column is extrapolatory.
+The $n=13$ Case--2 row controls for the 13 online unknowns used by
+Case~2+$\mathbf B_3$.  The linear PROM is the reference for the fixed
+151-mode basis.}
+\label{tab:adaptive-state}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_case2_adaptive_state.tex}}
+\end{table}
+
+Table~\ref{tab:adaptive-state} shows a reduction of the mean in-domain state
+error from $1.617\%$ for uncorrected Case~2 to $0.447\%$ for the adaptive
+variant, a $72.4\%$ reduction.  The latter is close to the linear-PROM
+mean of $0.441\%$.  At the extrapolatory parameter the error decreases
+from $2.643\%$ to $0.850\%$, also close to the linear reference.
+These changes require neither new coefficient training data nor additional
+network fitting.  They result from allowing three residual-selected
+secondary patterns to be corrected together with the ten primary coordinates.
+
+Merely increasing the primary dimension from $n=10$ to $n=13$ reduces the
+mean state error only from $1.617\%$ to $1.513\%$, and the extrapolatory
+error from $2.643\%$ to $2.409\%$.  With the same 13 online unknowns,
+Case~2+$\mathbf B_3$ gives $0.447\%$ and $0.850\%$, respectively.  The
+observed recovery therefore cannot be attributed solely to adding three
+degrees of freedom: the residual-selected combinations of the 141 secondary
+coordinates are substantially more effective here than freeing POD
+coordinates 11--13.
+
+The corrected PROM improves on Cases~1 and~3 in mean error and at
+extrapolation, but not at every parameter:
+Case~3 has a slightly smaller state error at verification.  Likewise, the
+linear PROM is not a strict HDM-error lower bound; at $\mub^{(1)}$ the
+corrected trajectory has a slightly smaller HDM error than that reference.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.96\textwidth]{Figures/euclidean_prom_only/euclidean_case2_adaptive_state_histories.png}
+\caption{Instantaneous relative state errors
+$100\norm{\uvec_{\mathrm{HDM}}(t)-\uvec_{\mathrm{ROM}}(t)}_2/
+\norm{\uvec_{\mathrm{HDM}}(t)}_2$ for the common-initialization comparison.
+Panels follow the four reporting parameters and share the same ordinate
+range.  All model curves are solid.  These time-resolved errors complement,
+rather than replace, the space--time norm in Table~\ref{tab:adaptive-state}.}
+\label{fig:adaptive-state-histories}
+\end{figure}
+
+\subsection{Recovery of the full coordinate trajectory}
+\begin{table}[H]
+\centering
+\caption{Common-initialization full-residual comparison: complete
+151-coordinate trajectory error $e_q$ (\%) against the corresponding
+linear PROM.  Means and parameter ordering match Table~\ref{tab:adaptive-state}.}
+\label{tab:adaptive-coefficients}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_case2_adaptive_coefficient.tex}}
+\end{table}
+
+The mean coefficient error decreases from $3.678\%$ to $0.215\%$
+(Table~\ref{tab:adaptive-coefficients}).  At extrapolation it decreases
+from $6.104\%$ to $0.441\%$.  The corrected mean is smaller than the
+$0.823\%$ and $0.579\%$ of Cases~1 and~3, respectively.
+The equal-dimensional $n=13$ control retains a mean coefficient error of
+$3.438\%$ and an extrapolatory error of $5.525\%$.
+Thus the state-error improvement is accompanied by recovery of the
+linear-PROM coordinate history, rather than only by a fortuitous cancellation
+in the HDM state norm.  Figure~\ref{fig:adaptive-coefficients} resolves the
+errors by coordinate.  Although only three additional amplitudes are solved,
+their directions can change all 141 secondary coordinates.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_case2_adaptive_coefficients.png}
+\caption{Common-initialization comparison: per-coordinate absolute
+trajectory error (top) and relative trajectory error in percent (bottom)
+against the linear PROM.  All panels in each row share logarithmic ordinate
+limits computed from the plotted data.  The dotted vertical line marks
+the ten primary coordinates; every model curve is solid.  The zero-error
+linear-PROM reference is omitted from the logarithmic plots.}
+\label{fig:adaptive-coefficients}
+\end{figure}
+
+For these four parameters, a small online secondary correction substantially
+closes the baseline Case--2 accuracy gap without enriching its training set.
+This is not evidence that enrichment is unnecessary: enrichment changes the
+offline data, whereas the adaptive construction uses the current residual
+and Jacobian during deployment.  Their HPROM interaction is examined in Section~\ref{sec:hprom-enrichment}.
+No general state-error guarantee follows from this experiment.
+
+\section{Full-Residual Case--2 Sweep and Perturbation Diagnostic}
 \label{sec:prom-results}
-\subsection{Baseline state accuracy and solution fields}
-Table~\ref{tab:online-state} reports space--time state errors.  The linear
-PROM remains below $0.5\%$ at the three in-domain points.  Among the learned
-intrusive models, Case~3 and PROM--POD--AE remain closest to that reference in
-domain.  Case~2 improves on the direct POD--NN--ROM endpoint at all four
-points, but its prescribed tail remains visible, particularly away from the
-training grid.  POD--DL--ROM is the closer of the two non-intrusive baselines
-in this campaign.
-
-\begin{table}[H]
-\centering
-\caption{Online state errors $100\norm{\uvec_{\mathrm{HDM}}-\uvec_{\mathrm{ROM}}}_F/
-\norm{\uvec_{\mathrm{HDM}}}_F$.  The mean averages the three in-domain
-points.  The horizontal rule separates intrusive residual-minimizing models
-from non-intrusive maps.}
-\label{tab:online-state}
-\resizebox{0.94\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_online_state_errors.tex}}
-\end{table}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_solution_overlays.png}
-\caption{Final-time solution cut-plane overlays for the Euclidean-POD PROM
-campaign.  Fainter solid curves show two intermediate times.  Every intrusive
-curve uses the full residual; the two non-intrusive curves are direct reduced
-coordinate predictions.}
-\label{fig:solution-overlays}
-\end{figure}
-
-\subsection{Coefficient diagnostics}
-Table~\ref{tab:online-coefficients} and Fig.~\ref{fig:coefficient-curves}
-compare each complete coordinate history with its 151-coordinate linear-PROM
-counterpart.  The vertical line marks the $n=10$ primary/secondary split used
-by PROM--ANN.  The direct maps are kept in the same figures and tables as the
-intrusive models, with an explicit separator, because all use the same
-linear-PROM coordinate teacher in this campaign.
-
-\begin{table}[H]
-\centering
-\caption{Relative coefficient-history errors $e_q$ against the corresponding
-linear PROM.  The horizontal rule separates intrusive and non-intrusive
-models, consistently with Table~\ref{tab:online-state}.}
-\label{tab:online-coefficients}
-\resizebox{0.94\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_online_coefficient_errors.tex}}
-\end{table}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_coefficient_abs_rel_errors.png}
-\caption{Per-coefficient absolute (top) and relative (bottom) errors against
-the 151-coordinate linear PROM.  All panels in each row share the same
-logarithmic ordinate range.  The dotted vertical line marks coefficient 10;
-all model curves are solid.}
-\label{fig:coefficient-curves}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_coefficient_abs_heatmaps.png}
-\caption{Absolute coefficient errors over time.  Complete model names
-distinguish the intrusive PROM--POD--AE model from the non-intrusive
-POD--DL--ROM.  The dotted white line marks the $n=10$ primary split.}
-\label{fig:coefficient-absolute-heatmaps}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_coefficient_rel_heatmaps.png}
-\caption{Relative coefficient errors over time, using the same ordering and
-coordinate split as Fig.~\ref{fig:coefficient-absolute-heatmaps}.}
-\label{fig:coefficient-relative-heatmaps}
-\end{figure}
+The following retained PROM diagnostics motivate secondary correction but
+are not evidence about an HPROM perturbation or primary-dimension sweep.
+They use the Euclidean basis, full-residual linear-PROM references, and
+PROM-trained master map of the original campaign.  Their numbers are kept
+separate from the linear-HPROM teacher used in the main text.
 
 \subsection{Case--2 solved-dimension sweep}
 \label{sec:case2-sweep}
@@ -1151,412 +1787,177 @@ linear PROM.}
 \label{fig:tail-perturbation}
 \end{figure}
 
-\section{Case--2 Accuracy Recovery Before Data Enrichment}
-\label{sec:adaptive-results}
-\subsection{Correction rank and equal-dimensional controls}
-The initial choice $r=3$ was frozen by the preliminary validation screening
-described in Section~\ref{sec:adaptive-protocol}.  After that selection, we
-expanded the validation-only characterization to
-$r\in\{0,1,2,3,5,10\}$.  This additional sweep does not reselect the rank and
-does not use any reporting parameter.  Every run uses the same master ANN,
-$n=10$, the complete residual and Jacobian, and the common initial
-representation \eqref{eq:adaptive-common-initial}.  Thus $r=0$ is the
-matched uncorrected Case~2 trajectory.  For every $r$, the comparison also
-includes the plain Case--2 map \eqref{eq:case2-equal-dimension-control} with
-$n=10+r$.  In particular, $\mathbf B_5$ and $\mathbf B_{10}$ are compared
-with Case~2 at $n=15$ and $n=20$, respectively.
+\section{Pointwise HPROM Enrichment and Coefficient Histories}
+\label{app:hprom-details}
+The following panels and tables use only the downloaded HPROM campaigns.
+They retain the main-text model ordering and the same frozen linear-HPROM
+coefficient reference, shared limits, and initialization conventions.
+Heat maps store absolute instantaneous coordinate differences.  Relative
+maps divide each row by its complete linear-HPROM history norm and multiply
+by 100; they are not instantaneous relative errors.  Colour intensity uses
+one common magnitude range per error type across all budgets and models,
+with hue identifying the model.  Intensity is logarithmic except for a linear
+interval from zero to $10^{-4}$ times the common maximum.  This permits
+small correction errors and exact zeros to remain visible without clipping
+the extrapolation peaks.  Each row has a numerical colour bar.
 
+\subsection{The \texorpdfstring{$9+8$}{9+8} campaign}
 \begin{table}[H]
 \centering
-\caption{Validation-only, equal-dimensional full-residual PROM comparison.
-All six error columns report percentages for the complete 151-coordinate
-trajectory against the corresponding linear PROM.  At each row both models
-have $d=10+r$ online unknowns: the adaptive model retains $n=10$ and adds
-$r$ residual-selected secondary directions, whereas the control directly
-solves the first $10+r$ POD coordinates.  All requested ranks were attained
-at every time step.}
-\label{tab:adaptive-rank-validation}
-\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_case2_rank_validation.tex}}
+\caption{Pointwise $9+8$ HPROM state-history errors $e_u$ (\%).
+The mean averages the three in-domain reporting points.}
+\label{tab:hprom-lhs8-state}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/lhs8_state.tex}}
 \end{table}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.94\textwidth]{Figures/euclidean_prom_only/euclidean_case2_rank_validation.png}
-\caption{Validation-only comparison at equal online dimension
-$d=10+r$.  Left: mean complete coefficient-history error against linear PROM.
-Right: residual norm at termination of each nonlinear solve, averaged over
-time steps and the two validation parameters, then normalized by the common
-$r=0$, $n=10$ value.  The star identifies the previously frozen $r=3$ rather
-than a rank selected from this expanded sweep.}
-\label{fig:adaptive-rank-validation}
-\end{figure}
-
-For the residual-adaptive model, the mean coefficient error decreases from
-$3.873\%$ at $r=0$ to $1.937\%$, $0.557\%$, and $0.231\%$ at
-$r=1,2,3$, respectively.  Increasing the rank to five and ten further
-reduces that error to $0.124\%$ and $0.111\%$.  The equal-dimensional
-conventional controls do not exhibit this recovery: their means are
-$3.809\%$, $3.677\%$, $3.720\%$, $3.643\%$, and $3.542\%$ for
-$n=11,12,13,15,20$.  At 13 unknowns, for example, the adaptive and
-conventional validation errors are $0.231\%$ and $3.720\%$; at 20 unknowns
-they are $0.111\%$ and $3.542\%$.
-
-The residual data give the same qualitative distinction.  The adaptive
-mean converged-residual ratio decreases from one to $0.361$ by $r=3$ and
-then remains essentially unchanged.  The corresponding conventional ratio
-remains above $0.982$ even at $n=20$.  Therefore the observed improvement
-cannot be explained by online dimension alone.  For this benchmark, the
-Krylov directions in \eqref{eq:adaptive-krylov} capture combinations of the
-secondary coordinates that are much more effective for the local LSPG
-problem than the next POD modes selected by snapshot energy.
-
-This comparison remains diagnostic rather than an error theorem.  The
-nested-space result \eqref{eq:adaptive-nested-bound} concerns a fixed
-linearization, whereas the table reports complete nonlinear trajectories.
-Moreover, the two parameters used here also served for network validation.
-The expanded sweep therefore documents rank dependence and the mechanism of
-the recovery, but it neither supplies an independent generalization estimate
-nor changes the previously frozen reporting choice $r=3$.  Consequently,
-only $\mathbf B_3$ and its $n=13$ equal-dimensional control are evaluated at
-the four reporting parameters below.
-
-\subsection{Equal-dimensional control and state accuracy}
-We now assess the residual-adaptive construction of
-Section~\ref{sec:adaptive-case2} under the dedicated protocol of
-Section~\ref{sec:adaptive-protocol}.  The notation ``Case~2 + $\mathbf B_3$''
-denotes three directions rebuilt at every time step, not a fixed offline
-basis.  All learned models in this comparison retain their baseline
-training data; enrichment is examined separately in the next section.
-
 \begin{table}[H]
 \centering
-\caption{Common-initialization full-residual comparison: state-history error
-$e_u$ (\%).  Every learned model uses baseline training data.  The mean
-averages the three in-domain points; the final column is extrapolatory.
-The $n=13$ Case--2 row controls for the 13 online unknowns used by
-Case~2+$\mathbf B_3$.  The linear PROM is the reference for the fixed
-151-mode basis.}
-\label{tab:adaptive-state}
-\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_case2_adaptive_state.tex}}
+\caption{Pointwise $9+8$ complete coefficient-history errors
+$e_q$ (\%) against the frozen linear HPROM, matching the preceding table.}
+\label{tab:hprom-lhs8-coefficients}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/lhs8_coefficient.tex}}
 \end{table}
-
-Table~\ref{tab:adaptive-state} shows a reduction of the mean in-domain state
-error from $1.617\%$ for uncorrected Case~2 to $0.447\%$ for the adaptive
-variant, a $72.4\%$ reduction.  The latter is close to the linear-PROM
-mean of $0.441\%$.  At the extrapolatory parameter the error decreases
-from $2.643\%$ to $0.850\%$, also close to the linear reference.
-These changes require neither new coefficient training data nor additional
-network fitting.  They result from allowing three residual-selected
-secondary patterns to be corrected together with the ten primary coordinates.
-
-Merely increasing the primary dimension from $n=10$ to $n=13$ reduces the
-mean state error only from $1.617\%$ to $1.513\%$, and the extrapolatory
-error from $2.643\%$ to $2.409\%$.  With the same 13 online unknowns,
-Case~2+$\mathbf B_3$ gives $0.447\%$ and $0.850\%$, respectively.  The
-observed recovery therefore cannot be attributed solely to adding three
-degrees of freedom: the residual-selected combinations of the 141 secondary
-coordinates are substantially more effective here than freeing POD
-coordinates 11--13.
-
-The appropriate baseline in this statement is $1.617\%$, not the
-$1.607\%$ mean of Table~\ref{tab:online-state}: the former comes from
-the matched initial condition \eqref{eq:adaptive-common-initial}.
-Keeping both results explicit prevents an initialization change from being
-attributed to the correction space.  The corrected method improves on
-Cases~1 and~3 in mean error and at extrapolation, but not at every parameter:
-Case~3 has a slightly smaller state error at verification.  Likewise, the
-linear PROM is not a strict HDM-error lower bound; at $\mub^{(1)}$ the
-corrected trajectory has a slightly smaller HDM error than that reference.
-
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.96\textwidth]{Figures/euclidean_prom_only/euclidean_case2_adaptive_state_histories.png}
-\caption{Instantaneous relative state errors
-$100\norm{\uvec_{\mathrm{HDM}}(t)-\uvec_{\mathrm{ROM}}(t)}_2/
-\norm{\uvec_{\mathrm{HDM}}(t)}_2$ for the common-initialization comparison.
-Panels follow the four reporting parameters and share the same ordinate
-range.  All model curves are solid.  These time-resolved errors complement,
-rather than replace, the space--time norm in Table~\ref{tab:adaptive-state}.}
-\label{fig:adaptive-state-histories}
+\includegraphics[width=\textwidth,height=.72\textheight,keepaspectratio]{Figures/euclidean_hprom/lhs8_solutions.pdf}
+\caption{$9+8$ HPROM solution overlays, matching the cuts,
+model colours, times, and common ordinate limits of
+Fig.~\ref{fig:hprom-baseline-solutions}.}
+\label{fig:hprom-lhs8-solutions}
 \end{figure}
-
-\subsection{Recovery of the full coordinate trajectory}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_hprom/lhs8_coefficients.pdf}
+\caption{$9+8$ per-coordinate trajectory errors, with the
+same linear-HPROM reference and shared logarithmic limits as
+Fig.~\ref{fig:coefficient-curves}.  All seven learned deployments appear.}
+\label{fig:hprom-lhs8-coefficients}
+\end{figure}
+\subsection{The \texorpdfstring{$9+12$}{9+12} campaign}
 \begin{table}[H]
 \centering
-\caption{Common-initialization full-residual comparison: complete
-151-coordinate trajectory error $e_q$ (\%) against the corresponding
-linear PROM.  Means and parameter ordering match Table~\ref{tab:adaptive-state}.}
-\label{tab:adaptive-coefficients}
-\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_case2_adaptive_coefficient.tex}}
+\caption{Pointwise $9+12$ HPROM state-history errors $e_u$ (\%).
+The mean averages the three in-domain reporting points.}
+\label{tab:hprom-lhs12-state}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/lhs12_state.tex}}
 \end{table}
-
-The mean coefficient error decreases from $3.678\%$ to $0.215\%$
-(Table~\ref{tab:adaptive-coefficients}).  At extrapolation it decreases
-from $6.104\%$ to $0.441\%$.  The corrected mean is smaller than the
-$0.823\%$ and $0.579\%$ of Cases~1 and~3, respectively.
-The equal-dimensional $n=13$ control retains a mean coefficient error of
-$3.438\%$ and an extrapolatory error of $5.525\%$.
-Thus the state-error improvement is accompanied by recovery of the
-linear-PROM coordinate history, rather than only by a fortuitous cancellation
-in the HDM state norm.  Figure~\ref{fig:adaptive-coefficients} resolves the
-errors by coordinate.  Although only three additional amplitudes are solved,
-their directions can change all 141 secondary coordinates.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_case2_adaptive_coefficients.png}
-\caption{Common-initialization comparison: per-coordinate absolute
-trajectory error (top) and relative trajectory error in percent (bottom)
-against the linear PROM.  All panels in each row share logarithmic ordinate
-limits computed from the plotted data.  The dotted vertical line marks
-the ten primary coordinates; every model curve is solid.  The zero-error
-linear-PROM reference is omitted from the logarithmic plots.}
-\label{fig:adaptive-coefficients}
-\end{figure}
-
-For these four parameters, a small online secondary correction substantially
-closes the baseline Case--2 accuracy gap without enriching its training set.
-This is not evidence that enrichment is unnecessary: enrichment changes the
-offline data, whereas the adaptive construction uses the current residual
-and Jacobian during deployment.  Their interaction is examined separately.
-No general state-error guarantee follows from this experiment.
-
-\section{Effect of PROM Coefficient-Data Enrichment}
-\label{sec:euclidean-prom-enrichment}
-The nested campaign tests how much of the baseline discrepancy can be
-reduced by extending parameter-space coverage at fixed architecture.  The
-Euclidean basis, network architectures, two parameter-validation trajectories,
-four online evaluation points, and full-residual PROM formulations are fixed.
-Only the number and location of linear-PROM coefficient-training trajectories
-change through the nested budgets $9$, $9+8$, $9+12$, and $9+18$.
-
-\subsection{Offline regression accuracy}
-Table~\ref{tab:euclidean-prom-enrichment-training} reports errors in the
-reduced coordinates used to train and select the networks.  Every learned
-family has substantially smaller external parameter-validation error at
-$9+12$ and $9+18$ than at baseline.  The progression is not strictly
-monotone for POD--DL--ROM, whose error changes from $0.433\%$ at $9+8$ to
-$0.453\%$ at $9+12$.  The validation error of the master parameter--time map shared by
-Case~2 and POD--NN--ROM decreases from $4.261\%$ to $1.607\%$ with $9+8$,
-to $1.137\%$ with $9+12$, and to $0.990\%$ with $9+18$.  This monotone
-held-out improvement does not,
-however, imply monotone accuracy at a more distant extrapolation point.
-The four Euclidean master maps use the same wide SiLU architecture, raw MSE
-objective, external validation data, and random seed.  Their selected
-checkpoints occur at epochs 1010, 1634, 1253, and 1731 for the baseline,
-$9+8$, $9+12$, and $9+18$ data, respectively, under the same
-validation-based early-stopping rule; none is the result of a wall-time
-interruption.
-
 \begin{table}[H]
 \centering
-\caption{Training and held-out parameter-validation coefficient errors across
-the Euclidean-POD PROM enrichment ladder.  The master map supplies both the
-Case--2 secondary tail and the POD--NN--ROM direct prediction.}
-\label{tab:euclidean-prom-enrichment-training}
-\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_prom_enrichment_training_comparison.tex}}
+\caption{Pointwise $9+12$ complete coefficient-history errors
+$e_q$ (\%) against the frozen linear HPROM, matching the preceding table.}
+\label{tab:hprom-lhs12-coefficients}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/lhs12_coefficient.tex}}
 \end{table}
-
-\subsection{Online state accuracy}
-Table~\ref{tab:euclidean-prom-enrichment-state} and
-Fig.~\ref{fig:euclidean-prom-enrichment-state} show a clear in-domain benefit.
-For Case~2 with $n=10$, the mean state error falls from $1.607\%$ to
-$0.702\%$, $0.602\%$, and $0.481\%$ at $9+8$, $9+12$, and $9+18$,
-respectively.  The direct POD--NN--ROM endpoint follows the same in-domain
-trend, from $1.698\%$ to $0.735\%$, $0.609\%$, and $0.484\%$.  Thus
-$9+12$ closes most, but not all, of their baseline gap; $9+18$ brings both
-close to the fixed linear-PROM mean of $0.441\%$.  Case~1, Case~3, and
-PROM--POD--AE already reach the linear-reference scale at $9+12$.
-POD--DL--ROM varies only slightly from $9+8$ to $9+12$ in domain and improves
-again at $9+18$.
-
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=.72\textheight,keepaspectratio]{Figures/euclidean_hprom/lhs12_solutions.pdf}
+\caption{$9+12$ HPROM solution overlays, matching the cuts,
+model colours, times, and common ordinate limits of
+Fig.~\ref{fig:hprom-baseline-solutions}.}
+\label{fig:hprom-lhs12-solutions}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{Figures/euclidean_hprom/lhs12_coefficients.pdf}
+\caption{$9+12$ per-coordinate trajectory errors, with the
+same linear-HPROM reference and shared logarithmic limits as
+Fig.~\ref{fig:coefficient-curves}.  All seven learned deployments appear.}
+\label{fig:hprom-lhs12-coefficients}
+\end{figure}
+\subsection{The \texorpdfstring{$9+18$}{9+18} campaign}
 \begin{table}[H]
 \centering
-\caption{Online state errors across the nested Euclidean-POD PROM
-coefficient-data ladder.  Values are percentages.  Each in-domain mean
-averages $\mub^{(v)},\mub^{(1)},\mub^{(2)}$; $\mub^{(3)}$ is extrapolatory.
-The linear PROM is unchanged, and the horizontal rule separates intrusive
-residual-minimizing models from non-intrusive direct maps.}
-\label{tab:euclidean-prom-enrichment-state}
-{\footnotesize
-\setlength{\tabcolsep}{3pt}
-\renewcommand{\arraystretch}{1.05}
-\input{tables/euclidean_prom_only/euclidean_prom_enrichment_online_state_comparison.tex}}
+\caption{Pointwise $9+18$ HPROM state-history errors $e_u$ (\%).
+The mean averages the three in-domain reporting points.}
+\label{tab:hprom-lhs18-state}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/lhs18_state.tex}}
 \end{table}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enrichment_state_error_comparison.png}
-\caption{Effect of the four-level nested PROM coefficient-data ladder on
-online state error.  Left: in-domain mean.  Right: extrapolatory point.  The
-two panels use exactly the same logarithmic ordinate limits, exposing the
-$9+8$ extrapolation anomaly without hiding the near-linear results.  The
-dashed vertical rule separates intrusive PROMs from non-intrusive ROMs; the
-solid black horizontal level is the fixed linear PROM.}
-\label{fig:euclidean-prom-enrichment-state}
-\end{figure}
-
-The extrapolatory result at $9+8$ is non-monotone and is retained rather than
-smoothed over.  Case~2 changes from $2.696\%$ at baseline to $3.270\%$, and
-POD--NN--ROM changes from $4.351\%$ to $19.465\%$.  Because these two models
-share the same parameter--time master map, while the other learned families
-improve at the same point, the degradation is specific to the extrapolation
-of that map rather than a uniform failure of the enriched data or the PROM
-solver.  Residual minimization still provides substantial correction: using
-the same predicted 151-coordinate vector, Case~2 reduces the direct-map state
-error from $19.465\%$ to $3.270\%$ by solving the first ten coordinates.
-At $9+12$, the Case--2 and POD--NN--ROM errors recover to $0.935\%$ and
-$1.083\%$, respectively; $9+18$ gives the slightly smaller values
-$0.876\%$ and $0.938\%$.
-
-The sampling geometry is consistent with this behaviour.  The $9+8$ subset
-contains a left-margin point at approximately $(3.949,0.0187)$ and a top-margin
-point at $(4.783,0.0325)$, but no sample in their upper-left intersection near
-$\mub^{(3)}=(4.000,0.0330)$.  The $9+12$ subset adds
-$(3.980,0.03173)$, coincident with the recovery observed for all learned
-families at $\mub^{(3)}$.  The subsequent $9+18$ additions yield only modest
-further extrapolatory changes.  This geometric evidence is consistent with
-the interpretation that counting margin points alone is insufficient.
-It does not prove causality, nor establish that the particular $9+8$
-deterioration is independent of optimization seed or stopping time.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enriched_solution_overlays.png}
-\caption{$9+18$ Euclidean-POD PROM solution cut-plane comparison against the
-HDM.  The model order, colours, state range, and time slices are identical to
-the baseline Fig.~\ref{fig:solution-overlays}; all curves are solid.}
-\label{fig:euclidean-prom-enriched-solution-overlays}
-\end{figure}
-
-\subsection{Coefficient diagnostics}
-The coefficient results localize the non-monotone state behaviour before the
-online reconstruction.  As shown in Table~\ref{tab:euclidean-prom-enrichment-coeff},
-the Case--2 extrapolatory coefficient error changes from $6.234\%$ to
-$7.387\%$ at $9+8$, while the shared direct POD--NN--ROM error changes from
-$10.214\%$ to $45.677\%$.  The latter therefore already contains a severe
-coefficient-space extrapolation error.  At $9+12$, these values recover to
-$0.987\%$ and $1.675\%$, and at $9+18$ they fall further to $0.589\%$ and
-$1.005\%$.  The state and coefficient evidence consistently identify the
-master-map extrapolation, rather than the Case--2 residual solve, as the
-source of the early-subset anomaly.
-
 \begin{table}[H]
 \centering
-\caption{Online coefficient-history errors against the fixed
-$n_{\mathrm{tot}}=151$ linear PROM across the nested data ladder.  Values are
-relative Frobenius percentages over all coefficients and time steps.  The
-horizontal rule separates intrusive and non-intrusive models.}
-\label{tab:euclidean-prom-enrichment-coeff}
-{\footnotesize
-\setlength{\tabcolsep}{3pt}
-\renewcommand{\arraystretch}{1.05}
-\input{tables/euclidean_prom_only/euclidean_prom_enrichment_online_coefficient_comparison.tex}}
+\caption{Pointwise $9+18$ complete coefficient-history errors
+$e_q$ (\%) against the frozen linear HPROM, matching the preceding table.}
+\label{tab:hprom-lhs18-coefficients}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/lhs18_coefficient.tex}}
 \end{table}
-
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enrichment_coeff_error_comparison.png}
-\caption{Effect of coefficient-data enrichment on global coefficient error.
-The logarithmic ordinate keeps both the $9+8$ POD--NN--ROM extrapolation error
-and the near-linear $9+18$ results visible.  The dashed vertical rule separates
-intrusive PROMs from direct ROM maps.}
-\label{fig:euclidean-prom-enrichment-coeff}
+\includegraphics[width=\textwidth,height=.73\textheight,keepaspectratio]{Figures/euclidean_hprom/baseline_heat_absolute.pdf}
+\caption{Absolute coefficient-error histories for the $9$ HPROM
+campaign.  Rows follow the learned model ordering and columns the four
+reporting parameters.  The dotted horizontal line marks the primary split.
+The common magnitude range is stated in the panel title and is unchanged
+across campaigns; hue distinguishes models, not an alternative error scale.}
+\label{fig:hprom-baseline-heat-absolute}
 \end{figure}
-
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enriched_coeff_abs_rel_errors.png}
-\caption{$9+18$ per-coefficient absolute and relative trajectory errors
-against the linear PROM.  The plotted set and fixed ordinate limits are
-identical to the baseline Fig.~\ref{fig:coefficient-curves}.  The dotted
-vertical line marks the ten-coordinate primary/secondary split.}
-\label{fig:euclidean-prom-enriched-coeff-errors}
+\includegraphics[width=\textwidth,height=.73\textheight,keepaspectratio]{Figures/euclidean_hprom/baseline_heat_relative.pdf}
+\caption{Relative coefficient-error histories for the $9$ HPROM
+campaign.  Rows follow the learned model ordering and columns the four
+reporting parameters.  The dotted horizontal line marks the primary split.
+The common magnitude range is stated in the panel title and is unchanged
+across campaigns; hue distinguishes models, not an alternative error scale.}
+\label{fig:hprom-baseline-heat-relative}
 \end{figure}
-
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enriched_coeff_abs_heatmaps.png}
-\caption{$9+18$ time-by-coefficient absolute errors against the linear PROM.
-Rows contain the four intrusive models followed by POD--NN--ROM and
-POD--DL--ROM; the colour range matches the baseline diagnostic.}
-\label{fig:euclidean-prom-enriched-coeff-abs-heatmaps}
+\includegraphics[width=\textwidth,height=.73\textheight,keepaspectratio]{Figures/euclidean_hprom/lhs8_heat_absolute.pdf}
+\caption{Absolute coefficient-error histories for the $9+8$ HPROM
+campaign.  Rows follow the learned model ordering and columns the four
+reporting parameters.  The dotted horizontal line marks the primary split.
+The common magnitude range is stated in the panel title and is unchanged
+across campaigns; hue distinguishes models, not an alternative error scale.}
+\label{fig:hprom-lhs8-heat-absolute}
 \end{figure}
-
 \begin{figure}[H]
 \centering
-\includegraphics[width=\textwidth]{Figures/euclidean_prom_only/prom_enriched_coeff_rel_heatmaps.png}
-\caption{$9+18$ time-by-coefficient relative errors, with the same common
-$0$--$20\%$ colour range and model ordering as the baseline diagnostic.}
-\label{fig:euclidean-prom-enriched-coeff-rel-heatmaps}
+\includegraphics[width=\textwidth,height=.73\textheight,keepaspectratio]{Figures/euclidean_hprom/lhs8_heat_relative.pdf}
+\caption{Relative coefficient-error histories for the $9+8$ HPROM
+campaign.  Rows follow the learned model ordering and columns the four
+reporting parameters.  The dotted horizontal line marks the primary split.
+The common magnitude range is stated in the panel title and is unchanged
+across campaigns; hue distinguishes models, not an alternative error scale.}
+\label{fig:hprom-lhs8-heat-relative}
 \end{figure}
-
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.94\textwidth]{Figures/euclidean_prom_only/prom_enrichment_case2_coeff_rel_errors.png}
-\caption{Case--2 per-coefficient relative error for the baseline, $9+8$,
-$9+12$, and $9+18$ master maps.  Each panel is one online evaluation point.
-The dotted
-vertical line separates the ten residual-solved primary coordinates from the
-141 ANN-injected secondary coordinates.}
-\label{fig:euclidean-prom-enrichment-case2-coeff}
+\includegraphics[width=\textwidth,height=.73\textheight,keepaspectratio]{Figures/euclidean_hprom/lhs12_heat_absolute.pdf}
+\caption{Absolute coefficient-error histories for the $9+12$ HPROM
+campaign.  Rows follow the learned model ordering and columns the four
+reporting parameters.  The dotted horizontal line marks the primary split.
+The common magnitude range is stated in the panel title and is unchanged
+across campaigns; hue distinguishes models, not an alternative error scale.}
+\label{fig:hprom-lhs12-heat-absolute}
 \end{figure}
-
-The nested experiment therefore supports two distinct conclusions.  First,
-coefficient-data coverage is an important limitation in domain: $9+8$
-substantially improves every model, $9+12$ places four of the six learned
-models at the linear-reference state-error scale, and $9+18$ also closes most
-of the remaining Case--2 and POD--NN--ROM gap.  Second, enrichment size alone
-does not control extrapolation.  The $9+8$ subset reduces held-out parameter
-validation error while worsening the corner extrapolation; adding four
-well-placed trajectories at $9+12$ reverses that failure.  The location of
-the added trajectories is therefore as important as their count.
-
-\section{Conclusions}
-The Euclidean-POD PROM campaign gives a common full-residual comparison of
-three learned closures, an intrusive decoder, and two direct
-reduced-coordinate maps.  The linear PROM provides an accuracy reference in
-the fixed 151-coordinate trial representation.  Case~3 and PROM--POD--AE
-retain close in-domain state accuracy while solving a low-dimensional online
-variable.  The Case--2/POD--NN shared-map study gives a precise interpretation
-of intrusive correction: solving progressively more coordinates through the
-residual moves the result from the direct-map endpoint toward linear PROM, but
-the prescribed tail can still transfer its error into the solved block.
-
-The residual-adaptive extension provides a different response to that
-limitation.  With the unchanged baseline network and three additional
-secondary amplitudes, the common-initialization comparison reduces the
-mean in-domain state error from $1.617\%$ to $0.447\%$, close to the
-linear reference.  A matched Case--2 control with $n=13$ gives $1.513\%$,
-showing that the recovery is not explained merely by adding three online
-unknowns.  The validation-only rank sweep also shows that most of the
-coefficient recovery occurs in the first three residual-selected directions.
-Across 11--20 unknowns, its mean validation coefficient error decreases from
-$1.937\%$ to $0.111\%$, whereas the equal-dimensional conventional Case--2
-controls remain between $3.542\%$ and $3.809\%$.  This isolates the
-orientation of the adaptive directions as the operative mechanism in the
-reported experiment.  The construction is nevertheless a local
-residual-based correction, not an HDM-error minimization principle or a
-guarantee of improvement for arbitrary data.
-
-The nested enrichment study shows that $9+12$ already reaches the
-linear-reference scale for four of the six learned models and removes the
-localized master-map extrapolation failure observed at $9+8$.  Increasing to
-$9+18$ remains useful for Case~2 and POD--NN--ROM in domain and brings all
-learned models close to the linear-PROM reference at the reported points.
-The comparison demonstrates that the geometry of added samples matters in
-addition to their number.
-
-The numerical evidence in this draft intentionally isolates the full-residual
-PROM setting.  This makes it possible to assess the correction space without
-conflating its effect with residual sampling.  The ECM derivation establishes
-the required model-specific construction for the separate HPROM study: each
-rule must be built from the corresponding learned trial map and tangent,
-rather than borrowed from a linear HPROM or from a different closure.  A
-matched HPROM presentation can therefore retain the reporting order, tables,
-and model comparisons established here.
-
-\appendix
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=.73\textheight,keepaspectratio]{Figures/euclidean_hprom/lhs12_heat_relative.pdf}
+\caption{Relative coefficient-error histories for the $9+12$ HPROM
+campaign.  Rows follow the learned model ordering and columns the four
+reporting parameters.  The dotted horizontal line marks the primary split.
+The common magnitude range is stated in the panel title and is unchanged
+across campaigns; hue distinguishes models, not an alternative error scale.}
+\label{fig:hprom-lhs12-heat-relative}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=.73\textheight,keepaspectratio]{Figures/euclidean_hprom/lhs18_heat_absolute.pdf}
+\caption{Absolute coefficient-error histories for the $9+18$ HPROM
+campaign.  Rows follow the learned model ordering and columns the four
+reporting parameters.  The dotted horizontal line marks the primary split.
+The common magnitude range is stated in the panel title and is unchanged
+across campaigns; hue distinguishes models, not an alternative error scale.}
+\label{fig:hprom-lhs18-heat-absolute}
+\end{figure}
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,height=.73\textheight,keepaspectratio]{Figures/euclidean_hprom/lhs18_heat_relative.pdf}
+\caption{Relative coefficient-error histories for the $9+18$ HPROM
+campaign.  Rows follow the learned model ordering and columns the four
+reporting parameters.  The dotted horizontal line marks the primary split.
+The common magnitude range is stated in the panel title and is unchanged
+across campaigns; hue distinguishes models, not an alternative error scale.}
+\label{fig:hprom-lhs18-heat-relative}
+\end{figure}
 \section{LSPG-Sensitive Basis Exploration}
 \label{app:lspg-sensitive}
 Before adopting the Euclidean POD basis used in the main text, we explored an

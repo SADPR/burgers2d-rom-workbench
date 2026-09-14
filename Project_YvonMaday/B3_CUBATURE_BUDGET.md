@@ -118,6 +118,20 @@ The result supports testing this rule on Sherlock, not reducing its support
 further or replacing the established campaign without retaining a record.
 No manuscript figures or production campaign results were changed.
 
+### Independent 1024-draw stress test
+
+A subsequent test used the first 1024 draws of the same sequence and was
+stored separately in `euclidean_b3_budget1024_local`. Its fit retained 686
+positive cells and required a 2026-cell augmented stencil. It failed every
+predeclared operator criterion: the Gram eigenvalue interval was
+[0.66711, 1.21542], the maximum relative gradient error was 0.07236, and
+the maximum true linearized-residual ratio was 1.11750. The two validation
+coefficient-error ratios were 1.49944 and 1.29773, well above 1.05.
+
+The study therefore stopped before evaluating any reporting parameter. The
+1024-draw rule is rejected. Among the tested rules, 2048 draws and 1506
+positive cells remain the smallest accepted configuration.
+
 ## Sherlock timing comparison
 
 With the existing campaign and active Python environment, execute:

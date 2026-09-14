@@ -1,0 +1,12 @@
+\begin{tabular}{llr|rr}
+\toprule
+Model & Architecture & Parameters & Train (\%) & Val (\%) \\
+\midrule
+HPROM--ANN Case 1 & (256,512,512,256), SiLU & 564621 & 1.225 & 3.567 \\
+HPROM--ANN Case 2 ($n=10$) & (256,512,512,256), SiLU & 565399 & 2.540 & 4.402 \\
+HPROM--ANN Case 3 & (256,512,512,256), SiLU & 565389 & 0.567 & 3.499 \\
+HPROM--POD--AE ($n_z=10$) & (512,256,128), GELU & 486817 & 0.207 & 2.810 \\
+\midrule
+POD--DL--ROM ($n_z=10$) & latent 10, SiLU & 952747 & 1.691 & 2.795 \\
+\bottomrule
+\end{tabular}

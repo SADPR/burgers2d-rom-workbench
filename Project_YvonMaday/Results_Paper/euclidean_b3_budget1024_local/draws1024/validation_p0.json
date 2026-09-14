@@ -1,0 +1,23 @@
+{
+  "point": 0,
+  "mu": [
+    4.5625,
+    0.02625
+  ],
+  "online_seconds": 1.5383127368986607,
+  "iterations": 1501,
+  "min_rank": 3,
+  "max_rank": 3,
+  "mean_weighted_residual_norm": 0.84224782069878,
+  "coefficient_error_percent": 0.36790225427412276,
+  "primary_error_percent": 0.15287524498936308,
+  "secondary_error_percent": 1.6420176769326515,
+  "profile": {
+    "predictor_seconds": 0.37366712652146816,
+    "krylov_seconds": 0.36671705171465874,
+    "tangent_seconds": 0.15543012879788876,
+    "solve_seconds": 0.5944800060242414
+  },
+  "weights_sha256": "4cf8f8104f7d8dd05037bb4514f741dcce9b1cd7cd3db493004c58a575d5c0db",
+  "threads": 1
+}

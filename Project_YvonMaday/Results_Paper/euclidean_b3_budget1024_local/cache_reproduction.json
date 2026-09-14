@@ -1,0 +1,20 @@
+{
+  "relative_tolerance": 0.0001,
+  "blocks": [
+    {
+      "rows": 151,
+      "relative_matrix_delta": 4.9386923056903405e-06,
+      "relative_target_delta": 5.313483779062411e-06
+    },
+    {
+      "rows": 91,
+      "relative_matrix_delta": 4.28121990468731e-06,
+      "relative_target_delta": 7.335460631552551e-08
+    },
+    {
+      "rows": 1,
+      "relative_matrix_delta": 2.775422006062413e-06,
+      "relative_target_delta": 0.0
+    }
+  ]
+}

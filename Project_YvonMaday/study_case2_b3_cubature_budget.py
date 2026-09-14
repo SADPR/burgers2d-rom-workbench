@@ -129,9 +129,14 @@ def main():
     parser.add_argument("--campaign-root", type=Path,
                         default=ROOT / "Project_YvonMaday/Results_Paper/euclidean_hprom_main")
     parser.add_argument("--offline-threads", type=int, default=2)
+    parser.add_argument("--budgets", type=int, nargs="+", default=list(BUDGETS),
+                        help="Nested prefixes of the fixed 4096-draw sequence")
     args = parser.parse_args()
     if args.offline_threads < 1:
         parser.error("offline threads must be positive")
+    budgets = tuple(dict.fromkeys(args.budgets))
+    if not budgets or any(budget < 1 or budget > 4096 for budget in budgets):
+        parser.error("budgets must be unique positive integers no larger than 4096")
     campaign = args.campaign_root.resolve()
     output = args.output.resolve()
     os.environ["CASE2_CAMPAIGN_ROOT"] = str(campaign)
@@ -164,7 +169,7 @@ def main():
         if cached["initial_rule_sha256"] != runner.sha256(original_prior_file):
             raise ValueError("Cached moment column weights differ.")
         protocol = dict(
-            budgets=list(BUDGETS), parent_draws=4096, seed=418,
+            budgets=list(budgets), parent_draws=4096, seed=418,
             thresholds=THRESHOLDS, maxiter=1500, rank=3, reuse_predictor=True,
             inputs=fingerprints, training_sources=actual_sources,
             matrix_sha256=runner.sha256(cache / "matrix.npy"),
@@ -214,7 +219,7 @@ def main():
         samples = np.random.default_rng(418).choice(n, size=4096, p=probabilities)
         regenerated = np.bincount(samples, minlength=n) / (4096 * probabilities)
         np.testing.assert_allclose(regenerated, original_prior, rtol=1e-12, atol=1e-13)
-        for budget in BUDGETS:
+        for budget in budgets:
             prior = np.bincount(samples[:budget], minlength=n) / (budget * probabilities)
             folder = output / f"draws{budget}"
             folder.mkdir(parents=True, exist_ok=True)
@@ -230,7 +235,7 @@ def main():
                           cache / "weights.npy", inputs, runner) for p in range(2)]
 
     candidates = []
-    for budget in BUDGETS:
+    for budget in budgets:
         folder = output / f"draws{budget}"
         rule = folder / "weights.npy"
         audit_file = folder / "validation_operator_audit.json"
@@ -269,7 +274,8 @@ def main():
     # Freeze this decision before accessing any reporting trajectories.
     runner.atomic_json(output / "selection.json", selection)
     if not selected:
-        print("Neither smaller rule passed validation. Retain the 3532-cell rule.", flush=True)
+        print("No candidate in this output passed validation; reporting points were not evaluated.",
+              flush=True)
         return
 
     reporting = []

@@ -1,0 +1,12 @@
+{
+  "candidates": 1015,
+  "sampled_cells": 686,
+  "stencil_cells": 2026,
+  "objective": 0.8595667753984709,
+  "optimizer_success": false,
+  "optimizer_message": "STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT",
+  "optimizer_iterations": 1500,
+  "projected_gradient_inf": 1.1460879873497292e-05,
+  "fit_seconds": 19.6165092010051,
+  "weights_sha256": "4cf8f8104f7d8dd05037bb4514f741dcce9b1cd7cd3db493004c58a575d5c0db"
+}

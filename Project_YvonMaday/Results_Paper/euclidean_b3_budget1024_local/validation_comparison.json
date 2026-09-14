@@ -1,0 +1,28 @@
+[
+  {
+    "draws": 1024,
+    "candidates": 1015,
+    "sampled_cells": 686,
+    "stencil_cells": 2026,
+    "objective": 0.8595667753984709,
+    "optimizer_success": false,
+    "optimizer_message": "STOP: TOTAL NO. OF ITERATIONS REACHED LIMIT",
+    "optimizer_iterations": 1500,
+    "projected_gradient_inf": 1.1460879873497292e-05,
+    "fit_seconds": 19.6165092010051,
+    "weights_sha256": "4cf8f8104f7d8dd05037bb4514f741dcce9b1cd7cd3db493004c58a575d5c0db",
+    "min_gram": 0.6671111596510326,
+    "max_gram": 1.2154157268926364,
+    "max_gradient_error": 0.07235557435641912,
+    "max_linearized_ratio": 1.1174972211766172,
+    "validation_error_ratios": [
+      1.4994363726106927,
+      1.2977344472356156
+    ],
+    "validation_coefficient_errors": [
+      0.36790225427412276,
+      0.4052272175180348
+    ],
+    "accepted": false
+  }
+]
