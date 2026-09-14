@@ -18,13 +18,17 @@ was modified or rerun in this reporting update.
   and nonlinear correction use the same square-root-weighted residual and
   Jacobian. Global POD orthogonality does not imply local weighted orthogonality.
 - Explained positive dynamic and complete-mass moment fitting separately from
-  conventional SVD-compressed ECM. The 4096 parameter counts candidate draws,
+  conventional SVD-compressed ECM. The 2048 parameter counts candidate draws,
   not retained cells or an SVD tolerance.
 - Replaced main PROM accuracy/enrichment comparisons with the baseline and
   nested 9+8, 9+12, 9+18 HPROM campaigns, including B3 at every budget.
 - Used one model/parameter order throughout accuracy tables and figures.
 - Added baseline HPROM cost measurements and the separate validated B3 support
   comparison with predictor reuse in both variants.
+- After downloading the corrected B3 enrichment runs, replaced all main B3
+  sources with the validated 2048-draw rules. Baseline uses the already measured
+  frozen selected deployment; lhs8/lhs12/lhs18 use their independently refitted
+  rules. Kept 4096 only as the matched support-ablation comparator.
 - Moved existing full-residual rank/equal-dimensional and perturbation controls
   to explicitly identified PROM appendices. No HPROM equivalents were fabricated.
 - Regenerated all main HPROM sampling, cut-plane, coordinate-history, heat-map,
@@ -57,8 +61,12 @@ Important qualifications retained in the paper:
 - Operator acceptance compares generalized sampled/full **Jacobian-action**
   Grams. Its LS ratio compares sampled B3 against full-residual B3 linearized
   updates, both scored in full residual norm, not an unrestricted 151-mode solve.
-- Enrichment results use 4096-draw rules. The 2048-draw/1506-positive-cell rule
-  belongs only to a separately validated baseline optimization.
+- Every main B3 result now uses 2048 draws and predictor reuse. Positive cells
+  are 1506/1533/1534/1512 across 9/9+8/9+12/9+18. Operator bounds are unchanged.
+- State errors are nearly unchanged from 4096, but the enriched complete-
+  coefficient means increase to 0.099/0.082/0.080 percent. The update explicitly
+  reports this support-versus-fidelity tradeoff instead of claiming identical
+  trajectories or a universal error floor.
 - Baseline timing uses one Sherlock node: HDM and linear HPROM have 24 numerical
   threads, learned deployments one. Single intrusive measurements provide no
   timing variability estimate. Enrichment-node timings are not mixed into them.
@@ -68,6 +76,21 @@ Important qualifications retained in the paper:
 - 9+8 improves in-domain regression but worsens extrapolation for conventional
   Case 2 and POD-NN-ROM. The coverage explanation is plausible, not a causal
   isolation of one additional LHS point.
+
+## Corrected B3 Summary (2048 Draws)
+
+| Data | Positive cells | In-domain state mean (%) | Extrapolation state (%) | In-domain coefficient mean (%) |
+| --- | ---: | ---: | ---: | ---: |
+| 9 | 1506 | 0.456310 | 0.850651 | 0.257384 |
+| 9+8 | 1533 | 0.442130 | 0.876287 | 0.098761 |
+| 9+12 | 1534 | 0.444235 | 0.849756 | 0.082494 |
+| 9+18 | 1512 | 0.444004 | 0.847998 | 0.079848 |
+
+Baseline B3 mean time is 8.433171 s, with an 87.36 HDM/time ratio against
+736.729178 s. It is faster than Case 1 (21.098 s) and Case 3 (18.856 s),
+but slower than uncorrected Case 2 (5.682 s). These are the existing matched
+single-measurement Sherlock data, not new local timings. No training or
+solver was run while updating the paper.
 
 ## Regenerate and Verify
 

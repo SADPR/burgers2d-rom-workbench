@@ -1,9 +1,11 @@
 """Numerical and presentation contracts for the HPROM paper asset generator."""
 
 import importlib
+import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 
 def assets(monkeypatch):
@@ -47,3 +49,52 @@ def test_table_budget_and_intrusive_separations(monkeypatch, tmp_path):
     assert r"\begin{tabular}{lrr|rr}" in text
     assert "4 \\\\\n\\midrule\nPOD--NN--ROM" in text
     assert module.METHODS == ("linear", "case1", "case2", "b3", "case3", "podae", "podnn", "poddl")
+
+
+def test_enriched_b3_uses_2048_and_never_falls_back(monkeypatch, tmp_path):
+    module = assets(monkeypatch)
+    monkeypatch.setattr(module, "CAMPAIGNS", {"lhs8": tmp_path})
+    rule_dir = tmp_path / "Stage4/case2_b3/positive_fit2048"
+    rule_dir.mkdir(parents=True)
+    (rule_dir / "selection.json").write_text(json.dumps({"rule_file": str(rule_dir / "weights.npy")}))
+    np.save(rule_dir / "weights.npy", np.ones(62500))
+    folder = rule_dir.parent / "reporting_positive_fit2048_hprom3_p0_steps500"
+    folder.mkdir()
+    (folder / "summary.json").write_text(json.dumps({"state_error_percent": .44}))
+    np.save(folder / "qN.npy", np.ones((151,501)))
+    old = rule_dir.parent / "reporting_positive_fit4096_hprom3_p0_steps500"
+    old.mkdir()
+    (old / "summary.json").write_text("4096 must not be read")
+    record = module.load_record("lhs8", "b3", 0)
+    assert record.weights_path == rule_dir / "weights.npy"
+    assert record.qpath == folder / "qN.npy"
+    (folder / "qN.npy").unlink()
+    with pytest.raises(FileNotFoundError):
+        module.load_record("lhs8", "b3", 0)
+
+
+def test_baseline_b3_resolves_frozen_selected_deployment(monkeypatch, tmp_path):
+    module = assets(monkeypatch)
+    local, remote = tmp_path / "local", tmp_path / "sherlock"
+    monkeypatch.setattr(module, "B3_BUDGET_LOCAL", local)
+    monkeypatch.setattr(module, "B3_BUDGET_SHERLOCK", remote)
+    rule_dir = local / "draws2048"
+    rule_dir.mkdir(parents=True)
+    remote.mkdir()
+    chosen = dict(draws=2048, accepted=True, min_gram=.85, max_gram=1.09,
+                  max_gradient_error=.03, max_linearized_ratio=1.01,
+                  weights_sha256="frozen-weights", validation_error_ratios=[1.02,1.03])
+    selection = dict(selected_draws=2048, smaller_rule_accepted=True, uses_reporting_points=False,
+                     candidates=[chosen], thresholds={"max_validation_error_ratio": 1.05})
+    (local / "selection.json").write_text(json.dumps(selection))
+    environment = dict(selection=selection, threads=1, reuse_predictor=True,
+                       selected_weights_sha256="frozen-weights", inputs={"master": "frozen-master"})
+    (remote / "environment.json").write_text(json.dumps(environment))
+    manifest, rule, audit, _ = module.b3_provenance("baseline")
+    assert rule == rule_dir / "weights.npy"
+    assert audit == rule_dir / "validation_operator_audit.json"
+    assert manifest["accepted"] and manifest["checks"]["minimum_Gram_eigenvalue"] == .85
+    environment["reuse_predictor"] = False
+    (remote / "environment.json").write_text(json.dumps(environment))
+    with pytest.raises(ValueError, match="protocol mismatch"):
+        module.b3_provenance("baseline")

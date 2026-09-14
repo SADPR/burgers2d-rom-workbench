@@ -32,12 +32,16 @@ REPO = PAPER.parents[1]
 FIGURES = PAPER / "Figures/euclidean_hprom"
 TABLES = PAPER / "tables/euclidean_hprom"
 BASE = PAPER / "euclidean_hprom_main"
+B3_DRAWS = 2048
+B3_BUDGET_LOCAL = PAPER / "euclidean_b3_budget_local"
+B3_BUDGET_SHERLOCK = PAPER / "euclidean_b3_budget_sherlock"
 DESIGN_PATH = REPO / "Project_YvonMaday/euclidean_nested_enrichment_design.json"
 BASIS_PATH = PAPER / "MetricStudy/euclidean/Stage1/basis.npy"
 UREF_PATH = BASIS_PATH.with_name("u_ref.npy")
 POINTS = ((4.875, .0225), (4.560, .0190), (5.190, .0260), (4., .0330))
 POINT_KEYS = ("verification", "offgrid1", "offgrid2", "extrapolation20pct")
 POINT_LABELS = (r"$\mu^{(v)}$", r"$\mu^{(1)}$", r"$\mu^{(2)}$", r"$\mu^{(3)}$")
+VALIDATION_POINTS = ((4.5625, .02625), (5.1875, .01875))
 HDM_NAMES = ("mu1_4.875+mu2_0.0225.npy", "mu1_4.56+mu2_0.019.npy",
              "mu1_5.19+mu2_0.026.npy", "mu1_4.0+mu2_0.033.npy")
 LEVELS = ("baseline", "lhs8", "lhs12", "lhs18")
@@ -98,6 +102,117 @@ def unique(paths):
     return paths[0]
 
 
+def b3_provenance(level):
+    """Resolve the validated 2048 rule without moving or altering raw results."""
+    if level == "baseline":
+        environment_path = B3_BUDGET_SHERLOCK / "environment.json"
+        environment = json.loads(environment_path.read_text())
+        selection_path = B3_BUDGET_LOCAL / "selection.json"
+        selection = json.loads(selection_path.read_text())
+        if selection != environment["selection"] or selection["selected_draws"] != B3_DRAWS:
+            raise ValueError("Baseline B3 deployment differs from its frozen support selection")
+        candidates = [c for c in selection["candidates"] if c["draws"] == B3_DRAWS]
+        if len(candidates) != 1 or not candidates[0]["accepted"]:
+            raise ValueError("No accepted baseline 2048 candidate")
+        chosen = candidates[0]
+        rule_dir = B3_BUDGET_LOCAL / f"draws{B3_DRAWS}"
+        checks = dict(zip(("minimum_Gram_eigenvalue", "maximum_Gram_eigenvalue",
+                           "maximum_gradient_relative_error",
+                           "maximum_sampled_to_full_linearized_residual_ratio"),
+                          (chosen[k] for k in ("min_gram", "max_gram", "max_gradient_error", "max_linearized_ratio"))))
+        manifest = dict(accepted=selection["smaller_rule_accepted"],
+                        selection_uses_reporting_points=selection["uses_reporting_points"],
+                        checks=checks, thresholds=selection["thresholds"], inputs=environment["inputs"],
+                        weights_sha256=chosen["weights_sha256"],
+                        held_out_validation=[rule_dir / f"validation_p{p}.json" for p in range(2)])
+        if (environment["threads"] != 1 or not environment["reuse_predictor"]
+                or environment["selected_weights_sha256"] != chosen["weights_sha256"]):
+            raise ValueError("Baseline selected B3 rule/protocol mismatch")
+        if any(r > selection["thresholds"]["max_validation_error_ratio"]
+               for r in chosen["validation_error_ratios"]):
+            raise ValueError("Baseline B3 failed its extra trajectory-comparison criterion")
+        provenance = [environment_path, selection_path, B3_BUDGET_LOCAL / "protocol.json",
+                      rule_dir / "fit.json"]
+    else:
+        rule_dir = CAMPAIGNS[level] / f"Stage4/case2_b3/positive_fit{B3_DRAWS}"
+        selection_path = rule_dir / "selection.json"
+        manifest = json.loads(selection_path.read_text())
+        if Path(manifest["rule_file"]).parts[-2:] != (rule_dir.name, "weights.npy"):
+            raise ValueError(f"Selection names a different rule: {selection_path}")
+        provenance = [selection_path, rule_dir / "config.json", rule_dir / "summary.json"]
+    audit_path = rule_dir / "validation_operator_audit.json"
+    return manifest, rule_dir / "weights.npy", audit_path, provenance
+
+
+def verify_b3_provenance(level):
+    selection, rule, audit_path, paths = b3_provenance(level)
+    audit = json.loads(audit_path.read_text())
+    if not selection["accepted"] or selection["selection_uses_reporting_points"]:
+        raise ValueError(f"B3 rule was not accepted without reporting leakage: {level}")
+    if len(selection["held_out_validation"]) != 2:
+        raise ValueError(f"Incomplete B3 validation: {level}")
+    rule_hash = digest(rule)
+    expected_inputs = {str(p.relative_to(REPO)): digest(p) for p in (
+        CAMPAIGNS[level] / "Stage3/models/master_ann_mu_t_to_qtot_ntot151_best.pt",
+        BASIS_PATH, UREF_PATH, BASE / "Stage2/prom_coeff_dataset_ntot151/meta.json")}
+    if (selection["weights_sha256"] != rule_hash or audit["weights_sha256"] != rule_hash
+            or audit["inputs"] != expected_inputs or selection["inputs"] != expected_inputs):
+        raise ValueError(f"Changed B3 rule/model/basis provenance: {level}")
+    records = audit["records"]
+    expected = {(p, k) for p in range(2) for k in (3, 15, 75, 175, 275, 425, 500)}
+    if len(records) != 14 or {(r["point"], r["step"]) for r in records} != expected:
+        raise ValueError(f"Invalid B3 held-out audit coverage: {level}")
+    checks = dict(minimum_Gram_eigenvalue=min(r["Gram_eigenvalue_min"] for r in records),
+                  maximum_Gram_eigenvalue=max(r["Gram_eigenvalue_max"] for r in records),
+                  maximum_gradient_relative_error=max(r["gradient_relative_error"] for r in records),
+                  maximum_sampled_to_full_linearized_residual_ratio=max(
+                      r["sampled_true_linearized_residual"] / max(r["full_true_linearized_residual"], 1e-30)
+                      for r in records))
+    for key, value in checks.items():
+        np.testing.assert_allclose(value, selection["checks"][key], rtol=0, atol=1e-12)
+    bounds = selection["thresholds"]
+    for key, value in dict(min_gram=.8, max_gram=1.2, max_gradient_error=.05, max_linearized_ratio=1.05).items():
+        if bounds[key] != value:
+            raise ValueError(f"Changed B3 acceptance threshold {key}: {level}")
+    if (not np.isfinite(list(checks.values())).all()
+            or checks["minimum_Gram_eigenvalue"] < bounds["min_gram"]
+            or checks["maximum_Gram_eigenvalue"] > bounds["max_gram"]
+            or checks["maximum_gradient_relative_error"] > bounds["max_gradient_error"]
+            or checks["maximum_sampled_to_full_linearized_residual_ratio"] > bounds["max_linearized_ratio"]):
+        raise ValueError(f"B3 operator audit fails its declared thresholds: {level}")
+    config = json.loads((B3_BUDGET_LOCAL / "protocol.json" if level == "baseline"
+                         else rule.parent / "config.json").read_text())
+    if config["inputs"] != expected_inputs or len(config["training_sources"]) != 9:
+        raise ValueError(f"B3 moment fit does not use its baseline nine teachers: {level}")
+    teacher_root = BASE / "Stage2/prom_coeff_dataset_ntot151/per_mu"
+    expected_sources = {str(p.relative_to(REPO)): digest(p / "qN.npy") for p in teacher_root.iterdir()}
+    if config["training_sources"] != expected_sources:
+        raise ValueError(f"Changed B3 moment-training trajectories: {level}")
+    for point in range(2):
+        path = (rule.parent / f"validation_p{point}.json" if level == "baseline" else
+                CAMPAIGNS[level] / f"Stage4/case2_b3/validation_positive_fit{B3_DRAWS}_hprom3_p{point}_steps500/summary.json")
+        record = json.loads(path.read_text())
+        meta = record if level == "baseline" else record["config"]
+        if meta["weights_sha256"] != rule_hash or meta["threads"] != 1:
+            raise ValueError(f"Validation trajectory uses a different B3 rule/protocol: {path}")
+        if not np.isfinite(record["coefficient_error_percent"]):
+            raise ValueError(f"Invalid B3 validation error: {path}")
+        if level != "baseline" and (meta["inputs"] != expected_inputs or not meta.get("reuse_predictor")):
+            raise ValueError(f"Changed B3 validation inputs/predictor reuse: {path}")
+        qpath = (path.with_name(f"validation_p{point}_qN.npy") if level == "baseline"
+                 else path.with_name("qN.npy"))
+        q = np.load(qpath, allow_pickle=False)
+        if q.shape != (151,501) or not np.isfinite(q).all():
+            raise ValueError(f"Incomplete B3 validation coordinates: {qpath}")
+        reference_dir = BASE / "Stage2/prom_coeff_dataset_ntot151_validation2/per_mu"
+        reference = unique([p / "qN.npy" for p in reference_dir.iterdir()
+                            if np.allclose(np.load(p / "mu.npy").ravel(), VALIDATION_POINTS[point], rtol=0, atol=1e-10)])
+        teacher = np.load(reference, allow_pickle=False)
+        error = 100 * np.linalg.norm(q-teacher) / np.linalg.norm(teacher)
+        np.testing.assert_allclose(error, record["coefficient_error_percent"], rtol=1e-9)
+    return selection
+
+
 @dataclass
 class Record:
     q: np.ndarray
@@ -128,10 +243,14 @@ def load_record(level, method, point):
         if summary["solve_backend_effective"] != "hprom":
             raise ValueError(f"Not an HPROM solve: {path}")
     elif method == "b3":
-        folder = root / f"Stage4/case2_b3/reporting_positive_fit4096_hprom3_p{point}_steps500"
-        path, qpath = folder / "summary.json", folder / "qN.npy"
+        if level == "baseline":
+            folder = B3_BUDGET_SHERLOCK / "selected"
+            path, qpath = folder / f"reporting_p{point}.json", folder / f"reporting_p{point}_qN.npy"
+        else:
+            folder = root / f"Stage4/case2_b3/reporting_positive_fit{B3_DRAWS}_hprom3_p{point}_steps500"
+            path, qpath = folder / "summary.json", folder / "qN.npy"
         summary = json.loads(path.read_text())
-        weights_path = root / "Stage4/case2_b3/positive_fit4096/weights.npy"
+        _, weights_path, _, _ = b3_provenance(level)
     else:
         folder = root / "Runs" / ("PODNN_ROM" if method == "podnn" else "PODDL_ROM")
         folder = unique(folder.glob(f"*{tag}*"))
@@ -197,11 +316,7 @@ def check_design_and_models():
                 if summary["trainable_parameters"] != baseline_summary["trainable_parameters"]:
                     raise ValueError(f"Enrichment changed network size: {checkpoint_path}")
             model_details[level, method] = summary
-        selection = json.loads((root / "Stage4/case2_b3/selection.json").read_text())
-        if not selection["accepted"] or selection["selection_uses_reporting_points"]:
-            raise ValueError(f"B3 rule was not validated without reporting leakage: {root}")
-        if len(selection["held_out_validation"]) != 2:
-            raise ValueError(f"Incomplete B3 validation: {root}")
+        verify_b3_provenance(level)
     for level in LEVELS:
         source = datasets["baseline"] if level == "baseline" else datasets["lhs18"]
         for folder in (datasets[level] / "per_mu").iterdir():
@@ -257,14 +372,20 @@ def recompute(records):
                 np.testing.assert_allclose(record.state, reported, rtol=2e-7, atol=1e-8,
                                            err_msg=f"State mismatch: {record.summary_path}")
                 if method == "b3":
-                    config = record.summary["config"]
+                    config = record.summary if level == "baseline" else record.summary["config"]
                     if config["weights_sha256"] != digest(record.weights_path) or config["threads"] != 1:
                         raise ValueError(f"B3 rule/protocol mismatch: {record.summary_path}")
                     if record.summary["min_rank"] != 3 or record.summary["max_rank"] != 3:
                         raise ValueError(f"B3 did not attain rank three: {record.summary_path}")
-                    if config["initialization"] != "known_linear":
+                    if level != "baseline" and (config["initialization"] != "known_linear"
+                                                 or not config.get("reuse_predictor")):
                         raise ValueError(f"Unexpected B3 initial representation: {record.summary_path}")
-                    for key, value in config["inputs"].items():
+                    np.testing.assert_allclose(record.q[:,0], projected[:,0], rtol=0, atol=1e-9,
+                                               err_msg=f"B3 did not use the known full-space initial state: {record.qpath}")
+                    selection, _, _, _ = b3_provenance(level)
+                    if level != "baseline" and config["inputs"] != selection["inputs"]:
+                        raise ValueError(f"B3 reporting inputs differ from validation: {record.summary_path}")
+                    for key, value in selection["inputs"].items():
                         if digest(REPO / key) != value:
                             raise ValueError(f"Changed B3 input {key}: {record.summary_path}")
                     np.testing.assert_allclose(record.coefficient, record.summary["coefficient_error_percent"], rtol=1e-9)
@@ -340,7 +461,7 @@ def summaries(records, details):
           r"Model & Train & Val & Train & Val & Train & Val & Train & Val", rows)
     rows = []
     for level,label in zip(LEVELS,LEVEL_LABELS):
-        selection = json.loads((CAMPAIGNS[level] / "Stage4/case2_b3/selection.json").read_text())
+        selection, _, _, _ = b3_provenance(level)
         weights = np.load(records[level,"b3",0].weights_path)
         checks = selection["checks"]
         rows.append([label, str(np.count_nonzero(weights)),
@@ -361,7 +482,7 @@ def summaries(records, details):
                                         state_error_percent=r.state,coefficient_error_percent=r.coefficient,
                                         q_source=str(r.qpath.relative_to(PAPER))))
     with (TABLES / "metrics.csv").open("w",newline="") as stream:
-        writer=csv.DictWriter(stream,fieldnames=list(metric_rows[0]));writer.writeheader();writer.writerows(metric_rows)
+        writer=csv.DictWriter(stream,fieldnames=list(metric_rows[0]),lineterminator="\n");writer.writeheader();writer.writerows(metric_rows)
 
 
 def save(fig, name):
@@ -571,8 +692,8 @@ def timing_table(records):
         rows.append([NAMES[method]+suffix,"24" if method=="linear" else "1",f"{error:.3f}",
                      f"{mean:.5g}",f"{hdm['mean_in_domain_seconds']/mean:.2f}"])
     table("timing_baseline.tex","lr|rrr",r"Model & Threads & Mean $e_u$ (\%) & Mean time (s) & HDM/time",rows)
-    # The smaller B3 rule is a separate baseline optimization, not an enriched result.
-    root=PAPER/"euclidean_b3_budget_sherlock"
+    # Preserve the matched 4096/2048 ablation; the main B3 row now uses 2048.
+    root=B3_BUDGET_SHERLOCK
     env=json.loads((root/"environment.json").read_text())
     if env["hostname"]!=protocol["hostname"] or env["threads"]!=1:
         raise ValueError("B3 budget timing hardware/protocol mismatch")
@@ -581,7 +702,9 @@ def timing_table(records):
         values=[json.loads((root/kind/f"reporting_p{p}.json").read_text()) for p in range(4)]
         errors=[v["state_error_percent"] for v in values]
         mean=np.mean([v["online_seconds"] for v in values[:3]])
-        cells=3532 if kind=="baseline" else 1506
+        weights_path=(BASE/"Stage4/case2_b3/positive_fit4096/weights.npy" if kind=="baseline"
+                      else B3_BUDGET_LOCAL/f"draws{B3_DRAWS}/weights.npy")
+        cells=int(np.count_nonzero(np.load(weights_path)))
         rows.append([str(draws),str(cells),f"{np.mean(errors[:3]):.3f}",f"{errors[3]:.3f}",
                      f"{mean:.3f}",f"{hdm['mean_in_domain_seconds']/mean:.2f}"])
     table("b3_budget.tex","rr|rrrr",r"Draws & Cells & Mean $e_u$ (\%) & $e_u(\mu^{(3)})$ (\%) & Time (s) & HDM/time",rows)
@@ -602,23 +725,38 @@ def main():
         sampling_figures()
     fingerprints={str(p.relative_to(REPO)):digest(p) for p in (
         BASIS_PATH,UREF_PATH,DESIGN_PATH,Path(__file__),PAPER/"manuscript_plot_style.py")}
-    for root in CAMPAIGNS.values():
+    for level, root in CAMPAIGNS.items():
         for stem in NETWORKS.values():
             for p in (root/"Stage3/models"/f"{stem}.pt", root/"Stage3"/f"{stem}_summary.txt"):
                 fingerprints[str(p.relative_to(REPO))] = digest(p)
-        for p in (root/"Stage4/case2_b3/selection.json",
-                  root/"Stage4/case2_b3/positive_fit4096/config.json"):
+        _, _, audit_path, paths = b3_provenance(level)
+        for p in (*paths, audit_path):
             fingerprints[str(p.relative_to(REPO))] = digest(p)
+        for point in range(2):
+            folder = root / f"Stage4/case2_b3/validation_positive_fit{B3_DRAWS}_hprom3_p{point}_steps500"
+            pair = ((B3_BUDGET_LOCAL/f"draws{B3_DRAWS}/validation_p{point}.json",
+                     B3_BUDGET_LOCAL/f"draws{B3_DRAWS}/validation_p{point}_qN.npy") if level=="baseline" else
+                    (folder/"summary.json",folder/"qN.npy"))
+            for p in pair:
+                fingerprints[str(p.relative_to(REPO))] = digest(p)
     for name in HDM_NAMES:
         p = REPO/"Project_YvonMaday/Results/param_snaps"/name
         fingerprints[str(p.relative_to(REPO))] = digest(p)
     for record in records.values():
         for p in (record.qpath,record.summary_path,record.weights_path):
             if p:fingerprints[str(p.relative_to(REPO))]=digest(p)
+    timing_sources = [BASE/"timing/online_thread_protocol.json", BASE/"timing/hdm/hdm_timing.json",
+                      BASE/"timing/direct_inference_repeat10_summary.txt",
+                      BASE/"Stage4/case2_b3/positive_fit4096/weights.npy"]
+    timing_sources += [B3_BUDGET_SHERLOCK/kind/f"reporting_p{p}{suffix}"
+                       for kind in ("baseline","selected") for p in range(4)
+                       for suffix in (".json","_qN.npy")]
+    for p in timing_sources:
+        fingerprints[str(p.relative_to(REPO))] = digest(p)
     audit=dict(campaigns={k:str(v.relative_to(PAPER)) for k,v in CAMPAIGNS.items()},
                coefficient_reference="frozen 151-coordinate linear HPROM",state_reference="HDM",
                timing="matched baseline protocol only; direct timings are coefficient inference only",
-               b3_rule="4096-draw rule refitted per checkpoint; 2048 baseline optimization reported separately",
+               b3_rule="2048-draw rule refitted per checkpoint; validated baseline support reused with predictor reuse at all budgets",
                state_recomputation="Euclidean orthogonal decomposition, verified against saved state errors",
                scales=scale,sha256=fingerprints)
     (TABLES/"audit.json").write_text(json.dumps(audit,indent=2)+"\n")

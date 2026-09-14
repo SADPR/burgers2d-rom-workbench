@@ -43,7 +43,7 @@ least-squares Petrov--Galerkin problem.  The correction directions are rebuilt
 at each time step and frozen during its nonlinear solve.  In the hyperreduced
 realization, both their construction and the solve use the same weighted
 sampled residual.  On a two-dimensional inviscid Burgers benchmark, three
-correction directions give a mean in-domain state error of $0.455\%$ with
+correction directions give a mean in-domain state error of $0.456\%$ with
 nine training trajectories, near the $0.441\%$ linear-HPROM reference;
 the conventional parameter--time closure gives $1.620\%$.  A separate
 common-initialization, equal-dimensional full-residual control supports the
@@ -1077,7 +1077,15 @@ HDM or linear-HPROM state.  The enriched B3 rules change with their master
 maps, but moment fitting still uses only these nine baseline trajectories;
 it does not generate additional training simulations.
 
-All four main B3 rules use $L=4096$ candidate draws with seed 418.
+All four main B3 rules use $L=2048$ candidate draws with seed 418.
+This is the number of draws before duplicate removal and moment fitting,
+not a prescribed positive-cell count.  The retained counts are 1506, 1533,
+1534, and 1512 at the four data budgets.  The baseline rule is the frozen
+selection from the support study below; the enriched rules are fitted
+separately for their corresponding master maps.  All main B3 deployments
+reuse the initial predictor residual and Jacobian in the first correction
+iteration; this removes duplicate operator evaluation without changing the
+sampled least-squares equations.
 The three dynamic moment blocks are separately normalized before fitting;
 the complete mass block is scaled to have a comparable aggregate weight.
 The positive fit uses exact objective gradients with at most 1500
@@ -1100,7 +1108,7 @@ Table~\ref{tab:b3-validation} records their extrema.
 
 \begin{table}[H]
 \centering
-\caption{Validation-only acceptance of the four 4096-draw B3 rules.
+\caption{Validation-only acceptance of the four 2048-draw B3 rules.
 Eigenvalues compare sampled and full complete-coordinate Jacobian Grams.
 Gradient error is a ratio, not a percentage.  ``LS ratio'' evaluates the
 sampled B3 linearized update in the full residual norm and divides by the
@@ -1251,10 +1259,10 @@ and enriched plots.  The zero-error linear reference is omitted.}
 \section{Secondary Recovery and Hyperreduced Online Work}
 \label{sec:hprom-b3-results}
 \subsection{What three correction amplitudes recover}
-Case~2+$\mathbf B_3$ gives mean state error $0.455\%$ and extrapolation
-error $0.845\%$, close to the frozen linear HPROM's $0.441\%$ and
-$0.850\%$.  Its mean coefficient error is $0.243\%$, and the extrapolation
-coefficient error is $0.336\%$.  The unchanged baseline master map supplies
+Case~2+$\mathbf B_3$ gives mean state error $0.456\%$ and extrapolation
+error $0.851\%$, close to the frozen linear HPROM's $0.441\%$ and
+$0.850\%$.  Its mean coefficient error is $0.257\%$, and the extrapolation
+coefficient error is $0.422\%$.  The unchanged baseline master map supplies
 the initial tail prediction.  Recovery uses neither extra ANN training
 parameters nor online access to future reference states.
 With $n=10$ and $\bar n=141$, each $141\times3$ matrix contains three
@@ -1295,13 +1303,16 @@ simulator speedup.  Intrusive rows use one measurement per point.}
 \resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/timing_baseline.tex}}
 \end{table}
 
-The 4096-draw B3 implementation costs $19.597$ s on average, including
-its online direction construction.  Its smaller nonlinear tangent alone
-does not make it cheaper than Case~3 ($18.856$ s): the correction construction
-acts on all secondary modes and its retained cell count is larger.
-The nonlinear ECM models retain 901 cells, whereas this B3 rule retains
-3532.  Accuracy and total online work must therefore be evaluated together,
-not inferred from the 13 versus ten online unknowns.
+The 2048-draw B3 implementation costs $8.433$ s on average, including
+its online direction construction, compared with $21.098$ s for Case~1,
+$18.856$ s for Case~3, and $5.682$ s for conventional Case~2.
+Thus the corrected model is faster than the state-conditioned and hybrid
+closures under this protocol, but is not as cheap as the uncorrected
+parameter--time closure.  It retains 1506 cells versus 901 for the
+conventional nonlinear ECM models.  The gain therefore cannot be inferred
+from cell count or the 13 versus ten unknowns alone: decoder differentiation,
+direction construction, and operator reuse also affect total work.
+The fixed HDM reference gives an $87.36$ HDM/time ratio for B3.
 
 \subsection{Reducing support without changing the correction model}
 A separate baseline-only budget study keeps $r=3$ and the baseline network
@@ -1322,9 +1333,10 @@ choosing an arbitrary cell count after observing test errors.
 \caption{Separate baseline B3 support comparison with predictor reuse in
 both variants, one CPU thread, and one trajectory measurement per point.
 The HDM reference is the same $736.729$ s.  Draw count is not positive
-cell count.  These timings must not be interchanged with the unreused
-4096-draw campaign row in Table~\ref{tab:hprom-timing}.  The smaller rule
-is not the rule used in the enrichment study.}
+cell count.  The 2048-draw row is the baseline B3 deployment also used in
+Table~\ref{tab:hprom-timing} and the main accuracy figures.  The 4096-draw
+row is retained only as the matched support-ablation comparator; each
+enriched master map receives its own 2048-draw fit.}
 \label{tab:hprom-b3-budget}
 \resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/b3_budget.tex}}
 \end{table}
@@ -1345,7 +1357,7 @@ not the POD basis or the held-out validation and reporting parameters.
 Each trained intrusive trial map receives a newly built positive rule.
 The comparison consequently assesses the complete enriched HPROM workflow;
 it is not a cubature-frozen ablation of the regression alone.  B3 uses the
-4096-draw fit at every budget, with the same nine baseline moment-anchor
+2048-draw fit at every budget, with the same nine baseline moment-anchor
 trajectories and the newly trained master map.
 
 \begin{table}[H]
@@ -1377,7 +1389,7 @@ Left: mean of the three in-domain parameters.  Right: extrapolation.
 Both panels use exactly the same state-error limits, including the largest
 plotted bar.  Black horizontal lines denote the fixed linear HPROM;
 dashed vertical lines separate intrusive models from direct maps.
-B3 uses the 4096-draw rules at all four budgets.}
+B3 uses separately fitted 2048-draw rules at all four budgets.}
 \label{fig:hprom-enrichment-state}
 \end{figure}
 
@@ -1404,9 +1416,9 @@ explanation, but does not prove that this single point causes the recovery:
 other locations, retraining, checkpoint selection, and rule fitting also
 change.  Adding margin points is not an extrapolation guarantee.
 
-The adaptive means remain $0.455\%$, $0.441\%$, $0.443\%$, and
-$0.443\%$ across the four budgets, with extrapolation errors
-$0.845\%$, $0.871\%$, $0.849\%$, and $0.849\%$.
+The adaptive means remain $0.456\%$, $0.442\%$, $0.444\%$, and
+$0.444\%$ across the four budgets, with extrapolation errors
+$0.851\%$, $0.876\%$, $0.850\%$, and $0.848\%$.
 Its primary benefit is recovery \emph{before} extensive regression enrichment.
 This does not make new data unnecessary: enrichment further reduces its
 coefficient discrepancy and can improve other deployment families without
@@ -1432,8 +1444,8 @@ vertical separators distinguish residual-solving and direct models.}
 \label{fig:hprom-enrichment-coefficients}
 \end{figure}
 
-B3's mean complete-coordinate discrepancy decreases from $0.243\%$ to
-$0.063\%$, $0.039\%$, and $0.034\%$ across the ladder.  Thus its nearly
+B3's mean complete-coordinate discrepancy decreases from $0.257\%$ to
+$0.099\%$, $0.082\%$, and $0.080\%$ across the ladder.  Thus its nearly
 constant HDM state errors do not mean that enrichment has no effect: the
 trajectory approaches the fixed teacher more closely while its state error
 is already dominated by that teacher's discrepancy from the HDM.
@@ -1441,9 +1453,17 @@ Conventional Case~2 gives means $3.667\%$, $1.434\%$, $0.920\%$,
 and $0.607\%$; the direct master-map means remain close at
 $3.859\%$, $1.514\%$, $0.944\%$, and $0.607\%$.
 At extrapolation their $9+8$ coefficient discrepancies grow to
-$8.278\%$ and $25.405\%$, whereas B3 remains at $0.443\%$.
+$8.278\%$ and $25.405\%$, whereas B3 remains at $0.472\%$.
 This supports an actual recovery of the reduced trajectory, not only
 fortuitous cancellation in a total HDM state norm.
+The smaller support is not numerically identical to the earlier 4096-draw
+fits: their enriched mean coefficient errors were $0.063\%$, $0.039\%$,
+and $0.034\%$.  With 2048 draws the corresponding errors are slightly
+larger, while all enriched mean state errors change by less than $0.002$
+percentage points.  This is consistent with a cubature-accuracy contribution
+once regression improves; it does not establish a universal error floor.
+The support reduction trades some coordinate fidelity for lower measured
+baseline online work, rather than leaving every error unchanged.
 
 \begin{figure}[H]
 \centering
