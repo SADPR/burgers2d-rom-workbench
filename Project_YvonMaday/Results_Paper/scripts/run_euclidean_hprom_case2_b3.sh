@@ -11,10 +11,13 @@ STAGE="${1:-all}"
 case "$STAGE" in rule|validation|reporting|all) ;; *) echo "Usage: $0 [rule|validation|reporting|all]" >&2; exit 2;; esac
 
 PAPER_ROOT="${EUCLIDEAN_HPROM_ROOT:-$PROJECT_DIR/Results_Paper/euclidean_hprom_main}"
+BASELINE_HPROM_ROOT="${BASELINE_EUCLIDEAN_HPROM_ROOT:-$PROJECT_DIR/Results_Paper/euclidean_hprom_main}"
 export CASE2_CAMPAIGN_ROOT="$PAPER_ROOT"
 export CASE2_BASIS_DIR="$PROJECT_DIR/Results_Paper/MetricStudy/euclidean/Stage1"
 export CASE2_MODEL_PATH="$PAPER_ROOT/Stage3/models/master_ann_mu_t_to_qtot_ntot151_best.pt"
 export CASE2_HYPER_OUTPUT="$PAPER_ROOT/Stage4/case2_b3"
+export CASE2_TRAINING_DATASET="${CASE2_TRAINING_DATASET:-$BASELINE_HPROM_ROOT/Stage2/prom_coeff_dataset_ntot151}"
+export CASE2_REFERENCE_CAMPAIGN_ROOT="${CASE2_REFERENCE_CAMPAIGN_ROOT:-$BASELINE_HPROM_ROOT}"
 OUT="$CASE2_HYPER_OUTPUT"
 RULE="$OUT/positive_fit4096/weights.npy"
 RULE_THREADS="${CASE2_B3_RULE_THREADS:-${CASE2_B3_THREADS:-24}}"
@@ -32,6 +35,7 @@ set_threads() {
 require_file "$CASE2_MODEL_PATH"
 require_file "$CASE2_BASIS_DIR/basis.npy"
 require_file "$CASE2_BASIS_DIR/u_ref.npy"
+require_file "$CASE2_TRAINING_DATASET/meta.json"
 
 build_rule() {
   set_threads "$RULE_THREADS"

@@ -163,10 +163,16 @@ echo "[euclidean-hprom-online] stage=$STAGE family=$FAMILY root=$PAPER_ROOT"
 echo "[euclidean-hprom-online] ECM=$ECM_PERCENT% rule_threads=$RULE_THREADS online_threads=$ONLINE_THREADS device=$ONLINE_DEVICE"
 
 if [[ "$PLAN_ONLY" != 1 ]]; then
-  for model in "$CASE1_MODEL" "$MASTER_MODEL" "$CASE3_MODEL" "$PODAE_MODEL" "$PODDL_MODEL"; do
+  models_to_check=()
+  selected case1 && models_to_check+=("$CASE1_MODEL")
+  if selected case2 || selected podnn; then models_to_check+=("$MASTER_MODEL"); fi
+  selected case3 && models_to_check+=("$CASE3_MODEL")
+  selected pod_ae && models_to_check+=("$PODAE_MODEL")
+  selected poddl && models_to_check+=("$PODDL_MODEL")
+  for model in "${models_to_check[@]}"; do
     require_file "$model"
   done
-  "$PYTHON_BIN" - "$CASE1_MODEL" "$MASTER_MODEL" "$CASE3_MODEL" "$PODAE_MODEL" "$PODDL_MODEL" <<'PY'
+  "$PYTHON_BIN" - "${models_to_check[@]}" <<'PY'
 import sys
 import torch
 for path in sys.argv[1:]:
@@ -178,7 +184,7 @@ for path in sys.argv[1:]:
             f"Refusing non-HPROM-consistent checkpoint {path}: "
             f"training={backend!r}, validation={validation!r}"
         )
-print("All learned checkpoints declare HPROM training and HPROM external validation.")
+print("Selected checkpoints declare HPROM training and HPROM external validation.")
 PY
 fi
 

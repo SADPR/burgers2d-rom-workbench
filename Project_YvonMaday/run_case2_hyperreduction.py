@@ -48,7 +48,12 @@ MODEL = _configured_path(
     "CASE2_MODEL_PATH",
     CAMPAIGN / "Stage3/models/master_ann_mu_t_to_qtot_ntot151_best.pt",
 )
-TRAINING = CAMPAIGN / "Stage2/prom_coeff_dataset_ntot151/per_mu"
+TRAINING_DATASET = _configured_path(
+    "CASE2_TRAINING_DATASET",
+    CAMPAIGN / "Stage2/prom_coeff_dataset_ntot151",
+)
+REFERENCE_CAMPAIGN = _configured_path("CASE2_REFERENCE_CAMPAIGN_ROOT", CAMPAIGN)
+TRAINING = TRAINING_DATASET / "per_mu"
 DEFAULT_OUTPUT = _configured_path(
     "CASE2_HYPER_OUTPUT", PAPER / "euclidean_case2_hyperreduction"
 )
@@ -57,9 +62,9 @@ DEFAULT_OUTPUT = _configured_path(
 def reference_path(mu, stage):
     """Return the method-matched full linear trajectory used only for scoring."""
     if stage == "validation":
-        parent = CAMPAIGN / "Stage2/prom_coeff_dataset_ntot151_validation2/per_mu"
+        parent = REFERENCE_CAMPAIGN / "Stage2/prom_coeff_dataset_ntot151_validation2/per_mu"
     else:
-        parent = CAMPAIGN / "Runs/Linear"
+        parent = REFERENCE_CAMPAIGN / "Runs/Linear"
     if not parent.is_dir():
         raise FileNotFoundError(f"Missing linear-reference directory: {parent}")
     for path in parent.iterdir():
@@ -80,7 +85,7 @@ def load_inputs():
         raise ValueError("Expected the baseline 151-coordinate master ANN")
     if not np.allclose(v.T @ v, np.eye(ntot), rtol=0, atol=1e-10):
         raise ValueError("Expected the Euclidean-orthonormal POD basis")
-    metadata_path = CAMPAIGN / "Stage2/prom_coeff_dataset_ntot151/meta.json"
+    metadata_path = TRAINING_DATASET / "meta.json"
     metadata = json.loads(metadata_path.read_text())
     dataset_backend = str(metadata.get("solve_backend", "")).lower()
     checkpoint_backend = str(checkpoint.get("dataset_backend", "")).lower()

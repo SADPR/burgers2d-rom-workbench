@@ -92,3 +92,7 @@ Project_YvonMaday/Results_Paper/euclidean_b3_budget_*/
 # Per-point trajectories and progress from the local PROM Case-2 rank study.
 # Its compact protocols and final CSV/JSON summaries remain versioned.
 Project_YvonMaday/Results_Paper/euclidean_case2_prom_rank_study/*/
+
+# Sherlock outputs of the nested HPROM enrichment campaign.
+Project_YvonMaday/Results_Paper/euclidean_hprom_enrichment_*/
+Project_YvonMaday/Results_Paper/euclidean_hprom_enrichment_submit_logs/
