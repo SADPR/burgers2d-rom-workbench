@@ -1,0 +1,32 @@
+{
+  "purpose": "Equal-online-dimension controls for the validation-only correction-rank sweep",
+  "correction_ranks": [
+    0,
+    1,
+    2,
+    3,
+    5,
+    10
+  ],
+  "plain_case2_primary_dimensions": [
+    10,
+    11,
+    12,
+    13,
+    15,
+    20
+  ],
+  "pairing": "Case 2 plus B_r at n=10 versus plain Case 2 at n=10+r",
+  "initialization": "common linear-PROM initial representation",
+  "parameters": "two external ANN-validation parameters only",
+  "selection_uses_reporting_points": false,
+  "timings_reported": false,
+  "threads": 2,
+  "inputs": {
+    "model": "f4b9aed731e5559449cea9e7df6490409358366f670cb8bc15ba684fc5ec38db",
+    "basis": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+    "reference_state": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "runner": "8f7cb0ad7884fd773bc3928862751fbaa76c0dd02cc87c560f4f06bd1a698fe0",
+    "solver": "1a56568ab60718c5354086ad1c682acd5aef853054c352f79207f31ca3d0ed23"
+  }
+}

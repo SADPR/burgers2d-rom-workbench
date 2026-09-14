@@ -270,6 +270,14 @@ INPUT ./Figures/euclidean_prom_only/euclidean_prom_case2_tail_sensitivity.png
 INPUT ./Figures/euclidean_prom_only/euclidean_prom_case2_tail_sensitivity.png
 INPUT ./Figures/euclidean_prom_only/euclidean_prom_case2_tail_sensitivity.png
 INPUT ./Figures/euclidean_prom_only/euclidean_prom_case2_tail_sensitivity.png
+INPUT ./tables/euclidean_prom_only/euclidean_case2_rank_validation.tex
+INPUT ./tables/euclidean_prom_only/euclidean_case2_rank_validation.tex
+INPUT tables/euclidean_prom_only/euclidean_case2_rank_validation.tex
+INPUT ./Figures/euclidean_prom_only/euclidean_case2_rank_validation.png
+INPUT ./Figures/euclidean_prom_only/euclidean_case2_rank_validation.png
+INPUT ./Figures/euclidean_prom_only/euclidean_case2_rank_validation.png
+INPUT ./Figures/euclidean_prom_only/euclidean_case2_rank_validation.png
+INPUT ./Figures/euclidean_prom_only/euclidean_case2_rank_validation.png
 INPUT ./tables/euclidean_prom_only/euclidean_case2_adaptive_state.tex
 INPUT ./tables/euclidean_prom_only/euclidean_case2_adaptive_state.tex
 INPUT tables/euclidean_prom_only/euclidean_case2_adaptive_state.tex
@@ -286,9 +294,6 @@ INPUT ./Figures/euclidean_prom_only/euclidean_case2_adaptive_coefficients.png
 INPUT ./Figures/euclidean_prom_only/euclidean_case2_adaptive_coefficients.png
 INPUT ./Figures/euclidean_prom_only/euclidean_case2_adaptive_coefficients.png
 INPUT ./Figures/euclidean_prom_only/euclidean_case2_adaptive_coefficients.png
-INPUT ./tables/euclidean_prom_only/euclidean_case2_adaptive_times.tex
-INPUT ./tables/euclidean_prom_only/euclidean_case2_adaptive_times.tex
-INPUT tables/euclidean_prom_only/euclidean_case2_adaptive_times.tex
 INPUT ./tables/euclidean_prom_only/euclidean_prom_enrichment_training_comparison.tex
 INPUT ./tables/euclidean_prom_only/euclidean_prom_enrichment_training_comparison.tex
 INPUT tables/euclidean_prom_only/euclidean_prom_enrichment_training_comparison.tex

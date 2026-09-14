@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex manuscript_paper_euclidean"] 1789159760.49043 "manuscript_paper_euclidean.aux" "manuscript_paper_euclidean.bbl" "manuscript_paper_euclidean" 1789159850.9094 0
+["bibtex manuscript_paper_euclidean"] 1789348965.26741 "manuscript_paper_euclidean.aux" "manuscript_paper_euclidean.bbl" "manuscript_paper_euclidean" 1789349061.09431 0
   "./bibliography.bib" 1788637307.24378 16057 43e0a2cf3b9f09a9d2d4b5e22c3b39c4 ""
   "/usr/share/texlive/texmf-dist/bibtex/bst/base/unsrt.bst" 1292289607 18030 1376b4b231b50c66211e47e42eda2875 ""
-  "manuscript_paper_euclidean.aux" 1789159850.76981 34149 3ae47061f3204764681d2d99f1967bed "pdflatex"
+  "manuscript_paper_euclidean.aux" 1789349060.95386 36034 efb2384e96dac3b605d1614aa2f66a21 "pdflatex"
   (generated)
   "manuscript_paper_euclidean.bbl"
   "manuscript_paper_euclidean.blg"
   (rewritten before read)
-["pdflatex"] 1789159844.61157 "manuscript_paper_euclidean.tex" "manuscript_paper_euclidean.pdf" "manuscript_paper_euclidean" 1789159850.90963 0
+["pdflatex"] 1789349054.64311 "manuscript_paper_euclidean.tex" "manuscript_paper_euclidean.pdf" "manuscript_paper_euclidean" 1789349061.0945 0
   "/etc/texmf/web2c/texmf.cnf" 1788979759.87371 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy5.tfm" 1246382020 1120 1e8878807317373affa7f7bba4cf2f6a ""
@@ -143,6 +143,7 @@
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1788979769 6831095 1ef0345b7a76a0d052b78f19a8baef36 ""
   "Figures/euclidean_prom_only/euclidean_case2_adaptive_coefficients.png" 1789102131.02432 732281 16ed2ebc6c80e325347c11063aa6adf5 ""
   "Figures/euclidean_prom_only/euclidean_case2_adaptive_state_histories.png" 1789102127.98054 394155 41c39e33104a24e92debc4e9ba99add7 ""
+  "Figures/euclidean_prom_only/euclidean_case2_rank_validation.png" 1789348922.2179 163477 c03a495c2d9479d80a15fd2b7c4fcc6c ""
   "Figures/euclidean_prom_only/euclidean_prom_case2_n_sweep_coefficient_errors.png" 1788639010.35055 299885 8709af827843fb66e98ca3b0b6b06d19 ""
   "Figures/euclidean_prom_only/euclidean_prom_case2_n_sweep_state_errors.png" 1788639031.95752 151131 5f84bf9fced967d91bec52a5858821e5 ""
   "Figures/euclidean_prom_only/euclidean_prom_case2_tail_sensitivity.png" 1788639021.63053 209552 4d284255ee01d196b32fcd570316bbf9 ""
@@ -161,13 +162,13 @@
   "Figures/euclidean_prom_only/prom_enrichment_sampling_intermediate.png" 1789159840.08982 135820 020b5fbd8acd821f776d38da9fefa6ae ""
   "Figures/euclidean_prom_only/prom_enrichment_sampling_middle.png" 1789159839.99282 128537 dfd0109ee1739b8540847e0a4f3064de ""
   "Figures/euclidean_prom_only/prom_enrichment_state_error_comparison.png" 1789159840.30796 162650 ffb9a2025a0178648b136a45305198e3 ""
-  "manuscript_paper_euclidean.aux" 1789159850.76981 34149 3ae47061f3204764681d2d99f1967bed "pdflatex"
-  "manuscript_paper_euclidean.bbl" 1789159760.53486 2997 13b115941bd03f2cbfc45b5d52d1e361 "bibtex manuscript_paper_euclidean"
-  "manuscript_paper_euclidean.out" 1789159850.77881 8826 6c180bbe8fe74d247f8cb9ee5666303e "pdflatex"
-  "manuscript_paper_euclidean.tex" 1789159823.69583 71520 f7313c91be3dba9f9fc62d5f95a0b48b ""
-  "tables/euclidean_prom_only/euclidean_case2_adaptive_coefficient.tex" 1789102124.62334 465 aa1210e9a117f641cee348a3fff135d4 ""
-  "tables/euclidean_prom_only/euclidean_case2_adaptive_state.tex" 1789102124.62324 465 39f42bac31a0c368ab18c4ffb1911ba6 ""
-  "tables/euclidean_prom_only/euclidean_case2_adaptive_times.tex" 1789102124.6234 394 6e01da9c93ed94c8fa513e2c1d65fe08 ""
+  "manuscript_paper_euclidean.aux" 1789349060.95386 36034 efb2384e96dac3b605d1614aa2f66a21 "pdflatex"
+  "manuscript_paper_euclidean.bbl" 1789348965.30089 2997 13b115941bd03f2cbfc45b5d52d1e361 "bibtex manuscript_paper_euclidean"
+  "manuscript_paper_euclidean.out" 1789349060.95486 8792 10168f7d693d3428c53656bf91d0d023 "pdflatex"
+  "manuscript_paper_euclidean.tex" 1789349048.21987 76951 8a3ef3a8bcdf9039ec865a91702088d3 ""
+  "tables/euclidean_prom_only/euclidean_case2_adaptive_coefficient.tex" 1789348922.21982 551 255fde8953e885ee96d8aa390b82a326 ""
+  "tables/euclidean_prom_only/euclidean_case2_adaptive_state.tex" 1789348922.21975 551 d388c8e35a30103115de323ae669c3d7 ""
+  "tables/euclidean_prom_only/euclidean_case2_rank_validation.tex" 1789348921.9872 707 eee3a306ad2d2bd2829cadb6755b3be1 ""
   "tables/euclidean_prom_only/euclidean_prom_case2_n_sweep_state_errors.tex" 1788639317.61317 497 fd2fa26c49b098746c99f4b28eff3aae ""
   "tables/euclidean_prom_only/euclidean_prom_case2_tail_primary_errors.tex" 1788639319.91517 488 204802f5dd2da4dd34ba8ccbdbb06360 ""
   "tables/euclidean_prom_only/euclidean_prom_enrichment_dataset_summary.tex" 1789159831.21007 558 60972cfb47f85ae424aafbbfd177f3ed ""

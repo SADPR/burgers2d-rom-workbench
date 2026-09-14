@@ -1,0 +1,27 @@
+{
+  "purpose": "Full-residual PROM characterization of the previously frozen B3 rank",
+  "ranks": [
+    0,
+    1,
+    2,
+    3,
+    5,
+    10
+  ],
+  "primary_dimension": 10,
+  "frozen_rank": 3,
+  "frozen_rank_basis": "Earlier validation screening over ranks 1, 3, and 5",
+  "rank_sweep_role": "Post-selection characterization; it does not alter the frozen rank",
+  "matched_control": "Case 2 n=13 versus Case 2 n=10 plus B3",
+  "initialization": "common linear-PROM initial representation",
+  "selection_uses_reporting_points": false,
+  "timings_reported": false,
+  "threads": 2,
+  "inputs": {
+    "model": "f4b9aed731e5559449cea9e7df6490409358366f670cb8bc15ba684fc5ec38db",
+    "basis": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+    "reference_state": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "runner": "8f7cb0ad7884fd773bc3928862751fbaa76c0dd02cc87c560f4f06bd1a698fe0",
+    "solver": "1a56568ab60718c5354086ad1c682acd5aef853054c352f79207f31ca3d0ed23"
+  }
+}

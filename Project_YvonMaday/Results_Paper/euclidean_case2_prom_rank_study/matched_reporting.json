@@ -1,0 +1,98 @@
+[
+  {
+    "point": 0,
+    "model": "Case 2, n=10",
+    "online_unknowns": 10,
+    "state_error_percent": 1.161789814593225,
+    "coefficient_error_percent": 2.654634195480542,
+    "iterations": 1499
+  },
+  {
+    "point": 0,
+    "model": "Case 2 + B3, n=10",
+    "online_unknowns": 13,
+    "state_error_percent": 0.41154475272718916,
+    "coefficient_error_percent": 0.08689534069284388,
+    "iterations": 1501
+  },
+  {
+    "point": 0,
+    "model": "Case 2, n=13",
+    "online_unknowns": 13,
+    "state_error_percent": 1.156946135436176,
+    "coefficient_error_percent": 2.6426214605376983,
+    "iterations": 1500
+  },
+  {
+    "point": 1,
+    "model": "Case 2, n=10",
+    "online_unknowns": 10,
+    "state_error_percent": 1.9465738583186922,
+    "coefficient_error_percent": 4.454247467470239,
+    "iterations": 1499
+  },
+  {
+    "point": 1,
+    "model": "Case 2 + B3, n=10",
+    "online_unknowns": 13,
+    "state_error_percent": 0.4456622413517306,
+    "coefficient_error_percent": 0.26626572281753313,
+    "iterations": 1505
+  },
+  {
+    "point": 1,
+    "model": "Case 2, n=13",
+    "online_unknowns": 13,
+    "state_error_percent": 1.677767920541529,
+    "coefficient_error_percent": 3.828266709217163,
+    "iterations": 1500
+  },
+  {
+    "point": 2,
+    "model": "Case 2, n=10",
+    "online_unknowns": 10,
+    "state_error_percent": 1.7433209253039528,
+    "coefficient_error_percent": 3.925675087064649,
+    "iterations": 1500
+  },
+  {
+    "point": 2,
+    "model": "Case 2 + B3, n=10",
+    "online_unknowns": 13,
+    "state_error_percent": 0.483145004465455,
+    "coefficient_error_percent": 0.29081933852655856,
+    "iterations": 1504
+  },
+  {
+    "point": 2,
+    "model": "Case 2, n=13",
+    "online_unknowns": 13,
+    "state_error_percent": 1.703546564281769,
+    "coefficient_error_percent": 3.8416475723211025,
+    "iterations": 1500
+  },
+  {
+    "point": 3,
+    "model": "Case 2, n=10",
+    "online_unknowns": 10,
+    "state_error_percent": 2.6428313903488245,
+    "coefficient_error_percent": 6.104201758783119,
+    "iterations": 1500
+  },
+  {
+    "point": 3,
+    "model": "Case 2 + B3, n=10",
+    "online_unknowns": 13,
+    "state_error_percent": 0.8502504776064158,
+    "coefficient_error_percent": 0.4413454872313862,
+    "iterations": 1526
+  },
+  {
+    "point": 3,
+    "model": "Case 2, n=13",
+    "online_unknowns": 13,
+    "state_error_percent": 2.409175420546378,
+    "coefficient_error_percent": 5.5254630714039195,
+    "iterations": 1500
+  }
+]

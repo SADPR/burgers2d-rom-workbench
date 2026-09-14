@@ -49,11 +49,16 @@ from eliminating the primary increment in the linearized LSPG problem and
 are held fixed during each nonlinear time-step solve.  With three correction
 directions and the unchanged baseline network, the mean in-domain state error
 decreases from $1.617\%$ to $0.447\%$ in a common-initialization comparison.
+A Case--2 control that instead frees the first 13 POD coordinates gives
+$1.513\%$, showing that the recovery is associated with the selected
+secondary patterns rather than only with three additional online unknowns.
 A nested coefficient-data study
 with 9, $9+8$, $9+12$, and $9+18$ PROM trajectories separates in-domain
-improvement from extrapolation behaviour.  We also state the empirical
-cubature method (ECM) formulation required for a future HPROM extension; all
-numerical results reported here are full-residual PROM results.
+    improvement from extrapolation behaviour.  We also state the empirical
+    cubature method (ECM) formulation needed to equip these trial maps with
+    hyperreduction.  The numerical evidence in this draft deliberately isolates
+    the full-residual PROM setting so that correction-space effects are not
+    conflated with cubature effects.
 \end{abstract}
 
 \vspace{-0.8em}
@@ -695,6 +700,32 @@ frees combinations of secondary coordinates selected by the current
 residual and Jacobian.  The two choices can therefore give different
 accuracy at the same number of online unknowns.
 
+More precisely, consider the equal-dimensional choice $d=n+r$.  A
+conventional Case--2 model with $d$ primary coordinates has tangent space
+\begin{equation}
+\mathcal T_d^{\mathrm{POD}}
+=\operatorname{range}\!\left(\mathbf V_{1:d}\right)
+=\operatorname{span}\{\mathbf v_1,\ldots,\mathbf v_{n+r}\},
+\label{eq:adaptive-pod-control-space}
+\end{equation}
+whereas the residual-adaptive model has
+\begin{equation}
+\mathcal T_{n,r}^{\mathrm{RA}}
+=\operatorname{range}\!\left(
+\left[\mathbf V_{1:n}\quad
+\overline{\mathbf V}_{n}\mathbf B_r\right]\right).
+\label{eq:adaptive-equal-dimension-space}
+\end{equation}
+Both spaces have dimension $n+r$ when the requested rank is attained, but
+they are generally different subspaces.  Equation
+\eqref{eq:adaptive-pod-control-space} adds the next $r$ POD modes according
+to offline snapshot energy.  Equation
+\eqref{eq:adaptive-equal-dimension-space} instead adds $r$ combinations
+within the complete secondary space according to the current projected
+linearized residual problem.  An equal-dimensional numerical control is
+therefore required to distinguish the effect of direction selection from
+the effect of merely adding unknowns.
+
 For $r=0$, \eqref{eq:adaptive-trial} is the original Case--2 map, and its
 online trajectory is recovered when the initialization and nonlinear solver
 settings also match.  If the constructed columns span the entire secondary
@@ -726,8 +757,9 @@ involving all $\bar n$ secondary modes.  The final nonlinear solves use
 $\mathbf J\mathbf T_r$, whose width is only $n+r_m$, and need no
 network derivative with respect to the primary coordinates.  Both the
 direction-construction cost and the nonlinear solve must be included in
-online timings.  The present construction is a full-residual PROM method;
-its adaptive spaces have not been equipped with an ECM rule in this study.
+online timings.  The numerical evidence reported in the present study uses
+the full residual; its HPROM realization and cubature effects are assessed
+separately.
 
 \section{Benchmark and PROM Protocol}
 \label{sec:benchmark}
@@ -887,7 +919,33 @@ trajectories nor retrains the network.  In particular, the online directions
 are constructed from the current computed state, residual, and Jacobian,
 not from HDM or linear-PROM solutions at the evaluation parameters.
 
-A preliminary local screening compared $r=1,3,5$ at the two validation
+To isolate direction selection from online dimension, we use the requested
+ranks
+\begin{equation}
+r\in\{0,1,2,3,5,10\}.
+\label{eq:adaptive-tested-ranks}
+\end{equation}
+Each rank is paired with a conventional Case--2 control having $d=10+r$
+primary coordinates.  Because the common map
+\eqref{eq:master-map} predicts all 151 coordinates, the control trial map is
+\begin{equation}
+\boldsymbol\phi_d^{\mathrm{C2}}(\mathbf x;\mub,t)
+=\uvec_{\mathrm{ref}}+\mathbf V_{1:d}\mathbf x
++\mathbf V_{d+1:n_{\mathrm{tot}}}
+\mathbf P_{>d}\mathcal G_q(\mub,t),
+\qquad \mathbf x\in\mathbb R^d.
+\label{eq:case2-equal-dimension-control}
+\end{equation}
+Its tangent is $\mathbf V_{1:d}$.  The paired adaptive map retains
+$n=10$ and uses the tangent in
+\eqref{eq:adaptive-equal-dimension-space}; both models consequently solve
+for exactly $d$ amplitudes.  They also share the master ANN, full residual,
+initial representation, nonlinear solver settings, and validation
+parameters.  Hence their difference is the orientation of the $r$ added
+directions, not the amount of coefficient data or the number of online
+unknowns.
+
+A preliminary screening compared $r=1,3,5$ at the two validation
 parameters.  Their mean full-trajectory coefficient errors against the
 linear PROM were $1.988\%$, $1.093\%$, and $1.123\%$, respectively.
 The resulting choice $r=3$ was frozen before evaluation at the four reporting
@@ -898,8 +956,8 @@ comparison below retained the selected rank rather than selecting it again.
 Thus $r=3$ is the tested configuration, not a claim of optimal rank for every
 initialization or parameter.
 
-The dedicated Sherlock comparison isolates the online correction using a
-common initial state for all four methods.  Specifically,
+The dedicated comparison isolates the online correction using a
+common initial state for all compared trajectories.  Specifically,
 \begin{equation}
 \q_N^0=\mathbf V_{\mathrm{tot}}^T
 \left(\uvec_0-\uvec_{\mathrm{ref}}\right),\qquad
@@ -921,22 +979,9 @@ $10+3=13$ unknowns, while $\q_N$ still has 151 entries.  The attained rank
 was three at every step of all four reported trajectories.  All methods use
 500 time steps and the same nominal Gauss--Newton settings: at most 20
 iterations, a relative residual-norm threshold of $10^{-5}$, and a
-relative residual-change stopping threshold of $10^{-2}$.  The native
-implementations are retained: the networks are evaluated in single
-precision, Cases~1 and~3 use their neural closure/tangent path, and Case~2
-and its corrected variant perform the affine reduced solve in double
-precision.  The timings therefore compare these implementations, not
-operation counts alone.
-
-Four methods at four parameters were run sequentially on the same Sherlock
-node, equipped with Intel Xeon Gold 5118 processors, with 24 numerical
-threads.  There is one measured full trajectory per method and parameter,
-and no full-trajectory warmup.  The timed interval includes initialization,
-network prediction, direction and tangent construction when applicable,
-and time integration; it excludes model/data loading, accuracy evaluation,
-and result-file writing.  The reported mean is a mean over the three
-in-domain parameters, not over repeated timings.  No matched HDM timing is
-available for this experiment, so no HDM-relative speed-up is inferred.
+relative residual-change stopping threshold of $10^{-2}$.  The present PROM
+experiment isolates approximation properties of the correction space, so no
+timing comparison is reported in this section.
 
 \subsection{Reported errors}
 For each evaluation parameter, the state error is
@@ -1108,7 +1153,74 @@ linear PROM.}
 
 \section{Case--2 Accuracy Recovery Before Data Enrichment}
 \label{sec:adaptive-results}
-\subsection{State accuracy with the unchanged baseline network}
+\subsection{Correction rank and equal-dimensional controls}
+The initial choice $r=3$ was frozen by the preliminary validation screening
+described in Section~\ref{sec:adaptive-protocol}.  After that selection, we
+expanded the validation-only characterization to
+$r\in\{0,1,2,3,5,10\}$.  This additional sweep does not reselect the rank and
+does not use any reporting parameter.  Every run uses the same master ANN,
+$n=10$, the complete residual and Jacobian, and the common initial
+representation \eqref{eq:adaptive-common-initial}.  Thus $r=0$ is the
+matched uncorrected Case~2 trajectory.  For every $r$, the comparison also
+includes the plain Case--2 map \eqref{eq:case2-equal-dimension-control} with
+$n=10+r$.  In particular, $\mathbf B_5$ and $\mathbf B_{10}$ are compared
+with Case~2 at $n=15$ and $n=20$, respectively.
+
+\begin{table}[H]
+\centering
+\caption{Validation-only, equal-dimensional full-residual PROM comparison.
+All six error columns report percentages for the complete 151-coordinate
+trajectory against the corresponding linear PROM.  At each row both models
+have $d=10+r$ online unknowns: the adaptive model retains $n=10$ and adds
+$r$ residual-selected secondary directions, whereas the control directly
+solves the first $10+r$ POD coordinates.  All requested ranks were attained
+at every time step.}
+\label{tab:adaptive-rank-validation}
+\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_case2_rank_validation.tex}}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.94\textwidth]{Figures/euclidean_prom_only/euclidean_case2_rank_validation.png}
+\caption{Validation-only comparison at equal online dimension
+$d=10+r$.  Left: mean complete coefficient-history error against linear PROM.
+Right: residual norm at termination of each nonlinear solve, averaged over
+time steps and the two validation parameters, then normalized by the common
+$r=0$, $n=10$ value.  The star identifies the previously frozen $r=3$ rather
+than a rank selected from this expanded sweep.}
+\label{fig:adaptive-rank-validation}
+\end{figure}
+
+For the residual-adaptive model, the mean coefficient error decreases from
+$3.873\%$ at $r=0$ to $1.937\%$, $0.557\%$, and $0.231\%$ at
+$r=1,2,3$, respectively.  Increasing the rank to five and ten further
+reduces that error to $0.124\%$ and $0.111\%$.  The equal-dimensional
+conventional controls do not exhibit this recovery: their means are
+$3.809\%$, $3.677\%$, $3.720\%$, $3.643\%$, and $3.542\%$ for
+$n=11,12,13,15,20$.  At 13 unknowns, for example, the adaptive and
+conventional validation errors are $0.231\%$ and $3.720\%$; at 20 unknowns
+they are $0.111\%$ and $3.542\%$.
+
+The residual data give the same qualitative distinction.  The adaptive
+mean converged-residual ratio decreases from one to $0.361$ by $r=3$ and
+then remains essentially unchanged.  The corresponding conventional ratio
+remains above $0.982$ even at $n=20$.  Therefore the observed improvement
+cannot be explained by online dimension alone.  For this benchmark, the
+Krylov directions in \eqref{eq:adaptive-krylov} capture combinations of the
+secondary coordinates that are much more effective for the local LSPG
+problem than the next POD modes selected by snapshot energy.
+
+This comparison remains diagnostic rather than an error theorem.  The
+nested-space result \eqref{eq:adaptive-nested-bound} concerns a fixed
+linearization, whereas the table reports complete nonlinear trajectories.
+Moreover, the two parameters used here also served for network validation.
+The expanded sweep therefore documents rank dependence and the mechanism of
+the recovery, but it neither supplies an independent generalization estimate
+nor changes the previously frozen reporting choice $r=3$.  Consequently,
+only $\mathbf B_3$ and its $n=13$ equal-dimensional control are evaluated at
+the four reporting parameters below.
+
+\subsection{Equal-dimensional control and state accuracy}
 We now assess the residual-adaptive construction of
 Section~\ref{sec:adaptive-case2} under the dedicated protocol of
 Section~\ref{sec:adaptive-protocol}.  The notation ``Case~2 + $\mathbf B_3$''
@@ -1118,10 +1230,12 @@ training data; enrichment is examined separately in the next section.
 
 \begin{table}[H]
 \centering
-\caption{Common-initialization Sherlock comparison: state-history error
+\caption{Common-initialization full-residual comparison: state-history error
 $e_u$ (\%).  Every learned model uses baseline training data.  The mean
 averages the three in-domain points; the final column is extrapolatory.
-The linear PROM is the reference for the fixed 151-mode basis.}
+The $n=13$ Case--2 row controls for the 13 online unknowns used by
+Case~2+$\mathbf B_3$.  The linear PROM is the reference for the fixed
+151-mode basis.}
 \label{tab:adaptive-state}
 \resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_case2_adaptive_state.tex}}
 \end{table}
@@ -1134,6 +1248,15 @@ from $2.643\%$ to $0.850\%$, also close to the linear reference.
 These changes require neither new coefficient training data nor additional
 network fitting.  They result from allowing three residual-selected
 secondary patterns to be corrected together with the ten primary coordinates.
+
+Merely increasing the primary dimension from $n=10$ to $n=13$ reduces the
+mean state error only from $1.617\%$ to $1.513\%$, and the extrapolatory
+error from $2.643\%$ to $2.409\%$.  With the same 13 online unknowns,
+Case~2+$\mathbf B_3$ gives $0.447\%$ and $0.850\%$, respectively.  The
+observed recovery therefore cannot be attributed solely to adding three
+degrees of freedom: the residual-selected combinations of the 141 secondary
+coordinates are substantially more effective here than freeing POD
+coordinates 11--13.
 
 The appropriate baseline in this statement is $1.617\%$, not the
 $1.607\%$ mean of Table~\ref{tab:online-state}: the former comes from
@@ -1160,7 +1283,7 @@ rather than replace, the space--time norm in Table~\ref{tab:adaptive-state}.}
 \subsection{Recovery of the full coordinate trajectory}
 \begin{table}[H]
 \centering
-\caption{Common-initialization Sherlock comparison: complete
+\caption{Common-initialization full-residual comparison: complete
 151-coordinate trajectory error $e_q$ (\%) against the corresponding
 linear PROM.  Means and parameter ordering match Table~\ref{tab:adaptive-state}.}
 \label{tab:adaptive-coefficients}
@@ -1171,6 +1294,8 @@ The mean coefficient error decreases from $3.678\%$ to $0.215\%$
 (Table~\ref{tab:adaptive-coefficients}).  At extrapolation it decreases
 from $6.104\%$ to $0.441\%$.  The corrected mean is smaller than the
 $0.823\%$ and $0.579\%$ of Cases~1 and~3, respectively.
+The equal-dimensional $n=13$ control retains a mean coefficient error of
+$3.438\%$ and an extrapolatory error of $5.525\%$.
 Thus the state-error improvement is accompanied by recovery of the
 linear-PROM coordinate history, rather than only by a fortuitous cancellation
 in the HDM state norm.  Figure~\ref{fig:adaptive-coefficients} resolves the
@@ -1189,40 +1314,12 @@ linear-PROM reference is omitted from the logarithmic plots.}
 \label{fig:adaptive-coefficients}
 \end{figure}
 
-\subsection{Measured online cost and scope of the result}
-\begin{table}[H]
-\centering
-\caption{Measured full-trajectory online times (s) on Sherlock with
-24 numerical threads.  Each entry is one measurement, not an average of
-repeated runs.  The mean averages the three in-domain parameters.  Direction
-construction is included for Case~2 + $\mathbf B_3$; timing boundaries are
-specified in Section~\ref{sec:adaptive-protocol}.}
-\label{tab:adaptive-times}
-\resizebox{\textwidth}{!}{\input{tables/euclidean_prom_only/euclidean_case2_adaptive_times.tex}}
-\end{table}
-
-The additional accuracy is not free.  The mean time increases from
-$95.0$~s for Case~2 to $174.8$~s for the corrected method, a factor of
-$1.84$.  The measured direction/tangent-construction portion alone averages
-$68.0$~s over the in-domain points.  It would therefore be misleading to
-estimate the overhead only from the change from ten to thirteen unknowns.
-Nevertheless, in this implementation the corrected method takes less time
-than Cases~1 and~3, whose corresponding means are $463.7$~s and
-$478.3$~s.  Their mean-time ratios to the corrected method are $2.65$
-and $2.74$, respectively.  These are method-to-method cost ratios, not
-HDM-relative speed-ups.  A single run per point does not quantify timing
-variability, so these measurements support the observed ordering rather than
-a precise statistical performance claim.
-
 For these four parameters, a small online secondary correction substantially
 closes the baseline Case--2 accuracy gap without enriching its training set.
-This is an alternative use of computation, not evidence that enrichment is
-unnecessary: the adaptive method spends additional work at every deployment,
-whereas enrichment changes the offline data and leaves the original online
-architecture intact.  Their relative total cost depends on the number of
-future queries.  No corrected/enriched combination or hyperreduced adaptive
-variant has been tested here, and no general state-error guarantee follows
-from this experiment.
+This is not evidence that enrichment is unnecessary: enrichment changes the
+offline data, whereas the adaptive construction uses the current residual
+and Jacobian during deployment.  Their interaction is examined separately.
+No general state-error guarantee follows from this experiment.
 
 \section{Effect of PROM Coefficient-Data Enrichment}
 \label{sec:euclidean-prom-enrichment}
@@ -1430,10 +1527,17 @@ The residual-adaptive extension provides a different response to that
 limitation.  With the unchanged baseline network and three additional
 secondary amplitudes, the common-initialization comparison reduces the
 mean in-domain state error from $1.617\%$ to $0.447\%$, close to the
-linear reference.  Its measured mean online cost is $1.84$ times that of
-uncorrected Case~2, but lower than the measured costs of Cases~1 and~3.
-The construction is a local residual-based correction, not an HDM-error
-minimization principle or a guarantee of improvement for arbitrary data.
+linear reference.  A matched Case--2 control with $n=13$ gives $1.513\%$,
+showing that the recovery is not explained merely by adding three online
+unknowns.  The validation-only rank sweep also shows that most of the
+coefficient recovery occurs in the first three residual-selected directions.
+Across 11--20 unknowns, its mean validation coefficient error decreases from
+$1.937\%$ to $0.111\%$, whereas the equal-dimensional conventional Case--2
+controls remain between $3.542\%$ and $3.809\%$.  This isolates the
+orientation of the adaptive directions as the operative mechanism in the
+reported experiment.  The construction is nevertheless a local
+residual-based correction, not an HDM-error minimization principle or a
+guarantee of improvement for arbitrary data.
 
 The nested enrichment study shows that $9+12$ already reaches the
 linear-reference scale for four of the six learned models and removes the
@@ -1443,12 +1547,14 @@ learned models close to the linear-PROM reference at the reported points.
 The comparison demonstrates that the geometry of added samples matters in
 addition to their number.
 
-The results intentionally do not mix PROM evidence with an unavailable HPROM
-data set.  The ECM derivation establishes the required model-specific
-construction: an HPROM rule must be built from each learned trial map and its
-tangent, rather than borrowed from a linear HPROM or from a different closure.
-The next HPROM campaign can therefore use the same reporting order, tables,
-and model comparisons as the PROM study.
+The numerical evidence in this draft intentionally isolates the full-residual
+PROM setting.  This makes it possible to assess the correction space without
+conflating its effect with residual sampling.  The ECM derivation establishes
+the required model-specific construction for the separate HPROM study: each
+rule must be built from the corresponding learned trial map and tangent,
+rather than borrowed from a linear HPROM or from a different closure.  A
+matched HPROM presentation can therefore retain the reporting order, tables,
+and model comparisons established here.
 
 \appendix
 \section{LSPG-Sensitive Basis Exploration}

@@ -168,12 +168,12 @@ def reference(mu, stage):
     raise FileNotFoundError(f"No linear PROM reference for {mu}")
 
 
-def score(q, v, uref, mu, refpath):
+def score(q, v, uref, mu, refpath, nprimary=10):
     teacher = np.load(refpath)[:, :q.shape[1]]
     difference = q - teacher
     result = {"coefficient_error_percent": float(100 * np.linalg.norm(difference) / np.linalg.norm(teacher)),
-              "primary_error_percent": float(100 * np.linalg.norm(difference[:10]) / np.linalg.norm(teacher[:10])),
-              "secondary_error_percent": float(100 * np.linalg.norm(difference[10:]) / np.linalg.norm(teacher[10:]))}
+              "primary_error_percent": float(100 * np.linalg.norm(difference[:nprimary]) / np.linalg.norm(teacher[:nprimary])),
+              "secondary_error_percent": float(100 * np.linalg.norm(difference[nprimary:]) / np.linalg.norm(teacher[nprimary:]))}
     filename = f"mu1_{mu[0]}+mu2_{mu[1]}.npy"
     candidates = (
         ROOT / "Results/param_snaps" / filename,
@@ -200,14 +200,19 @@ def main():
     parser.add_argument("--steps", type=int, default=NUM_STEPS)
     parser.add_argument("--point-indices", type=int, nargs="+")
     parser.add_argument("--threads", type=int, default=2)
+    parser.add_argument("--n-primary", type=int, default=10)
     parser.add_argument("--initialization", choices=("ann", "linear"), default="ann")
     parser.add_argument("--output", type=Path, default=PAPER / "euclidean_case2_local_corrections")
     args = parser.parse_args()
     if not 1 <= args.steps <= NUM_STEPS:
         parser.error("steps must be between 1 and 500")
-    allowed = {"baseline", "ann_tangent3"} | {f"{prefix}{r}" for prefix in ("global", "krylov") for r in (1, 3, 5, 10)}
+    allowed = {"baseline", "ann_tangent3"} | {
+        f"{prefix}{r}" for prefix in ("global", "krylov") for r in range(1, 11)
+    }
     if not set(args.methods) <= allowed:
         parser.error(f"Allowed methods: {sorted(allowed)}")
+    if not 1 <= args.n_primary < 151:
+        parser.error("n-primary must be between 1 and 150")
     args.output.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(args.threads)
     model, ntot, kind, _ = _load_case2_model(MODEL, "cpu")
@@ -221,18 +226,19 @@ def main():
                 "reference_sha256": sha256(BASIS / "u_ref.npy"),
                 "solver_sha256": sha256(ROOT / "burgers/case2_residual_correction.py"),
                 "runner_sha256": sha256(__file__), "dt": DT, "steps": args.steps,
-                "nprimary": 10, "ntot": ntot, "threads": args.threads,
+                "nprimary": args.n_primary, "ntot": ntot, "threads": args.threads,
                 "numpy": np.__version__, "torch": str(torch.__version__),
                 "initialization": args.initialization,
                 "validation_only_selection": True}
     points = VALIDATION if args.stage == "validation" else REPORTING
     selected = args.point_indices if args.point_indices is not None else range(len(points))
-    fixed = global_error_space(model, 10, args.output) if any(m.startswith("global") for m in args.methods) else None
+    fixed = global_error_space(model, args.n_primary, args.output) if any(m.startswith("global") for m in args.methods) else None
     for index in selected:
         mu = points[index]
         refpath = reference(mu, args.stage)
         for method in args.methods:
-            folder = args.output / f"{args.stage}_{index}_{method}_steps{args.steps}"
+            dimension_tag = "" if args.n_primary == 10 else f"_n{args.n_primary}"
+            folder = args.output / f"{args.stage}_{index}_{method}{dimension_tag}_steps{args.steps}"
             folder.mkdir(exist_ok=True)
             summary = folder / "summary.json"
             config = {**manifest, "mu": mu, "method": method, "stage": args.stage,
@@ -243,10 +249,11 @@ def main():
                     raise RuntimeError(f"Configuration changed; use a new output root: {folder}")
                 print(f"Completed, skipping {folder.name}", flush=True)
                 continue
-            q, stats = rollout(model, v, uref, mu, method, args.steps, 10, fixed,
+            q, stats = rollout(model, v, uref, mu, method, args.steps, args.n_primary, fixed,
                                folder / "progress.json", initialization=args.initialization)
             np.save(folder / "qN.npy", q)
-            result = {"config": config, **stats, **score(q, v, uref, mu, refpath)}
+            result = {"config": config, **stats,
+                      **score(q, v, uref, mu, refpath, args.n_primary)}
             atomic_json(summary, result)
             print(json.dumps({k: value for k, value in result.items() if k != "config"}), flush=True)
 

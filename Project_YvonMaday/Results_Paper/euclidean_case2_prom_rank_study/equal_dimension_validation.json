@@ -1,0 +1,134 @@
+[
+  {
+    "point": 0,
+    "rank": 0,
+    "primary_dimension": 10,
+    "online_unknowns": 10,
+    "coefficient_error_percent": 3.8076084878758736,
+    "primary_error_percent": 2.0405993491364143,
+    "secondary_error_percent": 15.837289635571922,
+    "iterations": 1500,
+    "mean_residual_norm": 2.672524938646031
+  },
+  {
+    "point": 0,
+    "rank": 1,
+    "primary_dimension": 11,
+    "online_unknowns": 11,
+    "coefficient_error_percent": 3.6470208503877926,
+    "primary_error_percent": 1.7182005548441683,
+    "secondary_error_percent": 17.050590149694823,
+    "iterations": 1500,
+    "mean_residual_norm": 2.6656546649213024
+  },
+  {
+    "point": 0,
+    "rank": 2,
+    "primary_dimension": 12,
+    "online_unknowns": 12,
+    "coefficient_error_percent": 3.4322955827073045,
+    "primary_error_percent": 1.196665568367826,
+    "secondary_error_percent": 18.329549387857366,
+    "iterations": 1500,
+    "mean_residual_norm": 2.6584516306299384
+  },
+  {
+    "point": 0,
+    "rank": 3,
+    "primary_dimension": 13,
+    "online_unknowns": 13,
+    "coefficient_error_percent": 3.480387553596923,
+    "primary_error_percent": 1.3407778056566366,
+    "secondary_error_percent": 19.502199864012706,
+    "iterations": 1500,
+    "mean_residual_norm": 2.65924969807595
+  },
+  {
+    "point": 0,
+    "rank": 5,
+    "primary_dimension": 15,
+    "online_unknowns": 15,
+    "coefficient_error_percent": 3.3560266688702893,
+    "primary_error_percent": 0.999162120881742,
+    "secondary_error_percent": 21.84566574492949,
+    "iterations": 1500,
+    "mean_residual_norm": 2.648895819233959
+  },
+  {
+    "point": 0,
+    "rank": 10,
+    "primary_dimension": 20,
+    "online_unknowns": 20,
+    "coefficient_error_percent": 3.2513922997306697,
+    "primary_error_percent": 0.7056725669370918,
+    "secondary_error_percent": 27.420367172557796,
+    "iterations": 1500,
+    "mean_residual_norm": 2.6194962764729697
+  },
+  {
+    "point": 1,
+    "rank": 0,
+    "primary_dimension": 10,
+    "online_unknowns": 10,
+    "coefficient_error_percent": 3.9374358960664724,
+    "primary_error_percent": 0.6449087270040188,
+    "secondary_error_percent": 18.041637339896674,
+    "iterations": 1500,
+    "mean_residual_norm": 3.9423068427895833
+  },
+  {
+    "point": 1,
+    "rank": 1,
+    "primary_dimension": 11,
+    "online_unknowns": 11,
+    "coefficient_error_percent": 3.970661515225871,
+    "primary_error_percent": 0.9085434051635546,
+    "secondary_error_percent": 19.347974398795518,
+    "iterations": 1500,
+    "mean_residual_norm": 3.938714967396077
+  },
+  {
+    "point": 1,
+    "rank": 2,
+    "primary_dimension": 12,
+    "online_unknowns": 12,
+    "coefficient_error_percent": 3.9227037837102094,
+    "primary_error_percent": 0.7375787367265421,
+    "secondary_error_percent": 20.699806078200897,
+    "iterations": 1500,
+    "mean_residual_norm": 3.9278845921032977
+  },
+  {
+    "point": 1,
+    "rank": 3,
+    "primary_dimension": 13,
+    "online_unknowns": 13,
+    "coefficient_error_percent": 3.9592466130287933,
+    "primary_error_percent": 0.9490626011447715,
+    "secondary_error_percent": 21.994389808742486,
+    "iterations": 1500,
+    "mean_residual_norm": 3.9350104717641408
+  },
+  {
+    "point": 1,
+    "rank": 5,
+    "primary_dimension": 15,
+    "online_unknowns": 15,
+    "coefficient_error_percent": 3.9299774365946014,
+    "primary_error_percent": 0.971650580407598,
+    "secondary_error_percent": 24.486102348118415,
+    "iterations": 1500,
+    "mean_residual_norm": 3.921884748948727
+  },
+  {
+    "point": 1,
+    "rank": 10,
+    "primary_dimension": 20,
+    "online_unknowns": 20,
+    "coefficient_error_percent": 3.832726756505873,
+    "primary_error_percent": 0.7828353250642006,
+    "secondary_error_percent": 31.07827370977142,
+    "iterations": 1500,
+    "mean_residual_norm": 3.8717641410009147
+  }
+]
