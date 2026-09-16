@@ -89,6 +89,11 @@ Project_YvonMaday/Results_Paper/euclidean_b3_reuse_*/
 # Local study outputs and Sherlock comparisons for B3 cubature budgets.
 Project_YvonMaday/Results_Paper/euclidean_b3_budget_*/
 
+# Reproducible ECM moment matrices, compression workspaces and timing runs.
+# Compact ECM reports and the deployment manifest remain versioned.
+Project_YvonMaday/Results_Paper/euclidean_b3_ecm_local/
+Project_YvonMaday/Results_Paper/euclidean_b3_ecm_sherlock_*/
+
 # Per-point trajectories and progress from the local PROM Case-2 rank study.
 # Its compact protocols and final CSV/JSON summaries remain versioned.
 Project_YvonMaday/Results_Paper/euclidean_case2_prom_rank_study/*/

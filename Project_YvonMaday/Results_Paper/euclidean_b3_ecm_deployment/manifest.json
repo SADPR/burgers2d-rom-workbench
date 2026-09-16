@@ -1,0 +1,28 @@
+{
+  "accepted": true,
+  "selection_uses_reporting_points": false,
+  "inputs": {
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage3/models/master_ann_mu_t_to_qtot_ntot151_best.pt": "3e25d26aca9da2f0e71cfb00019393023194f82ed3603187d120c1c06998ab10",
+    "Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/basis.npy": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+    "Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/meta.json": "6d1b19098d09ba9fd42b1e5f0f2a22d0c929dca1df3ce405b1b30c271e016098"
+  },
+  "files": {
+    "ecm_weights.npy": "6ae4c22e9d70b8e13d1563d1a39c9cc251d6f333cf328f3794374f234e23dd8a",
+    "reference2048_weights.npy": "599c85a3aa270986a5faa2a573fead1662900284d8a0cb07e04924d80afe466d",
+    "selection.json": "93ceac9d8bb12f005a2c002ac49406d208b05a85e806b824b51936e59ccc0a41",
+    "validation_operator_audit.json": "b1ffc51a3f52707378446d724614d2862f62dcf945dc79d90071f77c72fd066c",
+    "fit.json": "0d23d59ea95bed6ebb0067dad14e923d8548d760be3d578f35816ff5962805b8"
+  },
+  "solver_sources": {
+    "burgers/case2_hyperreduction.py": "74fa1e1e426c2407dfb01fe8a2eddc0bf77474ca502cb36f63d6403ed2c600df",
+    "burgers/case2_residual_correction.py": "1a56568ab60718c5354086ad1c682acd5aef853054c352f79207f31ca3d0ed23",
+    "burgers/core.py": "f5a6da10863ff27fab6eebba6515d7610be0d05153ffd53eedb7c09838d02950",
+    "burgers/config.py": "aeeea790ae3f2997e0a0b8320ae96861c22542504ae1dda83816eb83d7da3713",
+    "burgers/ecsw_utils.py": "4ecbfd40e70c0c12bc1afa2c48b92e291d2cf99d5e14797249a410d301ed90a3",
+    "Project_YvonMaday/run_case2_hyperreduction.py": "d104f1fc04318bce06344871d15498c83b0eb0d3689b0458110b38cbf17d24d7",
+    "Project_YvonMaday/run_case2_local_corrections.py": "8f7cb0ad7884fd773bc3928862751fbaa76c0dd02cc87c560f4f06bd1a698fe0",
+    "Project_YvonMaday/run_prom_ann_case_2.py": "3e3ff73424ccba8afd3877e9c68be9420f729db0f50ebf04f389d13bd9f48290",
+    "Project_YvonMaday/study_case2_b3_cubature_budget.py": "e19fa00344c0ed2b21c5e43a44c9507216013d72cff6bd6097ca547fef5817b2"
+  }
+}

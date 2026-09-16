@@ -1,0 +1,193 @@
+{
+  "inputs": {
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage3/models/master_ann_mu_t_to_qtot_ntot151_best.pt": "3e25d26aca9da2f0e71cfb00019393023194f82ed3603187d120c1c06998ab10",
+    "Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/basis.npy": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+    "Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/meta.json": "6d1b19098d09ba9fd42b1e5f0f2a22d0c929dca1df3ce405b1b30c271e016098"
+  },
+  "weights_sha256": "6ae4c22e9d70b8e13d1563d1a39c9cc251d6f333cf328f3794374f234e23dd8a",
+  "records": [
+    {
+      "point": 0,
+      "mu": [
+        4.5625,
+        0.02625
+      ],
+      "step": 3,
+      "Gram_eigenvalue_min": 0.9817652447287651,
+      "Gram_eigenvalue_max": 1.0197869420184231,
+      "gradient_relative_error": 0.002257257840064418,
+      "full_true_linearized_residual": 1.0559585186276363,
+      "sampled_true_linearized_residual": 1.0561419757648265
+    },
+    {
+      "point": 0,
+      "mu": [
+        4.5625,
+        0.02625
+      ],
+      "step": 15,
+      "Gram_eigenvalue_min": 0.9817402821718029,
+      "Gram_eigenvalue_max": 1.0197778902361767,
+      "gradient_relative_error": 0.0017037538179023684,
+      "full_true_linearized_residual": 1.559400264791148,
+      "sampled_true_linearized_residual": 1.5595121535722256
+    },
+    {
+      "point": 0,
+      "mu": [
+        4.5625,
+        0.02625
+      ],
+      "step": 75,
+      "Gram_eigenvalue_min": 0.9815984194100216,
+      "Gram_eigenvalue_max": 1.019817854233331,
+      "gradient_relative_error": 0.0029590151017193575,
+      "full_true_linearized_residual": 0.8201612875251235,
+      "sampled_true_linearized_residual": 0.8204901120237131
+    },
+    {
+      "point": 0,
+      "mu": [
+        4.5625,
+        0.02625
+      ],
+      "step": 175,
+      "Gram_eigenvalue_min": 0.9718112664805386,
+      "Gram_eigenvalue_max": 1.025208958289654,
+      "gradient_relative_error": 0.004033632445018294,
+      "full_true_linearized_residual": 0.8532100702858632,
+      "sampled_true_linearized_residual": 0.8682692227167685
+    },
+    {
+      "point": 0,
+      "mu": [
+        4.5625,
+        0.02625
+      ],
+      "step": 275,
+      "Gram_eigenvalue_min": 0.9800740946039256,
+      "Gram_eigenvalue_max": 1.0200193364725412,
+      "gradient_relative_error": 0.005258609028722172,
+      "full_true_linearized_residual": 1.048925410412156,
+      "sampled_true_linearized_residual": 1.0515227255896478
+    },
+    {
+      "point": 0,
+      "mu": [
+        4.5625,
+        0.02625
+      ],
+      "step": 425,
+      "Gram_eigenvalue_min": 0.9815763737500737,
+      "Gram_eigenvalue_max": 1.0202977218900577,
+      "gradient_relative_error": 0.003962781452206319,
+      "full_true_linearized_residual": 0.6177018947259757,
+      "sampled_true_linearized_residual": 0.6223880882540466
+    },
+    {
+      "point": 0,
+      "mu": [
+        4.5625,
+        0.02625
+      ],
+      "step": 500,
+      "Gram_eigenvalue_min": 0.9814926528728575,
+      "Gram_eigenvalue_max": 1.0200339700027075,
+      "gradient_relative_error": 0.003581981553559746,
+      "full_true_linearized_residual": 0.6286859588294855,
+      "sampled_true_linearized_residual": 0.630033039115398
+    },
+    {
+      "point": 1,
+      "mu": [
+        5.1875,
+        0.01875
+      ],
+      "step": 3,
+      "Gram_eigenvalue_min": 0.9817728448249881,
+      "Gram_eigenvalue_max": 1.019795506178786,
+      "gradient_relative_error": 0.0024757103693880886,
+      "full_true_linearized_residual": 1.4960871046380846,
+      "sampled_true_linearized_residual": 1.496195568642288
+    },
+    {
+      "point": 1,
+      "mu": [
+        5.1875,
+        0.01875
+      ],
+      "step": 15,
+      "Gram_eigenvalue_min": 0.9817410510348936,
+      "Gram_eigenvalue_max": 1.0197800726238024,
+      "gradient_relative_error": 0.0011622842883563028,
+      "full_true_linearized_residual": 1.4184928727087156,
+      "sampled_true_linearized_residual": 1.4186952993846056
+    },
+    {
+      "point": 1,
+      "mu": [
+        5.1875,
+        0.01875
+      ],
+      "step": 75,
+      "Gram_eigenvalue_min": 0.9816148481279645,
+      "Gram_eigenvalue_max": 1.0198608245530076,
+      "gradient_relative_error": 0.0037683873520289457,
+      "full_true_linearized_residual": 1.628397110151764,
+      "sampled_true_linearized_residual": 1.6297279500282789
+    },
+    {
+      "point": 1,
+      "mu": [
+        5.1875,
+        0.01875
+      ],
+      "step": 175,
+      "Gram_eigenvalue_min": 0.9815929226937994,
+      "Gram_eigenvalue_max": 1.0199772539966787,
+      "gradient_relative_error": 0.004706375136767946,
+      "full_true_linearized_residual": 1.4067387692201616,
+      "sampled_true_linearized_residual": 1.4077498134826816
+    },
+    {
+      "point": 1,
+      "mu": [
+        5.1875,
+        0.01875
+      ],
+      "step": 275,
+      "Gram_eigenvalue_min": 0.9816647981666851,
+      "Gram_eigenvalue_max": 1.019932323073534,
+      "gradient_relative_error": 0.003724901498877466,
+      "full_true_linearized_residual": 1.4435273642722304,
+      "sampled_true_linearized_residual": 1.4442966267063297
+    },
+    {
+      "point": 1,
+      "mu": [
+        5.1875,
+        0.01875
+      ],
+      "step": 425,
+      "Gram_eigenvalue_min": 0.9751128772459225,
+      "Gram_eigenvalue_max": 1.028213913403492,
+      "gradient_relative_error": 0.006255584844514977,
+      "full_true_linearized_residual": 1.3475309471276198,
+      "sampled_true_linearized_residual": 1.370100312577958
+    },
+    {
+      "point": 1,
+      "mu": [
+        5.1875,
+        0.01875
+      ],
+      "step": 500,
+      "Gram_eigenvalue_min": 0.9816193793839754,
+      "Gram_eigenvalue_max": 1.0199464388305624,
+      "gradient_relative_error": 0.004143012621590862,
+      "full_true_linearized_residual": 1.8404922788513323,
+      "sampled_true_linearized_residual": 1.841586095560148
+    }
+  ]
+}

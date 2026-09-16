@@ -1,0 +1,17 @@
+{
+  "rank": 838,
+  "range_rank": 1024,
+  "relative_frobenius_error": 0.009970428387714583,
+  "tolerance": 0.01,
+  "compressed_error": 6.736439342559312e-13,
+  "sampled_cells": 839,
+  "stencil_cells": 2318,
+  "moment_relative_errors": {
+    "adaptive_Gram": 0.0017596911250459617,
+    "gradient": 0.003818192872023232,
+    "mass": 0.004559699785127411,
+    "residual_energy": 0.002219925270173201
+  },
+  "weights_sha256": "6ae4c22e9d70b8e13d1563d1a39c9cc251d6f333cf328f3794374f234e23dd8a",
+  "local_offline_seconds": 121.86960693262517
+}

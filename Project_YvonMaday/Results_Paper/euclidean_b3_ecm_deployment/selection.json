@@ -1,0 +1,129 @@
+{
+  "accepted": true,
+  "selection_uses_reporting_points": false,
+  "rule_file": "/home/sares/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/euclidean_b3_ecm_local/ecm_tol0.01/weights.npy",
+  "weights_sha256": "6ae4c22e9d70b8e13d1563d1a39c9cc251d6f333cf328f3794374f234e23dd8a",
+  "candidates": [
+    {
+      "rank": 387,
+      "range_rank": 512,
+      "relative_frobenius_error": 0.09986968888197792,
+      "tolerance": 0.1,
+      "compressed_error": 6.753391697321801e-13,
+      "sampled_cells": 388,
+      "stencil_cells": 1134,
+      "moment_relative_errors": {
+        "adaptive_Gram": 0.02281166829046868,
+        "gradient": 0.06699487883252121,
+        "mass": 0.07555073147751855,
+        "residual_energy": 0.020785784126666793
+      },
+      "weights_sha256": "e46f0ca684e45a6ca4c59ec25ca5c61d489dee609792bae2373cff6630b041f2",
+      "local_offline_seconds": 80.60620420239866,
+      "min_gram": 0.7884014644630188,
+      "max_gram": 1.2758529069894222,
+      "max_gradient_error": 0.09827665635608905,
+      "max_linearized_ratio": 1.1827217821941485,
+      "operator_pass": false,
+      "accepted": false
+    },
+    {
+      "rank": 505,
+      "range_rank": 640,
+      "relative_frobenius_error": 0.049774708334616814,
+      "tolerance": 0.05,
+      "compressed_error": 6.730609332259224e-13,
+      "sampled_cells": 506,
+      "stencil_cells": 1475,
+      "moment_relative_errors": {
+        "adaptive_Gram": 0.014141046271843871,
+        "gradient": 0.03267907061527227,
+        "mass": 0.03873403723304838,
+        "residual_energy": 0.015960750439349043
+      },
+      "weights_sha256": "65079e7f9f50a9888e75d3fcac82f76405e9b6e26bfb5ebf572e26ea1726153c",
+      "local_offline_seconds": 55.38753944821656,
+      "min_gram": 0.8000949170357247,
+      "max_gram": 1.1632568280747033,
+      "max_gradient_error": 0.04767641511846289,
+      "max_linearized_ratio": 1.1550528419713244,
+      "operator_pass": false,
+      "accepted": false
+    },
+    {
+      "rank": 676,
+      "range_rank": 896,
+      "relative_frobenius_error": 0.019930469647599165,
+      "tolerance": 0.02,
+      "compressed_error": 6.727665877735378e-13,
+      "sampled_cells": 677,
+      "stencil_cells": 1920,
+      "moment_relative_errors": {
+        "adaptive_Gram": 0.011257072825261944,
+        "gradient": 0.020372870177954243,
+        "mass": 0.014417577787760401,
+        "residual_energy": 0.012533214212844769
+      },
+      "weights_sha256": "58bf52ef76f7b168681089b54ed5cb555cec775f3a6e7cd5782d3eb2e92fcd15",
+      "local_offline_seconds": 101.43243716843426,
+      "min_gram": 0.9532093757681874,
+      "max_gram": 1.0856056762962272,
+      "max_gradient_error": 0.04209025654672118,
+      "max_linearized_ratio": 1.0193247818479727,
+      "operator_pass": true,
+      "accepted": false,
+      "validation_coefficient_ratios": [
+        1.7150949078774957,
+        1.1725623951120248
+      ]
+    },
+    {
+      "rank": 838,
+      "range_rank": 1024,
+      "relative_frobenius_error": 0.009970428387714583,
+      "tolerance": 0.01,
+      "compressed_error": 6.736439342559312e-13,
+      "sampled_cells": 839,
+      "stencil_cells": 2318,
+      "moment_relative_errors": {
+        "adaptive_Gram": 0.0017596911250459617,
+        "gradient": 0.003818192872023232,
+        "mass": 0.004559699785127411,
+        "residual_energy": 0.002219925270173201
+      },
+      "weights_sha256": "6ae4c22e9d70b8e13d1563d1a39c9cc251d6f333cf328f3794374f234e23dd8a",
+      "local_offline_seconds": 121.86960693262517,
+      "min_gram": 0.9718112664805386,
+      "max_gram": 1.028213913403492,
+      "max_gradient_error": 0.006255584844514977,
+      "max_linearized_ratio": 1.0176499937768666,
+      "operator_pass": true,
+      "accepted": true,
+      "validation_coefficient_ratios": [
+        0.8931144159020722,
+        0.9201991961279086
+      ]
+    }
+  ],
+  "protocol": {
+    "inputs": {
+      "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage3/models/master_ann_mu_t_to_qtot_ntot151_best.pt": "3e25d26aca9da2f0e71cfb00019393023194f82ed3603187d120c1c06998ab10",
+      "Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/basis.npy": "a8a1499ab5219eb9548fae93765275b0522fff591c1de14b5f8b6aa086ca58dc",
+      "Project_YvonMaday/Results_Paper/MetricStudy/euclidean/Stage1/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+      "Project_YvonMaday/Results_Paper/euclidean_hprom_main/Stage2/prom_coeff_dataset_ntot151/meta.json": "6d1b19098d09ba9fd42b1e5f0f2a22d0c929dca1df3ce405b1b30c271e016098"
+    },
+    "comparator_sha256": "599c85a3aa270986a5faa2a573fead1662900284d8a0cb07e04924d80afe466d",
+    "tolerances": [
+      0.1,
+      0.05,
+      0.02,
+      0.01,
+      0.005,
+      0.002
+    ],
+    "seed": 418,
+    "maximum_validation_coefficient_ratio": 1.05,
+    "selection_uses_reporting_points": false,
+    "ecm_tolerance": 1e-08
+  }
+}
