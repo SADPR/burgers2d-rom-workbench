@@ -7,19 +7,25 @@
 \usepackage{float}
 \usepackage[section]{placeins}
 \usepackage{array}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 \setlength{\emergencystretch}{1.5em}
+\algrenewcommand\algorithmicrequire{\textbf{Input:}}
+\algrenewcommand\algorithmicensure{\textbf{Output:}}
 
 \newcommand{\q}{\mathbf q}
 \newcommand{\qbar}{\overline{\mathbf q}}
+\newcommand{\qtot}{\mathbf q_{\mathrm{tot}}}
 \newcommand{\qp}{\q}
 \newcommand{\qs}{\qbar}
 \newcommand{\uvec}{\mathbf u}
+\newcommand{\utilde}{\widetilde{\mathbf u}}
 \newcommand{\mub}{\bm\mu}
 \newcommand{\z}{\mathbf z}
 \newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
 
 \title{\vspace{-1.5em}Residual-adaptive correction of parameter--time closures for hyperreduced projection-based models}
-\author{S. Ares de Parga, H. Ballout, Y. Maday, H. Hassan}
+\author{S. Ares de Parga, H. Ballout, Y. Maday}
 \date{\today}
 
 \begin{document}
@@ -28,17 +34,22 @@
 
 \begin{abstract}
 We compare learned closures and nonlinear manifolds for parametric
-projection-based reduced-order models of a nonlinear time-dependent system.
-All models use a common Euclidean proper-orthogonal-decomposition (POD)
+projection-based reduced-order models (PROMs) of a nonlinear time-dependent
+system.
+All models use a common orthonormal proper-orthogonal-decomposition (POD)
 coordinate system.  The learned families comprise \textsc{PROM-ANN} closures,
-an intrusive \textsc{PROM-POD-AE} decoder manifold, and the non-intrusive
+an intrusive \textsc{PROM-POD-AE} decoder manifold, and the nonintrusive
 \textsc{POD-NN-ROM} and \textsc{POD-DL-ROM} maps.  Their main numerical
 comparison uses hyperreduced PROMs (HPROMs), with linear-HPROM-generated
 training targets and model-specific positive cubature rules.
 
-A parameter--time closure prescribes secondary coordinates without responding
-to the current residual.  We augment that tail with a small residual-adaptive
-space obtained by eliminating the primary increment in the linearized
+The parameter--time closure of Case~2 is especially attractive: it avoids
+requiring a single-valued primary-to-secondary relation across trajectories,
+and its iterate-independent trial tangent makes the online residual solve
+comparatively simple.  Yet its prescribed secondary coordinates cannot
+respond to the current residual.  We augment that tail with a small
+residual-adaptive space obtained by eliminating the primary increment in the
+linearized
 least-squares Petrov--Galerkin problem.  The correction directions are rebuilt
 at each time step and frozen during its nonlinear solve.  In the hyperreduced
 realization, both their construction and the solve use the same weighted
@@ -61,121 +72,169 @@ or extrapolation guarantee.
 
 \section{Introduction}
 \label{sec:introduction}
-Projection-based model order reduction (PMOR) reduces a high-dimensional model
-while retaining its governing residual and its parameter dependence
-\cite{antoulas2005approximation,quarteroni2014reduced}.  For nonlinear,
-transport-dominated systems, an accurate linear subspace may nevertheless
-require many coordinates.  Nonlinear trial manifolds, learned closures, and
-latent representations seek to reduce the number of online unknowns without
-discarding the projection principle
-\cite{barnett2023neural,cohen2023nonlinear,aghili2026nonlinear}.
+\noindent\emph{Left blank for now.  The introduction and its literature
+review will be completed in a later revision.  References currently cited
+in the subsequent sections are preliminary; further references will be
+added as those sections are developed.}
+% Introduction note: place hernandez2026hyperreduction in the historical
+% discussion of nonlinear coordinates.  It permits dense linear combinations
+% of modal coefficients and includes a parameter-aligned limiting case in
+% which the complete latent state is evaluated without a projected solve.
 
-This work compares intrusive closure-enhanced PROMs (PROM--ANN), an intrusive
-decoder manifold (PROM--POD--AE), a non-intrusive direct coefficient map
-(POD--NN--ROM), and a non-intrusive latent map (POD--DL--ROM).  PROM means
-that the full time-discrete residual is minimized online.  It is not
-synonymous with a generic ROM: the non-intrusive baselines do not evaluate a
-residual online.  Likewise, the HPROM formulation below is a sampled-residual
-extension of PROM, not a second name for the same computation.
-
-The reported campaign uses a standard Euclidean POD basis and a common
-linear HPROM teacher.  This permits a direct comparison between
-a parameter--time-conditioned closure, introduced below as Case~2, which
-prescribes a learned secondary-coordinate tail but solves a primary
-coordinate block, and POD--NN--ROM, which predicts the full coordinate
-vector from the same parameter--time map.  Model-specific ECM rules equip
-the conventional intrusive trial maps with hyperreduction.  For the adaptive
-correction, a positive moment-fitted rule additionally represents secondary
-directions that are selected online rather than prescribed offline.  These
-rules approximate the same governing residual but define different weighted
-sampled objectives; they are not assumed to be identical optimality problems.
-
-Two responses to limited regression accuracy are examined separately.  The
-first adds a small number of residual-solved secondary correction amplitudes
-to Case~2, using the existing trained map.  The second enriches the
-linear-HPROM coefficient data and retrains all learned families.  The former
-spends additional work online; the latter spends additional work offline.
-Their separate assessment identifies what can be recovered from the
-governing equations before generating further training trajectories.
-Full-residual PROM experiments are retained as diagnostic controls in the
-appendices.  They isolate correction rank and equal-dimensional trial-space
-selection before introducing cubature.  The main results instead assess
-HPROM accuracy, hyperreduction, online work, and coefficient-data enrichment.
-
-\section{Projection Framework}
+\section{Affine Projection-Based Model Order Reduction}
 \label{sec:projection-framework}
-\subsection{Time-discrete residual and Euclidean POD basis}
-Consider a parametric nonlinear semi-discrete initial-value problem
+
+\subsection{POD trial space}
+Let $\uvec(t;\mub)\in\mathbb R^N$ denote the solution of the
+high-dimensional model (HDM), with
+$t\in[0,T_f]$ and $\mub\in\mathcal D\subset\mathbb R^p$.
+From a collection of $N_s$ HDM
+solution snapshots $\{\uvec^i\}_{i=1}^{N_s}$, define the reference state and
+centered snapshot matrix
+\begin{equation}
+\uvec_{\mathrm{ref}}=\frac{1}{N_s}\sum_{i=1}^{N_s}\uvec^i,
+\qquad
+\mathbf S_c=
+\begin{bmatrix}
+\uvec^1-\uvec_{\mathrm{ref}} & \cdots &
+\uvec^{N_s}-\uvec_{\mathrm{ref}}
+\end{bmatrix}.
+\label{eq:centered-snapshots}
+\end{equation}
+Proper orthogonal decomposition (POD) constructs an orthonormal basis by
+compressing these centered snapshots.  Writing
+$r_S=\operatorname{rank}(\mathbf S_c)$, the compact
+singular-value decomposition (SVD) is
+\begin{equation}
+\mathbf S_c=\mathbf U_{\mathbf S}\boldsymbol\Sigma_{\mathbf S}
+\mathbf Y_{\mathbf S}^T.
+\label{eq:snapshot-svd}
+\end{equation}
+Here $\mathbf U_{\mathbf S}\in\mathbb R^{N\times r_S}$ and
+$\mathbf Y_{\mathbf S}\in\mathbb R^{N_s\times r_S}$ have orthonormal
+columns, and $\boldsymbol\Sigma_{\mathbf S}$ contains the positive singular
+values $\sigma_1\geq\cdots\geq\sigma_{r_S}>0$.  A
+standard energy criterion selects $n_{\mathrm{tot}}\ll N$ such that
+\begin{equation}
+1-\frac{\displaystyle\sum_{i=1}^{n_{\mathrm{tot}}}\sigma_i^2}
+{\displaystyle\sum_{i=1}^{r_S}\sigma_i^2}
+\leq\varepsilon_S^2,
+\label{eq:pod-energy-criterion}
+\end{equation}
+for a prescribed tolerance $\varepsilon_S>0$.  The resulting common
+reduced-order basis (ROB) is
+\begin{equation}
+\mathbf V_{\mathrm{tot}}=
+\mathbf U_{\mathbf S}(:,1:n_{\mathrm{tot}})
+\in\mathbb R^{N\times n_{\mathrm{tot}}},
+\qquad
+\mathbf V_{\mathrm{tot}}^T\mathbf V_{\mathrm{tot}}=\mathbf I_{n_{\mathrm{tot}}}.
+\label{eq:pod-basis}
+\end{equation}
+The tolerance in \eqref{eq:pod-energy-criterion} bounds the fraction of
+centered snapshot energy discarded by this POD truncation.
+The HDM state is approximated in the corresponding affine trial space by
+\begin{equation}
+\uvec(t;\mub)\approx
+\utilde(\qtot(t;\mub))
+=\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\qtot(t;\mub).
+\label{eq:linear-reconstruction}
+\end{equation}
+Here $\qtot\in\mathbb R^{n_{\mathrm{tot}}}$ collects all generalized
+coordinates in the retained POD space, and the tilde distinguishes this
+reduced approximation from the HDM solution $\uvec$.
+
+\subsection{Time-discrete LSPG and the full-residual linear PROM}
+Consider the parametric nonlinear semi-discrete initial-value problem
 \begin{equation}
 \mathbf M(\mub)\dot{\uvec}(t;\mub)+\mathbf f(\uvec(t;\mub);\mub)
--\mathbf g(t;\mub)=\mathbf0,\qquad \uvec(0;\mub)=\uvec_0(\mub),
+-\mathbf g(t;\mub)=\mathbf0,\qquad
+\uvec(0;\mub)=\uvec_0(\mub).
 \label{eq:ivp}
 \end{equation}
-with $\mub\in\mathcal D$.  After a chosen implicit time discretization, let
-$\mathbf r^{m+1}(\uvec;\mub)\in\mathbb R^N$ denote the residual at step
-$m+1$, with dependence on the previous state understood.  The HDM solves
+Here $\mathbf M\in\mathbb R^{N\times N}$ is a mass-like matrix,
+$\mathbf f\in\mathbb R^N$ is the nonlinear semi-discrete operator,
+$\mathbf g\in\mathbb R^N$ contains forcing or source terms, and
+$\uvec_0$ is the initial state.  A dot denotes differentiation in time.
+Let $0=t^0<t^1<\cdots<t^{N_t}=T_f$ be the time grid and
+$\uvec^m(\mub)$ the HDM state at $t^m$.
+After a chosen implicit time discretization, let
+$\mathbf r^{m+1}(\mathbf v;\mub)\in\mathbb R^N$ denote the residual at
+step $m+1$ evaluated at a candidate state $\mathbf v\in\mathbb R^N$.
+Dependence on previous time states and on the time-step size is kept
+implicit for readability.  The HDM solves
 \begin{equation}
 \mathbf r^{m+1}(\uvec^{m+1};\mub)=\mathbf0.
 \label{eq:discrete-residual}
 \end{equation}
-Let $\uvec_{\mathrm{ref}}$ be the snapshot mean and let $\mathbf S_c$ collect
-the centered HDM snapshots.  The thin singular-value decomposition
+Substituting \eqref{eq:linear-reconstruction} gives $N$ residual equations
+for $n_{\mathrm{tot}}$ generalized coordinates.  A linear projection-based
+reduced-order model (PROM) instead determines these coordinates through
+the time-discrete least-squares Petrov--Galerkin (LSPG) problem
 \begin{equation}
-\mathbf S_c=\mathbf U\boldsymbol\Sigma\mathbf Y^T
-\end{equation}
-defines the Euclidean POD basis retained in this work,
-\begin{equation}
-\mathbf V_{\mathrm{tot}}=\mathbf U(:,1:n_{\mathrm{tot}}),\qquad
-\mathbf V_{\mathrm{tot}}^T\mathbf V_{\mathrm{tot}}=\mathbf I.
-\label{eq:euclidean-pod}
-\end{equation}
-The common affine linear trial manifold is
-\begin{equation}
-\boldsymbol\phi_N(\q_N)=\uvec_{\mathrm{ref}}+
-\mathbf V_{\mathrm{tot}}\q_N,\qquad
-\q_N\in\mathbb R^{n_{\mathrm{tot}}}.
-\label{eq:linear-reconstruction}
-\end{equation}
-All learned trial maps below are expressed in these same coordinates.
-
-\subsection{Linear PROM and LSPG reference}
-The full-residual linear PROM is the time-discrete least-squares
-Petrov--Galerkin (LSPG) problem
-\begin{equation}
-\q_N^{m+1}(\mub)=\arg\min_{\mathbf x\in\mathbb R^{n_{\mathrm{tot}}}}
-\norm{\mathbf r^{m+1}(\boldsymbol\phi_N(\mathbf x);\mub)}_2^2.
+\q_N^{m+1}(\mub)
+=\arg\min_{\mathbf x\in\mathbb R^{n_{\mathrm{tot}}}}
+\norm{\mathbf r^{m+1}(\utilde(\mathbf x);\mub)}_2^2.
 \label{eq:linear-prom}
 \end{equation}
-At Gauss--Newton iterate $k$, define
+Here $\q_N^{m+1}$ denotes the coordinates computed by the linear PROM,
+and the associated reduced state is
+\begin{equation}
+\utilde_N^{m+1}(\mub)
+:=\utilde(\q_N^{m+1}(\mub))
+=\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\q_N^{m+1}(\mub).
+\label{eq:linear-reference-state}
+\end{equation}
+Thus $\qtot$ is the complete coordinate variable, whereas $\q_N$ is the
+particular trajectory generated by the linear reduced solve.
+The residual in \eqref{eq:linear-prom} uses previously computed reduced
+states, held fixed while determining the new state.
+Its first-order optimality condition is orthogonality of the residual to
+the LSPG test space, whose basis is the Jacobian action on the trial basis.
+For a generic complete-coordinate iterate $\qtot^{m+1,k}$, define the
+residual Jacobian, trial tangent, and LSPG test basis by
 \begin{equation}
 \mathbf T_N=\mathbf V_{\mathrm{tot}},\qquad
 \mathbf J^{m+1,k}=
-\left.\frac{\partial\mathbf r^{m+1}}{\partial\uvec}\right|_{
-\boldsymbol\phi_N(\q_N^{m+1,k})},\qquad
+\left.\frac{\partial\mathbf r^{m+1}}{\partial\mathbf v}\right|_{
+\mathbf v=\utilde(\qtot^{m+1,k})},\qquad
 \mathbf W_N^{m+1,k}=\mathbf J^{m+1,k}\mathbf T_N.
 \end{equation}
-The normal equations for the increment are
+At a stationary point,
+$(\mathbf W_N)^T\mathbf r^{m+1}=\mathbf0$.
+The Gauss--Newton increment is obtained by minimizing the norm of the
+linearized residual, and satisfies
 \begin{equation}
 \left(\mathbf W_N^{m+1,k}\right)^T\mathbf W_N^{m+1,k}
-\Delta\q_N^{m+1,k}=-
+\Delta\qtot^{m+1,k}=-
 \left(\mathbf W_N^{m+1,k}\right)^T
-\mathbf r^{m+1}\!\left(\boldsymbol\phi_N(\q_N^{m+1,k});\mub\right).
+\mathbf r^{m+1}\!\left(\utilde(\qtot^{m+1,k});\mub\right).
 \label{eq:linear-prom-gn}
 \end{equation}
-Equation~\eqref{eq:linear-prom} generates all training targets in the PROM
-campaign.
+The normal equations express this linear least-squares optimality
+condition; they do not require forming an inverse.  Moreover,
+$(\mathbf W_N)^T\mathbf W_N$ is the Gauss--Newton matrix, not generally the
+exact derivative of $(\mathbf W_N)^T\mathbf r$: the latter also contains
+derivatives of the state-dependent test basis multiplied by the residual.
+For this linear PROM, $\qtot^{m+1,k}=\q_N^{m+1,k}$ in the iteration.
 
-\subsection{Linear HPROM and ECM formulation}
+\subsection{Linear HPROM via the empirical cubature method}
 \label{sec:linear-hprom}
-The linear HPROM replaces full residual evaluations in the LSPG update by a
-sparse, positive empirical-cubature approximation.  This formulation is
-given in detail because the same projected-residual algebra is used when the
-affine trial manifold is replaced by a learned one.  Let
+Reducing the number of unknowns does not remove the cost of evaluating
+an $N$-component nonlinear residual and its Jacobian actions.
+Motivated by stability considerations, we use a project--then--approximate
+hyperreduced PROM (HPROM): a sparse rule approximates the entity-wise
+contributions to the LSPG projected residual and Gauss--Newton matrix,
+rather than the trial-state map.  The empirical cubature method (ECM)
+\cite{hernandez2017dimensional,hernandez2020multiscale} and
+energy-conserving sampling and weighting (ECSW) \cite{farhat2015structure}
+are two approaches in this family.  We adopt ECM here; the cited ECM works
+give its construction details.  Let
 $\mathcal E=\{e_i\}_{i=1}^{N_e}$ be the mesh entities.  The time-discrete
 residual is assembled from local contributions as
 \begin{equation}
-\mathbf r^{m+1}(\uvec;\mub)=\sum_{e_i\in\mathcal E}\mathbf L_{e_i}^T
-\mathbf r_{e_i}^{m+1}(\mathbf L_{e_i^+}\uvec;\mub).
+\mathbf r^{m+1}(\mathbf v;\mub)=\sum_{e_i\in\mathcal E}\mathbf L_{e_i}^T
+\mathbf r_{e_i}^{m+1}(\mathbf L_{e_i^+}\mathbf v;\mub).
 \label{eq:entity-residual}
 \end{equation}
 Here $\mathbf r_{e_i}^{m+1}\in\mathbb R^{d_{e_i}}$ is the contribution of
@@ -185,16 +244,17 @@ state stencil needed to evaluate it.  The stencil contains neighbouring
 entities whenever the discretization requires them.
 
 For the affine trial map \eqref{eq:linear-reconstruction}, the projected
-LSPG residual at a Gauss--Newton iterate has the entity-wise form
+LSPG residual at a generic complete-coordinate iterate has the entity-wise
+form
 \begin{equation}
 \begin{aligned}
 \mathbf r_N^{m+1,k}(\mub)
 &:=\left(\mathbf W_N^{m+1,k}\right)^T
-\mathbf r^{m+1}\!\left(\boldsymbol\phi_N(\q_N^{m+1,k});\mub\right)\\
+\mathbf r^{m+1}\!\left(\utilde(\qtot^{m+1,k});\mub\right)\\
 &=\sum_{e_i\in\mathcal E}
 \left(\mathbf L_{e_i}\mathbf W_N^{m+1,k}\right)^T
 \mathbf r_{e_i}^{m+1}\!\left(
-\mathbf L_{e_i^+}\boldsymbol\phi_N(\q_N^{m+1,k});\mub\right).
+\mathbf L_{e_i^+}\utilde(\qtot^{m+1,k});\mub\right).
 \end{aligned}
 \label{eq:linear-projected-residual}
 \end{equation}
@@ -219,7 +279,7 @@ projected quantities,
 &=\sum_{e_i\in\widetilde{\mathcal E}_N}\xi_{N,e_i}
 \left(\mathbf L_{e_i}\mathbf W_N^{m+1,k}\right)^T
 \mathbf r_{e_i}^{m+1}\!\left(
-\mathbf L_{e_i^+}\boldsymbol\phi_N(\q_N^{m+1,k});\mub\right),\\
+\mathbf L_{e_i^+}\utilde(\qtot^{m+1,k});\mub\right),\\
 \widehat{\mathbf J}_N^{m+1,k}
 &=\sum_{e_i\in\widetilde{\mathcal E}_N}\xi_{N,e_i}
 \left(\mathbf L_{e_i}\mathbf W_N^{m+1,k}\right)^T
@@ -227,21 +287,37 @@ projected quantities,
 \end{aligned}
 \label{eq:linear-ecm-sampled-normal-equations}
 \end{equation}
-The online sampled update is consequently
+The linear HPROM is obtained by using these sampled quantities in place of
+their full-residual counterparts.  Its online update is
 \begin{equation}
 \widehat{\mathbf J}_N^{m+1,k}\Delta\q_N^{m+1,k}
 =-\widehat{\mathbf r}_N^{m+1,k},\qquad
 \q_N^{m+1,k+1}=\q_N^{m+1,k}+\Delta\q_N^{m+1,k}.
 \label{eq:linear-hprom-gn-update}
 \end{equation}
+In this equation the generic iterate above is instantiated as
+$\qtot^{m+1,k}=\q_N^{m+1,k}$.  After convergence at every time step, the
+sequence
+\begin{equation}
+\mathcal Q_N(\mub)
+:=\left\{\q_N^m(\mub)\right\}_{m=0}^{N_t},\qquad
+\utilde_N^m(\mub):=\utilde\!\left(\q_N^m(\mub)\right)
+\label{eq:linear-hprom-reference-trajectory}
+\end{equation}
+defines the complete-coordinate \emph{linear-HPROM reference trajectory}
+and its associated state approximation.  In the remainder of the main
+text, $\q_N^m\in\mathbb R^{n_{\mathrm{tot}}}$ denotes this linear-HPROM
+trajectory.  The full-residual PROM controls in the appendices use the
+corresponding linear-PROM reference, with that context stated there.
 
 \paragraph{Offline cubature construction.}
-For every selected parameter--time training state $s$, the linear coordinate
-$\q_{N,s}$ and its LSPG test basis $\mathbf W_{N,s}$ define the contribution
+For every selected parameter--time state $s$, a complete coordinate
+$\mathbf q_{\mathrm{tot},s}$ and its LSPG test basis $\mathbf W_{N,s}$ define the contribution
 of entity $e_i$ to the projected residual,
 \begin{equation}
 \mathbf c_{N,e_i}^{(s)}=(\mathbf L_{e_i}\mathbf W_{N,s})^T
-\mathbf r_{e_i}(\mathbf L_{e_i^+}\boldsymbol\phi_N(\q_{N,s});\mub_s).
+\mathbf r_{e_i}(\mathbf L_{e_i^+}\utilde(
+\mathbf q_{\mathrm{tot},s});\mub_s).
 \label{eq:linear-ecm-contribution}
 \end{equation}
 Stacking all $n_{\mathrm{tot}}$-component contributions over
@@ -258,87 +334,288 @@ $N_{\mathrm{ECM}}$ selected states gives
 \qquad \mathbf b_N=\mathbf C_N\mathbf1.
 \label{eq:linear-ecm-training-matrix}
 \end{equation}
-ECM seeks a sparse nonnegative approximation of the full projected-residual
-data,
+An unrestricted nonnegative least-squares fit would admit the dense vector
+$\mathbf1$ and would not, by itself, reduce the mesh.
+ECM instead selects a small support that reproduces a compressed set of
+entity moments.  Let $\mathbf Z_N\in\mathbb R^{N_e\times k_N}$ contain
+the leading right singular vectors of $\mathbf C_N$ retained at the
+prescribed SVD tolerance.  Including the constant moment gives
 \begin{equation}
-\boldsymbol\xi_N=\arg\min_{\boldsymbol\zeta\geq\mathbf0}
-\norm{\mathbf C_N\boldsymbol\zeta-\mathbf b_N}_2^2,\qquad
+\mathbf A_N=
+\begin{bmatrix}\mathbf Z_N^T\\ \mathbf1^T\end{bmatrix},
+\qquad
+\mathbf b_N^{\mathrm{cmp}}=\mathbf A_N\mathbf1.
+\label{eq:linear-ecm-compressed-moments}
+\end{equation}
+The rule is constructed to satisfy
+\begin{equation}
+\boldsymbol\xi_N\geq\mathbf0,\qquad
+\mathbf A_N\boldsymbol\xi_N\approx\mathbf b_N^{\mathrm{cmp}},\qquad
 \widetilde{\mathcal E}_N=\{e_i\in\mathcal E:\xi_{N,e_i}>0\}.
 \label{eq:linear-ecm}
 \end{equation}
-In the present implementation, a direct SVD removes numerically null
-directions of $\mathbf C_N$ before the nonnegative cubature solve.  The rule
-is therefore tied to the affine trial manifold and its LSPG test basis.  In
-particular, replacing $\boldsymbol\phi_N$ by a learned closure or decoder
-also changes the tangent, the test basis, and the projected contributions;
-the corresponding ECM rule must be constructed for that map.
+Here $\approx$ denotes satisfaction to the cubature solver's numerical
+tolerance.  The constant moment enforces
+$\sum_{e_i}\xi_{N,e_i}\approx N_e$.
+The implementation uses a direct SVD and a greedy ECM support selection
+with positivity-preserving weight updates.  Matching the retained moments
+approximates $\mathbf C_N\boldsymbol\xi_N=\mathbf b_N$; components
+discarded by the SVD are not constrained.  The rule is therefore tied to
+the trial approximation and its LSPG test basis.
 
-\paragraph{Relation to other hyperreduction methods.}
-The common step is to approximate an entity-wise sum of \emph{projected}
-residual contributions, rather than the state reconstruction or a learned
-map.  We use ECM in the sense of empirical cubature
-\cite{hernandez2017dimensional,hernandez2020multiscale}.  ECSW is another
-project--then--approximate hyperreduction strategy
-\cite{farhat2015structure}.  It could be used with the same LSPG and trial
-manifold formulations, but ECM is the rule used in this work.
-
-\section{Learned Reduced Representations}
+\section{Nonlinear-Manifold Projection-Based Model Order Reduction}
 \label{sec:learned-representations}
-\subsection{PROM--ANN closures}
-Partition the common POD basis and coordinate vector as
+For transport-dominated parametric problems, an accurate linear
+approximation can require many POD modes even when the solution set has a
+small intrinsic dimension.  This difficulty is described by the
+Kolmogorov $n$-width.  For the centered solution set
+$\mathcal S=\{\uvec(t;\mub)-\uvec_{\mathrm{ref}}:
+t\in[0,T_f],\ \mub\in\mathcal D\}$, it is
 \begin{equation}
-\mathbf V_{\mathrm{tot}}=[\mathbf V\ \overline{\mathbf V}],\qquad
-\q_N=\begin{bmatrix}\qp\\\qs\end{bmatrix},\qquad
+d_n(\mathcal S)=
+\inf_{\substack{X_n\subset\mathbb R^N\\
+X_n\ \mathrm{linear},\ \dim X_n=n}}
+\ \sup_{\mathbf s\in\mathcal S}\ \inf_{\mathbf v\in X_n}
+\norm{\mathbf s-\mathbf v}_2.
+\label{eq:kolmogorov-width}
+\end{equation}
+Slow decay of $d_n(\mathcal S)$ limits the accuracy achievable with any
+fixed $n$-dimensional linear trial space, not just one chosen by POD.
+This is the Kolmogorov barrier to linear reducibility
+\cite{barnett2023neural,aghili2026nonlinear}.
+
+To mitigate this barrier, the learned representations considered here
+retain the complete $n_{\mathrm{tot}}$-mode POD basis while reducing the
+number of independent online coordinates.  Rather than discarding the
+secondary state contribution, a learned relation expresses it in terms of
+fewer variables.  The resulting approximation remains within the complete
+POD space but need not be confined to a fixed linear subspace of the
+smaller dimension.
+
+\subsection{Closure-based nonlinear trial manifolds}
+We begin by partitioning the complete POD basis and its coordinates as
+\begin{equation}
+\mathbf V_{\mathrm{tot}}=
+\begin{bmatrix}\mathbf V&\overline{\mathbf V}\end{bmatrix},
+\qquad
+\qtot=
+\begin{bmatrix}\q\\ \qbar\end{bmatrix},
+\qquad
 n+\bar n=n_{\mathrm{tot}}.
 \label{eq:partition}
 \end{equation}
-Here $\q\in\mathbb R^n$ and $\qbar\in\mathbb R^{\bar n}$ denote the
-primary and secondary coordinates, respectively.  The Euclidean POD
-construction gives
+In the models assessed here, $\mathbf V\in\mathbb R^{N\times n}$ contains
+the first $n$ POD modes and
+$\overline{\mathbf V}\in\mathbb R^{N\times\bar n}$ the remaining modes;
+$\q\in\mathbb R^n$ and $\qbar\in\mathbb R^{\bar n}$ are called the primary
+and secondary coordinates, respectively.  This leading-coordinate
+partition is used by every primary--secondary model assessed below.
+
+Because $\mathbf V_{\mathrm{tot}}$ is orthonormal, its two blocks satisfy
 \begin{equation}
 \mathbf V^T\mathbf V=\mathbf I_n,\qquad
 \overline{\mathbf V}^{\,T}\overline{\mathbf V}=\mathbf I_{\bar n},\qquad
-\mathbf V^T\overline{\mathbf V}=\mathbf0,
+\mathbf V^T\overline{\mathbf V}=\mathbf0.
 \label{eq:partition-orthogonality}
 \end{equation}
-and the associated linear state is
+The affine approximation \eqref{eq:linear-reconstruction} can therefore be
+written as
 \begin{equation}
-\uvec=\uvec_{\mathrm{ref}}+\mathbf V\q+
+\utilde(\qtot)=\uvec_{\mathrm{ref}}+\mathbf V\q+
 \overline{\mathbf V}\qbar.
 \label{eq:partitioned-state}
 \end{equation}
-The full-coordinate linear PROM solves both blocks.  A learned closure
-instead supplies the secondary block and leaves only the primary block as
-an online unknown.
-PROM--ANN supplies the secondary block through a learned relation
+Both coordinate blocks remain independent in the linear PROM and HPROM of
+Section~\ref{sec:projection-framework}.  A nonlinear-manifold model instead
+replaces the secondary block by a learned relation.  The PROM--ANN
+construction of Barnett et al.~\cite{barnett2023neural} introduced the
+state-conditioned closure $\qbar=\mathcal N(\q)$.  To express that model and
+the parameter-conditioned variants considered here in a common notation, we
+write the more general closure
 \begin{equation}
-\qs=\mathcal F(\qp,\mub,t),\qquad
-\boldsymbol\phi_{\mathcal F}(\qp;\mub,t)=\uvec_{\mathrm{ref}}+
-\mathbf V\qp+\overline{\mathbf V}\mathcal F(\qp,\mub,t).
+\qbar=\mathcal F(\q,\mub,t),
+\qquad
+\mathcal F:\mathbb R^n\times\mathcal D\times[0,T_f]
+\longrightarrow\mathbb R^{\bar n}.
+\label{eq:closure-map}
+\end{equation}
+Substitution into \eqref{eq:partitioned-state} defines the associated state
+map
+\begin{equation}
+\uvec(t;\mub)\approx
+\utilde_{\mathcal F}(\q;\mub,t)
+:=\uvec_{\mathrm{ref}}+\mathbf V\q+
+\overline{\mathbf V}\mathcal F(\q,\mub,t).
 \label{eq:closure-manifold}
 \end{equation}
-The network provides reduced secondary coordinates, not a direct HDM state
-approximation.  The primary coordinates remain online unknowns of a residual
-minimization.  This is the neural-network-augmented projection construction
-of \cite{barnett2023neural}; analogous closure roles have also been
-represented by non-neural regressors \cite{ares2026closure}.
+Here $\mathcal F$ is assumed continuously differentiable.  At fixed
+$(\mub,t)$, the image of $\utilde_{\mathcal F}$ defines the trial set
+\begin{equation}
+\mathcal T_{\mathcal F}(\mub,t)=
+\left\{\utilde_{\mathcal F}(\mathbf x;\mub,t):
+\mathbf x\in\mathbb R^n\right\}.
+\label{eq:closure-trial-set}
+\end{equation}
+Thus the network parameterizes the secondary coordinates, while the
+governing equations retain responsibility for the primary coordinates.
+The secondary modes are no longer independent unknowns, but their state
+contribution is retained.
+When $\mathcal F$ is represented by an artificial neural network (ANN), we
+refer to this closure-augmented projection family as \emph{PROM--ANN}.  The
+name emphasizes that the network supplies the closure, whereas the online
+primary coordinates are still determined by a PROM residual minimization;
+the ANN does not predict the complete online state.
 
-The three cases are information patterns in this common construction:
+The state-conditioned special case $\qbar=\mathcal N(\q)$ presumes that
+the primary coordinates identify the relevant state uniquely: if two
+states in the target solution set have the same $\q$ but different
+$\qbar$, no single-valued map $\mathcal N$ can reproduce both.  The local
+analysis in \cite{aghili2026nonlinear} provides conditions under which the
+leading reduced coordinates define an injective local chart and the
+remaining coordinates can consequently be expressed as functions of them.
+This property need not hold globally over a broad parameter domain.
+Supplying $(\mub,t)$ to the closure offers a direct way to distinguish
+states that may be ambiguous from $\q$ alone.  This observation motivates
+the following three information patterns within the common map
+$\mathcal F$:
 \begin{align}
 \text{Case 1:}\quad&\qs=\mathcal N(\qp),&
 \text{Case 2:}\quad&\qs=\mathcal M(\mub,t),&
 \text{Case 3:}\quad&\qs=\mathcal H(\qp,\mub,t).
 \label{eq:closure-cases}
 \end{align}
-Case~1 is state-conditioned, Case~2 parameter--time-conditioned, and Case~3
-combines both inputs.  The LSPG problem is
+Case~1 predicts the secondary coordinates from the solved primary
+coordinates $\q$ alone (state-conditioned).  Case~2 prescribes them from
+$(\mub,t)$, independently of $\q$ (parameter--time-conditioned).
+Case~3 uses both $\q$ and $(\mub,t)$.
+Cases~2 and~3 are alternative choices of conditioning information, not
+consequences of the local injectivity result above.
+
+Cases~1 and~3 can give curved trial manifolds as
+$\q$ varies.  In contrast, the Case~2 state map is affine in its online
+coordinate,
+\begin{equation}
+\utilde_{\mathcal M}(\q;\mub,t)
+:=\uvec_{\mathrm{ref}}+\mathbf V\q+
+\overline{\mathbf V}\mathcal M(\mub,t).
+\label{eq:case2-state-map}
+\end{equation}
+Therefore, at fixed parameter and time, its image is the translated affine
+trial set
+\begin{equation}
+\mathcal T_{\mathcal M}(\mub,t)
+:=\left\{\utilde_{\mathcal M}(\mathbf x;\mub,t):
+\mathbf x\in\mathbb R^n\right\}
+=\uvec_{\mathrm{ref}}+\overline{\mathbf V}\mathcal M(\mub,t)
++\operatorname{range}(\mathbf V).
+\label{eq:case2-translated-space}
+\end{equation}
+The map may be nonlinear in $(\mub,t)$, but its dependence on the online
+unknown $\q$ is affine.  For every differentiable closure the primary
+block is recoverable from the state:
+$\mathbf V^T(\utilde_{\mathcal F}-\uvec_{\mathrm{ref}})=\q$.
+Consequently the parameterization is injective and its tangent has rank
+$n$; the closure reduces the number of independent coordinates without
+changing the complete POD representation.
+
+\paragraph{Training coordinates and consistency choice.}
+The closure ansatz \eqref{eq:closure-map} does not prescribe how the
+coordinates used to train $\mathcal F$ must be generated.  Given an HDM
+snapshot $\uvec^s$ at $(\mub_s,t_s)$, the construction introduced for
+PROM--ANN obtains the complete POD coordinate by orthogonal projection,
+\begin{equation}
+\mathbf q_{\mathrm{tot,proj}}^s
+:=\mathbf V_{\mathrm{tot}}^T
+\left(\uvec^s-\uvec_{\mathrm{ref}}\right)
+=
+\begin{bmatrix}
+\q_{\mathrm{proj}}^s\\[1mm]
+\qbar_{\mathrm{proj}}^s
+\end{bmatrix}.
+\label{eq:projected-closure-training-coordinates}
+\end{equation}
+The original state-conditioned formulation and its subsequent regression
+extensions train the primary-to-secondary relation using pairs of this form
+\cite{barnett2023neural,ares2026closure}.  This construction fits the learned
+manifold to the orthogonal projections of the available HDM snapshots onto
+the retained POD space.
+
+Alternatively, a complete coordinate
+$\mathbf q_{\mathrm{tot,ref}}^s$ may be supplied
+by a selected reduced reference model and partitioned as
+\begin{equation}
+\mathbf q_{\mathrm{tot,ref}}^s
+=
+\begin{bmatrix}
+\q_{\mathrm{ref}}^s\\[1mm]
+\qbar_{\mathrm{ref}}^s
+\end{bmatrix},
+\qquad
+\mathcal F(\q_{\mathrm{ref}}^s,\mub_s,t_s)
+\approx\qbar_{\mathrm{ref}}^s.
+\label{eq:reference-model-closure-training-coordinates}
+\end{equation}
+This second construction fits relations present in the trajectory of that
+reference model rather than in orthogonally projected HDM snapshots.  Both
+choices are compatible with the closure ansatz and the online LSPG
+formulation; they define different regression targets and, consequently,
+potentially different learned trial sets.
+
+In this paper, the main HPROM study adopts the second construction with the
+linear HPROM as reference.  At every training parameter and time, the
+specific coordinate $\q_N^m(\mub)$ from
+\eqref{eq:linear-hprom-reference-trajectory} is split using the same basis
+partition.  For the regression time argument, we write
+$\q_N(t^m;\mub)=\q_N^m(\mub)$.  Thus
+\begin{equation}
+\q_N^m(\mub)=
+\begin{bmatrix}
+\q^m(\mub)\\[1mm]\qbar^m(\mub)
+\end{bmatrix}.
+\label{eq:linear-hprom-reference-partition}
+\end{equation}
+The three regressions are trained to reproduce relations present in this
+reference trajectory,
+\begin{align}
+\mathcal N(\q^m(\mub))&\approx\qbar^m(\mub),
+&
+\mathcal M(\mub,t^m)&\approx\qbar^m(\mub),
+&
+\mathcal H(\q^m(\mub),\mub,t^m)&\approx\qbar^m(\mub).
+\label{eq:closure-reference-targets}
+\end{align}
+The full-residual PROM controls in Appendices~\ref{sec:adaptive-results}
+and~\ref{sec:prom-results} use the same partition and regression relations,
+with $\q_N$ supplied instead by the linear PROM \eqref{eq:linear-prom}.
+In the main study, the nonlinear manifolds are thus constructed
+from coordinates generated by the linear HPROM dynamics, rather than from
+orthogonal projections of HDM snapshots.  We refer to this paper-specific
+choice of targets as \emph{linear-HPROM-consistent training}.  It is not a
+requirement of the closure-based formulation.  The closure-based HPROMs
+nevertheless have their own trial approximations and cubature rules.
+
+This choice gives a direct interpretation of the regression error.
+Evaluating a learned closure at a reference primary coordinate yields
+\begin{equation}
+\utilde_{\mathcal F}(\q^m(\mub);\mub,t^m)-\utilde_N^m(\mub)
+=\overline{\mathbf V}
+\left[\mathcal F(\q^m(\mub),\mub,t^m)-\qbar^m(\mub)\right].
+\label{eq:closure-reference-reconstruction-error}
+\end{equation}
+By \eqref{eq:partition-orthogonality}, the norm of this state difference
+equals the norm of the secondary-coordinate regression error at the
+reference primary coordinate.
+
+\paragraph{LSPG projection on closure-based trial manifolds.}
+For a trained closure, the online LSPG problem is
 \begin{equation}
 \qp^{m+1}(\mub)=\arg\min_{\mathbf x\in\mathbb R^n}
-\norm{\mathbf r^{m+1}(\boldsymbol\phi_{\mathcal F}
+\norm{\mathbf r^{m+1}(\utilde_{\mathcal F}
 (\mathbf x;\mub,t^{m+1});\mub)}_2^2,
 \label{eq:closure-lspg}
 \end{equation}
-with tangent
+Thus the model is intrusive: the primary coordinates are determined by
+minimizing the governing residual, not by regression.  Its tangent is
 \begin{equation}
 \mathbf T_{\mathcal F}=\mathbf V+\overline{\mathbf V}
 \frac{\partial\mathcal F}{\partial\qp},\qquad
@@ -361,116 +638,349 @@ implementation solves the least-squares system directly.
 For Case~2, $\partial\mathcal M/\partial\qp=\mathbf0$ and
 $\mathbf T_{\mathcal M}=\mathbf V$.  Its tangent is therefore the cheapest,
 but its prescribed secondary block is not corrected through a
-state-dependent tangent.
+state-dependent tangent.  This tension motivates a central question of the
+study: can a few residual-informed secondary degrees of freedom recover
+accuracy while retaining most of Case~2's online simplicity?  The
+construction in Section~\ref{sec:adaptive-case2} addresses this question.
+The primary coordinates obtained from this online solve can differ from
+$\q^m(\mub)$.  The reconstruction identity in
+\eqref{eq:closure-reference-reconstruction-error} applies at the reference
+primary coordinate and is not a bound on the computed trajectory error.
 
-\subsection{PROM--POD--AE and intrusive trial maps}
-An autoencoder maps the complete linear coordinate vector through a latent
-variable,
+\subsection{Autoencoder-based nonlinear trial manifolds}
+A second construction uses an autoencoder to learn a nonlinear manifold in
+the retained POD-coordinate space.  The two-stage POD-plus-autoencoder
+architecture is inspired by POD--DL--ROM \cite{fresca2022pod}, which couples
+POD compression with learned latent dynamics and is deployed as a
+nonintrusive model: its online latent coordinates are predicted directly
+from the parameters and time.  Autoencoder decoders can instead be retained
+as nonlinear trial maps in an intrusive residual-based formulation, as in
+manifold LSPG \cite{lee2020model} and its hyperreduced developments in
+\cite{romor2025explicable}.
+
+We adopt the latter online principle but train the autoencoder on the
+complete linear-HPROM coordinate $\q_N$.  To distinguish this model from
+the nonintrusive POD--DL--ROM, we coin the name \emph{PROM--POD--AE} for
+the resulting intrusive variant.  Its encoder
+$\mathcal E:\mathbb R^{n_{\mathrm{tot}}}\to\mathbb R^{n_z}$ and decoder
+$\mathcal D:\mathbb R^{n_z}\to\mathbb R^{n_{\mathrm{tot}}}$ give the
+latent coordinate and reconstruction
 \begin{equation}
-\z=\mathcal E(\q_N),\qquad
-\widehat{\q}_N=\mathcal D(\z),\qquad \z\in\mathbb R^{n_z}.
+\z_N=\mathcal E(\q_N),\qquad
+\widehat{\q}_N=\mathcal D(\z_N)\approx\q_N,\qquad
+\z_N\in\mathbb R^{n_z}.
+\label{eq:podae-reference-training}
 \end{equation}
-PROM--POD--AE uses the decoder as an intrusive nonlinear trial manifold,
+After training, the decoder maps a generic online latent variable to a
+complete coordinate vector $\qtot=\mathcal D(\z)$.  PROM--POD--AE uses this
+decoder as an intrusive nonlinear trial manifold,
 \begin{equation}
-\boldsymbol\phi_{\mathrm{AE}}(\z)=\uvec_{\mathrm{ref}}+
-\mathbf V_{\mathrm{tot}}\mathcal D(\z),\qquad
-\mathbf T_{\mathrm{AE}}=\mathbf V_{\mathrm{tot}}
+\begin{aligned}
+\uvec(t;\mub)&\approx
+\utilde_{\mathrm{AE}}(\z)
+:=\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\z),\\
+\mathbf T_{\mathrm{AE}}&=\mathbf V_{\mathrm{tot}}
 \frac{\partial\mathcal D}{\partial\z}.
+\end{aligned}
 \label{eq:podae-manifold}
 \end{equation}
-Its latent coordinate minimizes the same residual as
-\eqref{eq:closure-lspg}, but over $\z$ rather than $\qp$.  This is distinct
-from POD--DL--ROM, which is non-intrusive.
+Its trial set is the decoder image
+$\{\utilde_{\mathrm{AE}}(\z):\z\in\mathbb R^{n_z}\}$.
+It is locally an $n_z$-dimensional immersed manifold wherever the decoder
+Jacobian has full column rank; an autoencoder does not automatically
+guarantee this property or global injectivity.
+The latent coordinate minimizes the same time-discrete residual as
+\eqref{eq:closure-lspg}, but over $\z$ rather than $\qp$.
+The decoder is therefore retained in the online trial approximation;
+the latent coordinate is obtained by the residual solve.
+
+\paragraph{Summary of intrusive trial maps.}
+Let $\mathbf y_{\mathcal X}$ denote the independent online variable of an
+intrusive model $\mathcal X$, and let
+$\utilde_{\mathcal X}(\mathbf y_{\mathcal X};\mub,t)$ denote its trial map.
+At a Gauss--Newton iterate, define
+\begin{equation}
+\mathbf r_{\mathcal X}:=
+\mathbf r\!\left(\utilde_{\mathcal X}(\mathbf y_{\mathcal X};\mub,t);\mub\right),
+\qquad
+\mathbf J_{\mathcal X}:=
+\left.\frac{\partial\mathbf r}{\partial\mathbf v}\right|_{
+\mathbf v=\utilde_{\mathcal X}(\mathbf y_{\mathcal X};\mub,t)}.
+\label{eq:generic-trial-residual-jacobian}
+\end{equation}
+The trial tangent and the associated LSPG test basis are, respectively,
+\begin{equation}
+\mathbf T_{\mathcal X}
+:=\frac{\partial\utilde_{\mathcal X}}
+{\partial\mathbf y_{\mathcal X}},
+\qquad
+\mathbf W_{\mathcal X}:=\mathbf J_{\mathcal X}\mathbf T_{\mathcal X}.
+\label{eq:generic-trial-tangent}
+\end{equation}
+Consequently, every intrusive model in this section has the common
+Gauss--Newton update
+\begin{equation}
+\begin{aligned}
+\Delta\mathbf y_{\mathcal X}
+&=\arg\min_{\mathbf d}
+\norm{\mathbf r_{\mathcal X}+\mathbf W_{\mathcal X}\mathbf d}_2^2,\\
+\mathbf W_{\mathcal X}^T\mathbf W_{\mathcal X}
+\Delta\mathbf y_{\mathcal X}
+&=-\mathbf W_{\mathcal X}^T\mathbf r_{\mathcal X}.
+\end{aligned}
+\label{eq:generic-trial-gn}
+\end{equation}
+Thus the ``online variable'' in Table~\ref{tab:trial-maps} is the variable
+over which the time-discrete residual is minimized, the ``trial
+approximation'' is the state supplied to that residual, and the last column
+is precisely the derivative in \eqref{eq:generic-trial-tangent}.  The table
+instantiates this common structure for the affine model, the three PROM--ANN
+closures, and PROM--POD--AE.  Equivalently, each row supplies the particular
+tuple $(\mathbf y_{\mathcal X},\utilde_{\mathcal X},
+\mathbf T_{\mathcal X})$ to be substituted into
+\eqref{eq:generic-trial-residual-jacobian}--\eqref{eq:generic-trial-gn}.
+The linear row identifies the generic objects as
+$\mathbf y=\qtot$, $\utilde(\qtot)$, and
+$\mathbf T=\mathbf V_{\mathrm{tot}}$.
+In particular, Case~2 has
+$\mathbf T_{\mathcal M}=\mathbf V$ because $\mathcal M(\mub,t)$ is independent
+of its online variable, whereas the state-conditioned closures and the
+autoencoder contribute their learned Jacobians to the tangent.
+Equation~\eqref{eq:generic-trial-gn} is also the bridge to hyperreduction:
+the quantities that must be approximated are the projected residual
+$\mathbf W_{\mathcal X}^T\mathbf r_{\mathcal X}$ and the Gauss--Newton matrix
+$\mathbf W_{\mathcal X}^T\mathbf J_{\mathcal X}\mathbf T_{\mathcal X}$,
+not the trial state by itself.
 
 \begin{table}[H]
 \centering
-\caption{Trial decoders and tangent bases of the intrusive models.  PROMs
-minimize the full time-discrete residual; their HPROM counterparts use
-map-specific weighted sampled residuals with these same decoders and tangents.}
+\caption{Online variables, trial maps, and tangent bases of the intrusive
+models.  PROMs minimize the full time-discrete residual; their HPROM
+counterparts use map-specific weighted sampled residuals with these same
+maps and tangents.}
 \label{tab:trial-maps}
 \small
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.25}
-\begin{tabular}{@{}l c l l@{}}
+\begin{tabular}{@{}l|c|l|l@{}}
 \toprule
-Model & Online variable & Trial decoder & Tangent \\
+Model $\mathcal X$ & Online variable $\mathbf y_{\mathcal X}$
+& Trial map $\utilde_{\mathcal X}$ & Tangent $\mathbf T_{\mathcal X}$ \\
 \midrule
-Linear PROM/HPROM & $\q_N$ & $\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\q_N$ & $\mathbf V_{\mathrm{tot}}$ \\
-PROM--ANN Case 1 & $\qp$ & $\uvec_{\mathrm{ref}}+\mathbf V\qp+\overline{\mathbf V}\mathcal N(\qp)$ & $\mathbf V+\overline{\mathbf V}\,\partial\mathcal N/\partial\qp$ \\
-PROM--ANN Case 2 & $\qp$ & $\uvec_{\mathrm{ref}}+\mathbf V\qp+\overline{\mathbf V}\mathcal M(\mub,t)$ & $\mathbf V$ \\
-PROM--ANN Case 3 & $\qp$ & $\uvec_{\mathrm{ref}}+\mathbf V\qp+\overline{\mathbf V}\mathcal H(\qp,\mub,t)$ & $\mathbf V+\overline{\mathbf V}\,\partial\mathcal H/\partial\qp$ \\
-PROM--POD--AE & $\z$ & $\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\z)$ & $\mathbf V_{\mathrm{tot}}\,\partial\mathcal D/\partial\z$ \\
+PROM & $\mathbf y=\qtot$ & $\utilde(\qtot)=\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\qtot$ & $\mathbf T=\mathbf V_{\mathrm{tot}}$ \\
+PROM--ANN Case 1 & $\mathbf y_{\mathcal N}=\qp$ & $\utilde_{\mathcal N}(\qp)=\uvec_{\mathrm{ref}}+\mathbf V\qp+\overline{\mathbf V}\mathcal N(\qp)$ & $\mathbf T_{\mathcal N}=\mathbf V+\overline{\mathbf V}\,\partial\mathcal N/\partial\qp$ \\
+PROM--ANN Case 2 & $\mathbf y_{\mathcal M}=\qp$ & $\utilde_{\mathcal M}(\qp)=\uvec_{\mathrm{ref}}+\mathbf V\qp+\overline{\mathbf V}\mathcal M(\mub,t)$ & $\mathbf T_{\mathcal M}=\mathbf V$ \\
+PROM--ANN Case 3 & $\mathbf y_{\mathcal H}=\qp$ & $\utilde_{\mathcal H}(\qp)=\uvec_{\mathrm{ref}}+\mathbf V\qp+\overline{\mathbf V}\mathcal H(\qp,\mub,t)$ & $\mathbf T_{\mathcal H}=\mathbf V+\overline{\mathbf V}\,\partial\mathcal H/\partial\qp$ \\
+PROM--POD--AE & $\mathbf y_{\mathrm{AE}}=\z$ & $\utilde_{\mathrm{AE}}(\z)=\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\mathcal D(\z)$ & $\mathbf T_{\mathrm{AE}}=\mathbf V_{\mathrm{tot}}\,\partial\mathcal D/\partial\z$ \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Model-specific ECM construction}
 \label{sec:nonlinear-ecm}
-The HPROM extension does not reuse the linear rule in \eqref{eq:linear-ecm}.
-For any intrusive map $\boldsymbol\phi_c$ and tangent $\mathbf T_c$, the
-entity contributions use $\mathbf W_c=\mathbf J\mathbf T_c$.  A manifold
-coordinate is first fitted at every selected HDM state,
+The notation in Table~\ref{tab:trial-maps} permits one ECM construction for
+all intrusive trial maps.  Fix a model $\mathcal X$ and suppress the
+time-step and Gauss--Newton iteration indices.  Denote its state at the
+current iterate by
+$\mathbf u_{\mathcal X}:=
+\utilde_{\mathcal X}(\mathbf y_{\mathcal X};\mub,t)$.
+Substitution of the entity-wise residual decomposition
+\eqref{eq:entity-residual} into the two full-residual quantities identified
+after \eqref{eq:generic-trial-gn} gives
 \begin{equation}
-\mathbf y_{c,s}=\arg\min_{\mathbf y}\norm{\uvec_s^{m_s+1}-
-\boldsymbol\phi_c(\mathbf y;\mub_s,t^{m_s+1})}_2^2.
+\begin{aligned}
+\mathbf g_{\mathcal X}
+&:=\mathbf W_{\mathcal X}^T\mathbf r_{\mathcal X}
+=\sum_{e_i\in\mathcal E}
+\left(\mathbf L_{e_i}\mathbf W_{\mathcal X}\right)^T
+\mathbf r_{e_i}\!\left(
+\mathbf L_{e_i^+}\mathbf u_{\mathcal X};\mub\right),\\
+\mathbf G_{\mathcal X}
+&:=\mathbf W_{\mathcal X}^T\mathbf J_{\mathcal X}
+\mathbf T_{\mathcal X}
+=\sum_{e_i\in\mathcal E}
+\left(\mathbf L_{e_i}\mathbf W_{\mathcal X}\right)^T
+\mathbf J_{e_i}
+\left(\mathbf L_{e_i^+}\mathbf T_{\mathcal X}\right).
+\end{aligned}
+\label{eq:generic-manifold-entity-sums}
+\end{equation}
+The full LSPG increment satisfies
+$\mathbf G_{\mathcal X}\Delta\mathbf y_{\mathcal X}
+=-\mathbf g_{\mathcal X}$.  Equation~\eqref{eq:generic-manifold-entity-sums}
+applies without modification to the affine model, all three closure cases,
+and the autoencoder decoder.  What changes from one model to another is the
+state at which the residual is evaluated and the tangent appearing in both
+projected sums.  This is why the cubature construction is model-specific.
+
+Offline rule construction requires a representative point on the chosen
+trial manifold for every selected HDM training state.  Let $s$ identify the
+pair $(\mub_s,t^{m_s+1})$ and its HDM state $\uvec_s^{m_s+1}$.  Its manifold
+coordinate is obtained from the closest-point problem
+\begin{equation}
+\mathbf y_{\mathcal X,s}
+=\arg\min_{\mathbf y}
+\frac12\norm{\boldsymbol\delta_{\mathcal X,s}(\mathbf y)}_2^2,
+\qquad
+\boldsymbol\delta_{\mathcal X,s}(\mathbf y)
+:=\utilde_{\mathcal X}(\mathbf y;\mub_s,t^{m_s+1})
+-\uvec_s^{m_s+1}.
 \label{eq:nonlinear-manifold-fit}
 \end{equation}
-For Case~2 this is linear least squares after subtracting the prescribed tail,
+At an iterate $\mathbf y_{\mathcal X,s}^{(k)}$, Gauss--Newton linearizes the
+trial map with its tangent and computes
 \begin{equation}
-{\qp}_{2,s}=\mathbf V^\dagger\left[
-\uvec_s^{m_s+1}-\uvec_{\mathrm{ref}}-
-\overline{\mathbf V}\mathcal M(\mub_s,t^{m_s+1})\right].
-\label{eq:case2-ecm-fit}
-\end{equation}
-For Cases~1 and~3 and for the decoder manifold, it is nonlinear least
-squares, for example with the Gauss--Newton update
-\begin{equation}
-\mathbf y_{c,s}^{(k+1)}=\mathbf y_{c,s}^{(k)}-
-\left[\frac{\partial\boldsymbol\phi_c}{\partial\mathbf y}\right]^\dagger
-\left[\boldsymbol\phi_c(\mathbf y_{c,s}^{(k)};\mub_s,t^{m_s+1})-
-\uvec_s^{m_s+1}\right].
+\begin{aligned}
+\Delta\mathbf y_{\mathcal X,s}^{(k)}
+&=\arg\min_{\mathbf d}
+\norm{\boldsymbol\delta_{\mathcal X,s}
+(\mathbf y_{\mathcal X,s}^{(k)})
++\mathbf T_{\mathcal X,s}^{(k)}\mathbf d}_2^2,\\
+\mathbf y_{\mathcal X,s}^{(k+1)}
+&=\mathbf y_{\mathcal X,s}^{(k)}
++\Delta\mathbf y_{\mathcal X,s}^{(k)}.
+\end{aligned}
 \label{eq:nonlinear-manifold-fit-gn}
 \end{equation}
-At the fitted state,
+Here $\boldsymbol\delta_{\mathcal X,s}$ and
+$\mathbf T_{\mathcal X,s}^{(k)}$ are evaluated at the current coordinate.
+This offline fit is a state-space projection onto the trial manifold, not a
+time-advancing LSPG solve: its Jacobian is $\mathbf T_{\mathcal X}$ rather
+than $\mathbf W_{\mathcal X}=\mathbf J_{\mathcal X}\mathbf T_{\mathcal X}$.
+For a trial map affine in its online variable, the same expression reduces
+to a linear least-squares problem; curved closure and decoder maps generally
+require iteration.
+
+After fitting, the discrete residual and its LSPG basis are evaluated at
+$\utilde_{\mathcal X}(\mathbf y_{\mathcal X,s};\mub_s,t^{m_s+1})$.  The
+contribution of entity $e_i$ to the projected residual is
 \begin{equation}
-\mathbf c_{c,e_i}^{(s)}=(\mathbf L_{e_i}\mathbf W_{c,s})^T
+\mathbf c_{\mathcal X,e_i}^{(s)}
+=(\mathbf L_{e_i}\mathbf W_{\mathcal X,s})^T
 \mathbf r_{e_i}(\mathbf L_{e_i^+}
-\boldsymbol\phi_c(\mathbf y_{c,s};\mub_s,t^{m_s+1});\mub_s).
+\utilde_{\mathcal X}(\mathbf y_{\mathcal X,s};\mub_s,t^{m_s+1});\mub_s).
 \label{eq:nonlinear-ecm-contribution}
 \end{equation}
-Stacking these vectors produces $\mathbf C_c$ and
-$\mathbf b_c=\mathbf C_c\mathbf1$ as in \eqref{eq:linear-ecm}; a positive
-ECM rule is then computed for each map.  The trained closure or decoder, its
-tangent, and the parameter--time sample set are therefore part of a rule.  A
-linear-HPROM rule, or one built for a different nonlinear map, is not assumed
-valid without an additional consistency assessment
-\cite{hernandez2017dimensional,hernandez2020multiscale,de2023hyper}.
+Stacking these vectors produces $\mathbf C_{\mathcal X}$ and
+$\mathbf b_{\mathcal X}=\mathbf C_{\mathcal X}\mathbf1$ exactly as in
+\eqref{eq:linear-ecm-training-matrix}; compression and sparse positive
+moment matching follow \eqref{eq:linear-ecm} with a model-specific support
+$\widetilde{\mathcal E}_{\mathcal X}$ and positive weights
+$\boldsymbol\xi_{\mathcal X}$.
 
-\subsection{Non-intrusive reference models}
-POD--NN--ROM is a direct map
+For disjoint residual-row entities, as in the finite-volume discretization
+used here, let $\mathbf S_{\boldsymbol\xi_{\mathcal X}}$ select the retained
+residual rows and scale those belonging to entity $e_i$ by
+$\sqrt{\xi_{\mathcal X,e_i}}$.  The corresponding HPROM minimizes
 \begin{equation}
-\q_N(t;\mub)\approx\mathcal G_q(\mub,t),
+\mathbf y_{\mathcal X}^{m+1}=\arg\min_{\mathbf y}
+\norm{\mathbf S_{\boldsymbol\xi_{\mathcal X}}\mathbf r^{m+1}
+(\utilde_{\mathcal X}(\mathbf y;\mub,t^{m+1});\mub)}_2^2.
+\label{eq:learned-hprom-objective}
+\end{equation}
+At an online iterate its sampled Gauss--Newton update is
+\begin{equation}
+\Delta\mathbf y_{\mathcal X}
+=\arg\min_{\mathbf d}
+\norm{
+\mathbf S_{\boldsymbol\xi_{\mathcal X}}\mathbf r_{\mathcal X}
++\mathbf S_{\boldsymbol\xi_{\mathcal X}}
+\mathbf J_{\mathcal X}\mathbf T_{\mathcal X}\mathbf d}_2^2.
+\label{eq:generic-learned-hprom-gn}
+\end{equation}
+The same square-root weights therefore act on the residual and its
+Jacobian--tangent product.  The resulting normal equations are precisely the
+model-specific counterpart of
+\eqref{eq:linear-ecm-sampled-normal-equations}.  The learned map, its tangent,
+and the parameter--time states used to form $\mathbf C_{\mathcal X}$ are all
+part of the rule.  For this reason, we construct a separate ECM rule for
+each nonlinear trial map rather than reusing the rule trained for the
+linear HPROM.  Besides matching the corresponding projected residual,
+this construction can select fewer mesh entities than the full-coordinate
+linear rule, reducing the residual work performed online; its actual
+support size depends on the map and the training data.
+
+\subsection{Nonintrusive reduced-order models}
+To assess what an online residual solve contributes, we include direct,
+nonintrusive comparators.  In their usual formulations, POD--NN and
+POD--DL--ROM learn from HDM snapshots projected onto a POD basis
+\cite{hesthaven2018non,fresca2022pod}.  Here, both direct models instead
+use the same linear-HPROM coordinate trajectories as the intrusive models,
+and all are evaluated at the same reporting parameters.  This deliberate
+alignment of training targets helps assess the accuracy--online-cost
+trade-off of residual enforcement versus regression alone; the resulting
+direct-model errors are not claimed to represent the conventional
+HDM-projection-trained variants.
+
+The POD--NN method of Hesthaven and Ubbiali
+\cite{hesthaven2018non} replaces an online projection solve by an ANN that
+maps problem parameters directly to POD coefficients.  We use the name
+\emph{POD--NN--ROM} for the corresponding time-dependent reference model:
+time is appended to the parameter input, and the regression target is the
+specific linear-HPROM coordinate trajectory rather than an orthogonal
+projection of HDM snapshots.  Thus,
+\begin{equation}
+\widehat{\q}_N(t;\mub)=\mathcal G_q(\mub,t)\approx\q_N(t;\mub),
 \label{eq:podnn}
 \end{equation}
-and does not solve a residual online.  POD--DL--ROM uses a learned latent map
-and decoder,
+and no residual is solved online.  This makes POD--NN--ROM a direct
+counterpart to Case~2: the same parameter--time ANN can predict the
+complete coordinate vector, while Case~2 uses only its secondary block
+and solves for the primary coordinates.  In the numerical study, both
+deploy exactly the same trained ANN; only their online use of its output
+differs, as specified in \eqref{eq:master-map}.
+
+POD--DL--ROM instead trains an
+autoencoder together with a parameter--time map to its latent coordinates,
 \begin{equation}
-\z(t;\mub)\approx\mathcal G_z(\mub,t),\qquad
-\q_N(t;\mub)\approx\mathcal D(\mathcal G_z(\mub,t)),
+\begin{aligned}
+\mathcal G_z(\mub,t)&\approx\mathcal E(\q_N(t;\mub)),\\
+\widehat{\q}_N(t;\mub)&=\mathcal D(\mathcal G_z(\mub,t))
+\approx\q_N(t;\mub).
+\end{aligned}
 \label{eq:poddl}
 \end{equation}
-following the POD--DL--ROM principle \cite{fresca2022pod}.  These are direct
-reduced-coordinate regressors, not PROM residual solves.
+This follows the POD--DL--ROM principle \cite{fresca2022pod} and provides
+an autoencoder-based counterpart to PROM--POD--AE: the direct model
+predicts the latent coordinates, whereas the intrusive model determines
+them through a residual solve.  Unlike the Case~2/POD--NN--ROM pair, these
+two models are trained separately and do not share decoder weights.
+For either direct model, the predicted physical state is reconstructed as
+\begin{equation}
+\utilde_{\mathrm{direct}}(t;\mub)
+=\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\widehat{\q}_N(t;\mub).
+\label{eq:direct-state-reconstruction}
+\end{equation}
+Thus all learned models produce states in the same complete POD
+representation.  The distinction is how their independent coordinates are
+determined: a residual solve for a PROM or HPROM, and regression alone for
+these nonintrusive maps.
 
 \section{Residual-Adaptive Secondary Correction for Case~2}
 \label{sec:adaptive-case2}
 \subsection{From a prescribed tail to a corrected trial space}
-In Case~2, the network fixes $\qbar=\mathcal M(\mub,t)$ and LSPG adjusts
-only $\q$.  At a fixed linearization, primary increments change the residual
-only within $\operatorname{range}(\mathbf J\mathbf V)$.  The component of a
-secondary prediction error's linearized residual contribution orthogonal to
-that space cannot be removed by primary increments alone.  The proposed extension retains
-the trained map and permits selected secondary corrections online.
+Case~2 is attractive because conditioning the secondary block on $(\mub,t)$
+in \eqref{eq:case2-state-map} does not require a single-valued relation
+$\qbar=\mathcal N(\q)$ across
+the entire parameter--time solution set.  Its trial-state parametrization
+is injective in $\q$, as in the other primary--secondary closures, but its
+trial tangent $\mathbf T_{\mathcal M}=\mathbf V$ is also independent of the
+primary iterate.  The online solve therefore needs no derivative of the
+ANN, which can reduce its cost relative to Cases~1 and~3; the residual
+Jacobian $\mathbf J$ still varies with the state.
+
+This simplicity comes with a limitation: the network fixes
+$\qbar=\mathcal M(\mub,t)$ and LSPG adjusts only $\q$.  At fixed
+$(\mub,t)$, the online state can therefore move only along
+$\operatorname{range}(\mathbf V)$ in the affine trial set
+\eqref{eq:case2-translated-space}.  At a fixed linearization, primary
+increments change the residual only within
+$\operatorname{range}(\mathbf J\mathbf V)$.  The component of a secondary
+prediction error's linearized residual contribution orthogonal to that
+space cannot be removed by primary increments alone.  The proposed
+extension seeks to preserve the trained map and avoid differentiating it
+online while permitting a small number of residual-informed secondary
+corrections, rather than reverting to a full-coordinate solve.
 
 At step $m+1$, let $\mathbf B_r^{m+1}\in\mathbb R^{\bar n\times r}$
 contain $r$ orthonormal directions in secondary-coordinate space, where
@@ -479,8 +989,9 @@ $r$ additional amplitudes $\mathbf a\in\mathbb R^r$ and define
 \begin{equation}
 \begin{aligned}
 \qbar&=\mathcal M(\mub,t^{m+1})+\mathbf B_r^{m+1}\mathbf a,\\
-\boldsymbol\phi_r^{m+1}(\q,\mathbf a;\mub)
-&=\uvec_{\mathrm{ref}}+\mathbf V\q+
+\uvec(t^{m+1};\mub)&\approx
+\utilde_r^{m+1}(\q,\mathbf a;\mub)\\
+&:=\uvec_{\mathrm{ref}}+\mathbf V\q+
 \overline{\mathbf V}
 \left[\mathcal M(\mub,t^{m+1})+\mathbf B_r^{m+1}\mathbf a\right].
 \end{aligned}
@@ -491,22 +1002,24 @@ secondary coordinates.  Thus $r$ counts independent correction patterns,
 not selected POD coefficients.  A single amplitude can modify every
 secondary coordinate through its corresponding column.
 
-The complete coordinate vector retains the notation of the linear
-reference:
+The complete coordinate vector produced by the corrected model is
 \begin{equation}
-\q_N^{m+1}=\begin{bmatrix}
+\mathbf q_{\mathrm{tot},r}^{m+1}=\begin{bmatrix}
 \q^{m+1}\\
 \mathcal M(\mub,t^{m+1})+\mathbf B_r^{m+1}\mathbf a^{m+1}
 \end{bmatrix}\in\mathbb R^{n_{\mathrm{tot}}},\qquad
-\uvec_r^{m+1}=\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\q_N^{m+1}.
+\utilde_r^{m+1}=\uvec_{\mathrm{ref}}+
+\mathbf V_{\mathrm{tot}}\mathbf q_{\mathrm{tot},r}^{m+1}.
 \label{eq:adaptive-complete-coordinates}
 \end{equation}
-Thus $\q_N$ always denotes the complete reconstructed reduced-coordinate
-vector; $[\q;\mathbf a]$ contains only the independent online unknowns.
+Thus $\mathbf q_{\mathrm{tot},r}$ is a model output, whereas $\q_N$ remains
+the linear-HPROM reference used to train and assess it.  Its independent
+online variable is $\mathbf y_r=[\q;\mathbf a]$.
 
 Once $\mathbf B_r^{m+1}$ has been constructed and held fixed, the map
-\eqref{eq:adaptive-trial} is affine in its $n+r$ unknowns.  Its exact tangent
-is
+\eqref{eq:adaptive-trial} is affine in its $n+r$ unknowns.  Compared with
+the Case~2 row of Table~\ref{tab:trial-maps}, its exact tangent changes
+from $\mathbf T_{\mathcal M}=\mathbf V$ to
 \begin{equation}
 \mathbf T_r^{m+1}=\left[\mathbf V\quad
 \overline{\mathbf V}\mathbf B_r^{m+1}\right],\qquad
@@ -517,24 +1030,28 @@ The second identity follows from \eqref{eq:partition-orthogonality} and
 $(\mathbf B_r^{m+1})^T\mathbf B_r^{m+1}=\mathbf I_r$.  It also gives
 $\norm{\overline{\mathbf V}\mathbf B_r^{m+1}\mathbf a}_2
 =\norm{\mathbf a}_2$: the amplitude norm measures the state correction in
-the Euclidean norm already used by the POD basis.
+the standard coefficient norm used throughout this work.
+Crucially, $\mathbf B_r^{m+1}$ is not fixed offline: it is selected from
+the current residual and Jacobian, rebuilt at each time step, and frozen
+only during that step's nonlinear solve.
 
 \subsection{Eliminating the primary increment}
 The correction directions should address residual components that the
 primary update cannot remove.  To identify them, first form the predictor
 \begin{equation}
-\uvec_*^{m+1}=\uvec_{\mathrm{ref}}+\mathbf V\q^m+
+\utilde_*^{m+1}=\uvec_{\mathrm{ref}}+\mathbf V\q^m+
 \overline{\mathbf V}\mathcal M(\mub,t^{m+1}).
 \label{eq:adaptive-predictor}
 \end{equation}
 The residual at this predictor uses the previous \emph{computed} state
-$\uvec_r^m$ in its time-discretization terms.  No reference trajectory enters
+$\utilde_r^m$ in its time-discretization terms.  No reference trajectory enters
 that evaluation.  In the derivation that follows, suppress $m+1$ and
 $\mub$ and write
 \begin{equation}
-\mathbf r_* = \mathbf r^{m+1}(\uvec_*^{m+1};\mub),\qquad
-\mathbf J_* = \left.\frac{\partial\mathbf r^{m+1}}{\partial\uvec}
-\right|_{\uvec_*^{m+1}},\qquad \mathbf A=\mathbf J_*\mathbf V.
+\mathbf r_* = \mathbf r^{m+1}(\utilde_*^{m+1};\mub),\qquad
+\mathbf J_* = \left.\frac{\partial\mathbf r^{m+1}}{\partial\mathbf v}
+\right|_{\mathbf v=\utilde_*^{m+1}},\qquad
+\mathbf A=\mathbf J_*\mathbf V.
 \label{eq:adaptive-linearization}
 \end{equation}
 If both coordinate blocks were free, the linearized correction would solve
@@ -580,7 +1097,7 @@ $\mathbf H\Delta\qbar=-\mathbf g$.  Equivalently, $\mathbf H$ is the
 Schur complement obtained by eliminating the primary block of the full
 linearized normal equations.  It is positive definite if
 $\mathbf J_*\mathbf V_{\mathrm{tot}}$ has full column rank.  These
-operators are derived from the current Euclidean LSPG problem; they do not
+operators are derived from the current LSPG problem; they do not
 alter the POD basis or the offline training targets.
 
 \subsection{A small Krylov space for the secondary correction}
@@ -593,10 +1110,9 @@ and before any Krylov breakdown, choose
 \mathbf H^{r-1}\mathbf g\},\qquad \mathbf B_r^T\mathbf B_r=\mathbf I_r.
 \label{eq:adaptive-krylov}
 \end{equation}
-Here $r$ is a user-selected computational budget.  Three directions are
-one possible choice, not a restriction of the formulation.  The construction
-uses orthogonalized operator applications, so it does not explicitly form
-powers of $\mathbf H$.
+Here $r$ is a user-selected computational budget.  The construction uses
+orthogonalized operator applications, so it does not explicitly form powers
+of $\mathbf H$.
 
 For $r=1$ and $\mathbf g\ne\mathbf0$, the space is the span of
 the negative gradient of one half of the objective in
@@ -640,8 +1156,9 @@ $\mathbf J_*\overline{\mathbf V}$:
 \end{aligned}
 \label{eq:adaptive-actions}
 \end{equation}
-The implementation constructs the orthonormal columns by Arnoldi
-orthogonalization with two reorthogonalization passes.  If $\mathbf g$
+One way to obtain the orthonormal columns of $\mathbf B_r$ is Arnoldi
+orthogonalization of the operator actions in \eqref{eq:adaptive-actions}.
+If $\mathbf g$
 is numerically zero, no secondary direction is added.  If a later vector
 is numerically dependent, the construction stops and uses the attained
 rank $r_m\leq r$.  In that event all formulas use $r_m$ in place of $r$;
@@ -655,12 +1172,12 @@ time-discrete residual on \eqref{eq:adaptive-trial}:
 \begin{bmatrix}\q^{m+1}\\\mathbf a^{m+1}\end{bmatrix}
 =\arg\min_{\mathbf x\in\mathbb R^n,\,\mathbf b\in\mathbb R^{r_m}}
 \norm{\mathbf r^{m+1}
-(\boldsymbol\phi_r^{m+1}(\mathbf x,\mathbf b;\mub);\mub)}_2^2.
+(\utilde_r^{m+1}(\mathbf x,\mathbf b;\mub);\mub)}_2^2.
 \label{eq:adaptive-nonlinear-lspg}
 \end{equation}
-Writing $\mathbf z=[\q;\mathbf a]$, the Gauss--Newton increment is
+The corresponding Gauss--Newton increment is
 \begin{equation}
-\Delta\mathbf z^{m+1,k}
+\Delta\mathbf y_r^{m+1,k}
 =\arg\min_{\mathbf d\in\mathbb R^{n+r_m}}
 \norm{\mathbf r^{m+1,k}+
 \mathbf J^{m+1,k}\mathbf T_r^{m+1}\mathbf d}_2^2.
@@ -673,28 +1190,12 @@ derivative of the trial map being optimized.  The method does not omit a
 derivative of a state-dependent $\mathbf B_r$: constructing the space and
 solving on that fixed space are two distinct operations.
 
-The complete online step is as follows.
-\begin{enumerate}
-\item Predict $\mathcal M(\mub,t^{m+1})$ with the trained network and form
-the predictor \eqref{eq:adaptive-predictor} from the preceding primary
-coordinates $\q^m$.
-\item Evaluate $\mathbf r_*$ and $\mathbf J_*$ using the preceding
-computed full reduced state $\uvec_r^m$ in the time-discrete residual.
-\item Factor $\mathbf J_*\mathbf V$, apply
-\eqref{eq:adaptive-actions}, and construct up to $r$ columns of
-$\mathbf B_r^{m+1}$ according to \eqref{eq:adaptive-krylov}.
-\item Form $\mathbf T_r^{m+1}$ and initialize the nonlinear solve with
-$\mathbf z^{m+1,0}=[\q^m;\mathbf0]$.  Solve
-\eqref{eq:adaptive-nonlinear-lspg} by \eqref{eq:adaptive-gn}.
-\item Store $\q^{m+1}$ and the corrected secondary coordinates
-$\qbar^{m+1}=\mathcal M(\mub,t^{m+1})+
-\mathbf B_r^{m+1}\mathbf a^{m+1}$.  Their reconstructed state is the
-predecessor used at the next time step.
-\end{enumerate}
-At the next step a new correction space is constructed.  Its amplitudes
-are initialized to zero because the columns generally differ from those at
-the previous step; the previous correction is nevertheless retained through
-the time-discrete predecessor state.
+Algorithm~\ref{alg:case2-online} summarizes the complete online
+advance for both full and weighted sampled residuals.  A new correction
+space is constructed at each time step and then frozen during its nonlinear
+solve.  Its amplitudes start at zero because the columns generally differ
+between steps; the previous correction nevertheless enters the next
+time-discrete residual through the computed predecessor state.
 
 \subsection{Interpretation, limiting cases, and cost}
 The method changes the online trial space while retaining the trained
@@ -735,7 +1236,7 @@ online trajectory is recovered when the initialization and nonlinear solver
 settings also match.  If the constructed columns span the entire secondary
 space, the corrected affine space equals the full linear-PROM space:
 \begin{equation}
-\left\{\boldsymbol\phi_{\bar n}^{m+1}(\q,\mathbf a;\mub)\right\}
+\left\{\utilde_{\bar n}^{m+1}(\q,\mathbf a;\mub)\right\}
 =\uvec_{\mathrm{ref}}+\operatorname{range}(\mathbf V_{\mathrm{tot}}).
 \label{eq:adaptive-full-space}
 \end{equation}
@@ -776,7 +1277,7 @@ objective is
 \begin{equation}
 \min_{\q,\mathbf a}
 \norm{\mathbf S_\xi\mathbf r^{m+1}
-(\boldsymbol\phi_r^{m+1}(\q,\mathbf a;\mub);\mub)}_2^2.
+(\utilde_r^{m+1}(\q,\mathbf a;\mub);\mub)}_2^2.
 \label{eq:adaptive-sampled-objective}
 \end{equation}
 Each selected Burgers cell contributes both field residuals, so
@@ -820,12 +1321,12 @@ required: the implementation applies the sampled Jacobian, its adjoint, and
 $\mathbf P_\xi$ to form the Krylov actions.  Once the basis is frozen, the
 Gauss--Newton increment solves
 \begin{equation}
-\min_{\Delta\mathbf x\in\mathbb R^{n+r_m}}
+\min_{\Delta\mathbf y_r\in\mathbb R^{n+r_m}}
 \norm{\mathbf S_\xi\mathbf r+
 \mathbf S_\xi\mathbf J
 [\mathbf V\quad\overline{\mathbf V}\mathbf B_{r,\xi}]
-\Delta\mathbf x}_2^2,
-\qquad \mathbf x=\begin{bmatrix}\q\\\mathbf a\end{bmatrix}.
+\Delta\mathbf y_r}_2^2,
+\qquad \mathbf y_r=\begin{bmatrix}\q\\\mathbf a\end{bmatrix}.
 \label{eq:adaptive-sampled-gn}
 \end{equation}
 Thus both direction selection and the nonlinear correction solve the same
@@ -834,7 +1335,7 @@ then inserting them into a weighted solve, would be a different method.
 Likewise, a full-residual $\mathbf B_r$ is not simply reused as
 $\mathbf B_{r,\xi}$.
 
-Global Euclidean orthogonality of the trial basis still gives
+Global orthonormality of the trial basis still gives
 \eqref{eq:adaptive-tangent}; restricting its rows does not give an identity
 weighted Gram matrix.  The fitted rule must represent this geometry and the
 residual actions sufficiently well.  With unit weights and every cell
@@ -842,6 +1343,79 @@ retained, \eqref{eq:adaptive-sampled-schur} reduces to the full-residual
 construction.  For a reduced rule, the nested linearized residual bound
 holds for the \emph{sampled} objective, not automatically for the full
 residual or HDM state error.
+
+For Algorithm~\ref{alg:case2-online}, take $\mathbf S=\mathbf I_N$ for a
+full-residual PROM or $\mathbf S=\mathbf S_\xi$ for an HPROM.  The HPROM
+uses its fixed, model-specific positive rule for both direction selection
+and the nonlinear solve.  The branch $r=0$ recovers uncorrected Case~2
+under the same rule, initialization, and solver settings.
+
+\begin{algorithm}[H]
+\caption{Online advance of Case~2 with optional residual-adaptive correction}
+\label{alg:case2-online}
+\small
+\begin{algorithmic}[1]
+\Require $\mub$, time grid, trained $\mathcal M$, $\uvec_{\mathrm{ref}}$,
+$\mathbf V$, $\overline{\mathbf V}$, budget $r$, fixed $\mathbf S$,
+initial $(\q^0,\utilde^0)$
+\Ensure $(\q^m,\qbar^m,\utilde^m)$ for $m=1,\ldots,N_t$
+\For{$m=0,\ldots,N_t-1$}
+  \State $\qbar_*\gets\mathcal M(\mub,t^{m+1})$;
+  $\utilde_*\gets\uvec_{\mathrm{ref}}+\mathbf V\q^m+
+  \overline{\mathbf V}\qbar_*$
+  \State Fix $\utilde^m$ as the predecessor in $\mathbf r^{m+1}$
+  \If{$r>0$}
+    \State Evaluate $\widehat{\mathbf r}_*\gets\mathbf S\mathbf r_*$,
+    $\widehat{\mathbf J}_*\gets\mathbf S\mathbf J_*$ at $\utilde_*$
+    \State Thin QR: $\widehat{\mathbf J}_*\mathbf V=\mathbf Q\mathbf R$;
+    require $\operatorname{rank}(\widehat{\mathbf J}_*\mathbf V)=n$
+    \State $\mathbf P\gets\mathbf I-\mathbf Q\mathbf Q^T$;
+    $\mathbf g\gets\overline{\mathbf V}^{\,T}
+    \widehat{\mathbf J}_*^T\mathbf P\widehat{\mathbf r}_*$
+    \State Apply $\mathbf H\mathbf v=
+    \overline{\mathbf V}^{\,T}\widehat{\mathbf J}_*^T
+    \mathbf P\widehat{\mathbf J}_*\overline{\mathbf V}\mathbf v$
+    \State Orthonormalize $\mathcal K_r(\mathbf H,\mathbf g)$ to obtain
+    $\mathbf B^{m+1}$, stopping at breakdown
+  \Else
+    \State $\mathbf B^{m+1}\gets[\,]$ (no correction directions)
+  \EndIf
+  \State $r_m\gets\operatorname{cols}(\mathbf B^{m+1})$;
+  $\mathbf T_r^{m+1}\gets
+  [\mathbf V\quad\overline{\mathbf V}\mathbf B^{m+1}]$
+  \State Freeze $\mathbf B^{m+1}$;
+  $\mathbf y_r^{m+1,0}\gets[\q^m;\mathbf0]$; $k\gets0$
+  \While{the Gauss--Newton stopping criterion is not met}
+    \State Form $\utilde^{m+1,k}$ from \eqref{eq:adaptive-trial}
+    using $\mathbf y_r^{m+1,k}$ and $\mathbf B^{m+1}$
+    \State Evaluate $\widehat{\mathbf r}^{m+1,k}=\mathbf S\mathbf r^{m+1,k}$,
+    $\widehat{\mathbf J}^{m+1,k}=\mathbf S\mathbf J^{m+1,k}$
+    \State $\widehat{\mathbf W}_k\gets
+    \widehat{\mathbf J}^{m+1,k}\mathbf T_r^{m+1}$
+    \State Compute $\Delta\mathbf y_r^{m+1,k}$ satisfying
+    \Statex \hspace{\algorithmicindent}$
+    \widehat{\mathbf W}_k^T\widehat{\mathbf W}_k
+    \Delta\mathbf y_r^{m+1,k}
+    =-\widehat{\mathbf W}_k^T\widehat{\mathbf r}^{m+1,k}$
+    \State $\mathbf y_r^{m+1,k+1}\gets
+    \mathbf y_r^{m+1,k}+\Delta\mathbf y_r^{m+1,k}$;
+    $k\gets k+1$
+  \EndWhile
+  \State Extract $(\q^{m+1},\mathbf a^{m+1})$ from the final
+  $\mathbf y_r^{m+1,k}$
+  \State $\qbar^{m+1}\gets\qbar_*+\mathbf B^{m+1}\mathbf a^{m+1}$;
+  $\utilde^{m+1}\gets\uvec_{\mathrm{ref}}+
+  \mathbf V\q^{m+1}+\overline{\mathbf V}\qbar^{m+1}$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+The system displayed in Algorithm~\ref{alg:case2-online} is the normal-equation
+condition for the least-squares increment in
+\eqref{eq:adaptive-gn} or \eqref{eq:adaptive-sampled-gn}; it need not be
+assembled or solved as a Gram system.  The reported computations solve the
+linear least-squares problem directly and select the minimum-norm increment
+if the Jacobian--tangent product is rank deficient.
 
 \subsection{Positive moment fitting for an adaptive trial space}
 \label{sec:adaptive-positive-rule}
@@ -863,7 +1437,7 @@ $\mathbf r_{s,e}$ contain its two field rows.  The dynamic cell moments are
 \label{eq:adaptive-cell-moments}
 \end{equation}
 The operator $\operatorname{svec}$ stores the upper triangle, multiplying
-its off-diagonal entries by $\sqrt{2}$, so its Euclidean norm equals the
+its off-diagonal entries by $\sqrt{2}$, so its vector norm equals the
 Frobenius norm of the symmetric matrix.  Summing these cell contributions
 recovers the complete coordinate gradient, the adaptive normal matrix, and
 the residual energy.  A shared mass block additionally fits
@@ -872,8 +1446,8 @@ the residual energy.  A shared mass block additionally fits
 \mathbf V_{\mathrm{tot},e}\approx\mathbf I_{151}.
 \label{eq:adaptive-mass-moment}
 \end{equation}
-This is a cubature consistency condition in the standard Euclidean basis,
-not a change of POD metric.
+This is a cubature consistency condition in the fixed common basis, not a
+change of trial coordinates.
 
 The implementation first draws a candidate support using
 \begin{equation}
@@ -900,7 +1474,7 @@ optimizer termination alone is not taken as proof of cubature accuracy.
 
 \section{Benchmark and HPROM Protocol}
 \label{sec:benchmark}
-\subsection{Burgers problem and fixed Euclidean basis}
+\subsection{Burgers problem and fixed common basis}
 We use the two-dimensional parametric inviscid Burgers benchmark of
 \cite{barnett2023neural},
 \begin{equation}
@@ -922,7 +1496,7 @@ $250\times250$ grid: $N_e=62{,}500$ cells and $N=125{,}000$ unknowns.
 Backward Euler uses 500 uniform steps with $\Delta t=0.05$.
 Nine HDM trajectories on the $3\times3$ grid
 $\{4.25,4.875,5.50\}\times\{0.015,0.0225,0.03\}$ define the centered
-Euclidean POD basis.  Its retained 151 modes capture $99.9900\%$ of the
+POD basis.  Its retained 151 modes capture $99.9900\%$ of the
 snapshot energy.  The basis and mean state are fixed in every reported
 campaign; enrichment does not recompute them.
 
@@ -932,9 +1506,27 @@ The main campaigns train on complete trajectories generated by the
 not on orthogonal projections of HDM snapshots.  Its positive rule is
 constructed once from the baseline data and frozen thereafter.  The same
 linear-HPROM teacher generates baseline and enriched labels for every learned
-family, including the direct non-intrusive maps.  This is an experimental
+family, including the direct nonintrusive maps.  This is an experimental
 control linking their labels to a reduced dynamical solve, not a claim that
 they become intrusive models.
+More precisely, for training parameters $\{\mub_j\}_{j=1}^{N_\mu}$ the
+regression data are
+\begin{equation}
+\mathcal D_N^{\mathrm H}=
+\left\{\left(\mub_j,t^m,\q_N^m(\mub_j)\right):
+j=1,\ldots,N_\mu,\ m=0,\ldots,N_t\right\},
+\label{eq:hprom-coordinate-training-data}
+\end{equation}
+where every $\q_N^m(\mub_j)$ is obtained by advancing the linear HPROM with
+\eqref{eq:linear-hprom-gn-update}.  The training labels are therefore
+the particular realization of $\qtot$ generated by that reduced solve;
+they are not constructed as orthogonal projections
+$\mathbf V_{\mathrm{tot}}^T(\uvec^m(\mub_j)-\uvec_{\mathrm{ref}})$ of
+HDM snapshots.
+Cases~1--3 use the blocks in
+\eqref{eq:linear-hprom-reference-partition}; the autoencoder and both direct
+maps use the complete $\q_N$.  This is the precise sense in which the main
+learned representations are linear-HPROM-consistent.
 
 Two complete linear-HPROM trajectories are reserved for regression validation,
 \begin{equation}
@@ -967,10 +1559,13 @@ locations.  The margin is the union of four strips in a rectangle enlarged
 by $25\%$ of each original side length.  The retained budgets are
 $9$, $9+8$, $9+12$, and $9+18$, with equal counts of added interior and
 margin points.  The larger 36-point candidate design fixes the ordering
-only; a $9+36$ campaign is not part of the reported Euclidean study.
+only; a $9+36$ campaign is not part of the reported study.
 The largest HPROM data set contains all smaller sets, and the repeated
 trajectories are exact copies, not newly generated labels.  The two
 validation parameters remain unchanged.
+Table~\ref{tab:euclidean-enrichment-dataset} summarizes the resulting
+trajectory and parameter counts, while Fig.~\ref{fig:parameter-space} shows
+the nested spatial coverage of the parameter domain.
 
 \begin{table}[H]
 \centering
@@ -1003,7 +1598,7 @@ and its checkpoint selected using the same validation parameters.
 Cases~1--3 and the intrusive autoencoder use coordinate mean-squared error,
 with scaling embedded in their networks.  POD--DL--ROM combines prediction,
 latent consistency, and reconstruction losses with respective weights
-$1$, $0.03$, and $0.01$.  None uses a sensitivity-aware POD metric.
+$1$, $0.03$, and $0.01$.  All use the same fixed POD coordinate system.
 Table~\ref{tab:training} records the baseline
 regression accuracy and parameter counts.  Its errors refer to each family's
 complete output coordinates: the secondary block for Cases~1 and~3 and the
@@ -1019,26 +1614,32 @@ it is trained once, not separately for these deployments.}
 \resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/training_baseline.tex}}
 \end{table}
 
-The controlled parameter--time master map predicts the entire vector,
+The controlled parameter--time master map predicts the entire reference
+coordinate vector,
 \begin{equation}
 \mathcal G_q:(\mub,t)\longmapsto\widehat{\q}_N\in\mathbb R^{151},\qquad
-\mathcal M(\mub,t)=\mathbf P_{>10}\mathcal G_q(\mub,t).
+\mathcal M(\mub,t)=\bigl[\mathcal G_q(\mub,t)\bigr]_{11:151}.
 \label{eq:master-map}
 \end{equation}
+Here the hat distinguishes the network prediction $\widehat{\q}_N$ from its
+linear-HPROM target $\q_N$.
 POD--NN--ROM uses $\mathcal G_q$ directly.  Case~2 injects only its last
 141 entries and determines the first ten by a sampled residual solve.
 Case~2+$\mathbf B_3$ retains that same injected tail and solves three extra
 amplitudes.  Sharing the map isolates deployment from regression quality.
+Figure~\ref{fig:shared-map-deployments} summarizes the three deployments and
+identifies which coordinates remain residual-solved in each one.
 
 \begin{figure}[H]
 \centering
 \fbox{\begin{minipage}{0.94\textwidth}
 \centering
+\small
 \textbf{One parameter--time prediction, three deployments}\\[0.5em]
 $\mathcal G_q(\mub,t)=[\widehat{\q};\widehat{\qbar}]
 \in\mathbb R^{151}$, with blocks of sizes 10 and 141.\\[0.5em]
 \begin{tabular}{l|c|c}
-Deployment & Complete output $\q_N$ & Residual-solved unknowns\\
+Deployment & Complete deployed coordinate $\qtot$ & Residual-solved unknowns\\
 \hline
 POD--NN--ROM & $[\widehat{\q};\widehat{\qbar}]$ & none\\[0.3em]
 HPROM--ANN Case 2 & $[\q;\widehat{\qbar}]$ & $\q\in\mathbb R^{10}$\\[0.3em]
@@ -1127,11 +1728,17 @@ counts because of neighbour dependencies.}
 \resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/cubature.tex}}
 \end{table}
 
+Table~\ref{tab:hprom-cubature} shows that each conventional nonlinear ECM
+rule retains 901 cells, compared with 5621 for the frozen linear-HPROM
+rule.  The separate B3 moment fit retains 1506--1534 cells across the
+reported data budgets.  A smaller sampled support does not by itself
+determine the total online time.
+
 The adaptive computations use the known initial condition represented in the
 complete linear space,
 \begin{equation}
-\q_N^0=\mathbf V_{\mathrm{tot}}^T(\uvec_0-\uvec_{\mathrm{ref}}),\qquad
-\uvec_r^0=\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\q_N^0.
+\qtot^0=\mathbf V_{\mathrm{tot}}^T(\uvec_0-\uvec_{\mathrm{ref}}),\qquad
+\utilde_r^0=\uvec_{\mathrm{ref}}+\mathbf V_{\mathrm{tot}}\qtot^0.
 \label{eq:adaptive-common-initial}
 \end{equation}
 This predecessor need not belong to the learned manifold at $t=0$.
@@ -1145,27 +1752,56 @@ equal-dimensional PROM control in Appendix~\ref{sec:adaptive-results}
 addresses direction selection separately.  An equivalent matched HPROM
 rank/control study has not been run and is not claimed here.
 All requested B3 ranks were three throughout the 500-step reporting runs.
+The reported Krylov bases use Arnoldi orthogonalization with two
+reorthogonalization passes for each direction after the first.
 Its nonlinear solver permits 20 Gauss--Newton iterations, with relative
 residual cutoff $10^{-5}$ and relative residual-change threshold $10^{-2}$.
 
 \subsection{Errors and scope of online measurements}
-For every reporting parameter we reconstruct the complete state and use
+For every reporting parameter $\mub$, denote the complete coordinate
+output of a model by $\mathbf q_{\mathrm{tot}}^{\mathrm{ROM},m}$ and its
+state reconstruction by
+$\utilde_{\mathrm{ROM}}^m=\uvec_{\mathrm{ref}}+
+\mathbf V_{\mathrm{tot}}\mathbf q_{\mathrm{tot}}^{\mathrm{ROM},m}$.
+Collect the state histories and the reference and model coordinate
+histories as
+\begin{equation}
+\begin{aligned}
+\mathbf U(\mub)&=
+\begin{bmatrix}\uvec^0&\cdots&\uvec^{N_t}\end{bmatrix},\\
+\widetilde{\mathbf U}^{\mathrm{ROM}}(\mub)&=
+\begin{bmatrix}\utilde_{\mathrm{ROM}}^0&\cdots&
+\utilde_{\mathrm{ROM}}^{N_t}\end{bmatrix},\\
+\mathbf Q_N(\mub)&=
+\begin{bmatrix}\q_N^0&\cdots&\q_N^{N_t}\end{bmatrix},\\
+\mathbf Q_{\mathrm{tot}}^{\mathrm{ROM}}(\mub)&=
+\begin{bmatrix}\mathbf q_{\mathrm{tot}}^{\mathrm{ROM},0}&\cdots&
+\mathbf q_{\mathrm{tot}}^{\mathrm{ROM},N_t}\end{bmatrix}.
+\end{aligned}
+\label{eq:state-coordinate-histories}
+\end{equation}
+Every column is evaluated at the same $\mub$.
+The state matrices have size $N\times(N_t+1)$, whereas the coordinate
+matrices have size $n_{\mathrm{tot}}\times(N_t+1)$.
+The reported trajectory errors are
 \begin{align}
-e_u(\mub)=100\frac{\norm{\uvec_{\mathrm{HDM}}-\uvec_{\mathrm{ROM}}}_F}
-{\norm{\uvec_{\mathrm{HDM}}}_F},\label{eq:state-error}\\
-e_q(\mub)=100\frac{\norm{\q_N^{\mathrm{lin,H}}-\widehat{\q}_N}_F}
-{\norm{\q_N^{\mathrm{lin,H}}}_F}.
+e_u(\mub)&=100\frac{\norm{\mathbf U-
+\widetilde{\mathbf U}^{\mathrm{ROM}}}_F}
+{\norm{\mathbf U}_F},\label{eq:state-error}\\
+e_q(\mub)&=100\frac{\norm{\mathbf Q_N-
+\mathbf Q_{\mathrm{tot}}^{\mathrm{ROM}}}_F}
+{\norm{\mathbf Q_N}_F}.
 \label{eq:coefficient-error}
 \end{align}
 The histories contain all 501 saved states.  The coefficient reference is
-always the frozen full-coordinate \emph{linear HPROM}, even for non-intrusive
+always the frozen full-coordinate \emph{linear HPROM}, even for nonintrusive
 maps.  The mean averages $\mub^{(v)},\mub^{(1)},\mub^{(2)}$ only;
 extrapolation is reported separately.  This reference is not a strict
 HDM-error lower bound: other trajectories can have slightly smaller state
 error while differing from its coefficient history.
 Per-coordinate absolute errors are
-$\norm{\widehat q_{N,i}-q_{N,i}^{\mathrm{lin,H}}}_2$ over time; relative
-plots divide by $\norm{q_{N,i}^{\mathrm{lin,H}}}_2$ and multiply by 100.
+$\norm{q_{N,i}-q_{\mathrm{tot},i}^{\mathrm{ROM}}}_2$ over time; relative
+plots divide by $\norm{q_{N,i}}_2$ and multiply by 100.
 Their logarithmic limits are shared across all four data budgets and include
 all positive plotted values.  Pointwise coefficient heat maps use the same
 reference and the same complete-history denominator for each coordinate,
@@ -1189,7 +1825,7 @@ so their times are not mixed into the baseline speedup comparison.
 \subsection{State accuracy and solution profiles}
 Table~\ref{tab:online-state} compares the baseline models in a fixed order:
 linear reference, Cases~1 and~2, corrected Case~2, Case~3, intrusive decoder,
-and the two non-intrusive maps.  This order is retained in every subsequent
+and the two nonintrusive maps.  This order is retained in every subsequent
 accuracy table and comparison figure.  Horizontal rules separate the
 residual-solving models from the direct regressors.
 
@@ -1226,6 +1862,8 @@ space--time errors, not as evidence of identical trajectories.}
 \end{figure}
 
 \subsection{Complete coefficient recovery}
+Table~\ref{tab:online-coefficients} reports the complete-coordinate errors
+behind the state-level comparison, using the frozen linear HPROM as teacher.
 \begin{table}[H]
 \centering
 \caption{Baseline complete 151-coordinate trajectory errors $e_q$ (\%)
@@ -1267,7 +1905,8 @@ the initial tail prediction.  Recovery uses neither extra ANN training
 parameters nor online access to future reference states.
 With $n=10$ and $\bar n=141$, each $141\times3$ matrix contains three
 patterns over the \emph{entire} secondary block; the solve has 13 independent
-amplitudes while the reconstructed $\q_N$ still has 151 entries.
+amplitudes while the reconstructed $\mathbf q_{\mathrm{tot},r}$ still has
+151 entries.
 
 These results establish the performance of the tested hyperreduced algorithm,
 not a clean estimate of the correction's isolated causal effect, because the
@@ -1277,6 +1916,8 @@ three adaptive secondary patterns give mean state error $0.447\%$, whereas
 freeing the next three POD coordinates gives $1.513\%$.  That diagnostic
 supports the mechanism, but its numbers are PROM results and are not
 substituted into the HPROM tables.
+Figure~\ref{fig:hprom-b3-histories} resolves the aggregate HPROM errors in
+time and also compares B3 across all four training-data budgets.
 
 \begin{figure}[H]
 \centering
@@ -1327,6 +1968,8 @@ acceptance criteria.  A local
 1024-draw stress test fails acceptance and is not deployed at reporting
 points.  Thus support reduction is controlled by validation rather than by
 choosing an arbitrary cell count after observing test errors.
+Table~\ref{tab:hprom-b3-budget} reports the retained support, measured cost,
+and accuracy of the accepted 2048-draw rule and its 4096-draw comparator.
 
 \begin{table}[H]
 \centering
@@ -1359,6 +2002,8 @@ The comparison consequently assesses the complete enriched HPROM workflow;
 it is not a cubature-frozen ablation of the regression alone.  B3 uses the
 2048-draw fit at every budget, with the same nine baseline moment-anchor
 trajectories and the newly trained master map.
+Table~\ref{tab:hprom-enrichment-training} separates the effect of this data
+ladder on training and held-out regression errors before online deployment.
 
 \begin{table}[H]
 \centering
@@ -1425,6 +2070,9 @@ coefficient discrepancy and can improve other deployment families without
 an adaptive online construction.
 
 \subsection{Coordinate consistency and enriched solution fields}
+Table~\ref{tab:hprom-enrichment-coefficients} and
+Fig.~\ref{fig:hprom-enrichment-coefficients} compare complete-coordinate
+recovery across the same budgets used in the state-error study.
 \begin{table}[H]
 \centering
 \caption{Complete coefficient-history errors $e_q$ (\%) against the frozen
@@ -1464,6 +2112,9 @@ percentage points.  This is consistent with a cubature-accuracy contribution
 once regression improves; it does not establish a universal error floor.
 The support reduction trades some coordinate fidelity for lower measured
 baseline online work, rather than leaving every error unchanged.
+Figures~\ref{fig:hprom-enriched-solutions} and
+\ref{fig:hprom-enriched-coefficients} show the corresponding $9+18$ solution
+cuts and per-coordinate trajectories under the common plotting limits.
 
 \begin{figure}[H]
 \centering
@@ -1480,7 +2131,7 @@ protocol in Section~\ref{sec:hprom-protocol}.}
 \includegraphics[width=\textwidth]{Figures/euclidean_hprom/lhs18_coefficients.pdf}
 \caption{$9+18$ per-coordinate HPROM trajectory errors, with the same
 reference, model colours, coordinate split, and shared logarithmic limits as
-Fig.~\ref{fig:coefficient-curves}.  All models, including both non-intrusive
+Fig.~\ref{fig:coefficient-curves}.  All models, including both nonintrusive
 maps and B3, are shown.}
 \label{fig:hprom-enriched-coefficients}
 \end{figure}
@@ -1495,7 +2146,7 @@ and one training realization per family and budget.
 \section{Conclusions}
 \label{sec:conclusions}
 The main comparison now uses HPROM-generated training trajectories and
-model-specific positive cubature in a fixed Euclidean POD basis.
+model-specific positive cubature in a fixed common POD basis.
 Conventional parameter--time Case~2 improves the shared direct map modestly
 in mean accuracy but remains exposed to its prescribed secondary errors.
 State-conditioned and hybrid closures are more accurate with sparse labels
@@ -1535,6 +2186,11 @@ and a master ANN trained on nine linear-PROM trajectories, with the two
 validation parameters in \eqref{eq:validation-points}.  They are not HPROM
 runs, do not use the HPROM-trained master network, and report no timings.
 Their purpose is to isolate trial-space orientation before cubature.
+In this appendix and Appendix~\ref{sec:prom-results}, $\q_N$ denotes
+the corresponding full-residual linear-PROM trajectory from
+\eqref{eq:linear-prom}, and $\mathbf Q_N$ its complete coordinate history.
+Coefficient errors use \eqref{eq:coefficient-error} with this PROM
+reference, rather than the linear HPROM used in the main experiments.
 All compared trajectories use the known initial representation
 \eqref{eq:adaptive-common-initial}, the same full residual, and the same
 nominal nonlinear solver settings.  The tested ranks are
@@ -1545,9 +2201,10 @@ r\in\{0,1,2,3,5,10\}.
 The $n=10$ adaptive model is paired at every rank with conventional Case~2
 having $d=10+r$ primary coordinates and trial map
 \begin{equation}
-\boldsymbol\phi_d^{\mathrm{C2}}(\mathbf x;\mub,t)
+\utilde_d^{\mathrm{C2}}(\mathbf x;\mub,t)
 =\uvec_{\mathrm{ref}}+\mathbf V_{1:d}\mathbf x+
-\mathbf V_{d+1:151}\mathbf P_{>d}\mathcal G_q^{\mathrm{PROM}}(\mub,t),
+\mathbf V_{d+1:151}
+\bigl[\mathcal G_q^{\mathrm{PROM}}(\mub,t)\bigr]_{d+1:151},
 \qquad\mathbf x\in\mathbb R^d.
 \label{eq:case2-equal-dimension-control}
 \end{equation}
@@ -1570,6 +2227,10 @@ matched uncorrected Case~2 trajectory.  For every $r$, the comparison also
 includes the plain Case--2 map \eqref{eq:case2-equal-dimension-control} with
 $n=10+r$.  In particular, $\mathbf B_5$ and $\mathbf B_{10}$ are compared
 with Case~2 at $n=15$ and $n=20$, respectively.
+Table~\ref{tab:adaptive-rank-validation} reports the resulting
+equal-dimensional trajectory errors, and
+Fig.~\ref{fig:adaptive-rank-validation} compares their rank dependence with
+the corresponding converged-residual reduction.
 
 \begin{table}[H]
 \centering
@@ -1668,13 +2329,15 @@ extrapolation, but not at every parameter:
 Case~3 has a slightly smaller state error at verification.  Likewise, the
 linear PROM is not a strict HDM-error lower bound; at $\mub^{(1)}$ the
 corrected trajectory has a slightly smaller HDM error than that reference.
+Figure~\ref{fig:adaptive-state-histories} shows how these aggregate
+state-history errors accumulate over time at each reporting parameter.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.96\textwidth]{Figures/euclidean_prom_only/euclidean_case2_adaptive_state_histories.png}
 \caption{Instantaneous relative state errors
-$100\norm{\uvec_{\mathrm{HDM}}(t)-\uvec_{\mathrm{ROM}}(t)}_2/
-\norm{\uvec_{\mathrm{HDM}}(t)}_2$ for the common-initialization comparison.
+$100\norm{\uvec(t)-\utilde_{\mathrm{ROM}}(t)}_2/
+\norm{\uvec(t)}_2$ for the common-initialization comparison.
 Panels follow the four reporting parameters and share the same ordinate
 range.  All model curves are solid.  These time-resolved errors complement,
 rather than replace, the space--time norm in Table~\ref{tab:adaptive-state}.}
@@ -1726,7 +2389,7 @@ No general state-error guarantee follows from this experiment.
 \label{sec:prom-results}
 The following retained PROM diagnostics motivate secondary correction but
 are not evidence about an HPROM perturbation or primary-dimension sweep.
-They use the Euclidean basis, full-residual linear-PROM references, and
+They use the common basis, full-residual linear-PROM references, and
 PROM-trained master map of the original campaign.  Their numbers are kept
 separate from the linear-HPROM teacher used in the main text.
 
@@ -1734,10 +2397,11 @@ separate from the linear-HPROM teacher used in the main text.
 \label{sec:case2-sweep}
 The shared master map permits an interpolation between a direct parameter--time
 regression and the full-coordinate linear PROM.  Table~\ref{tab:case2-sweep}
-and Fig.~\ref{fig:case2-sweep-state} show that increasing $n$ reduces state
-error, with the sharpest improvement between $n=50$ and $n=100$.  This records
-the balance in this controlled Case--2 setting between coordinates supplied by
-the ANN and coordinates corrected by the residual.
+and Figs.~\ref{fig:case2-sweep-state} and
+\ref{fig:case2-sweep-coefficients} show that increasing $n$ reduces state and
+coordinate errors, with the sharpest state improvement between $n=50$ and
+$n=100$.  This records the balance in this controlled Case--2 setting between
+coordinates supplied by the ANN and coordinates corrected by the residual.
 
 \begin{table}[H]
 \centering
@@ -1769,18 +2433,28 @@ therefore omitted.}
 
 \subsection{Controlled Case--2 tail perturbation}
 \label{sec:tail-perturbation}
-To test the transfer mechanism independently of a regression magnitude, we
-start from the linear-PROM secondary history $\qs^{\mathrm{lin}}$ and add a
-perturbation in the direction of the actual master-map secondary error:
+To test the transfer mechanism independently of a regression magnitude,
+let $\overline{\mathbf Q}_N$ be the last 141 rows of the linear-PROM
+coordinate history $\mathbf Q_N$ at a
+reporting parameter.  Let
+$\widehat{\overline{\mathbf Q}}_N$ collect the corresponding
+secondary predictions of the PROM-trained master map.
+When their difference is nonzero, prescribe the perturbed history
 \begin{equation}
-{\qs}_{\epsilon}=\qs^{\mathrm{lin}}+
-\frac{\epsilon}{100}\frac{\widehat{\qs}-\qs^{\mathrm{lin}}}
-{\norm{\widehat{\qs}-\qs^{\mathrm{lin}}}_F}
-\norm{\qs^{\mathrm{lin}}}_F.
+\overline{\mathbf Q}_{\epsilon}
+=\overline{\mathbf Q}_N
++\frac{\epsilon}{100}
+\frac{\widehat{\overline{\mathbf Q}}_N
+-\overline{\mathbf Q}_N}
+{\norm{\widehat{\overline{\mathbf Q}}_N
+-\overline{\mathbf Q}_N}_F}
+\norm{\overline{\mathbf Q}_N}_F.
 \label{eq:tail-perturbation}
 \end{equation}
-For each prescribed percentage $\epsilon$, Case~2 solves only the
-first ten coordinates.  Thus the diagnostic uses the observed ANN-error
+The imposed relative secondary-history error is therefore exactly
+$\epsilon\%$.  At each time step, Case~2 injects the corresponding column
+of $\overline{\mathbf Q}_{\epsilon}$ and solves only the first ten
+coordinates.  Thus the diagnostic uses the observed ANN-error
 direction but does not conflate its effect with a change of learned model.
 Table~\ref{tab:tail-perturbation} and Fig.~\ref{fig:tail-perturbation} show a
 monotone transfer from secondary-tail error to the recovered primary block.
@@ -1800,7 +2474,7 @@ corresponding linear-PROM primary history.}
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{Figures/euclidean_prom_only/euclidean_prom_case2_tail_sensitivity.png}
-\caption{Euclidean-POD Case--2 sensitivity to a prescribed secondary-tail
+\caption{Case--2 sensitivity to a prescribed secondary-tail
 error, restricted to perturbations up to $50\%$.  Left: state error against
 the HDM.  Right: error in the ten residual-solved primary coordinates against
 linear PROM.}
@@ -1822,6 +2496,11 @@ small correction errors and exact zeros to remain visible without clipping
 the extrapolation peaks.  Each row has a numerical colour bar.
 
 \subsection{The \texorpdfstring{$9+8$}{9+8} campaign}
+Tables~\ref{tab:hprom-lhs8-state} and
+\ref{tab:hprom-lhs8-coefficients} give the pointwise state and coordinate
+errors.  Figures~\ref{fig:hprom-lhs8-solutions} and
+\ref{fig:hprom-lhs8-coefficients} provide their solution-cut and
+per-coordinate counterparts.
 \begin{table}[H]
 \centering
 \caption{Pointwise $9+8$ HPROM state-history errors $e_u$ (\%).
@@ -1853,6 +2532,11 @@ Fig.~\ref{fig:coefficient-curves}.  All seven learned deployments appear.}
 \label{fig:hprom-lhs8-coefficients}
 \end{figure}
 \subsection{The \texorpdfstring{$9+12$}{9+12} campaign}
+Tables~\ref{tab:hprom-lhs12-state} and
+\ref{tab:hprom-lhs12-coefficients} give the pointwise state and coordinate
+errors.  Figures~\ref{fig:hprom-lhs12-solutions} and
+\ref{fig:hprom-lhs12-coefficients} show the matching solution cuts and
+per-coordinate histories.
 \begin{table}[H]
 \centering
 \caption{Pointwise $9+12$ HPROM state-history errors $e_u$ (\%).
@@ -1884,6 +2568,11 @@ Fig.~\ref{fig:coefficient-curves}.  All seven learned deployments appear.}
 \label{fig:hprom-lhs12-coefficients}
 \end{figure}
 \subsection{The \texorpdfstring{$9+18$}{9+18} campaign}
+Tables~\ref{tab:hprom-lhs18-state} and
+\ref{tab:hprom-lhs18-coefficients} complete the pointwise tabulation for the
+largest data budget; its solution and coefficient plots appear in
+Figs.~\ref{fig:hprom-enriched-solutions} and
+\ref{fig:hprom-enriched-coefficients}.
 \begin{table}[H]
 \centering
 \caption{Pointwise $9+18$ HPROM state-history errors $e_u$ (\%).
@@ -1898,6 +2587,17 @@ $e_q$ (\%) against the frozen linear HPROM, matching the preceding table.}
 \label{tab:hprom-lhs18-coefficients}
 \resizebox{\textwidth}{!}{\input{tables/euclidean_hprom/lhs18_coefficient.tex}}
 \end{table}
+The absolute and relative coefficient-error histories are shown for the
+baseline campaign in Figs.~\ref{fig:hprom-baseline-heat-absolute} and
+\ref{fig:hprom-baseline-heat-relative}, for $9+8$ in
+Figs.~\ref{fig:hprom-lhs8-heat-absolute} and
+\ref{fig:hprom-lhs8-heat-relative}, for $9+12$ in
+Figs.~\ref{fig:hprom-lhs12-heat-absolute} and
+\ref{fig:hprom-lhs12-heat-relative}, and for $9+18$ in
+Figs.~\ref{fig:hprom-lhs18-heat-absolute} and
+\ref{fig:hprom-lhs18-heat-relative}.  This ordered sequence uses the common
+colour scales described above so that changes across budgets remain
+comparable.
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth,height=.73\textheight,keepaspectratio]{Figures/euclidean_hprom/baseline_heat_absolute.pdf}
@@ -1978,24 +2678,99 @@ The common magnitude range is stated in the panel title and is unchanged
 across campaigns; hue distinguishes models, not an alternative error scale.}
 \label{fig:hprom-lhs18-heat-relative}
 \end{figure}
-\section{LSPG-Sensitive Basis Exploration}
+\section{Alternative Inner Products for POD Basis Construction}
 \label{app:lspg-sensitive}
-Before adopting the Euclidean POD basis used in the main text, we explored an
-$M$-regularized basis metric intended to emphasize sensitivity of the LSPG
-normal equations to reduced-coordinate perturbations.  The objective was to
-reduce transfer from a learned secondary block to residual-solved primary
-coordinates without degrading the linear reference.  In the present Burgers
-campaign, controlled tests did not establish a systematic improvement
-sufficient to justify making that metric the main experimental variable.  For
-clarity and reproducibility, every reported result therefore uses the standard
-Euclidean POD basis of \eqref{eq:euclidean-pod}.  The metric-aware
-construction is retained as an exploratory direction, not as a contribution
-or as a source of the numerical comparisons in this paper.  The historical
-LSPG-sensitive enrichment campaign also selected an ELU master map, whereas
-the Euclidean campaign uses SiLU.  Its earlier extrapolation trend is therefore
-not an architecture-controlled metric comparison and cannot be attributed to
-the basis choice alone.
+The snapshot SVD in Section~\ref{sec:projection-framework} uses the standard
+state inner product.  Other choices can be appropriate for basis construction
+while retaining the same trial-map and LSPG structure.  In particular, let
+$\mathbf M_u=\mathbf M_u^T\succ0$ define a discrete state inner product,
+\begin{equation}
+(\mathbf v,\mathbf w)_{\mathbf M_u}=\mathbf v^T\mathbf M_u\mathbf w,
+\qquad
+\norm{\mathbf v}_{\mathbf M_u}^2=\mathbf v^T\mathbf M_u\mathbf v.
+\label{eq:mass-inner-product}
+\end{equation}
+For finite-element discretizations, $\mathbf M_u$ can be the consistent or
+lumped mass matrix.  For finite-volume discretizations, it is commonly the
+block-diagonal matrix of cell volumes.  This weighting is particularly
+natural on an unstructured mesh, where cells need not represent equal
+physical volume.
 
-\bibliographystyle{unsrt}
-\bibliography{bibliography}
+The corresponding mass-weighted POD can be computed from the snapshot
+correlation matrix
+\begin{equation}
+\mathbf C_M=\mathbf S_c^T\mathbf M_u\mathbf S_c,
+\qquad
+\mathbf C_M\mathbf y_i=\lambda_i\mathbf y_i,
+\label{eq:mass-pod-correlation}
+\end{equation}
+with modes
+\begin{equation}
+\boldsymbol\phi_i=\frac{1}{\sqrt{\lambda_i}}\mathbf S_c\mathbf y_i,
+\qquad
+\boldsymbol\phi_i^T\mathbf M_u\boldsymbol\phi_j=\delta_{ij}.
+\label{eq:mass-pod-modes}
+\end{equation}
+For the resulting metric-orthonormal basis
+$\boldsymbol\Phi=[\boldsymbol\phi_1\ \cdots\
+\boldsymbol\phi_{n_{\mathrm{tot}}}]$, the corresponding projection
+coordinates are
+$\boldsymbol\Phi^T\mathbf M_u(\uvec-\uvec_{\mathrm{ref}})$.
+Euclidean projection and state/coefficient norm identities must therefore
+be replaced by their metric counterparts; the inner product used to
+construct the basis does not automatically change the online residual norm.
+When all control volumes are equal, $\mathbf M_u$ is a scalar multiple of
+the identity and this construction spans the same POD subspaces as the
+standard snapshot SVD.  The uniform Cartesian Burgers discretization used
+here has precisely this property.
+
+As a separate double check, we also tested a basis metric that combines the
+physical mass term with local sensitivity of the time-discrete LSPG residual.
+For selected parameter--time states $s\in\mathcal S_{\mathrm{met}}$, define
+\begin{equation}
+\mathbf G
+=\varepsilon\mathbf M_u+
+\sum_{s\in\mathcal S_{\mathrm{met}}}
+\omega_s\mathbf J_s^T\mathbf P_s\mathbf J_s,
+\label{eq:combined-lspg-mass-metric}
+\end{equation}
+where $\mathbf J_s=\partial\mathbf r_s/\partial\uvec$,
+$\mathbf P_s\succeq0$ weights the residual equations, and $\omega_s>0$
+weights the selected states.  The full-residual experiment used
+$\mathbf P_s=\mathbf I$.  Writing
+\begin{equation}
+\mathbf C_J=
+\sum_{s\in\mathcal S_{\mathrm{met}}}
+\omega_s\mathbf S_c^T\mathbf J_s^T\mathbf P_s\mathbf J_s\mathbf S_c,
+\qquad
+\mathbf C_G=\mathbf S_c^T\mathbf G\mathbf S_c
+=\varepsilon\mathbf C_M+\mathbf C_J,
+\label{eq:combined-lspg-correlation}
+\end{equation}
+we scaled the regularization according to
+\begin{equation}
+\varepsilon=\eta\,
+\frac{\operatorname{tr}(\mathbf C_J)}
+{\operatorname{tr}(\mathbf C_M)},
+\qquad \eta=10^{-10}.
+\label{eq:combined-lspg-mass-scale}
+\end{equation}
+An eigendecomposition of $\mathbf C_G$ then gives modes by the analogue of
+\eqref{eq:mass-pod-modes}, with $\mathbf M_u$ replaced by $\mathbf G$.
+Thus the sensitivity information affects only basis construction; the online
+residual objective and trial-tangent formulas retain their form after the
+basis is fixed.  A $\mathbf G$-orthonormal basis does not, however, satisfy
+the Euclidean identities in \eqref{eq:partition-orthogonality} unless it is
+also reorthonormalized in the standard state inner product.
+
+For this benchmark, the mass-weighted construction and the combined
+mass--LSPG-sensitivity construction did not produce a systematic accuracy
+advantage in the linear reference, the learned closures, or the controlled
+secondary-tail tests.  The differences were small and not consistent across
+the evaluated parameter points.  We therefore use the standard Euclidean
+snapshot SVD for every result in the paper.  The alternatives above remain
+valid options for problems whose spatial discretization or mesh geometry
+provides a reason to prefer a different state inner product.
+
+\input{references}
 \end{document}

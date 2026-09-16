@@ -1,32 +1,4 @@
-\begin{thebibliography}{10}
-
-\bibitem{antoulas2005approximation}
-Athanasios~C Antoulas.
-\newblock {\em Approximation of large-scale dynamical systems}.
-\newblock SIAM, 2005.
-
-\bibitem{quarteroni2014reduced}
-Alfio Quarteroni, Gianluigi Rozza, et~al.
-\newblock {\em Reduced order methods for modeling and computational reduction},
-  volume~9.
-\newblock Springer, 2014.
-
-\bibitem{barnett2023neural}
-Joshua Barnett, Charbel Farhat, and Yvon Maday.
-\newblock Neural-network-augmented projection-based model order reduction for
-  mitigating the {Kolmogorov} barrier to reducibility.
-\newblock {\em Journal of Computational Physics}, 492:112420, 2023.
-
-\bibitem{cohen2023nonlinear}
-Albert Cohen, Charbel Farhat, Yvon Maday, and Agustin Somacal.
-\newblock Nonlinear compressive reduced basis approximation for {PDEs}.
-\newblock {\em Comptes Rendus. M{\'e}canique}, 351(S1):357--374, 2023.
-
-\bibitem{aghili2026nonlinear}
-Joubine Aghili, Hassan Ballout, Yvon Maday, and Christophe Prud'Homme.
-\newblock Nonlinear compressive reduced basis approximation: when taylor meets
-  kolmogorov.
-\newblock {\em arXiv preprint arXiv:2601.13712}, 2026.
+\begin{thebibliography}{1}
 
 \bibitem{hernandez2017dimensional}
 Joaquin~Alberto Hernandez, Manuel~Alejandro Caicedo, and Alex Ferrer.
@@ -49,6 +21,12 @@ Charbel Farhat, Todd Chapman, and Philip Avery.
   nonlinear finite element dynamic models.
 \newblock {\em International Journal for Numerical Methods in Engineering},
   102(5):1077--1110, 2015.
+
+\bibitem{barnett2023neural}
+Joshua Barnett, Charbel Farhat, and Yvon Maday.
+\newblock Neural-network-augmented projection-based model order reduction for
+  mitigating the {Kolmogorov} barrier to reducibility.
+\newblock {\em Journal of Computational Physics}, 492:112420, 2023.
 
 \bibitem{ares2026closure}
 Sebastian Ares De~Parga, Radek Tezaur, Carlos~G. Hern{\'a}ndez, and Charbel

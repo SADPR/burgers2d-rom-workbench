@@ -2,269 +2,305 @@
 \providecommand\hyper@newdestlabel[2]{}
 \providecommand\HyField@AuxAddToFields[1]{}
 \providecommand\HyField@AuxAddToCoFields[2]{}
-\citation{antoulas2005approximation}
-\citation{quarteroni2014reduced}
-\citation{barnett2023neural}
-\citation{cohen2023nonlinear}
-\citation{aghili2026nonlinear}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
 \newlabel{sec:introduction}{{1}{1}{Introduction}{section.1}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {2}Projection Framework}{2}{section.2}\protected@file@percent }
-\newlabel{sec:projection-framework}{{2}{2}{Projection Framework}{section.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Time-discrete residual and Euclidean POD basis}{2}{subsection.3}\protected@file@percent }
-\newlabel{eq:ivp}{{1}{2}{Time-discrete residual and Euclidean POD basis}{equation.4}{}}
-\newlabel{eq:discrete-residual}{{2}{2}{Time-discrete residual and Euclidean POD basis}{equation.5}{}}
-\newlabel{eq:euclidean-pod}{{4}{2}{Time-discrete residual and Euclidean POD basis}{equation.7}{}}
-\newlabel{eq:linear-reconstruction}{{5}{2}{Time-discrete residual and Euclidean POD basis}{equation.8}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Linear PROM and LSPG reference}{2}{subsection.9}\protected@file@percent }
-\newlabel{eq:linear-prom}{{6}{2}{Linear PROM and LSPG reference}{equation.10}{}}
-\newlabel{eq:linear-prom-gn}{{8}{2}{Linear PROM and LSPG reference}{equation.12}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Linear HPROM and ECM formulation}{3}{subsection.13}\protected@file@percent }
-\newlabel{sec:linear-hprom}{{2.3}{3}{Linear HPROM and ECM formulation}{subsection.13}{}}
-\newlabel{eq:entity-residual}{{9}{3}{Linear HPROM and ECM formulation}{equation.14}{}}
-\newlabel{eq:linear-projected-residual}{{10}{3}{Linear HPROM and ECM formulation}{equation.15}{}}
-\newlabel{eq:linear-projected-jacobian}{{11}{3}{Linear HPROM and ECM formulation}{equation.16}{}}
-\newlabel{eq:linear-ecm-sampled-normal-equations}{{12}{3}{Linear HPROM and ECM formulation}{equation.17}{}}
-\newlabel{eq:linear-hprom-gn-update}{{13}{3}{Linear HPROM and ECM formulation}{equation.18}{}}
-\@writefile{toc}{\contentsline {paragraph}{Offline cubature construction.}{3}{section*.19}\protected@file@percent }
-\newlabel{eq:linear-ecm-contribution}{{14}{3}{Offline cubature construction}{equation.20}{}}
-\newlabel{eq:linear-ecm-training-matrix}{{15}{3}{Offline cubature construction}{equation.21}{}}
-\newlabel{eq:linear-ecm}{{16}{3}{Offline cubature construction}{equation.22}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Affine Projection-Based Model Order Reduction}{1}{section.2}\protected@file@percent }
+\newlabel{sec:projection-framework}{{2}{1}{Affine Projection-Based Model Order Reduction}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}POD trial space}{1}{subsection.3}\protected@file@percent }
+\newlabel{eq:centered-snapshots}{{1}{1}{POD trial space}{equation.4}{}}
+\newlabel{eq:snapshot-svd}{{2}{2}{POD trial space}{equation.5}{}}
+\newlabel{eq:pod-energy-criterion}{{3}{2}{POD trial space}{equation.6}{}}
+\newlabel{eq:pod-basis}{{4}{2}{POD trial space}{equation.7}{}}
+\newlabel{eq:linear-reconstruction}{{5}{2}{POD trial space}{equation.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Time-discrete LSPG and the full-residual linear PROM}{2}{subsection.9}\protected@file@percent }
+\newlabel{eq:ivp}{{6}{2}{Time-discrete LSPG and the full-residual linear PROM}{equation.10}{}}
+\newlabel{eq:discrete-residual}{{7}{2}{Time-discrete LSPG and the full-residual linear PROM}{equation.11}{}}
+\newlabel{eq:linear-prom}{{8}{2}{Time-discrete LSPG and the full-residual linear PROM}{equation.12}{}}
+\newlabel{eq:linear-reference-state}{{9}{2}{Time-discrete LSPG and the full-residual linear PROM}{equation.13}{}}
 \citation{hernandez2017dimensional}
 \citation{hernandez2020multiscale}
 \citation{farhat2015structure}
+\newlabel{eq:linear-prom-gn}{{11}{3}{Time-discrete LSPG and the full-residual linear PROM}{equation.15}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Linear HPROM via the empirical cubature method}{3}{subsection.16}\protected@file@percent }
+\newlabel{sec:linear-hprom}{{2.3}{3}{Linear HPROM via the empirical cubature method}{subsection.16}{}}
+\newlabel{eq:entity-residual}{{12}{3}{Linear HPROM via the empirical cubature method}{equation.17}{}}
+\newlabel{eq:linear-projected-residual}{{13}{3}{Linear HPROM via the empirical cubature method}{equation.18}{}}
+\newlabel{eq:linear-projected-jacobian}{{14}{3}{Linear HPROM via the empirical cubature method}{equation.19}{}}
+\newlabel{eq:linear-ecm-sampled-normal-equations}{{15}{3}{Linear HPROM via the empirical cubature method}{equation.20}{}}
+\citation{barnett2023neural}
+\citation{aghili2026nonlinear}
+\newlabel{eq:linear-hprom-gn-update}{{16}{4}{Linear HPROM via the empirical cubature method}{equation.21}{}}
+\newlabel{eq:linear-hprom-reference-trajectory}{{17}{4}{Linear HPROM via the empirical cubature method}{equation.22}{}}
+\@writefile{toc}{\contentsline {paragraph}{Offline cubature construction.}{4}{section*.23}\protected@file@percent }
+\newlabel{eq:linear-ecm-contribution}{{18}{4}{Offline cubature construction}{equation.24}{}}
+\newlabel{eq:linear-ecm-training-matrix}{{19}{4}{Offline cubature construction}{equation.25}{}}
+\newlabel{eq:linear-ecm-compressed-moments}{{20}{4}{Offline cubature construction}{equation.26}{}}
+\newlabel{eq:linear-ecm}{{21}{4}{Offline cubature construction}{equation.27}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Nonlinear-Manifold Projection-Based Model Order Reduction}{4}{section.28}\protected@file@percent }
+\newlabel{sec:learned-representations}{{3}{4}{Nonlinear-Manifold Projection-Based Model Order Reduction}{section.28}{}}
+\newlabel{eq:kolmogorov-width}{{22}{4}{Nonlinear-Manifold Projection-Based Model Order Reduction}{equation.29}{}}
+\citation{barnett2023neural}
+\citation{aghili2026nonlinear}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Closure-based nonlinear trial manifolds}{5}{subsection.30}\protected@file@percent }
+\newlabel{eq:partition}{{23}{5}{Closure-based nonlinear trial manifolds}{equation.31}{}}
+\newlabel{eq:partition-orthogonality}{{24}{5}{Closure-based nonlinear trial manifolds}{equation.32}{}}
+\newlabel{eq:partitioned-state}{{25}{5}{Closure-based nonlinear trial manifolds}{equation.33}{}}
+\newlabel{eq:closure-map}{{26}{5}{Closure-based nonlinear trial manifolds}{equation.34}{}}
+\newlabel{eq:closure-manifold}{{27}{5}{Closure-based nonlinear trial manifolds}{equation.35}{}}
+\newlabel{eq:closure-trial-set}{{28}{5}{Closure-based nonlinear trial manifolds}{equation.36}{}}
 \citation{barnett2023neural}
 \citation{ares2026closure}
-\@writefile{toc}{\contentsline {paragraph}{Relation to other hyperreduction methods.}{4}{section*.23}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3}Learned Reduced Representations}{4}{section.24}\protected@file@percent }
-\newlabel{sec:learned-representations}{{3}{4}{Learned Reduced Representations}{section.24}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}PROM--ANN closures}{4}{subsection.25}\protected@file@percent }
-\newlabel{eq:partition}{{17}{4}{PROM--ANN closures}{equation.26}{}}
-\newlabel{eq:partition-orthogonality}{{18}{4}{PROM--ANN closures}{equation.27}{}}
-\newlabel{eq:partitioned-state}{{19}{4}{PROM--ANN closures}{equation.28}{}}
-\newlabel{eq:closure-manifold}{{20}{4}{PROM--ANN closures}{equation.29}{}}
-\newlabel{eq:closure-cases}{{21}{4}{PROM--ANN closures}{equation.30}{}}
-\newlabel{eq:closure-lspg}{{22}{4}{PROM--ANN closures}{equation.31}{}}
-\newlabel{eq:closure-tangent}{{23}{4}{PROM--ANN closures}{equation.32}{}}
-\newlabel{eq:closure-gn}{{24}{4}{PROM--ANN closures}{equation.33}{}}
-\citation{hernandez2017dimensional}
-\citation{hernandez2020multiscale}
-\citation{de2023hyper}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}PROM--POD--AE and intrusive trial maps}{5}{subsection.34}\protected@file@percent }
-\newlabel{eq:podae-manifold}{{26}{5}{PROM--POD--AE and intrusive trial maps}{equation.36}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Trial decoders and tangent bases of the intrusive models. PROMs minimize the full time-discrete residual; their HPROM counterparts use map-specific weighted sampled residuals with these same decoders and tangents.}}{5}{table.38}\protected@file@percent }
-\newlabel{tab:trial-maps}{{1}{5}{Trial decoders and tangent bases of the intrusive models. PROMs minimize the full time-discrete residual; their HPROM counterparts use map-specific weighted sampled residuals with these same decoders and tangents}{table.38}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Model-specific ECM construction}{5}{subsection.39}\protected@file@percent }
-\newlabel{sec:nonlinear-ecm}{{3.3}{5}{Model-specific ECM construction}{subsection.39}{}}
-\newlabel{eq:nonlinear-manifold-fit}{{27}{5}{Model-specific ECM construction}{equation.40}{}}
-\newlabel{eq:case2-ecm-fit}{{28}{5}{Model-specific ECM construction}{equation.41}{}}
-\newlabel{eq:nonlinear-manifold-fit-gn}{{29}{5}{Model-specific ECM construction}{equation.42}{}}
-\newlabel{eq:nonlinear-ecm-contribution}{{30}{5}{Model-specific ECM construction}{equation.43}{}}
+\newlabel{eq:closure-cases}{{29}{6}{Closure-based nonlinear trial manifolds}{equation.37}{}}
+\newlabel{eq:case2-state-map}{{30}{6}{Closure-based nonlinear trial manifolds}{equation.38}{}}
+\newlabel{eq:case2-translated-space}{{31}{6}{Closure-based nonlinear trial manifolds}{equation.39}{}}
+\@writefile{toc}{\contentsline {paragraph}{Training coordinates and consistency choice.}{6}{section*.40}\protected@file@percent }
+\newlabel{eq:projected-closure-training-coordinates}{{32}{6}{Training coordinates and consistency choice}{equation.41}{}}
+\newlabel{eq:reference-model-closure-training-coordinates}{{33}{6}{Training coordinates and consistency choice}{equation.42}{}}
+\newlabel{eq:linear-hprom-reference-partition}{{34}{6}{Training coordinates and consistency choice}{equation.43}{}}
+\newlabel{eq:closure-reference-targets}{{35}{6}{Training coordinates and consistency choice}{equation.44}{}}
 \citation{fresca2022pod}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Non-intrusive reference models}{6}{subsection.44}\protected@file@percent }
-\newlabel{eq:podnn}{{31}{6}{Non-intrusive reference models}{equation.45}{}}
-\newlabel{eq:poddl}{{32}{6}{Non-intrusive reference models}{equation.46}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Residual-Adaptive Secondary Correction for Case~2}{6}{section.47}\protected@file@percent }
-\newlabel{sec:adaptive-case2}{{4}{6}{Residual-Adaptive Secondary Correction for Case~2}{section.47}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}From a prescribed tail to a corrected trial space}{6}{subsection.48}\protected@file@percent }
-\newlabel{eq:adaptive-trial}{{33}{6}{From a prescribed tail to a corrected trial space}{equation.49}{}}
-\newlabel{eq:adaptive-complete-coordinates}{{34}{6}{From a prescribed tail to a corrected trial space}{equation.50}{}}
-\newlabel{eq:adaptive-tangent}{{35}{6}{From a prescribed tail to a corrected trial space}{equation.51}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Eliminating the primary increment}{6}{subsection.52}\protected@file@percent }
-\newlabel{eq:adaptive-predictor}{{36}{6}{Eliminating the primary increment}{equation.53}{}}
-\newlabel{eq:adaptive-linearization}{{37}{7}{Eliminating the primary increment}{equation.54}{}}
-\newlabel{eq:adaptive-full-linearized}{{38}{7}{Eliminating the primary increment}{equation.55}{}}
-\newlabel{eq:adaptive-projector}{{39}{7}{Eliminating the primary increment}{equation.56}{}}
-\newlabel{eq:adaptive-primary-elimination}{{40}{7}{Eliminating the primary increment}{equation.57}{}}
-\newlabel{eq:adaptive-secondary-ls}{{41}{7}{Eliminating the primary increment}{equation.58}{}}
-\newlabel{eq:adaptive-schur}{{42}{7}{Eliminating the primary increment}{equation.59}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}A small Krylov space for the secondary correction}{7}{subsection.60}\protected@file@percent }
-\newlabel{eq:adaptive-krylov}{{43}{7}{A small Krylov space for the secondary correction}{equation.61}{}}
-\newlabel{eq:adaptive-rank-one}{{44}{7}{A small Krylov space for the secondary correction}{equation.62}{}}
-\newlabel{eq:adaptive-nested-bound}{{45}{8}{A small Krylov space for the secondary correction}{equation.63}{}}
-\newlabel{eq:adaptive-actions}{{46}{8}{A small Krylov space for the secondary correction}{equation.64}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Nonlinear solve on the frozen affine space}{8}{subsection.65}\protected@file@percent }
-\newlabel{eq:adaptive-nonlinear-lspg}{{47}{8}{Nonlinear solve on the frozen affine space}{equation.66}{}}
-\newlabel{eq:adaptive-gn}{{48}{8}{Nonlinear solve on the frozen affine space}{equation.67}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Interpretation, limiting cases, and cost}{9}{subsection.73}\protected@file@percent }
-\newlabel{eq:adaptive-pod-control-space}{{49}{9}{Interpretation, limiting cases, and cost}{equation.74}{}}
-\newlabel{eq:adaptive-equal-dimension-space}{{50}{9}{Interpretation, limiting cases, and cost}{equation.75}{}}
-\newlabel{eq:adaptive-full-space}{{51}{9}{Interpretation, limiting cases, and cost}{equation.76}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Weighted sampled realization}{9}{subsection.77}\protected@file@percent }
-\newlabel{sec:adaptive-sampling}{{4.6}{9}{Weighted sampled realization}{subsection.77}{}}
-\newlabel{eq:adaptive-sampled-objective}{{52}{9}{Weighted sampled realization}{equation.78}{}}
-\newlabel{eq:adaptive-weighted-operators}{{53}{10}{Weighted sampled realization}{equation.79}{}}
-\newlabel{eq:adaptive-sampled-schur}{{54}{10}{Weighted sampled realization}{equation.80}{}}
-\newlabel{eq:adaptive-sampled-krylov}{{55}{10}{Weighted sampled realization}{equation.81}{}}
-\newlabel{eq:adaptive-sampled-gn}{{56}{10}{Weighted sampled realization}{equation.82}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Positive moment fitting for an adaptive trial space}{10}{subsection.83}\protected@file@percent }
-\newlabel{sec:adaptive-positive-rule}{{4.7}{10}{Positive moment fitting for an adaptive trial space}{subsection.83}{}}
-\newlabel{eq:adaptive-cell-moments}{{57}{10}{Positive moment fitting for an adaptive trial space}{equation.84}{}}
-\newlabel{eq:adaptive-mass-moment}{{58}{10}{Positive moment fitting for an adaptive trial space}{equation.85}{}}
+\citation{lee2020model}
+\citation{romor2025explicable}
+\newlabel{eq:closure-reference-reconstruction-error}{{36}{7}{Training coordinates and consistency choice}{equation.45}{}}
+\@writefile{toc}{\contentsline {paragraph}{LSPG projection on closure-based trial manifolds.}{7}{section*.46}\protected@file@percent }
+\newlabel{eq:closure-lspg}{{37}{7}{LSPG projection on closure-based trial manifolds}{equation.47}{}}
+\newlabel{eq:closure-tangent}{{38}{7}{LSPG projection on closure-based trial manifolds}{equation.48}{}}
+\newlabel{eq:closure-gn}{{39}{7}{LSPG projection on closure-based trial manifolds}{equation.49}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Autoencoder-based nonlinear trial manifolds}{7}{subsection.50}\protected@file@percent }
+\newlabel{eq:podae-reference-training}{{40}{7}{Autoencoder-based nonlinear trial manifolds}{equation.51}{}}
+\newlabel{eq:podae-manifold}{{41}{8}{Autoencoder-based nonlinear trial manifolds}{equation.52}{}}
+\@writefile{toc}{\contentsline {paragraph}{Summary of intrusive trial maps.}{8}{section*.53}\protected@file@percent }
+\newlabel{eq:generic-trial-residual-jacobian}{{42}{8}{Summary of intrusive trial maps}{equation.54}{}}
+\newlabel{eq:generic-trial-tangent}{{43}{8}{Summary of intrusive trial maps}{equation.55}{}}
+\newlabel{eq:generic-trial-gn}{{44}{8}{Summary of intrusive trial maps}{equation.56}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Online variables, trial maps, and tangent bases of the intrusive models. PROMs minimize the full time-discrete residual; their HPROM counterparts use map-specific weighted sampled residuals with these same maps and tangents.}}{8}{table.58}\protected@file@percent }
+\newlabel{tab:trial-maps}{{1}{8}{Online variables, trial maps, and tangent bases of the intrusive models. PROMs minimize the full time-discrete residual; their HPROM counterparts use map-specific weighted sampled residuals with these same maps and tangents}{table.58}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Model-specific ECM construction}{9}{subsection.59}\protected@file@percent }
+\newlabel{sec:nonlinear-ecm}{{3.3}{9}{Model-specific ECM construction}{subsection.59}{}}
+\newlabel{eq:generic-manifold-entity-sums}{{45}{9}{Model-specific ECM construction}{equation.60}{}}
+\newlabel{eq:nonlinear-manifold-fit}{{46}{9}{Model-specific ECM construction}{equation.61}{}}
+\newlabel{eq:nonlinear-manifold-fit-gn}{{47}{9}{Model-specific ECM construction}{equation.62}{}}
+\newlabel{eq:nonlinear-ecm-contribution}{{48}{9}{Model-specific ECM construction}{equation.63}{}}
+\newlabel{eq:learned-hprom-objective}{{49}{9}{Model-specific ECM construction}{equation.64}{}}
+\newlabel{eq:generic-learned-hprom-gn}{{50}{9}{Model-specific ECM construction}{equation.65}{}}
+\citation{hesthaven2018non}
+\citation{fresca2022pod}
+\citation{hesthaven2018non}
+\citation{fresca2022pod}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Nonintrusive reduced-order models}{10}{subsection.66}\protected@file@percent }
+\newlabel{eq:podnn}{{51}{10}{Nonintrusive reduced-order models}{equation.67}{}}
+\newlabel{eq:poddl}{{52}{10}{Nonintrusive reduced-order models}{equation.68}{}}
+\newlabel{eq:direct-state-reconstruction}{{53}{10}{Nonintrusive reduced-order models}{equation.69}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Residual-Adaptive Secondary Correction for Case~2}{10}{section.70}\protected@file@percent }
+\newlabel{sec:adaptive-case2}{{4}{10}{Residual-Adaptive Secondary Correction for Case~2}{section.70}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}From a prescribed tail to a corrected trial space}{10}{subsection.71}\protected@file@percent }
+\newlabel{eq:adaptive-trial}{{54}{11}{From a prescribed tail to a corrected trial space}{equation.72}{}}
+\newlabel{eq:adaptive-complete-coordinates}{{55}{11}{From a prescribed tail to a corrected trial space}{equation.73}{}}
+\newlabel{eq:adaptive-tangent}{{56}{11}{From a prescribed tail to a corrected trial space}{equation.74}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Eliminating the primary increment}{11}{subsection.75}\protected@file@percent }
+\newlabel{eq:adaptive-predictor}{{57}{11}{Eliminating the primary increment}{equation.76}{}}
+\newlabel{eq:adaptive-linearization}{{58}{11}{Eliminating the primary increment}{equation.77}{}}
+\newlabel{eq:adaptive-full-linearized}{{59}{11}{Eliminating the primary increment}{equation.78}{}}
+\newlabel{eq:adaptive-projector}{{60}{12}{Eliminating the primary increment}{equation.79}{}}
+\newlabel{eq:adaptive-primary-elimination}{{61}{12}{Eliminating the primary increment}{equation.80}{}}
+\newlabel{eq:adaptive-secondary-ls}{{62}{12}{Eliminating the primary increment}{equation.81}{}}
+\newlabel{eq:adaptive-schur}{{63}{12}{Eliminating the primary increment}{equation.82}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}A small Krylov space for the secondary correction}{12}{subsection.83}\protected@file@percent }
+\newlabel{eq:adaptive-krylov}{{64}{12}{A small Krylov space for the secondary correction}{equation.84}{}}
+\newlabel{eq:adaptive-rank-one}{{65}{12}{A small Krylov space for the secondary correction}{equation.85}{}}
+\newlabel{eq:adaptive-nested-bound}{{66}{12}{A small Krylov space for the secondary correction}{equation.86}{}}
+\newlabel{eq:adaptive-actions}{{67}{12}{A small Krylov space for the secondary correction}{equation.87}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Nonlinear solve on the frozen affine space}{13}{subsection.88}\protected@file@percent }
+\newlabel{eq:adaptive-nonlinear-lspg}{{68}{13}{Nonlinear solve on the frozen affine space}{equation.89}{}}
+\newlabel{eq:adaptive-gn}{{69}{13}{Nonlinear solve on the frozen affine space}{equation.90}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Interpretation, limiting cases, and cost}{13}{subsection.91}\protected@file@percent }
+\newlabel{eq:adaptive-pod-control-space}{{70}{13}{Interpretation, limiting cases, and cost}{equation.92}{}}
+\newlabel{eq:adaptive-equal-dimension-space}{{71}{13}{Interpretation, limiting cases, and cost}{equation.93}{}}
+\newlabel{eq:adaptive-full-space}{{72}{13}{Interpretation, limiting cases, and cost}{equation.94}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Weighted sampled realization}{14}{subsection.95}\protected@file@percent }
+\newlabel{sec:adaptive-sampling}{{4.6}{14}{Weighted sampled realization}{subsection.95}{}}
+\newlabel{eq:adaptive-sampled-objective}{{73}{14}{Weighted sampled realization}{equation.96}{}}
+\newlabel{eq:adaptive-weighted-operators}{{74}{14}{Weighted sampled realization}{equation.97}{}}
+\newlabel{eq:adaptive-sampled-schur}{{75}{14}{Weighted sampled realization}{equation.98}{}}
+\newlabel{eq:adaptive-sampled-krylov}{{76}{14}{Weighted sampled realization}{equation.99}{}}
+\newlabel{eq:adaptive-sampled-gn}{{77}{14}{Weighted sampled realization}{equation.100}{}}
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces Online advance of Case~2 with optional residual-adaptive correction}}{15}{algorithm.101}\protected@file@percent }
+\newlabel{alg:case2-online}{{1}{15}{Weighted sampled realization}{algorithm.101}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Positive moment fitting for an adaptive trial space}{15}{subsection.102}\protected@file@percent }
+\newlabel{sec:adaptive-positive-rule}{{4.7}{15}{Positive moment fitting for an adaptive trial space}{subsection.102}{}}
+\newlabel{eq:adaptive-cell-moments}{{78}{15}{Positive moment fitting for an adaptive trial space}{equation.103}{}}
 \citation{barnett2023neural}
-\newlabel{eq:adaptive-support-probability}{{59}{11}{Positive moment fitting for an adaptive trial space}{equation.86}{}}
-\newlabel{eq:adaptive-positive-fit}{{60}{11}{Positive moment fitting for an adaptive trial space}{equation.87}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Benchmark and HPROM Protocol}{11}{section.88}\protected@file@percent }
-\newlabel{sec:benchmark}{{5}{11}{Benchmark and HPROM Protocol}{section.88}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Burgers problem and fixed Euclidean basis}{11}{subsection.89}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Training targets, validation, and reporting parameters}{11}{subsection.92}\protected@file@percent }
-\newlabel{eq:validation-points}{{63}{11}{Training targets, validation, and reporting parameters}{equation.93}{}}
-\newlabel{eq:evaluation-points}{{64}{12}{Training targets, validation, and reporting parameters}{equation.94}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Nested enrichment and unchanged regression families}{12}{subsection.95}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Nested linear-HPROM coefficient data. Totals count complete trajectories; the two validation trajectories are excluded from training.}}{12}{table.97}\protected@file@percent }
-\newlabel{tab:euclidean-enrichment-dataset}{{2}{12}{Nested linear-HPROM coefficient data. Totals count complete trajectories; the two validation trajectories are excluded from training}{table.97}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces HPROM training layouts in the order baseline, $9+8$, $9+12$, $9+18$. Black circles mark baseline parameters, coloured points the added interior and margin parameters, diamonds the two held-out linear-HPROM regression-validation parameters, and stars the four reporting parameters. The original parameter box is outlined. Margin sampling does not guarantee corner coverage: the $9+12$ subset adds a location near $(3.980,0.03173)$ in the upper-left region close to $\bm  {\mu }^{(3)}$. Validation points concern regression and rule auditing, not HDM test data.}}{13}{figure.99}\protected@file@percent }
-\newlabel{fig:parameter-space}{{1}{13}{HPROM training layouts in the order baseline, $9+8$, $9+12$, $9+18$. Black circles mark baseline parameters, coloured points the added interior and margin parameters, diamonds the two held-out linear-HPROM regression-validation parameters, and stars the four reporting parameters. The original parameter box is outlined. Margin sampling does not guarantee corner coverage: the $9+12$ subset adds a location near $(3.980,0.03173)$ in the upper-left region close to $\mub ^{(3)}$. Validation points concern regression and rule auditing, not HDM test data}{figure.99}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Baseline regression architectures and relative Frobenius errors (\%) on training and held-out parameter-validation coordinates. The Case--2 master map also supplies POD--NN--ROM and Case~2+$\mathbf  B_3$; it is trained once, not separately for these deployments.}}{14}{table.101}\protected@file@percent }
-\newlabel{tab:training}{{3}{14}{Baseline regression architectures and relative Frobenius errors (\%) on training and held-out parameter-validation coordinates. The Case--2 master map also supplies POD--NN--ROM and Case~2+$\mathbf B_3$; it is trained once, not separately for these deployments}{table.101}{}}
-\newlabel{eq:master-map}{{65}{14}{Nested enrichment and unchanged regression families}{equation.102}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Coordinate-level interpretation of the controlled comparison. The same trained network is used in all three rows. Only deployment changes; the adaptive patterns are constructed online from the computed predictor, not from reference trajectories at the reporting parameters.}}{14}{figure.104}\protected@file@percent }
-\newlabel{fig:shared-map-deployments}{{2}{14}{Coordinate-level interpretation of the controlled comparison. The same trained network is used in all three rows. Only deployment changes; the adaptive patterns are constructed online from the computed predictor, not from reference trajectories at the reporting parameters}{figure.104}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Cubature protocol and initialization}{14}{subsection.105}\protected@file@percent }
-\newlabel{sec:hprom-protocol}{{5.4}{14}{Cubature protocol and initialization}{subsection.105}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Validation-only acceptance of the four 2048-draw B3 rules. Eigenvalues compare sampled and full complete-coordinate Jacobian Grams. Gradient error is a ratio, not a percentage. ``LS ratio'' evaluates the sampled B3 linearized update in the full residual norm and divides by the full-residual B3 linearized value. Reporting points do not enter acceptance.}}{15}{table.107}\protected@file@percent }
-\newlabel{tab:b3-validation}{{4}{15}{Validation-only acceptance of the four 2048-draw B3 rules. Eigenvalues compare sampled and full complete-coordinate Jacobian Grams. Gradient error is a ratio, not a percentage. ``LS ratio'' evaluates the sampled B3 linearized update in the full residual norm and divides by the full-residual B3 linearized value. Reporting points do not enter acceptance}{table.107}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Positive cubature cell counts at each data budget. B3 has a dedicated moment-fitted rule; the other nonlinear models use map-specific ECM. State stencil sizes can exceed retained residual-cell counts because of neighbour dependencies.}}{15}{table.109}\protected@file@percent }
-\newlabel{tab:hprom-cubature}{{5}{15}{Positive cubature cell counts at each data budget. B3 has a dedicated moment-fitted rule; the other nonlinear models use map-specific ECM. State stencil sizes can exceed retained residual-cell counts because of neighbour dependencies}{table.109}{}}
-\newlabel{eq:adaptive-common-initial}{{66}{15}{Cubature protocol and initialization}{equation.110}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Errors and scope of online measurements}{16}{subsection.111}\protected@file@percent }
-\newlabel{eq:state-error}{{67}{16}{Errors and scope of online measurements}{equation.112}{}}
-\newlabel{eq:coefficient-error}{{68}{16}{Errors and scope of online measurements}{equation.113}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Baseline HPROM Results}{16}{section.114}\protected@file@percent }
-\newlabel{sec:hprom-results}{{6}{16}{Baseline HPROM Results}{section.114}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}State accuracy and solution profiles}{16}{subsection.115}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Baseline HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain points; the last column is extrapolatory. B3 uses the known full-space initial representation, unlike the conventional learned runners; see Section~\ref {sec:hprom-protocol}.}}{17}{table.117}\protected@file@percent }
-\newlabel{tab:online-state}{{6}{17}{Baseline HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain points; the last column is extrapolatory. B3 uses the known full-space initial representation, unlike the conventional learned runners; see Section~\ref {sec:hprom-protocol}}{table.117}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Baseline solution cut-plane overlays. Each row is one reporting parameter; columns show $u_x(x,y_{\mathrm  {mid}})$ and $u_x(x_{\mathrm  {mid}},y)$. Increasing opacity denotes $t=5,15,25$; all model curves are solid. All panels and enrichment counterparts share state ordinate limits. Overlapping profiles should be read with the space--time errors, not as evidence of identical trajectories.}}{18}{figure.119}\protected@file@percent }
-\newlabel{fig:hprom-baseline-solutions}{{3}{18}{Baseline solution cut-plane overlays. Each row is one reporting parameter; columns show $u_x(x,y_{\mathrm {mid}})$ and $u_x(x_{\mathrm {mid}},y)$. Increasing opacity denotes $t=5,15,25$; all model curves are solid. All panels and enrichment counterparts share state ordinate limits. Overlapping profiles should be read with the space--time errors, not as evidence of identical trajectories}{figure.119}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Complete coefficient recovery}{19}{subsection.120}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Baseline complete 151-coordinate trajectory errors $e_q$ (\%) against the frozen linear HPROM. Parameter and model ordering match Table~\ref {tab:online-state}. The direct maps have the same teacher but perform no sampled-residual solve.}}{19}{table.122}\protected@file@percent }
-\newlabel{tab:online-coefficients}{{7}{19}{Baseline complete 151-coordinate trajectory errors $e_q$ (\%) against the frozen linear HPROM. Parameter and model ordering match Table~\ref {tab:online-state}. The direct maps have the same teacher but perform no sampled-residual solve}{table.122}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Baseline per-coordinate trajectory errors against the linear HPROM: absolute errors above, relative errors (\%) below. Columns follow $\bm  {\mu }^{(v)},\bm  {\mu }^{(1)},\bm  {\mu }^{(2)},\bm  {\mu }^{(3)}$. All model curves are solid; the dotted vertical line marks coordinate ten. Each row uses common data-derived logarithmic limits across all baseline and enriched plots. The zero-error linear reference is omitted.}}{19}{figure.124}\protected@file@percent }
-\newlabel{fig:coefficient-curves}{{4}{19}{Baseline per-coordinate trajectory errors against the linear HPROM: absolute errors above, relative errors (\%) below. Columns follow $\mub ^{(v)},\mub ^{(1)},\mub ^{(2)},\mub ^{(3)}$. All model curves are solid; the dotted vertical line marks coordinate ten. Each row uses common data-derived logarithmic limits across all baseline and enriched plots. The zero-error linear reference is omitted}{figure.124}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {7}Secondary Recovery and Hyperreduced Online Work}{20}{section.125}\protected@file@percent }
-\newlabel{sec:hprom-b3-results}{{7}{20}{Secondary Recovery and Hyperreduced Online Work}{section.125}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}What three correction amplitudes recover}{20}{subsection.126}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Instantaneous HDM-relative state errors. Top: baseline linear HPROM, Cases~1--3, and corrected Case~2. Bottom: corrected Case~2 at all four data budgets. Columns follow the four reporting parameters; all panels share ordinate limits and all model curves are solid. Instantaneous norm ratios differ from the space--time Frobenius ratios in the tables.}}{20}{figure.128}\protected@file@percent }
-\newlabel{fig:hprom-b3-histories}{{5}{20}{Instantaneous HDM-relative state errors. Top: baseline linear HPROM, Cases~1--3, and corrected Case~2. Bottom: corrected Case~2 at all four data budgets. Columns follow the four reporting parameters; all panels share ordinate limits and all model curves are solid. Instantaneous norm ratios differ from the space--time Frobenius ratios in the tables}{figure.128}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Baseline timings and measured cost}{21}{subsection.129}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Baseline online measurements on one Sherlock node. Times average only the three in-domain parameters. The fresh HDM reference is $736.729$ s using 24 threads. HDM/time divides this fixed HDM time by model time; linear HPROM uses 24 threads and learned models one. $\dagger $: direct-map time is loaded-network coefficient inference only, excluding full-state reconstruction, so its ratio is not an end-to-end simulator speedup. Intrusive rows use one measurement per point.}}{21}{table.131}\protected@file@percent }
-\newlabel{tab:hprom-timing}{{8}{21}{Baseline online measurements on one Sherlock node. Times average only the three in-domain parameters. The fresh HDM reference is $736.729$ s using 24 threads. HDM/time divides this fixed HDM time by model time; linear HPROM uses 24 threads and learned models one. $\dagger $: direct-map time is loaded-network coefficient inference only, excluding full-state reconstruction, so its ratio is not an end-to-end simulator speedup. Intrusive rows use one measurement per point}{table.131}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Reducing support without changing the correction model}{21}{subsection.132}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Separate baseline B3 support comparison with predictor reuse in both variants, one CPU thread, and one trajectory measurement per point. The HDM reference is the same $736.729$ s. Draw count is not positive cell count. The 2048-draw row is the baseline B3 deployment also used in Table~\ref {tab:hprom-timing} and the main accuracy figures. The 4096-draw row is retained only as the matched support-ablation comparator; each enriched master map receives its own 2048-draw fit.}}{22}{table.134}\protected@file@percent }
-\newlabel{tab:hprom-b3-budget}{{9}{22}{Separate baseline B3 support comparison with predictor reuse in both variants, one CPU thread, and one trajectory measurement per point. The HDM reference is the same $736.729$ s. Draw count is not positive cell count. The 2048-draw row is the baseline B3 deployment also used in Table~\ref {tab:hprom-timing} and the main accuracy figures. The 4096-draw row is retained only as the matched support-ablation comparator; each enriched master map receives its own 2048-draw fit}{table.134}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {8}Effect of HPROM Coefficient-Data Enrichment}{22}{section.135}\protected@file@percent }
-\newlabel{sec:hprom-enrichment}{{8}{22}{Effect of HPROM Coefficient-Data Enrichment}{section.135}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Regression accuracy at fixed model families}{22}{subsection.136}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Relative coordinate regression errors (\%) at the four HPROM data budgets. Each vertical rule separates complete training/validation pairs. The master-map row is shared by conventional Case~2, B3, and POD--NN--ROM. These family-specific coordinate errors are not state-history errors.}}{22}{table.138}\protected@file@percent }
-\newlabel{tab:hprom-enrichment-training}{{10}{22}{Relative coordinate regression errors (\%) at the four HPROM data budgets. Each vertical rule separates complete training/validation pairs. The master-map row is shared by conventional Case~2, B3, and POD--NN--ROM. These family-specific coordinate errors are not state-history errors}{table.138}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}In-domain improvement and extrapolation are different tests}{23}{subsection.139}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces HPROM state-history errors $e_u$ (\%) across nested data budgets. Each budget has the in-domain mean followed by extrapolation. Vertical rules separate budgets; the horizontal rule separates intrusive residual solves from direct maps. The linear HPROM is unchanged.}}{23}{table.141}\protected@file@percent }
-\newlabel{tab:hprom-enrichment-state}{{11}{23}{HPROM state-history errors $e_u$ (\%) across nested data budgets. Each budget has the in-domain mean followed by extrapolation. Vertical rules separate budgets; the horizontal rule separates intrusive residual solves from direct maps. The linear HPROM is unchanged}{table.141}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Effect of the nested HPROM coefficient-data ladder on state errors. Left: mean of the three in-domain parameters. Right: extrapolation. Both panels use exactly the same state-error limits, including the largest plotted bar. Black horizontal lines denote the fixed linear HPROM; dashed vertical lines separate intrusive models from direct maps. B3 uses separately fitted 2048-draw rules at all four budgets.}}{23}{figure.143}\protected@file@percent }
-\newlabel{fig:hprom-enrichment-state}{{6}{23}{Effect of the nested HPROM coefficient-data ladder on state errors. Left: mean of the three in-domain parameters. Right: extrapolation. Both panels use exactly the same state-error limits, including the largest plotted bar. Black horizontal lines denote the fixed linear HPROM; dashed vertical lines separate intrusive models from direct maps. B3 uses separately fitted 2048-draw rules at all four budgets}{figure.143}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Coordinate consistency and enriched solution fields}{24}{subsection.144}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, in the same budget and model order as Table~\ref {tab:hprom-enrichment-state}.}}{24}{table.146}\protected@file@percent }
-\newlabel{tab:hprom-enrichment-coefficients}{{12}{24}{Complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, in the same budget and model order as Table~\ref {tab:hprom-enrichment-state}}{table.146}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Coefficient-history counterpart of Fig.~\ref {fig:hprom-enrichment-state}. Both panels share coefficient-error limits; all errors use the same fixed linear-HPROM reference. Dashed vertical separators distinguish residual-solving and direct models.}}{24}{figure.148}\protected@file@percent }
-\newlabel{fig:hprom-enrichment-coefficients}{{7}{24}{Coefficient-history counterpart of Fig.~\ref {fig:hprom-enrichment-state}. Both panels share coefficient-error limits; all errors use the same fixed linear-HPROM reference. Dashed vertical separators distinguish residual-solving and direct models}{figure.148}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces $9+18$ HPROM solution overlays, with exactly the same model order, cut planes, times, and ordinate limits as Fig.~\ref {fig:hprom-baseline-solutions}. Initializations follow the campaign protocol in Section~\ref {sec:hprom-protocol}.}}{25}{figure.150}\protected@file@percent }
-\newlabel{fig:hprom-enriched-solutions}{{8}{25}{$9+18$ HPROM solution overlays, with exactly the same model order, cut planes, times, and ordinate limits as Fig.~\ref {fig:hprom-baseline-solutions}. Initializations follow the campaign protocol in Section~\ref {sec:hprom-protocol}}{figure.150}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces $9+18$ per-coordinate HPROM trajectory errors, with the same reference, model colours, coordinate split, and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All models, including both non-intrusive maps and B3, are shown.}}{26}{figure.152}\protected@file@percent }
-\newlabel{fig:hprom-enriched-coefficients}{{9}{26}{$9+18$ per-coordinate HPROM trajectory errors, with the same reference, model colours, coordinate split, and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All models, including both non-intrusive maps and B3, are shown}{figure.152}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusions}{26}{section.153}\protected@file@percent }
-\newlabel{sec:conclusions}{{9}{26}{Conclusions}{section.153}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {A}Full-Residual PROM Direction-Selection Controls}{27}{appendix.154}\protected@file@percent }
-\newlabel{sec:adaptive-results}{{A}{27}{Full-Residual PROM Direction-Selection Controls}{appendix.154}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Diagnostic protocol}{27}{subsection.155}\protected@file@percent }
-\newlabel{sec:adaptive-protocol}{{A.1}{27}{Diagnostic protocol}{subsection.155}{}}
-\newlabel{eq:adaptive-tested-ranks}{{69}{27}{Diagnostic protocol}{equation.156}{}}
-\newlabel{eq:case2-equal-dimension-control}{{70}{27}{Diagnostic protocol}{equation.157}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces Validation-only, equal-dimensional full-residual PROM comparison. All six error columns report percentages for the complete 151-coordinate trajectory against the corresponding linear PROM. At each row both models have $d=10+r$ online unknowns: the adaptive model retains $n=10$ and adds $r$ residual-selected secondary directions, whereas the control directly solves the first $10+r$ POD coordinates. All requested ranks were attained at every time step.}}{27}{table.159}\protected@file@percent }
-\newlabel{tab:adaptive-rank-validation}{{13}{27}{Validation-only, equal-dimensional full-residual PROM comparison. All six error columns report percentages for the complete 151-coordinate trajectory against the corresponding linear PROM. At each row both models have $d=10+r$ online unknowns: the adaptive model retains $n=10$ and adds $r$ residual-selected secondary directions, whereas the control directly solves the first $10+r$ POD coordinates. All requested ranks were attained at every time step}{table.159}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Validation-only comparison at equal online dimension $d=10+r$. Left: mean complete coefficient-history error against linear PROM. Right: residual norm at termination of each nonlinear solve, averaged over time steps and the two validation parameters, then normalized by the common $r=0$, $n=10$ value. The star identifies the previously frozen $r=3$ rather than a rank selected from this expanded sweep.}}{28}{figure.161}\protected@file@percent }
-\newlabel{fig:adaptive-rank-validation}{{10}{28}{Validation-only comparison at equal online dimension $d=10+r$. Left: mean complete coefficient-history error against linear PROM. Right: residual norm at termination of each nonlinear solve, averaged over time steps and the two validation parameters, then normalized by the common $r=0$, $n=10$ value. The star identifies the previously frozen $r=3$ rather than a rank selected from this expanded sweep}{figure.161}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Equal-dimensional control and state accuracy}{28}{subsection.162}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces Common-initialization full-residual comparison: state-history error $e_u$ (\%). Every learned model uses baseline training data. The mean averages the three in-domain points; the final column is extrapolatory. The $n=13$ Case--2 row controls for the 13 online unknowns used by Case~2+$\mathbf  B_3$. The linear PROM is the reference for the fixed 151-mode basis.}}{29}{table.164}\protected@file@percent }
-\newlabel{tab:adaptive-state}{{14}{29}{Common-initialization full-residual comparison: state-history error $e_u$ (\%). Every learned model uses baseline training data. The mean averages the three in-domain points; the final column is extrapolatory. The $n=13$ Case--2 row controls for the 13 online unknowns used by Case~2+$\mathbf B_3$. The linear PROM is the reference for the fixed 151-mode basis}{table.164}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Instantaneous relative state errors $100\left \lVert \mathbf  u_{\mathrm  {HDM}}(t)-\mathbf  u_{\mathrm  {ROM}}(t) \right \rVert _2/ \left \lVert \mathbf  u_{\mathrm  {HDM}}(t) \right \rVert _2$ for the common-initialization comparison. Panels follow the four reporting parameters and share the same ordinate range. All model curves are solid. These time-resolved errors complement, rather than replace, the space--time norm in Table~\ref {tab:adaptive-state}.}}{30}{figure.166}\protected@file@percent }
-\newlabel{fig:adaptive-state-histories}{{11}{30}{Instantaneous relative state errors $100\norm {\uvec _{\mathrm {HDM}}(t)-\uvec _{\mathrm {ROM}}(t)}_2/ \norm {\uvec _{\mathrm {HDM}}(t)}_2$ for the common-initialization comparison. Panels follow the four reporting parameters and share the same ordinate range. All model curves are solid. These time-resolved errors complement, rather than replace, the space--time norm in Table~\ref {tab:adaptive-state}}{figure.166}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}Recovery of the full coordinate trajectory}{30}{subsection.167}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces Common-initialization full-residual comparison: complete 151-coordinate trajectory error $e_q$ (\%) against the corresponding linear PROM. Means and parameter ordering match Table~\ref {tab:adaptive-state}.}}{30}{table.169}\protected@file@percent }
-\newlabel{tab:adaptive-coefficients}{{15}{30}{Common-initialization full-residual comparison: complete 151-coordinate trajectory error $e_q$ (\%) against the corresponding linear PROM. Means and parameter ordering match Table~\ref {tab:adaptive-state}}{table.169}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Common-initialization comparison: per-coordinate absolute trajectory error (top) and relative trajectory error in percent (bottom) against the linear PROM. All panels in each row share logarithmic ordinate limits computed from the plotted data. The dotted vertical line marks the ten primary coordinates; every model curve is solid. The zero-error linear-PROM reference is omitted from the logarithmic plots.}}{31}{figure.171}\protected@file@percent }
-\newlabel{fig:adaptive-coefficients}{{12}{31}{Common-initialization comparison: per-coordinate absolute trajectory error (top) and relative trajectory error in percent (bottom) against the linear PROM. All panels in each row share logarithmic ordinate limits computed from the plotted data. The dotted vertical line marks the ten primary coordinates; every model curve is solid. The zero-error linear-PROM reference is omitted from the logarithmic plots}{figure.171}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {B}Full-Residual Case--2 Sweep and Perturbation Diagnostic}{31}{appendix.172}\protected@file@percent }
-\newlabel{sec:prom-results}{{B}{31}{Full-Residual Case--2 Sweep and Perturbation Diagnostic}{appendix.172}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {B.1}Case--2 solved-dimension sweep}{31}{subsection.173}\protected@file@percent }
-\newlabel{sec:case2-sweep}{{B.1}{31}{Case--2 solved-dimension sweep}{subsection.173}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces Case--2 state errors as the number of residual-solved primary coordinates is varied. The $n=0$ and $n=151$ endpoints are respectively the shared-map POD--NN--ROM and the linear PROM.}}{32}{table.175}\protected@file@percent }
-\newlabel{tab:case2-sweep}{{16}{32}{Case--2 state errors as the number of residual-solved primary coordinates is varied. The $n=0$ and $n=151$ endpoints are respectively the shared-map POD--NN--ROM and the linear PROM}{table.175}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Case--2 state error versus the solved primary dimension. The black curve is the in-domain mean and the dotted line marks the baseline $n=10$ split.}}{32}{figure.177}\protected@file@percent }
-\newlabel{fig:case2-sweep-state}{{13}{32}{Case--2 state error versus the solved primary dimension. The black curve is the in-domain mean and the dotted line marks the baseline $n=10$ split}{figure.177}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Case--2 coefficient trajectories in the shared-master-map sweep. Top: absolute error against linear PROM. Bottom: the corresponding relative error. The $n=151$ linear-PROM reference has zero coefficient error and is therefore omitted.}}{33}{figure.179}\protected@file@percent }
-\newlabel{fig:case2-sweep-coefficients}{{14}{33}{Case--2 coefficient trajectories in the shared-master-map sweep. Top: absolute error against linear PROM. Bottom: the corresponding relative error. The $n=151$ linear-PROM reference has zero coefficient error and is therefore omitted}{figure.179}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {B.2}Controlled Case--2 tail perturbation}{33}{subsection.180}\protected@file@percent }
-\newlabel{sec:tail-perturbation}{{B.2}{33}{Controlled Case--2 tail perturbation}{subsection.180}{}}
-\newlabel{eq:tail-perturbation}{{71}{33}{Controlled Case--2 tail perturbation}{equation.181}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces Primary-coordinate error induced by a controlled secondary-tail perturbation in Case~2 with $n=10$. Each entry is relative to the corresponding linear-PROM primary history.}}{34}{table.183}\protected@file@percent }
-\newlabel{tab:tail-perturbation}{{17}{34}{Primary-coordinate error induced by a controlled secondary-tail perturbation in Case~2 with $n=10$. Each entry is relative to the corresponding linear-PROM primary history}{table.183}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Euclidean-POD Case--2 sensitivity to a prescribed secondary-tail error, restricted to perturbations up to $50\%$. Left: state error against the HDM. Right: error in the ten residual-solved primary coordinates against linear PROM.}}{34}{figure.185}\protected@file@percent }
-\newlabel{fig:tail-perturbation}{{15}{34}{Euclidean-POD Case--2 sensitivity to a prescribed secondary-tail error, restricted to perturbations up to $50\%$. Left: state error against the HDM. Right: error in the ten residual-solved primary coordinates against linear PROM}{figure.185}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {C}Pointwise HPROM Enrichment and Coefficient Histories}{34}{appendix.186}\protected@file@percent }
-\newlabel{app:hprom-details}{{C}{34}{Pointwise HPROM Enrichment and Coefficient Histories}{appendix.186}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {C.1}The $9+8$ campaign}{35}{subsection.187}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces Pointwise $9+8$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points.}}{35}{table.189}\protected@file@percent }
-\newlabel{tab:hprom-lhs8-state}{{18}{35}{Pointwise $9+8$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points}{table.189}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces Pointwise $9+8$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table.}}{35}{table.191}\protected@file@percent }
-\newlabel{tab:hprom-lhs8-coefficients}{{19}{35}{Pointwise $9+8$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table}{table.191}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces $9+8$ HPROM solution overlays, matching the cuts, model colours, times, and common ordinate limits of Fig.~\ref {fig:hprom-baseline-solutions}.}}{36}{figure.193}\protected@file@percent }
-\newlabel{fig:hprom-lhs8-solutions}{{16}{36}{$9+8$ HPROM solution overlays, matching the cuts, model colours, times, and common ordinate limits of Fig.~\ref {fig:hprom-baseline-solutions}}{figure.193}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces $9+8$ per-coordinate trajectory errors, with the same linear-HPROM reference and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All seven learned deployments appear.}}{37}{figure.195}\protected@file@percent }
-\newlabel{fig:hprom-lhs8-coefficients}{{17}{37}{$9+8$ per-coordinate trajectory errors, with the same linear-HPROM reference and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All seven learned deployments appear}{figure.195}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {C.2}The $9+12$ campaign}{37}{subsection.196}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {20}{\ignorespaces Pointwise $9+12$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points.}}{37}{table.198}\protected@file@percent }
-\newlabel{tab:hprom-lhs12-state}{{20}{37}{Pointwise $9+12$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points}{table.198}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {21}{\ignorespaces Pointwise $9+12$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table.}}{38}{table.200}\protected@file@percent }
-\newlabel{tab:hprom-lhs12-coefficients}{{21}{38}{Pointwise $9+12$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table}{table.200}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces $9+12$ HPROM solution overlays, matching the cuts, model colours, times, and common ordinate limits of Fig.~\ref {fig:hprom-baseline-solutions}.}}{39}{figure.202}\protected@file@percent }
-\newlabel{fig:hprom-lhs12-solutions}{{18}{39}{$9+12$ HPROM solution overlays, matching the cuts, model colours, times, and common ordinate limits of Fig.~\ref {fig:hprom-baseline-solutions}}{figure.202}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces $9+12$ per-coordinate trajectory errors, with the same linear-HPROM reference and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All seven learned deployments appear.}}{40}{figure.204}\protected@file@percent }
-\newlabel{fig:hprom-lhs12-coefficients}{{19}{40}{$9+12$ per-coordinate trajectory errors, with the same linear-HPROM reference and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All seven learned deployments appear}{figure.204}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {C.3}The $9+18$ campaign}{40}{subsection.205}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {22}{\ignorespaces Pointwise $9+18$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points.}}{40}{table.207}\protected@file@percent }
-\newlabel{tab:hprom-lhs18-state}{{22}{40}{Pointwise $9+18$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points}{table.207}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {23}{\ignorespaces Pointwise $9+18$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table.}}{41}{table.209}\protected@file@percent }
-\newlabel{tab:hprom-lhs18-coefficients}{{23}{41}{Pointwise $9+18$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table}{table.209}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Absolute coefficient-error histories for the $9$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{42}{figure.211}\protected@file@percent }
-\newlabel{fig:hprom-baseline-heat-absolute}{{20}{42}{Absolute coefficient-error histories for the $9$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.211}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces Relative coefficient-error histories for the $9$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{43}{figure.213}\protected@file@percent }
-\newlabel{fig:hprom-baseline-heat-relative}{{21}{43}{Relative coefficient-error histories for the $9$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.213}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {22}{\ignorespaces Absolute coefficient-error histories for the $9+8$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{44}{figure.215}\protected@file@percent }
-\newlabel{fig:hprom-lhs8-heat-absolute}{{22}{44}{Absolute coefficient-error histories for the $9+8$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.215}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {23}{\ignorespaces Relative coefficient-error histories for the $9+8$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{45}{figure.217}\protected@file@percent }
-\newlabel{fig:hprom-lhs8-heat-relative}{{23}{45}{Relative coefficient-error histories for the $9+8$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.217}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {24}{\ignorespaces Absolute coefficient-error histories for the $9+12$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{46}{figure.219}\protected@file@percent }
-\newlabel{fig:hprom-lhs12-heat-absolute}{{24}{46}{Absolute coefficient-error histories for the $9+12$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.219}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {25}{\ignorespaces Relative coefficient-error histories for the $9+12$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{47}{figure.221}\protected@file@percent }
-\newlabel{fig:hprom-lhs12-heat-relative}{{25}{47}{Relative coefficient-error histories for the $9+12$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.221}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {26}{\ignorespaces Absolute coefficient-error histories for the $9+18$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{48}{figure.223}\protected@file@percent }
-\newlabel{fig:hprom-lhs18-heat-absolute}{{26}{48}{Absolute coefficient-error histories for the $9+18$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.223}{}}
-\bibstyle{unsrt}
-\bibdata{bibliography}
-\@writefile{lof}{\contentsline {figure}{\numberline {27}{\ignorespaces Relative coefficient-error histories for the $9+18$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{49}{figure.225}\protected@file@percent }
-\newlabel{fig:hprom-lhs18-heat-relative}{{27}{49}{Relative coefficient-error histories for the $9+18$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.225}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {D}LSPG-Sensitive Basis Exploration}{49}{appendix.226}\protected@file@percent }
-\newlabel{app:lspg-sensitive}{{D}{49}{LSPG-Sensitive Basis Exploration}{appendix.226}{}}
-\bibcite{antoulas2005approximation}{1}
-\bibcite{quarteroni2014reduced}{2}
-\bibcite{barnett2023neural}{3}
-\bibcite{cohen2023nonlinear}{4}
+\newlabel{eq:adaptive-mass-moment}{{79}{16}{Positive moment fitting for an adaptive trial space}{equation.104}{}}
+\newlabel{eq:adaptive-support-probability}{{80}{16}{Positive moment fitting for an adaptive trial space}{equation.105}{}}
+\newlabel{eq:adaptive-positive-fit}{{81}{16}{Positive moment fitting for an adaptive trial space}{equation.106}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Benchmark and HPROM Protocol}{16}{section.107}\protected@file@percent }
+\newlabel{sec:benchmark}{{5}{16}{Benchmark and HPROM Protocol}{section.107}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Burgers problem and fixed common basis}{16}{subsection.108}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Training targets, validation, and reporting parameters}{16}{subsection.111}\protected@file@percent }
+\newlabel{eq:hprom-coordinate-training-data}{{84}{17}{Training targets, validation, and reporting parameters}{equation.112}{}}
+\newlabel{eq:validation-points}{{85}{17}{Training targets, validation, and reporting parameters}{equation.113}{}}
+\newlabel{eq:evaluation-points}{{86}{17}{Training targets, validation, and reporting parameters}{equation.114}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Nested enrichment and unchanged regression families}{17}{subsection.115}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Nested linear-HPROM coefficient data. Totals count complete trajectories; the two validation trajectories are excluded from training.}}{17}{table.117}\protected@file@percent }
+\newlabel{tab:euclidean-enrichment-dataset}{{2}{17}{Nested linear-HPROM coefficient data. Totals count complete trajectories; the two validation trajectories are excluded from training}{table.117}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces HPROM training layouts in the order baseline, $9+8$, $9+12$, $9+18$. Black circles mark baseline parameters, coloured points the added interior and margin parameters, diamonds the two held-out linear-HPROM regression-validation parameters, and stars the four reporting parameters. The original parameter box is outlined. Margin sampling does not guarantee corner coverage: the $9+12$ subset adds a location near $(3.980,0.03173)$ in the upper-left region close to $\bm  {\mu }^{(3)}$. Validation points concern regression and rule auditing, not HDM test data.}}{18}{figure.119}\protected@file@percent }
+\newlabel{fig:parameter-space}{{1}{18}{HPROM training layouts in the order baseline, $9+8$, $9+12$, $9+18$. Black circles mark baseline parameters, coloured points the added interior and margin parameters, diamonds the two held-out linear-HPROM regression-validation parameters, and stars the four reporting parameters. The original parameter box is outlined. Margin sampling does not guarantee corner coverage: the $9+12$ subset adds a location near $(3.980,0.03173)$ in the upper-left region close to $\mub ^{(3)}$. Validation points concern regression and rule auditing, not HDM test data}{figure.119}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Baseline regression architectures and relative Frobenius errors (\%) on training and held-out parameter-validation coordinates. The Case--2 master map also supplies POD--NN--ROM and Case~2+$\mathbf  B_3$; it is trained once, not separately for these deployments.}}{19}{table.121}\protected@file@percent }
+\newlabel{tab:training}{{3}{19}{Baseline regression architectures and relative Frobenius errors (\%) on training and held-out parameter-validation coordinates. The Case--2 master map also supplies POD--NN--ROM and Case~2+$\mathbf B_3$; it is trained once, not separately for these deployments}{table.121}{}}
+\newlabel{eq:master-map}{{87}{19}{Nested enrichment and unchanged regression families}{equation.122}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Coordinate-level interpretation of the controlled comparison. The same trained network is used in all three rows. Only deployment changes; the adaptive patterns are constructed online from the computed predictor, not from reference trajectories at the reporting parameters.}}{19}{figure.124}\protected@file@percent }
+\newlabel{fig:shared-map-deployments}{{2}{19}{Coordinate-level interpretation of the controlled comparison. The same trained network is used in all three rows. Only deployment changes; the adaptive patterns are constructed online from the computed predictor, not from reference trajectories at the reporting parameters}{figure.124}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Cubature protocol and initialization}{19}{subsection.125}\protected@file@percent }
+\newlabel{sec:hprom-protocol}{{5.4}{19}{Cubature protocol and initialization}{subsection.125}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Validation-only acceptance of the four 2048-draw B3 rules. Eigenvalues compare sampled and full complete-coordinate Jacobian Grams. Gradient error is a ratio, not a percentage. ``LS ratio'' evaluates the sampled B3 linearized update in the full residual norm and divides by the full-residual B3 linearized value. Reporting points do not enter acceptance.}}{20}{table.127}\protected@file@percent }
+\newlabel{tab:b3-validation}{{4}{20}{Validation-only acceptance of the four 2048-draw B3 rules. Eigenvalues compare sampled and full complete-coordinate Jacobian Grams. Gradient error is a ratio, not a percentage. ``LS ratio'' evaluates the sampled B3 linearized update in the full residual norm and divides by the full-residual B3 linearized value. Reporting points do not enter acceptance}{table.127}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Positive cubature cell counts at each data budget. B3 has a dedicated moment-fitted rule; the other nonlinear models use map-specific ECM. State stencil sizes can exceed retained residual-cell counts because of neighbour dependencies.}}{20}{table.129}\protected@file@percent }
+\newlabel{tab:hprom-cubature}{{5}{20}{Positive cubature cell counts at each data budget. B3 has a dedicated moment-fitted rule; the other nonlinear models use map-specific ECM. State stencil sizes can exceed retained residual-cell counts because of neighbour dependencies}{table.129}{}}
+\newlabel{eq:adaptive-common-initial}{{88}{21}{Cubature protocol and initialization}{equation.130}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}Errors and scope of online measurements}{21}{subsection.131}\protected@file@percent }
+\newlabel{eq:state-coordinate-histories}{{89}{21}{Errors and scope of online measurements}{equation.132}{}}
+\newlabel{eq:state-error}{{90}{21}{Errors and scope of online measurements}{equation.133}{}}
+\newlabel{eq:coefficient-error}{{91}{21}{Errors and scope of online measurements}{equation.134}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Baseline HPROM Results}{22}{section.135}\protected@file@percent }
+\newlabel{sec:hprom-results}{{6}{22}{Baseline HPROM Results}{section.135}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}State accuracy and solution profiles}{22}{subsection.136}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Baseline HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain points; the last column is extrapolatory. B3 uses the known full-space initial representation, unlike the conventional learned runners; see Section~\ref {sec:hprom-protocol}.}}{22}{table.138}\protected@file@percent }
+\newlabel{tab:online-state}{{6}{22}{Baseline HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain points; the last column is extrapolatory. B3 uses the known full-space initial representation, unlike the conventional learned runners; see Section~\ref {sec:hprom-protocol}}{table.138}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Baseline solution cut-plane overlays. Each row is one reporting parameter; columns show $u_x(x,y_{\mathrm  {mid}})$ and $u_x(x_{\mathrm  {mid}},y)$. Increasing opacity denotes $t=5,15,25$; all model curves are solid. All panels and enrichment counterparts share state ordinate limits. Overlapping profiles should be read with the space--time errors, not as evidence of identical trajectories.}}{23}{figure.140}\protected@file@percent }
+\newlabel{fig:hprom-baseline-solutions}{{3}{23}{Baseline solution cut-plane overlays. Each row is one reporting parameter; columns show $u_x(x,y_{\mathrm {mid}})$ and $u_x(x_{\mathrm {mid}},y)$. Increasing opacity denotes $t=5,15,25$; all model curves are solid. All panels and enrichment counterparts share state ordinate limits. Overlapping profiles should be read with the space--time errors, not as evidence of identical trajectories}{figure.140}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Complete coefficient recovery}{23}{subsection.141}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Baseline complete 151-coordinate trajectory errors $e_q$ (\%) against the frozen linear HPROM. Parameter and model ordering match Table~\ref {tab:online-state}. The direct maps have the same teacher but perform no sampled-residual solve.}}{24}{table.143}\protected@file@percent }
+\newlabel{tab:online-coefficients}{{7}{24}{Baseline complete 151-coordinate trajectory errors $e_q$ (\%) against the frozen linear HPROM. Parameter and model ordering match Table~\ref {tab:online-state}. The direct maps have the same teacher but perform no sampled-residual solve}{table.143}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Baseline per-coordinate trajectory errors against the linear HPROM: absolute errors above, relative errors (\%) below. Columns follow $\bm  {\mu }^{(v)},\bm  {\mu }^{(1)},\bm  {\mu }^{(2)},\bm  {\mu }^{(3)}$. All model curves are solid; the dotted vertical line marks coordinate ten. Each row uses common data-derived logarithmic limits across all baseline and enriched plots. The zero-error linear reference is omitted.}}{24}{figure.145}\protected@file@percent }
+\newlabel{fig:coefficient-curves}{{4}{24}{Baseline per-coordinate trajectory errors against the linear HPROM: absolute errors above, relative errors (\%) below. Columns follow $\mub ^{(v)},\mub ^{(1)},\mub ^{(2)},\mub ^{(3)}$. All model curves are solid; the dotted vertical line marks coordinate ten. Each row uses common data-derived logarithmic limits across all baseline and enriched plots. The zero-error linear reference is omitted}{figure.145}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}Secondary Recovery and Hyperreduced Online Work}{25}{section.146}\protected@file@percent }
+\newlabel{sec:hprom-b3-results}{{7}{25}{Secondary Recovery and Hyperreduced Online Work}{section.146}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}What three correction amplitudes recover}{25}{subsection.147}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Instantaneous HDM-relative state errors. Top: baseline linear HPROM, Cases~1--3, and corrected Case~2. Bottom: corrected Case~2 at all four data budgets. Columns follow the four reporting parameters; all panels share ordinate limits and all model curves are solid. Instantaneous norm ratios differ from the space--time Frobenius ratios in the tables.}}{25}{figure.149}\protected@file@percent }
+\newlabel{fig:hprom-b3-histories}{{5}{25}{Instantaneous HDM-relative state errors. Top: baseline linear HPROM, Cases~1--3, and corrected Case~2. Bottom: corrected Case~2 at all four data budgets. Columns follow the four reporting parameters; all panels share ordinate limits and all model curves are solid. Instantaneous norm ratios differ from the space--time Frobenius ratios in the tables}{figure.149}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Baseline timings and measured cost}{26}{subsection.150}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Baseline online measurements on one Sherlock node. Times average only the three in-domain parameters. The fresh HDM reference is $736.729$ s using 24 threads. HDM/time divides this fixed HDM time by model time; linear HPROM uses 24 threads and learned models one. $\dagger $: direct-map time is loaded-network coefficient inference only, excluding full-state reconstruction, so its ratio is not an end-to-end simulator speedup. Intrusive rows use one measurement per point.}}{26}{table.152}\protected@file@percent }
+\newlabel{tab:hprom-timing}{{8}{26}{Baseline online measurements on one Sherlock node. Times average only the three in-domain parameters. The fresh HDM reference is $736.729$ s using 24 threads. HDM/time divides this fixed HDM time by model time; linear HPROM uses 24 threads and learned models one. $\dagger $: direct-map time is loaded-network coefficient inference only, excluding full-state reconstruction, so its ratio is not an end-to-end simulator speedup. Intrusive rows use one measurement per point}{table.152}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}Reducing support without changing the correction model}{26}{subsection.153}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Separate baseline B3 support comparison with predictor reuse in both variants, one CPU thread, and one trajectory measurement per point. The HDM reference is the same $736.729$ s. Draw count is not positive cell count. The 2048-draw row is the baseline B3 deployment also used in Table~\ref {tab:hprom-timing} and the main accuracy figures. The 4096-draw row is retained only as the matched support-ablation comparator; each enriched master map receives its own 2048-draw fit.}}{27}{table.155}\protected@file@percent }
+\newlabel{tab:hprom-b3-budget}{{9}{27}{Separate baseline B3 support comparison with predictor reuse in both variants, one CPU thread, and one trajectory measurement per point. The HDM reference is the same $736.729$ s. Draw count is not positive cell count. The 2048-draw row is the baseline B3 deployment also used in Table~\ref {tab:hprom-timing} and the main accuracy figures. The 4096-draw row is retained only as the matched support-ablation comparator; each enriched master map receives its own 2048-draw fit}{table.155}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {8}Effect of HPROM Coefficient-Data Enrichment}{27}{section.156}\protected@file@percent }
+\newlabel{sec:hprom-enrichment}{{8}{27}{Effect of HPROM Coefficient-Data Enrichment}{section.156}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Regression accuracy at fixed model families}{27}{subsection.157}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Relative coordinate regression errors (\%) at the four HPROM data budgets. Each vertical rule separates complete training/validation pairs. The master-map row is shared by conventional Case~2, B3, and POD--NN--ROM. These family-specific coordinate errors are not state-history errors.}}{27}{table.159}\protected@file@percent }
+\newlabel{tab:hprom-enrichment-training}{{10}{27}{Relative coordinate regression errors (\%) at the four HPROM data budgets. Each vertical rule separates complete training/validation pairs. The master-map row is shared by conventional Case~2, B3, and POD--NN--ROM. These family-specific coordinate errors are not state-history errors}{table.159}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}In-domain improvement and extrapolation are different tests}{28}{subsection.160}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces HPROM state-history errors $e_u$ (\%) across nested data budgets. Each budget has the in-domain mean followed by extrapolation. Vertical rules separate budgets; the horizontal rule separates intrusive residual solves from direct maps. The linear HPROM is unchanged.}}{28}{table.162}\protected@file@percent }
+\newlabel{tab:hprom-enrichment-state}{{11}{28}{HPROM state-history errors $e_u$ (\%) across nested data budgets. Each budget has the in-domain mean followed by extrapolation. Vertical rules separate budgets; the horizontal rule separates intrusive residual solves from direct maps. The linear HPROM is unchanged}{table.162}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Effect of the nested HPROM coefficient-data ladder on state errors. Left: mean of the three in-domain parameters. Right: extrapolation. Both panels use exactly the same state-error limits, including the largest plotted bar. Black horizontal lines denote the fixed linear HPROM; dashed vertical lines separate intrusive models from direct maps. B3 uses separately fitted 2048-draw rules at all four budgets.}}{28}{figure.164}\protected@file@percent }
+\newlabel{fig:hprom-enrichment-state}{{6}{28}{Effect of the nested HPROM coefficient-data ladder on state errors. Left: mean of the three in-domain parameters. Right: extrapolation. Both panels use exactly the same state-error limits, including the largest plotted bar. Black horizontal lines denote the fixed linear HPROM; dashed vertical lines separate intrusive models from direct maps. B3 uses separately fitted 2048-draw rules at all four budgets}{figure.164}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}Coordinate consistency and enriched solution fields}{29}{subsection.165}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, in the same budget and model order as Table~\ref {tab:hprom-enrichment-state}.}}{29}{table.167}\protected@file@percent }
+\newlabel{tab:hprom-enrichment-coefficients}{{12}{29}{Complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, in the same budget and model order as Table~\ref {tab:hprom-enrichment-state}}{table.167}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Coefficient-history counterpart of Fig.~\ref {fig:hprom-enrichment-state}. Both panels share coefficient-error limits; all errors use the same fixed linear-HPROM reference. Dashed vertical separators distinguish residual-solving and direct models.}}{29}{figure.169}\protected@file@percent }
+\newlabel{fig:hprom-enrichment-coefficients}{{7}{29}{Coefficient-history counterpart of Fig.~\ref {fig:hprom-enrichment-state}. Both panels share coefficient-error limits; all errors use the same fixed linear-HPROM reference. Dashed vertical separators distinguish residual-solving and direct models}{figure.169}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces $9+18$ HPROM solution overlays, with exactly the same model order, cut planes, times, and ordinate limits as Fig.~\ref {fig:hprom-baseline-solutions}. Initializations follow the campaign protocol in Section~\ref {sec:hprom-protocol}.}}{30}{figure.171}\protected@file@percent }
+\newlabel{fig:hprom-enriched-solutions}{{8}{30}{$9+18$ HPROM solution overlays, with exactly the same model order, cut planes, times, and ordinate limits as Fig.~\ref {fig:hprom-baseline-solutions}. Initializations follow the campaign protocol in Section~\ref {sec:hprom-protocol}}{figure.171}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces $9+18$ per-coordinate HPROM trajectory errors, with the same reference, model colours, coordinate split, and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All models, including both nonintrusive maps and B3, are shown.}}{31}{figure.173}\protected@file@percent }
+\newlabel{fig:hprom-enriched-coefficients}{{9}{31}{$9+18$ per-coordinate HPROM trajectory errors, with the same reference, model colours, coordinate split, and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All models, including both nonintrusive maps and B3, are shown}{figure.173}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {9}Conclusions}{31}{section.174}\protected@file@percent }
+\newlabel{sec:conclusions}{{9}{31}{Conclusions}{section.174}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Full-Residual PROM Direction-Selection Controls}{32}{appendix.175}\protected@file@percent }
+\newlabel{sec:adaptive-results}{{A}{32}{Full-Residual PROM Direction-Selection Controls}{appendix.175}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.1}Diagnostic protocol}{32}{subsection.176}\protected@file@percent }
+\newlabel{sec:adaptive-protocol}{{A.1}{32}{Diagnostic protocol}{subsection.176}{}}
+\newlabel{eq:adaptive-tested-ranks}{{92}{32}{Diagnostic protocol}{equation.177}{}}
+\newlabel{eq:case2-equal-dimension-control}{{93}{32}{Diagnostic protocol}{equation.178}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces Validation-only, equal-dimensional full-residual PROM comparison. All six error columns report percentages for the complete 151-coordinate trajectory against the corresponding linear PROM. At each row both models have $d=10+r$ online unknowns: the adaptive model retains $n=10$ and adds $r$ residual-selected secondary directions, whereas the control directly solves the first $10+r$ POD coordinates. All requested ranks were attained at every time step.}}{33}{table.180}\protected@file@percent }
+\newlabel{tab:adaptive-rank-validation}{{13}{33}{Validation-only, equal-dimensional full-residual PROM comparison. All six error columns report percentages for the complete 151-coordinate trajectory against the corresponding linear PROM. At each row both models have $d=10+r$ online unknowns: the adaptive model retains $n=10$ and adds $r$ residual-selected secondary directions, whereas the control directly solves the first $10+r$ POD coordinates. All requested ranks were attained at every time step}{table.180}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Validation-only comparison at equal online dimension $d=10+r$. Left: mean complete coefficient-history error against linear PROM. Right: residual norm at termination of each nonlinear solve, averaged over time steps and the two validation parameters, then normalized by the common $r=0$, $n=10$ value. The star identifies the previously frozen $r=3$ rather than a rank selected from this expanded sweep.}}{33}{figure.182}\protected@file@percent }
+\newlabel{fig:adaptive-rank-validation}{{10}{33}{Validation-only comparison at equal online dimension $d=10+r$. Left: mean complete coefficient-history error against linear PROM. Right: residual norm at termination of each nonlinear solve, averaged over time steps and the two validation parameters, then normalized by the common $r=0$, $n=10$ value. The star identifies the previously frozen $r=3$ rather than a rank selected from this expanded sweep}{figure.182}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.2}Equal-dimensional control and state accuracy}{34}{subsection.183}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces Common-initialization full-residual comparison: state-history error $e_u$ (\%). Every learned model uses baseline training data. The mean averages the three in-domain points; the final column is extrapolatory. The $n=13$ Case--2 row controls for the 13 online unknowns used by Case~2+$\mathbf  B_3$. The linear PROM is the reference for the fixed 151-mode basis.}}{34}{table.185}\protected@file@percent }
+\newlabel{tab:adaptive-state}{{14}{34}{Common-initialization full-residual comparison: state-history error $e_u$ (\%). Every learned model uses baseline training data. The mean averages the three in-domain points; the final column is extrapolatory. The $n=13$ Case--2 row controls for the 13 online unknowns used by Case~2+$\mathbf B_3$. The linear PROM is the reference for the fixed 151-mode basis}{table.185}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Instantaneous relative state errors $100\left \lVert \mathbf  u(t)-\setbox \z@ \hbox {\mathsurround \z@ $\textstyle \mathbf  u$}\mathaccent "0365{\mathbf  u}_{\mathrm  {ROM}}(t) \right \rVert _2/ \left \lVert \mathbf  u(t) \right \rVert _2$ for the common-initialization comparison. Panels follow the four reporting parameters and share the same ordinate range. All model curves are solid. These time-resolved errors complement, rather than replace, the space--time norm in Table~\ref {tab:adaptive-state}.}}{35}{figure.187}\protected@file@percent }
+\newlabel{fig:adaptive-state-histories}{{11}{35}{Instantaneous relative state errors $100\norm {\uvec (t)-\utilde _{\mathrm {ROM}}(t)}_2/ \norm {\uvec (t)}_2$ for the common-initialization comparison. Panels follow the four reporting parameters and share the same ordinate range. All model curves are solid. These time-resolved errors complement, rather than replace, the space--time norm in Table~\ref {tab:adaptive-state}}{figure.187}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {A.3}Recovery of the full coordinate trajectory}{35}{subsection.188}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces Common-initialization full-residual comparison: complete 151-coordinate trajectory error $e_q$ (\%) against the corresponding linear PROM. Means and parameter ordering match Table~\ref {tab:adaptive-state}.}}{35}{table.190}\protected@file@percent }
+\newlabel{tab:adaptive-coefficients}{{15}{35}{Common-initialization full-residual comparison: complete 151-coordinate trajectory error $e_q$ (\%) against the corresponding linear PROM. Means and parameter ordering match Table~\ref {tab:adaptive-state}}{table.190}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Common-initialization comparison: per-coordinate absolute trajectory error (top) and relative trajectory error in percent (bottom) against the linear PROM. All panels in each row share logarithmic ordinate limits computed from the plotted data. The dotted vertical line marks the ten primary coordinates; every model curve is solid. The zero-error linear-PROM reference is omitted from the logarithmic plots.}}{36}{figure.192}\protected@file@percent }
+\newlabel{fig:adaptive-coefficients}{{12}{36}{Common-initialization comparison: per-coordinate absolute trajectory error (top) and relative trajectory error in percent (bottom) against the linear PROM. All panels in each row share logarithmic ordinate limits computed from the plotted data. The dotted vertical line marks the ten primary coordinates; every model curve is solid. The zero-error linear-PROM reference is omitted from the logarithmic plots}{figure.192}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Full-Residual Case--2 Sweep and Perturbation Diagnostic}{36}{appendix.193}\protected@file@percent }
+\newlabel{sec:prom-results}{{B}{36}{Full-Residual Case--2 Sweep and Perturbation Diagnostic}{appendix.193}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.1}Case--2 solved-dimension sweep}{36}{subsection.194}\protected@file@percent }
+\newlabel{sec:case2-sweep}{{B.1}{36}{Case--2 solved-dimension sweep}{subsection.194}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces Case--2 state errors as the number of residual-solved primary coordinates is varied. The $n=0$ and $n=151$ endpoints are respectively the shared-map POD--NN--ROM and the linear PROM.}}{37}{table.196}\protected@file@percent }
+\newlabel{tab:case2-sweep}{{16}{37}{Case--2 state errors as the number of residual-solved primary coordinates is varied. The $n=0$ and $n=151$ endpoints are respectively the shared-map POD--NN--ROM and the linear PROM}{table.196}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Case--2 state error versus the solved primary dimension. The black curve is the in-domain mean and the dotted line marks the baseline $n=10$ split.}}{37}{figure.198}\protected@file@percent }
+\newlabel{fig:case2-sweep-state}{{13}{37}{Case--2 state error versus the solved primary dimension. The black curve is the in-domain mean and the dotted line marks the baseline $n=10$ split}{figure.198}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Case--2 coefficient trajectories in the shared-master-map sweep. Top: absolute error against linear PROM. Bottom: the corresponding relative error. The $n=151$ linear-PROM reference has zero coefficient error and is therefore omitted.}}{38}{figure.200}\protected@file@percent }
+\newlabel{fig:case2-sweep-coefficients}{{14}{38}{Case--2 coefficient trajectories in the shared-master-map sweep. Top: absolute error against linear PROM. Bottom: the corresponding relative error. The $n=151$ linear-PROM reference has zero coefficient error and is therefore omitted}{figure.200}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {B.2}Controlled Case--2 tail perturbation}{38}{subsection.201}\protected@file@percent }
+\newlabel{sec:tail-perturbation}{{B.2}{38}{Controlled Case--2 tail perturbation}{subsection.201}{}}
+\newlabel{eq:tail-perturbation}{{94}{38}{Controlled Case--2 tail perturbation}{equation.202}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces Primary-coordinate error induced by a controlled secondary-tail perturbation in Case~2 with $n=10$. Each entry is relative to the corresponding linear-PROM primary history.}}{39}{table.204}\protected@file@percent }
+\newlabel{tab:tail-perturbation}{{17}{39}{Primary-coordinate error induced by a controlled secondary-tail perturbation in Case~2 with $n=10$. Each entry is relative to the corresponding linear-PROM primary history}{table.204}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Case--2 sensitivity to a prescribed secondary-tail error, restricted to perturbations up to $50\%$. Left: state error against the HDM. Right: error in the ten residual-solved primary coordinates against linear PROM.}}{39}{figure.206}\protected@file@percent }
+\newlabel{fig:tail-perturbation}{{15}{39}{Case--2 sensitivity to a prescribed secondary-tail error, restricted to perturbations up to $50\%$. Left: state error against the HDM. Right: error in the ten residual-solved primary coordinates against linear PROM}{figure.206}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Pointwise HPROM Enrichment and Coefficient Histories}{39}{appendix.207}\protected@file@percent }
+\newlabel{app:hprom-details}{{C}{39}{Pointwise HPROM Enrichment and Coefficient Histories}{appendix.207}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.1}The $9+8$ campaign}{40}{subsection.208}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces Pointwise $9+8$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points.}}{40}{table.210}\protected@file@percent }
+\newlabel{tab:hprom-lhs8-state}{{18}{40}{Pointwise $9+8$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points}{table.210}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces Pointwise $9+8$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table.}}{40}{table.212}\protected@file@percent }
+\newlabel{tab:hprom-lhs8-coefficients}{{19}{40}{Pointwise $9+8$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table}{table.212}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces $9+8$ HPROM solution overlays, matching the cuts, model colours, times, and common ordinate limits of Fig.~\ref {fig:hprom-baseline-solutions}.}}{41}{figure.214}\protected@file@percent }
+\newlabel{fig:hprom-lhs8-solutions}{{16}{41}{$9+8$ HPROM solution overlays, matching the cuts, model colours, times, and common ordinate limits of Fig.~\ref {fig:hprom-baseline-solutions}}{figure.214}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces $9+8$ per-coordinate trajectory errors, with the same linear-HPROM reference and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All seven learned deployments appear.}}{42}{figure.216}\protected@file@percent }
+\newlabel{fig:hprom-lhs8-coefficients}{{17}{42}{$9+8$ per-coordinate trajectory errors, with the same linear-HPROM reference and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All seven learned deployments appear}{figure.216}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.2}The $9+12$ campaign}{42}{subsection.217}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {20}{\ignorespaces Pointwise $9+12$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points.}}{42}{table.219}\protected@file@percent }
+\newlabel{tab:hprom-lhs12-state}{{20}{42}{Pointwise $9+12$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points}{table.219}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {21}{\ignorespaces Pointwise $9+12$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table.}}{43}{table.221}\protected@file@percent }
+\newlabel{tab:hprom-lhs12-coefficients}{{21}{43}{Pointwise $9+12$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table}{table.221}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces $9+12$ HPROM solution overlays, matching the cuts, model colours, times, and common ordinate limits of Fig.~\ref {fig:hprom-baseline-solutions}.}}{44}{figure.223}\protected@file@percent }
+\newlabel{fig:hprom-lhs12-solutions}{{18}{44}{$9+12$ HPROM solution overlays, matching the cuts, model colours, times, and common ordinate limits of Fig.~\ref {fig:hprom-baseline-solutions}}{figure.223}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces $9+12$ per-coordinate trajectory errors, with the same linear-HPROM reference and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All seven learned deployments appear.}}{45}{figure.225}\protected@file@percent }
+\newlabel{fig:hprom-lhs12-coefficients}{{19}{45}{$9+12$ per-coordinate trajectory errors, with the same linear-HPROM reference and shared logarithmic limits as Fig.~\ref {fig:coefficient-curves}. All seven learned deployments appear}{figure.225}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {C.3}The $9+18$ campaign}{45}{subsection.226}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {22}{\ignorespaces Pointwise $9+18$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points.}}{45}{table.228}\protected@file@percent }
+\newlabel{tab:hprom-lhs18-state}{{22}{45}{Pointwise $9+18$ HPROM state-history errors $e_u$ (\%). The mean averages the three in-domain reporting points}{table.228}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {23}{\ignorespaces Pointwise $9+18$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table.}}{46}{table.230}\protected@file@percent }
+\newlabel{tab:hprom-lhs18-coefficients}{{23}{46}{Pointwise $9+18$ complete coefficient-history errors $e_q$ (\%) against the frozen linear HPROM, matching the preceding table}{table.230}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Absolute coefficient-error histories for the $9$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{47}{figure.232}\protected@file@percent }
+\newlabel{fig:hprom-baseline-heat-absolute}{{20}{47}{Absolute coefficient-error histories for the $9$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.232}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces Relative coefficient-error histories for the $9$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{48}{figure.234}\protected@file@percent }
+\newlabel{fig:hprom-baseline-heat-relative}{{21}{48}{Relative coefficient-error histories for the $9$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.234}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {22}{\ignorespaces Absolute coefficient-error histories for the $9+8$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{49}{figure.236}\protected@file@percent }
+\newlabel{fig:hprom-lhs8-heat-absolute}{{22}{49}{Absolute coefficient-error histories for the $9+8$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.236}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {23}{\ignorespaces Relative coefficient-error histories for the $9+8$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{50}{figure.238}\protected@file@percent }
+\newlabel{fig:hprom-lhs8-heat-relative}{{23}{50}{Relative coefficient-error histories for the $9+8$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.238}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {24}{\ignorespaces Absolute coefficient-error histories for the $9+12$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{51}{figure.240}\protected@file@percent }
+\newlabel{fig:hprom-lhs12-heat-absolute}{{24}{51}{Absolute coefficient-error histories for the $9+12$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.240}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {25}{\ignorespaces Relative coefficient-error histories for the $9+12$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{52}{figure.242}\protected@file@percent }
+\newlabel{fig:hprom-lhs12-heat-relative}{{25}{52}{Relative coefficient-error histories for the $9+12$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.242}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {26}{\ignorespaces Absolute coefficient-error histories for the $9+18$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{53}{figure.244}\protected@file@percent }
+\newlabel{fig:hprom-lhs18-heat-absolute}{{26}{53}{Absolute coefficient-error histories for the $9+18$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.244}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {27}{\ignorespaces Relative coefficient-error histories for the $9+18$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale.}}{54}{figure.246}\protected@file@percent }
+\newlabel{fig:hprom-lhs18-heat-relative}{{27}{54}{Relative coefficient-error histories for the $9+18$ HPROM campaign. Rows follow the learned model ordering and columns the four reporting parameters. The dotted horizontal line marks the primary split. The common magnitude range is stated in the panel title and is unchanged across campaigns; hue distinguishes models, not an alternative error scale}{figure.246}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {D}Alternative Inner Products for POD Basis Construction}{54}{appendix.247}\protected@file@percent }
+\newlabel{app:lspg-sensitive}{{D}{54}{Alternative Inner Products for POD Basis Construction}{appendix.247}{}}
+\newlabel{eq:mass-inner-product}{{95}{54}{Alternative Inner Products for POD Basis Construction}{equation.248}{}}
+\bibcite{hernandez2017dimensional}{1}
+\bibcite{hernandez2020multiscale}{2}
+\bibcite{farhat2015structure}{3}
+\newlabel{eq:mass-pod-correlation}{{96}{55}{Alternative Inner Products for POD Basis Construction}{equation.249}{}}
+\newlabel{eq:mass-pod-modes}{{97}{55}{Alternative Inner Products for POD Basis Construction}{equation.250}{}}
+\newlabel{eq:combined-lspg-mass-metric}{{98}{55}{Alternative Inner Products for POD Basis Construction}{equation.251}{}}
+\newlabel{eq:combined-lspg-correlation}{{99}{55}{Alternative Inner Products for POD Basis Construction}{equation.252}{}}
+\newlabel{eq:combined-lspg-mass-scale}{{100}{55}{Alternative Inner Products for POD Basis Construction}{equation.253}{}}
+\bibcite{barnett2023neural}{4}
 \bibcite{aghili2026nonlinear}{5}
-\bibcite{hernandez2017dimensional}{6}
-\bibcite{hernandez2020multiscale}{7}
-\bibcite{farhat2015structure}{8}
-\bibcite{ares2026closure}{9}
-\bibcite{de2023hyper}{10}
-\bibcite{fresca2022pod}{11}
-\gdef \@abspage@last{50}
+\bibcite{chmiel2025unified}{6}
+\bibcite{ares2026closure}{7}
+\bibcite{fresca2022pod}{8}
+\bibcite{lee2020model}{9}
+\bibcite{romor2025explicable}{10}
+\bibcite{de2023hyper}{11}
+\bibcite{hesthaven2018non}{12}
+\gdef \@abspage@last{56}
