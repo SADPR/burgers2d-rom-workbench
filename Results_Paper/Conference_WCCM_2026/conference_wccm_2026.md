@@ -369,12 +369,16 @@ The following slides use only the three-chart local campaign reported in
 \end{aligned}
 ```
 
-Visual: place `burgers_global_local_animations/outputs/hdm_centerline_cuts_mu1.gif`
-on the right. It shows the HDM surface and the two centerline cuts at the first
-test parameter. Keep the formula-left/GIF-right layout used in slides 44--48.
+Visual: place the static image `burgers_problem_3d.png` on the right. It shows
+the HDM surface and the two centerline cuts at the first test parameter and at
+the representative time \(t=7.50\). Keep the formula-left/image-right layout
+used in slides 44--48. The static frame is intentional: the audience should
+first see the sharp front in the \(x\) direction and its transverse variation
+before the later animated model comparisons.
 
-Speaker note: define the two cuts once here; all subsequent global--local
-comparisons use those same cuts and the same vertical scale.
+Speaker note: briefly point out the high and low states separated by the sharp
+front, then define the horizontal and vertical centerline cuts. All subsequent
+global--local comparisons use those same cuts and the same vertical scale.
 
 ### Slide 50 -- 2D Burgers: Baseline training and evaluation
 

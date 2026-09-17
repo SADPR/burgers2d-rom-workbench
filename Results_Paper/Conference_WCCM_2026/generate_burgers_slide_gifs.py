@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -18,17 +19,23 @@ from matplotlib import animation
 from matplotlib.colors import Normalize
 
 
-ANIMATIONS = Path(
-    "/home/kratos/burgers2d-rom-workbench/Project_YvonMaday/Results_Paper/animations"
-)
+WORKBENCH = Path(__file__).resolve().parents[2]
+ANIMATIONS = WORKBENCH / "Project_YvonMaday" / "Results_Paper" / "animations"
 sys.path.insert(0, str(ANIMATIONS))
 import generate_burgers_presentation_assets as assets
 
 OUTPUT_DIRECTORY = Path(__file__).resolve().parent
+STATIC_FRAME_INDEX = 15  # t = 15 * 10 * DT = 7.50
 
 
-def main(output: Path) -> None:
+def main(
+    output: Path,
+    static_output: Path | None = None,
+    static_frame_index: int = STATIC_FRAME_INDEX,
+) -> None:
     assets.configure_style()
+    if shutil.which("dvipng") is None:
+        plt.rcParams.update({"text.usetex": False, "font.serif": ["DejaVu Serif"]})
     point = assets.POINTS[1]
     frame_ids = np.arange(0, assets.NT, 10)
     snaps = assets.load_npy(assets.hdm_path(point))
@@ -102,20 +109,21 @@ def main(output: Path) -> None:
     )
     ax3.legend(loc="upper right", bbox_to_anchor=(0.98, 0.98), frameon=True)
     title = fig.suptitle(
-        rf"\textbf{{Centerline cut planes}}"
-        "\n"
-        rf"$\mu_1={point.mu1:.2f},\quad \mu_2={point.mu2:.3f},\quad t=0.00$",
+        "Centerline cut planes\n"
+        + rf"$\mu_1={point.mu1:.2f},\quad \mu_2={point.mu2:.3f},\quad t=0.00$",
         x=0.5,
         y=0.98,
         fontsize=15,
+        fontweight="bold",
     )
 
     ax_x = fig.add_axes([0.085, 0.075, 0.39, 0.20])
     xcut2d, = ax_x.plot(assets.X, field0[assets.MID_Y, :], color="#c62828", linewidth=2.8)
     ax_x.set(xlim=(0.0, 100.0), ylim=(0.0, 5.6), xlabel=r"$x$", ylabel=r"$u_x$")
     ax_x.set_title(
-        rf"\textbf{{Horizontal cut: }}$y={assets.Y[assets.MID_Y]:.1f}$",
+        "Horizontal cut: " + rf"$y={assets.Y[assets.MID_Y]:.1f}$",
         color="#8e1b1b",
+        fontweight="bold",
     )
     ax_x.grid(True)
 
@@ -123,8 +131,9 @@ def main(output: Path) -> None:
     ycut2d, = ax_y.plot(assets.Y, field0[:, assets.MID_X], color="#1565c0", linewidth=2.8)
     ax_y.set(xlim=(0.0, 100.0), ylim=(0.0, 5.6), xlabel=r"$y$", ylabel=r"$u_x$")
     ax_y.set_title(
-        rf"\textbf{{Vertical cut: }}$x={assets.X[assets.MID_X]:.1f}$",
+        "Vertical cut: " + rf"$x={assets.X[assets.MID_X]:.1f}$",
         color="#0d47a1",
+        fontweight="bold",
     )
     ax_y.grid(True)
 
@@ -155,11 +164,20 @@ def main(output: Path) -> None:
         xcut2d.set_ydata(field[assets.MID_Y, :])
         ycut2d.set_ydata(field[:, assets.MID_X])
         title.set_text(
-            rf"\textbf{{Centerline cut planes}}"
-            "\n"
-            rf"$\mu_1={point.mu1:.2f},\quad \mu_2={point.mu2:.3f},\quad t={tidx * assets.DT:.2f}$"
+            "Centerline cut planes\n"
+            + rf"$\mu_1={point.mu1:.2f},\quad \mu_2={point.mu2:.3f},\quad t={tidx * assets.DT:.2f}$"
         )
         return surface[0], xcut3d, ycut3d, xcut2d, ycut2d, title
+
+    if static_output is not None:
+        if not 0 <= static_frame_index < len(frame_ids):
+            raise IndexError(
+                f"Frame {static_frame_index} is outside the animation's "
+                f"0--{len(frame_ids) - 1} range."
+            )
+        update(static_frame_index)
+        fig.savefig(static_output, dpi=105, facecolor="white")
+        update(0)
 
     movie = animation.FuncAnimation(fig, update, frames=len(frame_ids), interval=90, blit=False)
     movie.save(output, writer=animation.PillowWriter(fps=10), dpi=105)
@@ -170,4 +188,9 @@ if __name__ == "__main__":
     output_directory = Path(sys.argv[1]) if len(sys.argv) == 2 else OUTPUT_DIRECTORY
     output_directory.mkdir(parents=True, exist_ok=True)
     assets.hdm_3d_animation(output_directory / "burgers_hdm_3d.gif", assets.POINTS[1])
-    main(output_directory / "burgers_cutplane_explanation.gif")
+    cutplane_animation = output_directory / "burgers_cutplane_explanation.gif"
+    main(
+        cutplane_animation,
+        static_output=output_directory / "burgers_problem_3d.png",
+        static_frame_index=STATIC_FRAME_INDEX,
+    )
