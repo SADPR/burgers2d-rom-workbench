@@ -1,12 +1,16 @@
-\begin{tabular}{llr|rr}
+\begin{tabular}{lrlr|rr}
 \toprule
-Model & Architecture & Parameters & Train (\%) & Val (\%) \\
+Model & Online size & Architecture & Parameters & Train (\%) & Val (\%) \\
 \midrule
-HPROM--ANN Case 1 & (256,512,512,256), SiLU & 564621 & 1.225 & 3.567 \\
-HPROM--ANN Case 2 ($n=10$) & (256,512,512,256), SiLU & 565399 & 2.540 & 4.402 \\
-HPROM--ANN Case 3 & (256,512,512,256), SiLU & 565389 & 0.567 & 3.499 \\
-HPROM--POD--AE ($n_z=10$) & (512,256,128), GELU & 486817 & 0.207 & 2.810 \\
+HPROM--ANN Case 1 & 10 & (256,512,512,256), SiLU & 564621 & 1.225 & 3.567 \\
+HPROM--ANN Case 2 & 10 & (256,512,512,256), SiLU & 565399 & 2.540 & 4.402 \\
+HPROM--ANN Case 3 & 10 & (256,512,512,256), SiLU & 565389 & 0.567 & 3.499 \\
+HPROM--POD--AE & 10 & $\mathcal E$: (512,256,128) & 486817 & 0.207 & 2.810 \\
+ &  & $\mathcal D$: (128,256,512); GELU &  &  &  \\
 \midrule
-POD--DL--ROM ($n_z=10$) & latent 10, SiLU & 952747 & 1.691 & 2.795 \\
+POD--NN--ROM & -- & (256,512,512,256), SiLU & 565399 & 2.540 & 4.402 \\
+POD--DL--ROM & -- & $\mathcal E$: (512,256) & 952747 & 1.691 & 2.795 \\
+ &  & $\mathcal D$: (256,512) &  &  &  \\
+ &  & $\mathcal G_z$: (256,512,512,256); SiLU &  &  &  \\
 \bottomrule
 \end{tabular}

@@ -611,17 +611,24 @@ def write_coefficient_table() -> Path:
 
 
 def write_sweep_table() -> Path:
-    sweep = (0, 10, 20, 30, 50, 100, NTOT)
+    sweep = (NTOT, 10, 20, 30, 50, 100, 0)
     lines = [
-        r"\begin{tabular}{lrrrrr}",
+        r"\begin{tabular}{lr|rrrr|r}",
         r"\toprule",
-        r"Solved $n$ & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ \\",
+        r"Model & Online size & "
+        r"$\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ \\",
         r"\midrule",
     ]
     for n_primary in sweep:
+        if n_primary == 0:
+            lines.append(r"\midrule")
         values = [summary_value(sweep_paths(n_primary, point)[0], "relative_error_percent") for point in POINTS]
-        name = "0 (POD--NN--ROM)" if n_primary == 0 else ("151 (linear PROM)" if n_primary == NTOT else str(n_primary))
-        lines.append(" & ".join((name, *(fmt(value) for value in values[:3]), fmt(float(np.mean(values[:3]))), fmt(values[3]))) + r" \\")
+        name = ("POD--NN--ROM" if n_primary == 0 else
+                ("Linear PROM" if n_primary == NTOT else "PROM--ANN Case 2"))
+        online_size = "--" if n_primary == 0 else str(n_primary)
+        lines.append(" & ".join((name, online_size,
+                                 *(fmt(value) for value in values[:3]),
+                                 fmt(float(np.mean(values[:3]))), fmt(values[3]))) + r" \\")
     lines.extend((r"\bottomrule", r"\end{tabular}"))
     out = TAB_DIR / "euclidean_prom_case2_n_sweep_state_errors.tex"
     out.write_text("\n".join(lines) + "\n")
@@ -632,7 +639,7 @@ def write_tail_table() -> Path:
     levels = (0.0, 1.0, 3.0, 5.0, 10.0, 15.0, 20.0, 30.0, 50.0)
     rows = list(csv.DictReader((DIAGNOSTIC / "case2_secondary_sensitivity_summary.csv").open()))
     lines = [
-        r"\begin{tabular}{lrrrr}",
+        r"\begin{tabular}{l|rrrr}",
         r"\toprule",
         r"Imposed tail error (\%) & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & $\mu^{(3)}$ \\",
         r"\midrule",

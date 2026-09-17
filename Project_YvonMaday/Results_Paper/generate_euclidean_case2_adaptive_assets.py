@@ -4,6 +4,7 @@
 import csv
 import hashlib
 import json
+import shutil
 from pathlib import Path
 
 import matplotlib
@@ -13,6 +14,9 @@ import numpy as np
 
 from generate_euclidean_prom_only_assets import POINTS, BASIS_PATH, U_REF_PATH
 from manuscript_plot_style import METHOD_COLORS
+
+if shutil.which("dvipng") is None:
+    plt.rcParams["text.usetex"] = False
 
 PAPER = Path(__file__).resolve().parent
 REPO = PAPER.parents[1]
@@ -44,10 +48,12 @@ def write_table(name, header, rows, columns):
     (TABLES / name).write_text("\n".join(lines) + "\n")
 
 
-def common_log_limits(axes):
+def common_log_limits(axes, sample_count):
     values = np.concatenate([line.get_ydata() for ax in axes for line in ax.lines
-                             if len(line.get_ydata()) == 151])
+                             if len(line.get_ydata()) == sample_count])
     positive = values[np.isfinite(values) & (values > 0)]
+    if positive.size != values.size:
+        raise ValueError("Logarithmic plots require finite positive values")
     limits = (10 ** np.floor(np.log10(positive.min())),
               10 ** np.ceil(np.log10(positive.max())))
     for ax in axes:
@@ -162,8 +168,7 @@ def main():
         ax.set_title(rf"{point.label}: $\mu=({point.mu1:.3f},{point.mu2:.4f})$")
         ax.grid(alpha=.25)
         ax.set_xlim(0, 25)
-    maximum = max(v.max() for v in histories.values())
-    axes[0, 0].set_ylim(0, 1.08 * maximum)
+    common_log_limits(axes.ravel(), sample_count=501)
     for ax in axes[:, 0]:
         ax.set_ylabel(r"instantaneous state error (\%)")
     for ax in axes[-1]:
@@ -185,8 +190,8 @@ def main():
             ax.grid(which="both", alpha=.2)
             ax.set_xlim(1, 151)
         axes[1, index].set_xlabel("coefficient index")
-    common_log_limits(axes[0])
-    common_log_limits(axes[1])
+    common_log_limits(axes[0], sample_count=151)
+    common_log_limits(axes[1], sample_count=151)
     axes[0, 0].set_ylabel(r"$\|q_{N,i}-q_{N,i}^{\mathrm{lin}}\|_2$")
     axes[1, 0].set_ylabel(r"relative coefficient error (\%)")
     fig.legend(*axes[0, 0].get_legend_handles_labels(), loc="upper center", ncol=4)

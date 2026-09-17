@@ -32,9 +32,12 @@ REPO = PAPER.parents[1]
 FIGURES = PAPER / "Figures/euclidean_hprom"
 TABLES = PAPER / "tables/euclidean_hprom"
 BASE = PAPER / "euclidean_hprom_main"
-B3_DRAWS = 2048
-B3_BUDGET_LOCAL = PAPER / "euclidean_b3_budget_local"
-B3_BUDGET_SHERLOCK = PAPER / "euclidean_b3_budget_sherlock"
+B3_ECM_LOCAL = PAPER / "euclidean_b3_ecm_local"
+B3_ECM_DEPLOYMENT = PAPER / "euclidean_b3_ecm_deployment"
+B3_ECM_RUNS = sorted(PAPER.glob("euclidean_b3_ecm_sherlock_*"))
+if len(B3_ECM_RUNS) != 1:
+    raise ValueError(f"Expected one official B3 ECM benchmark, found {B3_ECM_RUNS}")
+B3_ECM_SHERLOCK = B3_ECM_RUNS[0]
 DESIGN_PATH = REPO / "Project_YvonMaday/euclidean_nested_enrichment_design.json"
 BASIS_PATH = PAPER / "MetricStudy/euclidean/Stage1/basis.npy"
 UREF_PATH = BASIS_PATH.with_name("u_ref.npy")
@@ -49,13 +52,15 @@ LEVEL_LABELS = ("9", "9+8", "9+12", "9+18")
 CAMPAIGNS = {"baseline": BASE, **{
     level: PAPER / f"euclidean_hprom_enrichment_{level}" for level in LEVELS[1:]}}
 METHODS = ("linear", "case1", "case2", "b3", "case3", "podae", "podnn", "poddl")
+ENRICHMENT_METHODS = tuple(method for method in METHODS if method != "b3")
 NAMES = {
     "linear": "Linear HPROM", "case1": "HPROM--ANN Case 1",
-    "case2": r"HPROM--ANN Case 2 ($n=10$)",
+    "case2": "HPROM--ANN Case 2",
     "b3": r"HPROM--ANN Case 2+$\mathbf B_3$",
-    "case3": "HPROM--ANN Case 3", "podae": r"HPROM--POD--AE ($n_z=10$)",
-    "podnn": "POD--NN--ROM", "poddl": r"POD--DL--ROM ($n_z=10$)",
+    "case3": "HPROM--ANN Case 3", "podae": "HPROM--POD--AE",
+    "podnn": "POD--NN--ROM", "poddl": "POD--DL--ROM",
 }
+BASELINE_NAMES = {**NAMES, "case2": "HPROM--ANN Case 2"}
 PLOT_NAMES = {
     "linear": "Linear HPROM", "case1": "HPROM-ANN C1",
     "case2": "HPROM-ANN C2", "b3": r"HPROM-ANN C2+$\mathbf B_3$",
@@ -103,45 +108,42 @@ def unique(paths):
 
 
 def b3_provenance(level):
-    """Resolve the validated 2048 rule without moving or altering raw results."""
-    if level == "baseline":
-        environment_path = B3_BUDGET_SHERLOCK / "environment.json"
-        environment = json.loads(environment_path.read_text())
-        selection_path = B3_BUDGET_LOCAL / "selection.json"
-        selection = json.loads(selection_path.read_text())
-        if selection != environment["selection"] or selection["selected_draws"] != B3_DRAWS:
-            raise ValueError("Baseline B3 deployment differs from its frozen support selection")
-        candidates = [c for c in selection["candidates"] if c["draws"] == B3_DRAWS]
-        if len(candidates) != 1 or not candidates[0]["accepted"]:
-            raise ValueError("No accepted baseline 2048 candidate")
-        chosen = candidates[0]
-        rule_dir = B3_BUDGET_LOCAL / f"draws{B3_DRAWS}"
-        checks = dict(zip(("minimum_Gram_eigenvalue", "maximum_Gram_eigenvalue",
-                           "maximum_gradient_relative_error",
-                           "maximum_sampled_to_full_linearized_residual_ratio"),
-                          (chosen[k] for k in ("min_gram", "max_gram", "max_gradient_error", "max_linearized_ratio"))))
-        manifest = dict(accepted=selection["smaller_rule_accepted"],
-                        selection_uses_reporting_points=selection["uses_reporting_points"],
-                        checks=checks, thresholds=selection["thresholds"], inputs=environment["inputs"],
-                        weights_sha256=chosen["weights_sha256"],
-                        held_out_validation=[rule_dir / f"validation_p{p}.json" for p in range(2)])
-        if (environment["threads"] != 1 or not environment["reuse_predictor"]
-                or environment["selected_weights_sha256"] != chosen["weights_sha256"]):
-            raise ValueError("Baseline selected B3 rule/protocol mismatch")
-        if any(r > selection["thresholds"]["max_validation_error_ratio"]
-               for r in chosen["validation_error_ratios"]):
-            raise ValueError("Baseline B3 failed its extra trajectory-comparison criterion")
-        provenance = [environment_path, selection_path, B3_BUDGET_LOCAL / "protocol.json",
-                      rule_dir / "fit.json"]
-    else:
-        rule_dir = CAMPAIGNS[level] / f"Stage4/case2_b3/positive_fit{B3_DRAWS}"
-        selection_path = rule_dir / "selection.json"
-        manifest = json.loads(selection_path.read_text())
-        if Path(manifest["rule_file"]).parts[-2:] != (rule_dir.name, "weights.npy"):
-            raise ValueError(f"Selection names a different rule: {selection_path}")
-        provenance = [selection_path, rule_dir / "config.json", rule_dir / "summary.json"]
-    audit_path = rule_dir / "validation_operator_audit.json"
-    return manifest, rule_dir / "weights.npy", audit_path, provenance
+    """Resolve each validated B3 rule without altering raw results."""
+    if level != "baseline":
+        raise ValueError("Only the baseline B3 deployment has a validated ECM rule")
+    selection_path = B3_ECM_DEPLOYMENT / "selection.json"
+    selection = json.loads(selection_path.read_text())
+    candidates = [candidate for candidate in selection["candidates"] if candidate["accepted"]]
+    if not selection["accepted"] or len(candidates) != 1:
+        raise ValueError("No unique validation-selected baseline B3 ECM rule")
+    chosen = candidates[0]
+    rule_dir = B3_ECM_LOCAL / f"ecm_tol{chosen['tolerance']:g}"
+    rule = B3_ECM_DEPLOYMENT / "ecm_weights.npy"
+    checks = dict(zip(("minimum_Gram_eigenvalue", "maximum_Gram_eigenvalue",
+                       "maximum_gradient_relative_error",
+                       "maximum_sampled_to_full_linearized_residual_ratio"),
+                      (chosen[k] for k in ("min_gram", "max_gram", "max_gradient_error", "max_linearized_ratio"))))
+    thresholds = dict(min_gram=.8, max_gram=1.2, max_gradient_error=.05,
+                      max_linearized_ratio=1.05,
+                      max_validation_error_ratio=selection["protocol"]["maximum_validation_coefficient_ratio"])
+    manifest = dict(accepted=True,
+                    selection_uses_reporting_points=selection["selection_uses_reporting_points"],
+                    checks=checks, thresholds=thresholds,
+                    inputs=selection["protocol"]["inputs"],
+                    weights_sha256=chosen["weights_sha256"],
+                    held_out_validation=[rule_dir / f"validation_p{p}.json" for p in range(2)])
+    protocol_path = B3_ECM_SHERLOCK / "protocol.json"
+    protocol = json.loads(protocol_path.read_text())
+    if (protocol["threads"] != 1 or not protocol["reuse_predictor"]
+            or protocol["sampled_cells"]["ecm"] != chosen["sampled_cells"]
+            or digest(rule) != chosen["weights_sha256"]):
+        raise ValueError("Baseline B3 ECM deployment/protocol mismatch")
+    if any(r > thresholds["max_validation_error_ratio"]
+           for r in chosen["validation_coefficient_ratios"]):
+        raise ValueError("Baseline B3 ECM failed its validation-trajectory criterion")
+    provenance = [protocol_path, selection_path, B3_ECM_DEPLOYMENT / "fit.json"]
+    audit_path = B3_ECM_DEPLOYMENT / "validation_operator_audit.json"
+    return manifest, rule, audit_path, provenance
 
 
 def verify_b3_provenance(level):
@@ -180,8 +182,7 @@ def verify_b3_provenance(level):
             or checks["maximum_gradient_relative_error"] > bounds["max_gradient_error"]
             or checks["maximum_sampled_to_full_linearized_residual_ratio"] > bounds["max_linearized_ratio"]):
         raise ValueError(f"B3 operator audit fails its declared thresholds: {level}")
-    config = json.loads((B3_BUDGET_LOCAL / "protocol.json" if level == "baseline"
-                         else rule.parent / "config.json").read_text())
+    config = json.loads((B3_ECM_LOCAL / "moments.json").read_text())["protocol"]
     if config["inputs"] != expected_inputs or len(config["training_sources"]) != 9:
         raise ValueError(f"B3 moment fit does not use its baseline nine teachers: {level}")
     teacher_root = BASE / "Stage2/prom_coeff_dataset_ntot151/per_mu"
@@ -189,18 +190,14 @@ def verify_b3_provenance(level):
     if config["training_sources"] != expected_sources:
         raise ValueError(f"Changed B3 moment-training trajectories: {level}")
     for point in range(2):
-        path = (rule.parent / f"validation_p{point}.json" if level == "baseline" else
-                CAMPAIGNS[level] / f"Stage4/case2_b3/validation_positive_fit{B3_DRAWS}_hprom3_p{point}_steps500/summary.json")
+        path = selection["held_out_validation"][point]
         record = json.loads(path.read_text())
-        meta = record if level == "baseline" else record["config"]
+        meta = record
         if meta["weights_sha256"] != rule_hash or meta["threads"] != 1:
             raise ValueError(f"Validation trajectory uses a different B3 rule/protocol: {path}")
         if not np.isfinite(record["coefficient_error_percent"]):
             raise ValueError(f"Invalid B3 validation error: {path}")
-        if level != "baseline" and (meta["inputs"] != expected_inputs or not meta.get("reuse_predictor")):
-            raise ValueError(f"Changed B3 validation inputs/predictor reuse: {path}")
-        qpath = (path.with_name(f"validation_p{point}_qN.npy") if level == "baseline"
-                 else path.with_name("qN.npy"))
+        qpath = path.with_name(f"validation_p{point}_qN.npy")
         q = np.load(qpath, allow_pickle=False)
         if q.shape != (151,501) or not np.isfinite(q).all():
             raise ValueError(f"Incomplete B3 validation coordinates: {qpath}")
@@ -243,12 +240,10 @@ def load_record(level, method, point):
         if summary["solve_backend_effective"] != "hprom":
             raise ValueError(f"Not an HPROM solve: {path}")
     elif method == "b3":
-        if level == "baseline":
-            folder = B3_BUDGET_SHERLOCK / "selected"
-            path, qpath = folder / f"reporting_p{point}.json", folder / f"reporting_p{point}_qN.npy"
-        else:
-            folder = root / f"Stage4/case2_b3/reporting_positive_fit{B3_DRAWS}_hprom3_p{point}_steps500"
-            path, qpath = folder / "summary.json", folder / "qN.npy"
+        if level != "baseline":
+            raise ValueError("Enriched B3 results are omitted until their ECM rules are built")
+        folder = B3_ECM_SHERLOCK / "ecm"
+        path, qpath = folder / f"reporting_p{point}.json", folder / f"reporting_p{point}_qN.npy"
         summary = json.loads(path.read_text())
         _, weights_path, _, _ = b3_provenance(level)
     else:
@@ -316,7 +311,8 @@ def check_design_and_models():
                 if summary["trainable_parameters"] != baseline_summary["trainable_parameters"]:
                     raise ValueError(f"Enrichment changed network size: {checkpoint_path}")
             model_details[level, method] = summary
-        verify_b3_provenance(level)
+        if level == "baseline":
+            verify_b3_provenance(level)
     for level in LEVELS:
         source = datasets["baseline"] if level == "baseline" else datasets["lhs18"]
         for folder in (datasets[level] / "per_mu").iterdir():
@@ -329,7 +325,8 @@ def check_design_and_models():
             for name in ("mu.npy", "t.npy", "qN.npy"):
                 if digest(folder / name) != digest(source_folder / name):
                     raise ValueError(f"Nested trajectory is not an exact copy: {folder / name}")
-    print("Verified 17/21/27 nested HPROM targets, 20 HPROM-trained checkpoints, and four accepted B3 rules.", flush=True)
+    print("Verified 17/21/27 nested HPROM targets, 20 HPROM-trained checkpoints, "
+          "and the baseline ECM B3 rule.", flush=True)
     return model_details
 
 
@@ -363,7 +360,7 @@ def recompute(records):
             truth_sq[sl] = np.sum(block ** 2, axis=0)
         linear = records["baseline", "linear", point].q
         for level in LEVELS:
-            for method in METHODS:
+            for method in (METHODS if level == "baseline" else ENRICHMENT_METHODS):
                 record = records[level, method, point]
                 record.state, record.history = state_errors(record.q, projected, orthogonal_sq, truth_sq)
                 record.coefficient = float(100 * np.linalg.norm(record.q - linear) / np.linalg.norm(linear))
@@ -409,73 +406,134 @@ def grouped(values):
     return [f"{x:.3f}" for x in (*values[:3], np.mean(values[:3]), values[3])]
 
 
+def baseline_online_dimension(method):
+    if method == "linear":
+        return "151"
+    if method == "b3":
+        return "13"  # Ten primary coordinates plus three correction amplitudes.
+    if method in ("case1", "case2", "case3", "podae"):
+        return "10"
+    return "--"  # Not applicable: direct maps have no residual solve.
+
+
+def training_baseline_rows(details):
+    rows = []
+    for method in NETWORKS:
+        if method == "poddl":
+            rows.append(None)
+            master = details["baseline", "case2"]
+            rows.append([NAMES["podnn"], "--", "(256,512,512,256), SiLU",
+                         master["trainable_parameters"],
+                         f"{float(master['train_rel_frob_percent']):.3f}",
+                         f"{float(master['val_rel_frob_percent']):.3f}"])
+        summary = details["baseline", method]
+        values = [summary["trainable_parameters"],
+                  f"{float(summary['train_rel_frob_percent']):.3f}",
+                  f"{float(summary['val_rel_frob_percent']):.3f}"]
+        if method == "podae":
+            encoder = summary["hidden_dims"].replace(" ", "")
+            widths = [width.strip() for width in encoder.strip("()").split(",")]
+            decoder = "(" + ",".join(reversed(widths)) + ")"
+            rows.append([NAMES[method], baseline_online_dimension(method), r"$\mathcal E$: " + encoder, *values])
+            rows.append(["", "", r"$\mathcal D$: " + decoder + "; GELU", "", "", ""])
+        elif method == "poddl":
+            encoder = summary["encoder_hidden_dims"].replace(" ", "")
+            decoder = summary["decoder_hidden_dims"].replace(" ", "")
+            dynamics = summary["dynamics_hidden_dims"].replace(" ", "")
+            rows.append([NAMES[method], baseline_online_dimension(method), r"$\mathcal E$: " + encoder, *values])
+            rows.append(["", "", r"$\mathcal D$: " + decoder, "", "", ""])
+            rows.append(["", "", r"$\mathcal G_z$: " + dynamics + "; SiLU", "", "", ""])
+        else:
+            rows.append([NAMES[method], baseline_online_dimension(method),
+                         "(256,512,512,256), SiLU", *values])
+    return rows
+
+
 def summaries(records, details):
-    header = r"Model & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$"
+    header = r"$\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$"
     for level in LEVELS:
         for metric in ("state", "coefficient"):
             rows = []
-            for method in METHODS:
+            for method in (METHODS if level == "baseline" else ENRICHMENT_METHODS):
                 if method == "podnn": rows.append(None)
-                rows.append([NAMES[method], *grouped([getattr(records[level, method, p], metric) for p in range(4)])])
-            table(f"{level}_{metric}.tex", "lrrrr|r", header, rows)
+                values = grouped([getattr(records[level, method, p], metric) for p in range(4)])
+                name = BASELINE_NAMES[method] if level == "baseline" else NAMES[method]
+                rows.append([name, baseline_online_dimension(method), *values])
+                if level != "baseline" and metric == "state" and method == "case2":
+                    rows.append([BASELINE_NAMES["b3"], baseline_online_dimension("b3"),
+                                 *(["--"] * 5)])
+            columns = "lr|rrrr|r"
+            prefix = r"Model & Online size & "
+            table(f"{level}_{metric}.tex", columns, prefix + header, rows)
     for metric in ("state", "coefficient"):
         rows = []
-        for method in METHODS:
+        for method in ENRICHMENT_METHODS:
             if method == "podnn": rows.append(None)
             values = []
             for level in LEVELS:
                 v = [getattr(records[level, method, p], metric) for p in range(4)]
                 values += [f"{np.mean(v[:3]):.3f}", f"{v[3]:.3f}"]
-            rows.append([NAMES[method], *values])
-        table(f"enrichment_{metric}.tex", "lrr|rr|rr|rr",
-              r"& \multicolumn{2}{c|}{Baseline 9} & \multicolumn{2}{c|}{$9+8$} & "
+            if metric == "state" and method == "linear":
+                rows.append([NAMES[method], baseline_online_dimension(method), *values[:2],
+                             r"\multicolumn{2}{c|}{unchanged}",
+                             r"\multicolumn{2}{c|}{unchanged}",
+                             r"\multicolumn{2}{c}{unchanged}"])
+            else:
+                rows.append([NAMES[method], baseline_online_dimension(method), *values])
+            if metric == "state" and method == "case2":
+                v = [records["baseline", "b3", p].state for p in range(4)]
+                rows.append([BASELINE_NAMES["b3"], baseline_online_dimension("b3"),
+                             f"{np.mean(v[:3]):.3f}", f"{v[3]:.3f}", *(["--"] * 6)])
+        table(f"enrichment_{metric}.tex", "lr|rr|rr|rr|rr",
+              r"\multicolumn{2}{c|}{} & \multicolumn{2}{c|}{Baseline 9} & \multicolumn{2}{c|}{$9+8$} & "
               r"\multicolumn{2}{c|}{$9+12$} & \multicolumn{2}{c}{$9+18$} \\ "
-              r"Model & Mean & $\mu^{(3)}$ & Mean & $\mu^{(3)}$ & Mean & $\mu^{(3)}$ & Mean & $\mu^{(3)}$",
+              r"Model & Online size & Mean & $\mu^{(3)}$ & Mean & $\mu^{(3)}$ & Mean & $\mu^{(3)}$ & Mean & $\mu^{(3)}$",
               rows)
     table("datasets.tex", "lrrrr|r", "Data & Baseline & Interior & Margin & Total & Validation",
           [[label, "9", str(p//2), str(p//2), str(9+p), "2"]
            for label,p in zip(LEVEL_LABELS,(0,8,12,18))])
+    table("training_baseline.tex", "lrlr|rr", r"Model & Online size & Architecture & Parameters & Train (\%) & Val (\%)",
+          training_baseline_rows(details))
     rows = []
     for method in NETWORKS:
         if method == "poddl":
             rows.append(None)
-        summary = details["baseline", method]
-        architecture = ("(256,512,512,256), SiLU" if method in ("case1", "case2", "case3")
-                        else "(512,256,128), GELU" if method == "podae" else "latent 10, SiLU")
-        rows.append([NAMES[method], architecture, summary["trainable_parameters"],
-                     f"{float(summary['train_rel_frob_percent']):.3f}",
-                     f"{float(summary['val_rel_frob_percent']):.3f}"])
-    table("training_baseline.tex", "llr|rr", r"Model & Architecture & Parameters & Train (\%) & Val (\%)", rows)
-    rows = []
-    for method in NETWORKS:
-        if method == "poddl":
-            rows.append(None)
+            master_values = []
+            for level in LEVELS:
+                master = details[level, "case2"]
+                master_values += [f"{float(master[k]):.3f}" for k in
+                                  ("train_rel_frob_percent", "val_rel_frob_percent")]
+            rows.append([NAMES["podnn"], "--", *master_values])
         values = []
         for level in LEVELS:
             d = details[level, method]
             values += [f"{float(d[k]):.3f}" for k in ("train_rel_frob_percent", "val_rel_frob_percent")]
-        rows.append([NAMES[method], *values])
-    table("training_enrichment.tex", "lrr|rr|rr|rr",
-          r"& \multicolumn{2}{c|}{Baseline 9} & \multicolumn{2}{c|}{$9+8$} & "
+        rows.append([NAMES[method], baseline_online_dimension(method), *values])
+    table("training_enrichment.tex", "lr|rr|rr|rr|rr",
+          r"\multicolumn{2}{c|}{} & \multicolumn{2}{c|}{Baseline 9} & \multicolumn{2}{c|}{$9+8$} & "
           r"\multicolumn{2}{c|}{$9+12$} & \multicolumn{2}{c}{$9+18$} \\ "
-          r"Model & Train & Val & Train & Val & Train & Val & Train & Val", rows)
+          r"Model & Online size & Train (\%) & Val (\%) & Train (\%) & Val (\%) & "
+          r"Train (\%) & Val (\%) & Train (\%) & Val (\%)", rows)
     rows = []
-    for level,label in zip(LEVELS,LEVEL_LABELS):
-        selection, _, _, _ = b3_provenance(level)
-        weights = np.load(records[level,"b3",0].weights_path)
-        checks = selection["checks"]
-        rows.append([label, str(np.count_nonzero(weights)),
-                     f"{checks['minimum_Gram_eigenvalue']:.4f}", f"{checks['maximum_Gram_eigenvalue']:.4f}",
-                     f"{checks['maximum_gradient_relative_error']:.4f}",
-                     f"{checks['maximum_sampled_to_full_linearized_residual_ratio']:.4f}", "Yes"])
+    selection, _, _, _ = b3_provenance("baseline")
+    weights = np.load(records["baseline","b3",0].weights_path)
+    checks = selection["checks"]
+    rows.append(["9", str(np.count_nonzero(weights)),
+                 f"{checks['minimum_Gram_eigenvalue']:.4f}", f"{checks['maximum_Gram_eigenvalue']:.4f}",
+                 f"{checks['maximum_gradient_relative_error']:.4f}",
+                 f"{checks['maximum_sampled_to_full_linearized_residual_ratio']:.4f}", "Yes"])
     table("b3_validation.tex", "lr|rrrr|l", r"Data & Cells & $\lambda_{\min}$ & $\lambda_{\max}$ & Gradient error & LS ratio & Accepted", rows)
     rows = []
     for method in METHODS[:6]:
-        rows.append([NAMES[method], *[str(np.count_nonzero(np.load(records[level,method,0].weights_path))) for level in LEVELS]])
-    table("cubature.tex", "lr|r|r|r", r"Model & Baseline 9 & $9+8$ & $9+12$ & $9+18$", rows)
+        values = [str(np.count_nonzero(np.load(records["baseline",method,0].weights_path)))]
+        values += ([r"--"] * 3 if method == "b3" else
+                   [str(np.count_nonzero(np.load(records[level,method,0].weights_path)))
+                    for level in LEVELS[1:]])
+        rows.append([NAMES[method], baseline_online_dimension(method), *values])
+    table("cubature.tex", "lr|r|r|r|r", r"Model & Online size & Baseline 9 & $9+8$ & $9+12$ & $9+18$", rows)
     metric_rows=[]
     for level in LEVELS:
-        for method in METHODS:
+        for method in (METHODS if level == "baseline" else ENRICHMENT_METHODS):
             for p in range(4):
                 r=records[level,method,p]
                 metric_rows.append(dict(level=level,method=method,point=POINT_KEYS[p],
@@ -508,19 +566,21 @@ def coefficient_figures(records):
         for point in range(4):
             ref=records[level,"linear",point].q
             norm=np.linalg.norm(ref,axis=1)
-            for method in METHODS[1:]:
+            for method in (METHODS[1:] if level == "baseline" else ENRICHMENT_METHODS[1:]):
                 absolute=np.linalg.norm(records[level,method,point].q-ref,axis=1)
                 all_absolute.append(absolute);all_relative.append(100*absolute/norm)
     absolute_lim,relative_lim=limits(all_absolute),limits(all_relative)
     heat_max={kind:max(float(np.max(np.abs(records[level,method,p].q-records[level,"linear",p].q)
                                       * (1 if kind=="absolute" else 100/np.linalg.norm(records[level,"linear",p].q,axis=1)[:,None])))
-                       for level in LEVELS for method in METHODS[1:] for p in range(4))
+                       for level in LEVELS
+                       for method in (METHODS[1:] if level == "baseline" else ENRICHMENT_METHODS[1:])
+                       for p in range(4))
               for kind in ("absolute","relative")}
     for level in LEVELS:
         fig,axes=plt.subplots(2,4,figsize=(15,6.6),sharex=True,sharey="row")
         for p in range(4):
             ref=records[level,"linear",p].q
-            for method in METHODS[1:]:
+            for method in (METHODS[1:] if level == "baseline" else ENRICHMENT_METHODS[1:]):
                 absolute=np.linalg.norm(records[level,method,p].q-ref,axis=1)
                 for row,v in enumerate((absolute,100*absolute/np.linalg.norm(ref,axis=1))):
                     axes[row,p].plot(np.arange(1,152),np.ma.masked_less_equal(v,0),color=COLORS[method],lw=1,label=PLOT_NAMES[method])
@@ -536,14 +596,15 @@ def coefficient_figures(records):
         fig.subplots_adjust(top=.83,hspace=.09,wspace=.13)
         save(fig,f"{level}_coefficients")
         for kind in ("absolute","relative"):
-            fig,axes=plt.subplots(7,4,figsize=(14,12.5),sharex=True,sharey=True)
+            plotted_methods = METHODS[1:] if level == "baseline" else ENRICHMENT_METHODS[1:]
+            fig,axes=plt.subplots(len(plotted_methods),4,figsize=(14,1.8*len(plotted_methods)),sharex=True,sharey=True)
             shown_rows = []
-            # One shared scale, logarithmic away from zero, keeps small B3
+            # One shared scale, logarithmic away from zero, keeps small
             # errors visible without clipping zeros or the extrapolation peak.
             threshold = heat_max[kind] / 10000
             intensity = SymLogNorm(linthresh=threshold, linscale=.25,
                                    vmin=0, vmax=heat_max[kind])
-            for row,method in enumerate(METHODS[1:]):
+            for row,method in enumerate(plotted_methods):
                 cmap=LinearSegmentedColormap.from_list(method,["#ffffff",COLORS[method]])
                 for p in range(4):
                     ref=records[level,"linear",p].q
@@ -553,7 +614,7 @@ def coefficient_figures(records):
                     axes[row,p].axhline(10.5,color=".35",ls=":",lw=.7)
                     if row==0:axes[row,p].set_title(title(p))
                     if p==0:axes[row,p].set_ylabel(PLOT_NAMES[method]+"\ncoefficient $i$")
-                    if row==6:axes[row,p].set_xlabel("time $t$")
+                    if row==len(plotted_methods)-1:axes[row,p].set_xlabel("time $t$")
                 shown_rows.append(shown)
             fig.subplots_adjust(left=.16,right=.9,hspace=.12,wspace=.05)
             for row, shown in enumerate(shown_rows):
@@ -575,19 +636,20 @@ def solution_figures(records,basis,uref,truth_cuts):
     for level in LEVELS:
         for p in range(4):
             cut_values.extend(truth_cuts[p])
-            for method in METHODS:
+            for method in (METHODS if level == "baseline" else ENRICHMENT_METHODS):
                 for idx in indices:
                     cut_values.append(uref[idx,None]+basis[idx]@records[level,method,p].q[:,[100,300,500]])
     ymin=min(float(v.min()) for v in cut_values);ymax=max(float(v.max()) for v in cut_values)
     margin=.04*(ymax-ymin);ylim=(min(0,ymin-margin),ymax+margin)
     for level in LEVELS:
+        plotted_methods = METHODS if level == "baseline" else ENRICHMENT_METHODS
         fig,axes=plt.subplots(4,2,figsize=(14,12),sharex=True,sharey=True)
         for p in range(4):
             for col,idx in enumerate(indices):
                 ax=axes[p,col]
                 for k,alpha in enumerate((.23,.43,1.)):
                     ax.plot(np.linspace(.2,99.8,250),truth_cuts[p][col][:,k],color=HDM_COLOR,lw=1.8,alpha=alpha,label="HDM" if k==2 else None)
-                    for method in METHODS:
+                    for method in plotted_methods:
                         cut=uref[idx]+basis[idx]@records[level,method,p].q[:,[100,300,500][k]]
                         ax.plot(np.linspace(.2,99.8,250),cut,color=COLORS[method],lw=1.1,alpha=alpha,label=PLOT_NAMES[method] if k==2 else None)
                 ax.set_title(title(p)+("; $u_x(x,y_{\rm mid})$" if col==0 else "; $u_x(x_{\rm mid},y)$"))
@@ -598,50 +660,78 @@ def solution_figures(records,basis,uref,truth_cuts):
         save(fig,f"{level}_solutions")
 
 
-def comparison_figures(records):
+def enrichment_comparison_figure(records, metric):
     fills=("#9ecae9","#fdd0a2","#9dd9d2","#a1d99b")
     edges=("#376795","#e6550d","#258f83","#2b7a2b")
-    for metric in ("state","coefficient"):
-        fig,axes=plt.subplots(1,2,figsize=(15,5.8),sharey=True)
-        methods=METHODS[1:]
-        for level,label,fill,edge,offset in zip(LEVELS,LEVEL_LABELS,fills,edges,(-.3,-.1,.1,.3)):
-            for col in range(2):
-                values=[]
-                for method in methods:
-                    v=[getattr(records[level,method,p],metric) for p in range(4)]
-                    values.append(np.mean(v[:3]) if col==0 else v[3])
-                axes[col].bar(np.arange(7)+offset,values,.18,color=fill,edgecolor=edge,label=label)
-        maxvalue=0
+    fig,axes=plt.subplots(1,2,figsize=(15,5.8),sharey=True)
+    methods=ENRICHMENT_METHODS[1:]
+    positions=np.arange(len(methods),dtype=float)
+    if metric == "state":
+        positions[2:] += 1  # Reserve a full category between Cases 2 and 3 for baseline B3.
+    for level,label,fill,edge,offset in zip(LEVELS,LEVEL_LABELS,fills,edges,(-.3,-.1,.1,.3)):
         for col in range(2):
-            baseline=[getattr(records["baseline","linear",p],metric) for p in range(4)]
-            reference=np.mean(baseline[:3]) if col==0 else baseline[3]
-            axes[col].axhline(reference,color="black",lw=1.1,label="Linear HPROM")
-            axes[col].axvline(4.5,color=".4",ls="--",lw=.9)
-            axes[col].set_xticks(np.arange(7),[PLOT_NAMES[m] for m in methods],rotation=28,ha="right")
-            axes[col].grid(axis="y",alpha=.2)
-            maxvalue=max(maxvalue,max(p.get_height() for p in axes[col].patches))
-        for ax in axes:ax.set_ylim(0,1.1*maxvalue)
-        axes[0].set_title(r"In-domain mean: $\mu^{(v)},\mu^{(1)},\mu^{(2)}$")
-        axes[1].set_title(r"Extrapolation: $\mu^{(3)}$")
-        axes[0].set_ylabel(("state error vs HDM" if metric=="state" else "coordinate error vs linear HPROM")+r" (\%)")
-        axes[0].legend(ncol=2);fig.subplots_adjust(bottom=.27,wspace=.06)
-        save(fig,f"enrichment_{metric}")
-    fig,axes=plt.subplots(2,4,figsize=(15,6.7),sharex=True,sharey="row")
+            values=[]
+            for method in methods:
+                v=[getattr(records[level,method,p],metric) for p in range(4)]
+                values.append(np.mean(v[:3]) if col==0 else v[3])
+            axes[col].bar(positions+offset,values,.18,color=fill,edgecolor=edge,label=label)
+    maxvalue=0
+    for col in range(2):
+        baseline=[getattr(records["baseline","linear",p],metric) for p in range(4)]
+        reference=np.mean(baseline[:3]) if col==0 else baseline[3]
+        axes[col].axhline(reference,color="black",lw=1.1,zorder=4,label="Linear HPROM")
+        if metric == "state":
+            b3=[records["baseline","b3",p].state for p in range(4)]
+            b3_value=np.mean(b3[:3]) if col==0 else b3[3]
+            axes[col].bar(2.0,b3_value,.18,color=fills[0],edgecolor=edges[0],lw=1.0)
+            tick_positions=np.insert(positions,2,2.0)
+            tick_labels=[PLOT_NAMES[m] for m in ("case1","case2","b3","case3","podae","podnn","poddl")]
+        else:
+            tick_positions=positions
+            tick_labels=[PLOT_NAMES[m] for m in methods]
+        axes[col].axvline(4.5 if metric == "state" else 3.5,color=".4",ls="--",lw=.9)
+        axes[col].set_xticks(tick_positions,tick_labels,rotation=32 if metric == "state" else 28,ha="right")
+        axes[col].grid(axis="y",alpha=.2)
+        maxvalue=max(maxvalue,max(p.get_height() for p in axes[col].patches))
+    for ax in axes:
+        if metric == "state":
+            ax.set_yscale("symlog",linthresh=1.0,linscale=1.0,base=10)
+            ticks=(0,.5,1,2,5,10)
+            ax.set_yticks(ticks,[f"{tick:g}" for tick in ticks])
+        ax.set_ylim(0,1.1*maxvalue)
+    axes[0].set_title(r"In-domain mean: $\mu^{(v)},\mu^{(1)},\mu^{(2)}$")
+    axes[1].set_title(r"Extrapolation: $\mu^{(3)}$")
+    axes[0].set_ylabel(("state error vs HDM" if metric=="state" else "coordinate error vs linear HPROM")+r" (\%)")
+    axes[0].legend(ncol=2);fig.subplots_adjust(bottom=.31 if metric == "state" else .27,wspace=.06)
+    save(fig,f"enrichment_{metric}")
+
+
+def comparison_figures(records):
+    for metric in ("state","coefficient"):
+        enrichment_comparison_figure(records,metric)
+    baseline_history_figure(records)
+
+
+def baseline_history_figure(records):
+    histories = [np.asarray(records["baseline", method, point].history)
+                 for point in range(4)
+                 for method in ("linear", "case1", "case2", "b3", "case3")]
+    if not all(np.isfinite(values).all() and (values > 0).all() for values in histories):
+        raise ValueError("Logarithmic state-error history requires finite positive values")
+    history_min = min(float(values.min()) for values in histories)
+    history_max = max(float(values.max()) for values in histories)
+    fig,axes=plt.subplots(1,4,figsize=(15,3.7),sharex=True,sharey=True)
     for p in range(4):
         for method in ("linear","case1","case2","b3","case3"):
-            axes[0,p].plot(np.linspace(0,25,501),records["baseline",method,p].history,color=COLORS[method],label=PLOT_NAMES[method],lw=1)
-        for level,label,color in zip(LEVELS,LEVEL_LABELS,edges):
-            axes[1,p].plot(np.linspace(0,25,501),records[level,"b3",p].history,color=color,label=label,lw=1)
-        axes[0,p].set_title(title(p));axes[1,p].set_xlabel("time $t$")
-        for row in range(2):axes[row,p].grid(alpha=.2)
-    history_max = max(float(np.max(line.get_ydata()))
-                      for ax in axes.ravel() for line in ax.lines)
+            axes[p].plot(np.linspace(0,25,501),records["baseline",method,p].history,
+                         color=COLORS[method],label=PLOT_NAMES[method],lw=1)
+        axes[p].set_title(title(p));axes[p].set_xlabel("time $t$");axes[p].grid(alpha=.2)
     for ax in axes.ravel():
-        ax.set_ylim(0, 1.05 * history_max)
-    axes[0,0].set_ylabel(r"baseline state error (\%)");axes[1,0].set_ylabel(r"$B_3$ state error (\%)")
-    fig.legend(*axes[0,0].get_legend_handles_labels(),loc="upper center",ncol=5)
-    axes[1,0].legend(title="training trajectories",ncol=2)
-    fig.subplots_adjust(top=.86,wspace=.08,hspace=.12)
+        ax.set_yscale("log")
+        ax.set_ylim(.8 * history_min, 1.2 * history_max)
+    axes[0].set_ylabel(r"state error (\%)")
+    fig.legend(*axes[0].get_legend_handles_labels(),loc="upper center",ncol=5)
+    fig.subplots_adjust(top=.78,wspace=.08)
     save(fig,"b3_histories")
 
 
@@ -662,7 +752,9 @@ def sampling_figures():
         ax.scatter(*np.array(POINTS).T,color="#D62728",marker="*",s=90,label="online reporting (4)")
         ax.set_title(f"Training trajectories: ${label}$");ax.set_xlim(3.9,5.85);ax.set_ylim(.0108,.0342)
         ax.set_xlabel(r"$\mu_1$");ax.set_ylabel(r"$\mu_2$");ax.grid(alpha=.15)
-        ax.annotate(r"$\mu^{(3)}$",(4.,.033),xytext=(4.09,.0331))
+        offsets=((6,-14),(6,-14),(6,6),(7,-2))
+        for point,point_label,offset in zip(POINTS,POINT_LABELS,offsets):
+            ax.annotate(point_label,point,textcoords="offset points",xytext=offset,fontsize=9)
     handles,labels=axes[-1,-1].get_legend_handles_labels()
     fig.legend(handles,labels,loc="upper center",ncol=3);fig.subplots_adjust(top=.88,hspace=.22)
     save(fig,"sampling")
@@ -679,7 +771,14 @@ def timing_table(records):
         raise ValueError("HDM timing hardware/protocol mismatch")
     if int(direct["numerical_threads"]) != 1 or int(direct["repeats_per_point"]) != 10:
         raise ValueError("Unexpected direct inference timing protocol")
-    rows=[]
+    ecm_protocol=json.loads((B3_ECM_SHERLOCK/"protocol.json").read_text())
+    ecm_environment=json.loads((B3_ECM_SHERLOCK/"environment.json").read_text())
+    if (ecm_protocol["hostname"]!=protocol["hostname"] or ecm_protocol["threads"]!=1
+            or any(pool["num_threads"] != 1 for pool in ecm_environment["threadpools"])):
+        raise ValueError("B3 ECM timing hardware/protocol mismatch")
+    full_rule = np.load(records["baseline", "linear", 0].weights_path, allow_pickle=False)
+    rows = [["HDM", "125{,}000", f"{full_rule.size:,}".replace(",", "{,}"),
+             "--", f"{hdm['mean_in_domain_seconds']:.3f}", "--"], None]
     for method in METHODS:
         if method in ("podnn","poddl"):
             times=[float(direct[f"{method}_{key}_mean_inference_time_s"]) for key in POINT_KEYS[:3]]
@@ -688,26 +787,19 @@ def timing_table(records):
             times=[float(records["baseline",method,p].summary[key]) for p in range(3)]
         mean=float(np.mean(times));error=np.mean([records["baseline",method,p].state for p in range(3)])
         if method=="podnn":rows.append(None)
-        suffix=r"$^\dagger$" if method in ("podnn","poddl") else ""
-        rows.append([NAMES[method]+suffix,"24" if method=="linear" else "1",f"{error:.3f}",
-                     f"{mean:.5g}",f"{hdm['mean_in_domain_seconds']/mean:.2f}"])
-    table("timing_baseline.tex","lr|rrr",r"Model & Threads & Mean $e_u$ (\%) & Mean time (s) & HDM/time",rows)
-    # Preserve the matched 4096/2048 ablation; the main B3 row now uses 2048.
-    root=B3_BUDGET_SHERLOCK
-    env=json.loads((root/"environment.json").read_text())
-    if env["hostname"]!=protocol["hostname"] or env["threads"]!=1:
-        raise ValueError("B3 budget timing hardware/protocol mismatch")
-    rows=[]
-    for kind,draws in (("baseline",4096),("selected",2048)):
-        values=[json.loads((root/kind/f"reporting_p{p}.json").read_text()) for p in range(4)]
-        errors=[v["state_error_percent"] for v in values]
-        mean=np.mean([v["online_seconds"] for v in values[:3]])
-        weights_path=(BASE/"Stage4/case2_b3/positive_fit4096/weights.npy" if kind=="baseline"
-                      else B3_BUDGET_LOCAL/f"draws{B3_DRAWS}/weights.npy")
-        cells=int(np.count_nonzero(np.load(weights_path)))
-        rows.append([str(draws),str(cells),f"{np.mean(errors[:3]):.3f}",f"{errors[3]:.3f}",
-                     f"{mean:.3f}",f"{hdm['mean_in_domain_seconds']/mean:.2f}"])
-    table("b3_budget.tex","rr|rrrr",r"Draws & Cells & Mean $e_u$ (\%) & $e_u(\mu^{(3)})$ (\%) & Time (s) & HDM/time",rows)
+        if method in ("podnn", "poddl"):
+            elements = "--"
+            time_text = f"{mean:.5f}" + r"$^\dagger$"
+            speedup = f"{hdm['mean_in_domain_seconds']/mean:,.2f}".replace(",", "{,}") + r"$^\dagger$"
+        else:
+            weights = np.load(records["baseline", method, 0].weights_path, allow_pickle=False)
+            elements = f"{np.count_nonzero(weights):,}".replace(",", "{,}")
+            time_text, speedup = f"{mean:.3f}", f"{hdm['mean_in_domain_seconds']/mean:.2f}"
+        rows.append([BASELINE_NAMES[method], baseline_online_dimension(method), elements,
+                     f"{error:.3f}", time_text, speedup])
+    table("timing_baseline.tex", "lrr|rrr",
+          r"Model & Online size & No. elements & Mean $e_u$ (\%) & Wall-clock time (s) & Speedup factor",
+          rows)
 
 
 def main():
@@ -715,7 +807,10 @@ def main():
     torch.set_num_threads(2)
     with threadpool_limits(2):
         details=check_design_and_models()
-        records={(level,method,p):load_record(level,method,p) for level in LEVELS for method in METHODS for p in range(4)}
+        records={(level,method,p):load_record(level,method,p)
+                 for level in LEVELS
+                 for method in (METHODS if level == "baseline" else ENRICHMENT_METHODS)
+                 for p in range(4)}
         basis,uref,truth_cuts=recompute(records)
         summaries(records,details)
         timing_table(records)
@@ -729,16 +824,15 @@ def main():
         for stem in NETWORKS.values():
             for p in (root/"Stage3/models"/f"{stem}.pt", root/"Stage3"/f"{stem}_summary.txt"):
                 fingerprints[str(p.relative_to(REPO))] = digest(p)
-        _, _, audit_path, paths = b3_provenance(level)
-        for p in (*paths, audit_path):
-            fingerprints[str(p.relative_to(REPO))] = digest(p)
-        for point in range(2):
-            folder = root / f"Stage4/case2_b3/validation_positive_fit{B3_DRAWS}_hprom3_p{point}_steps500"
-            pair = ((B3_BUDGET_LOCAL/f"draws{B3_DRAWS}/validation_p{point}.json",
-                     B3_BUDGET_LOCAL/f"draws{B3_DRAWS}/validation_p{point}_qN.npy") if level=="baseline" else
-                    (folder/"summary.json",folder/"qN.npy"))
-            for p in pair:
+        if level == "baseline":
+            _, _, audit_path, paths = b3_provenance(level)
+            for p in (*paths, audit_path):
                 fingerprints[str(p.relative_to(REPO))] = digest(p)
+        if level == "baseline":
+            selection, _, _, _ = b3_provenance(level)
+            for path in selection["held_out_validation"]:
+                for p in (path, path.with_name(path.stem + "_qN.npy")):
+                    fingerprints[str(p.relative_to(REPO))] = digest(p)
     for name in HDM_NAMES:
         p = REPO/"Project_YvonMaday/Results/param_snaps"/name
         fingerprints[str(p.relative_to(REPO))] = digest(p)
@@ -747,16 +841,16 @@ def main():
             if p:fingerprints[str(p.relative_to(REPO))]=digest(p)
     timing_sources = [BASE/"timing/online_thread_protocol.json", BASE/"timing/hdm/hdm_timing.json",
                       BASE/"timing/direct_inference_repeat10_summary.txt",
-                      BASE/"Stage4/case2_b3/positive_fit4096/weights.npy"]
-    timing_sources += [B3_BUDGET_SHERLOCK/kind/f"reporting_p{p}{suffix}"
-                       for kind in ("baseline","selected") for p in range(4)
+                      B3_ECM_DEPLOYMENT/"ecm_weights.npy"]
+    timing_sources += [B3_ECM_SHERLOCK/"ecm"/f"reporting_p{p}{suffix}"
+                       for p in range(4)
                        for suffix in (".json","_qN.npy")]
     for p in timing_sources:
         fingerprints[str(p.relative_to(REPO))] = digest(p)
     audit=dict(campaigns={k:str(v.relative_to(PAPER)) for k,v in CAMPAIGNS.items()},
                coefficient_reference="frozen 151-coordinate linear HPROM",state_reference="HDM",
                timing="matched baseline protocol only; direct timings are coefficient inference only",
-               b3_rule="2048-draw rule refitted per checkpoint; validated baseline support reused with predictor reuse at all budgets",
+               b3_rule="full-candidate, validation-selected ECM for the baseline B3 deployment",
                state_recomputation="Euclidean orthogonal decomposition, verified against saved state errors",
                scales=scale,sha256=fingerprints)
     (TABLES/"audit.json").write_text(json.dumps(audit,indent=2)+"\n")

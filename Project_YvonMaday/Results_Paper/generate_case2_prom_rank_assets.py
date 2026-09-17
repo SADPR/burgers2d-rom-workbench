@@ -39,12 +39,9 @@ def rank_assets(rows, controls):
     controls_by_rank = grouped(controls, "rank")
     baseline_residual = np.mean([row["mean_residual_norm"] for row in by_rank[0]])
     lines = [
-        r"\begin{tabular}{rr rrr rrr}",
+        r"\begin{tabular}{lr|rrr}",
         r"\toprule",
-        r"& & \multicolumn{3}{c}{PROM--ANN Case 2 + $\mathbf B_r$, $n=10$} & "
-        r"\multicolumn{3}{c}{PROM--ANN Case 2, $n=10+r$} \\",
-        r"\cmidrule(lr){3-5}\cmidrule(lr){6-8}",
-        r"$r$ & Unknowns & $e_q^{\mathrm{val},1}$ & $e_q^{\mathrm{val},2}$ & Mean & "
+        r"Model & Online size & "
         r"$e_q^{\mathrm{val},1}$ & $e_q^{\mathrm{val},2}$ & Mean \\",
         r"\midrule",
     ]
@@ -62,11 +59,16 @@ def rank_assets(rows, controls):
                                baseline_residual)
         control_ratio = float(np.mean([row["mean_residual_norm"] for row in paired]) /
                               baseline_residual)
+        if ranks:
+            lines.append(r"\addlinespace[0.2em]")
         lines.append(
-            f"{rank} & {10 + rank} & {adaptive_errors[0]:.3f} & "
-            f"{adaptive_errors[1]:.3f} & {adaptive_mean:.3f} & "
-            f"{control_errors[0]:.3f} & {control_errors[1]:.3f} & "
-            f"{control_mean:.3f} \\\\"
+            rf"PROM--ANN Case 2 + $\mathbf B_{{{rank}}}$" +
+            f" & {10 + rank} & "
+            f"{adaptive_errors[0]:.3f} & {adaptive_errors[1]:.3f} & {adaptive_mean:.3f} \\\\"
+        )
+        lines.append(
+            f"PROM--ANN Case 2 & {10 + rank} & "
+            f"{control_errors[0]:.3f} & {control_errors[1]:.3f} & {control_mean:.3f} \\\\"
         )
         ranks.append(rank)
         unknowns.append(10 + rank)
@@ -91,7 +93,7 @@ def rank_assets(rows, controls):
     axes[0].scatter([13], [adaptive_means[ranks.index(3)]], marker="*", s=130,
                     color="#D62728", edgecolor="#111111", linewidth=.5,
                     zorder=5, label=r"Frozen $r=3$")
-    axes[0].set_xlabel(r"online unknowns $d=10+r$")
+    axes[0].set_xlabel(r"online size $n+r$")
     axes[0].set_ylabel(r"mean validation coefficient-history error (\%)")
     axes[0].set_xticks(unknowns)
     axes[0].set_yscale("log")
@@ -105,7 +107,7 @@ def rank_assets(rows, controls):
     axes[1].scatter([13], [adaptive_residual_ratios[ranks.index(3)]], marker="*",
                     s=130,
                     color="#D62728", edgecolor="#111111", linewidth=.5, zorder=5)
-    axes[1].set_xlabel(r"online unknowns $d=10+r$")
+    axes[1].set_xlabel(r"online size $n+r$")
     axes[1].set_ylabel(r"mean converged-residual ratio")
     axes[1].set_xticks(unknowns)
     axes[1].grid(True, alpha=.25)
@@ -119,9 +121,9 @@ def reporting_tables(rows):
     by_model = grouped(rows, "model")
     order = ("Case 2, n=10", "Case 2, n=13", "Case 2 + B3, n=10")
     labels = {
-        "Case 2, n=10": r"PROM--ANN Case 2 ($n=10$)",
-        "Case 2, n=13": r"PROM--ANN Case 2 ($n=13$)",
-        "Case 2 + B3, n=10": r"PROM--ANN Case 2 + $\mathbf B_3$ ($n=10$)",
+        "Case 2, n=10": ("PROM--ANN Case 2", "10"),
+        "Case 2, n=13": ("PROM--ANN Case 2", "13"),
+        "Case 2 + B3, n=10": (r"PROM--ANN Case 2+$\mathbf B_3$", "13"),
     }
 
     existing_state = {
@@ -141,20 +143,21 @@ def reporting_tables(rows):
         return (*errors[:3], float(np.mean(errors[:3])), errors[3])
 
     def table(path, field, fixed):
-        lines = [r"\begin{tabular}{lrrrr|r}", r"\toprule",
-                 r"Model & $\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ \\",
+        lines = [r"\begin{tabular}{lr|rrrr|r}", r"\toprule",
+                 r"Model & Online size & "
+                 r"$\mu^{(v)}$ & $\mu^{(1)}$ & $\mu^{(2)}$ & Mean & $\mu^{(3)}$ \\",
                  r"\midrule"]
         values = {model: calculated(model, field) for model in order}
         display = [
-            ("Linear PROM (151 modes)", fixed["Linear PROM (151 modes)"]),
+            (("Linear PROM", "151"), fixed["Linear PROM (151 modes)"]),
+            (("PROM--ANN Case 1", "10"), fixed["PROM--ANN Case 1"]),
             (labels["Case 2, n=10"], values["Case 2, n=10"]),
             (labels["Case 2, n=13"], values["Case 2, n=13"]),
             (labels["Case 2 + B3, n=10"], values["Case 2 + B3, n=10"]),
-            ("PROM--ANN Case 1", fixed["PROM--ANN Case 1"]),
-            ("PROM--ANN Case 3", fixed["PROM--ANN Case 3"]),
+            (("PROM--ANN Case 3", "10"), fixed["PROM--ANN Case 3"]),
         ]
-        for label, row in display:
-            lines.append(label + " & " + " & ".join(f"{value:.3f}" for value in row) + r" \\")
+        for dimensions, row in display:
+            lines.append(" & ".join((*dimensions, *(f"{value:.3f}" for value in row))) + r" \\")
         lines.extend([r"\bottomrule", r"\end{tabular}"])
         path.write_text("\n".join(lines) + "\n")
 

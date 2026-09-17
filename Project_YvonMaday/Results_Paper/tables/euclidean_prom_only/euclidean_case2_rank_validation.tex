@@ -1,14 +1,23 @@
-\begin{tabular}{rr rrr rrr}
+\begin{tabular}{lr|rrr}
 \toprule
-& & \multicolumn{3}{c}{PROM--ANN Case 2 + $\mathbf B_r$, $n=10$} & \multicolumn{3}{c}{PROM--ANN Case 2, $n=10+r$} \\
-\cmidrule(lr){3-5}\cmidrule(lr){6-8}
-$r$ & Unknowns & $e_q^{\mathrm{val},1}$ & $e_q^{\mathrm{val},2}$ & Mean & $e_q^{\mathrm{val},1}$ & $e_q^{\mathrm{val},2}$ & Mean \\
+Model & Online size & $e_q^{\mathrm{val},1}$ & $e_q^{\mathrm{val},2}$ & Mean \\
 \midrule
-0 & 10 & 3.808 & 3.937 & 3.873 & 3.808 & 3.937 & 3.873 \\
-1 & 11 & 1.928 & 1.947 & 1.937 & 3.647 & 3.971 & 3.809 \\
-2 & 12 & 0.561 & 0.552 & 0.557 & 3.432 & 3.923 & 3.677 \\
-3 & 13 & 0.207 & 0.255 & 0.231 & 3.480 & 3.959 & 3.720 \\
-5 & 15 & 0.106 & 0.143 & 0.124 & 3.356 & 3.930 & 3.643 \\
-10 & 20 & 0.095 & 0.127 & 0.111 & 3.251 & 3.833 & 3.542 \\
+PROM--ANN Case 2 + $\mathbf B_{0}$ & 10 & 3.808 & 3.937 & 3.873 \\
+PROM--ANN Case 2 & 10 & 3.808 & 3.937 & 3.873 \\
+\addlinespace[0.2em]
+PROM--ANN Case 2 + $\mathbf B_{1}$ & 11 & 1.928 & 1.947 & 1.937 \\
+PROM--ANN Case 2 & 11 & 3.647 & 3.971 & 3.809 \\
+\addlinespace[0.2em]
+PROM--ANN Case 2 + $\mathbf B_{2}$ & 12 & 0.561 & 0.552 & 0.557 \\
+PROM--ANN Case 2 & 12 & 3.432 & 3.923 & 3.677 \\
+\addlinespace[0.2em]
+PROM--ANN Case 2 + $\mathbf B_{3}$ & 13 & 0.207 & 0.255 & 0.231 \\
+PROM--ANN Case 2 & 13 & 3.480 & 3.959 & 3.720 \\
+\addlinespace[0.2em]
+PROM--ANN Case 2 + $\mathbf B_{5}$ & 15 & 0.106 & 0.143 & 0.124 \\
+PROM--ANN Case 2 & 15 & 3.356 & 3.930 & 3.643 \\
+\addlinespace[0.2em]
+PROM--ANN Case 2 + $\mathbf B_{10}$ & 20 & 0.095 & 0.127 & 0.111 \\
+PROM--ANN Case 2 & 20 & 3.251 & 3.833 & 3.542 \\
 \bottomrule
 \end{tabular}
