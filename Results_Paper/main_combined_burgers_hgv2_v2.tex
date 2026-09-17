@@ -12,7 +12,7 @@
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{appendixnumberbeamer}
-\graphicspath{{Figures/}{/home/sares/Documents/HGV2/figures/}{/home/sares/Documents/HGV2/figures/validation_final_rbf363/}{/home/sares/Documents/HGV2/figures/validation_final_rbf363/error_maps/}{/home/sares/Documents/HGV2/figures/validation_final_rbf363/coefficients/}}
+\graphicspath{{Figures/}{/home/sares/Documents/HGV2/figures/validation_final_rbf363_v2/}{/home/sares/Documents/HGV2/figures/}{/home/sares/Documents/HGV2/figures/validation_final_rbf363/}{/home/sares/Documents/HGV2/figures/validation_final_rbf363/error_maps/}{/home/sares/Documents/HGV2/figures/validation_final_rbf363/coefficients/}}
 
 %------------------------------------------------
 % Stanford Colors
@@ -84,60 +84,6 @@ Charbel Farhat\textsuperscript{1,2} \
 \includegraphics[height=0.56\textheight,keepaspectratio]{Figures/burgers_hdm_3d_transition_cropped.png}\\[0.20cm]
 \Large Global and local HPROM validation\\[0.12cm]
 \normalsize Linear POD bases, quadratic manifolds, and GPR manifolds
-\end{frame}
-
-\begin{frame}{Setup for Paper Campaign}
-\small
-\textbf{Two-dimensional parametric inviscid Burgers problem}
-\[
-\frac{\partial \mathbf U}{\partial t}
-+\frac{\partial \mathbf F(\mathbf U)}{\partial x}
-+\frac{\partial \mathbf G(\mathbf U)}{\partial y}
-=\mathbf S(x;\boldsymbol\mu),
-\qquad
-\mathbf U=
-\begin{bmatrix}
-u_x\\u_y
-\end{bmatrix}.
-\]
-\[
-\mathbf S(x;\boldsymbol\mu)=
-\begin{bmatrix}
-0.02\exp(\mu_2 x)\\0
-\end{bmatrix},
-\qquad
-u_x(0,y,t;\boldsymbol\mu)=\mu_1.
-\]
-
-\vspace{-0.35em}
-\centering
-\(\mu_1\): inflow value \qquad
-\(\mu_2\): exponential source variation \qquad
-\(\boldsymbol\mu\in[4.25,5.50]\times[0.015,0.030]\)
-\par
-
-\vspace{0.35em}
-\textbf{Test points:}
-\[
-\boldsymbol\mu_1=(4.56,0.019),\quad
-\boldsymbol\mu_2=(4.75,0.020),\quad
-\boldsymbol\mu_3=(5.19,0.026).
-\]
-
-\vspace{-0.25em}
-\begin{columns}[T,onlytextwidth]
-\begin{column}{0.42\textwidth}
-\textbf{HDM:} $\Omega=[0,100]^2$, $250\times250$ finite-volume cells.
-\end{column}
-\begin{column}{0.58\textwidth}
-\textbf{Methods included:}
-\begin{tabular}{ll}
-Global HPROM & Local HPROM \\
-Global HQPROM & Local HQPROM \\
-Global HPROM--GPR & Local HPROM--GPR
-\end{tabular}
-\end{column}
-\end{columns}
 \end{frame}
 
 \begin{frame}{Parameter Domain and Test Points}
@@ -439,10 +385,6 @@ Local HPROM-GPR ($N_c=3$) & 9 & 60--97 & 811 & 0.714 & 0.786 & 0.113 & 110.5 \\
 Local HPROM ($N_c=5$) & 23--31 & -- & 2\,384 & 0.915 & 0.943 & 0.095 & 132.0 \\
 Local HQPROM ($N_c=5$) & 15--20 & -- & 1\,593 & 0.760 & 0.878 & 0.128 & 97.9 \\
 Local HPROM-GPR ($N_c=5$) & 7 & 41--68 & 631 & 0.673 & 0.880 & 0.094 & 133.2 \\
-\addlinespace[0.35em]
-Local HPROM ($N_c=8$) & 16--26 & -- & 1\,781 & 0.787 & 0.900 & 0.070 & 179.7 \\
-Local HQPROM ($N_c=8$) & 10--15 & -- & 1\,075 & 0.787 & 0.890 & 0.082 & 151.9 \\
-Local HPROM-GPR ($N_c=8$) & 6 & 28--54 & 541 & 0.801 & 1.156 & 0.085 & 147.9 \\
 \hline
 \end{tabular}}
 \vspace{0.2em}
@@ -497,12 +439,24 @@ Local HPROM-GPR ($N_c=8$) & 6 & 28--54 & 541 & 0.801 & 1.156 & 0.085 & 147.9 \\
 \end{frame}
 
 \begin{frame}{Burgers Conclusions}
+\small
 \begin{itemize}
-  \item All local ROMs improve runtime performance relative to their global counterparts, at every $N_c$ and at matched accuracy: $34.2\times\!\to\!179.7\times$ (HPROM), $19.5\times\!\to\!151.9\times$ (HQPROM), $53.1\times\!\to\!147.9\times$ (HPROM--GPR).
-  \item Increasing $N_c$ monotonically improves speedup within every family, so clustering, not the choice of local manifold, is the dominant lever.
-  \item Local HPROM at $N_c=8$ is the fastest model: 0.070 min and $179.7\times$ speedup.
-  \item Compactness and wall-clock time rank differently. At $N_c=8$, HPROM--GPR is the most compact ($n=6$, $N_e=541$) and HQPROM next ($n=10$--$15$, $N_e=1{,}075$), yet plain HPROM is fastest despite $n=16$--$26$: the per-iteration cost of the quadratic term and its Jacobian, and of the GPR evaluation, offsets their dimensional advantage.
-  \item Reported local-model runtimes include cluster selection and any cluster-transfer cost. The decision and transfer rules are formulation-specific and are defined in the appendix.
+  \item At matched accuracy, every local ROM is faster than its global counterpart:
+        $34.2\times\!\to\!132.0\times$ (HPROM), $19.5\times\!\to\!97.9\times$ (HQPROM),
+        $53.1\times\!\to\!133.2\times$ (HPROM--GPR).
+  \item Within each family the speedup grows monotonically with $N_c$, so clustering is
+        the dominant lever rather than the choice of local manifold.
+  \item When the nonlinear manifold does not compress enough, as for the quadratic, the
+        speedup reached at a given error need not beat the linear model. This is
+        problem-dependent, so the three families are alternatives rather than a ranking.
+  \item Clustering and nonlinear compression are not additive. A linear basis always gains
+        from more clusters, whereas HPROM--GPR already carries an intrinsic compression
+        that clustering should support rather than replace: at $N_c=5$ the local linear
+        HPROM has caught up with it ($132.0\times$ versus $133.2\times$), and raising
+        $N_c$ further would make HPROM--GPR more expensive, since every nonlinear step
+        also pays for the manifold tangent
+        $\mathbf{\Psi}=\mathbf{V}+\bar{\mathbf{V}}\,\partial\mathcal{N}_{\mathrm{GPR}}/
+        \partial\mathbf{q}$, the closure evaluation, and cluster selection and transfer.
 \end{itemize}
 \end{frame}
 
@@ -618,76 +572,81 @@ Local HPROM-GPR ($N_c=8$) & 6 & 28--54 & 541 & 0.801 & 1.156 & 0.085 & 147.9 \\
 \end{frame}
 
 \begin{frame}{HGV2 ROM Configurations}
+\centering
 \small
-\begin{itemize}
-  \item Global linear HPROM uses one POD basis. Local linear HPROM uses four POD bases and assigns each online state to its nearest cluster.
-  \item Global HPROM--RBF uses $n=8$ primary coordinates and predicts the remaining coordinates with one RBF map.
-  \item Local HPROM--RBF uses one $n=8$ RBF map per cluster. The local primary and secondary dimensions are reported in the next table.
-  \item Every POD basis and RBF map is trained from the same 363 HDM parameter cases. ECSW is an independent offline construction step.
-\end{itemize}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lccc}
+\hline
+\textbf{Model} & \textbf{Reduction} & \textbf{Closure} & $N_c$ \\
+\hline
+HPROM & one POD basis & -- & 1 \\
+HPROM--RBF & $n=8$ primary coordinates & one RBF map & 1 \\
+\addlinespace[0.35em]
+Local HPROM & one POD basis per cluster & -- & 4 \\
+Local HPROM--RBF & $n=8$ primary coordinates & one RBF map per cluster & 4 \\
+\hline
+\end{tabular}
+
+\vspace{0.5em}
+{\small Every POD basis and RBF map is trained from the same 363 HDM parameter cases.
+Each online state is assigned to its nearest cluster. ECSW is an independent offline
+construction step.}
 \end{frame}
 
 \begin{frame}{HGV2 Online Performance and Validation Accuracy}
-\centering
 \scriptsize
-Coefficient errors are global relative $L^2$ values over 100 independent validation cases. Online times are means over 10 validation cases on Sherlock: one node, 24 MPI ranks, and 24 cores.
-
-\vspace{0.12cm}
-\renewcommand{\arraystretch}{1.08}
-\setlength{\tabcolsep}{1pt}
-\tiny
+\centering
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{lccrrr|rr|rr}
-\toprule
-\textbf{Model} & $n$ & $\bar n$ & $C_D$ [\%] & $C_L$ [\%] & $C_M$ [\%] & \multicolumn{2}{c|}{\textbf{Online time [s]}} & \multicolumn{2}{c}{\textbf{Speedup}} \\
- & & & & & & \texttt{True} & \texttt{False} & \texttt{True} & \texttt{False} \\
-\midrule
-Global linear HPROM & 362 & -- & \textbf{0.975} & 0.554 & 6.620 & 24.03 & -- & 1.00 & -- \\
-Local linear HPROM, $N_c=4$ & 95--168 & -- & 1.101 & \textbf{0.444} & \textbf{6.242} & 6.80 & -- & 3.53 & -- \\
-Global HPROM--RBF & 8 & 354 & 1.388 & 1.335 & 7.004 & 6.00 & 1.15 & 4.00 & 20.97 \\
-Local HPROM--RBF, $N_c=4$ & 8 & 117--140 & 1.978 & 2.183 & 7.117 & \textbf{2.28} & \textbf{0.62} & \textbf{10.54} & \textbf{38.88} \\
-\bottomrule
+\begin{tabular}{lrrrrrrr}
+\hline
+\textbf{Computational model} & $n$ ($N$ for HDM) & $\bar{n}$ & $C_D$ (\%) & $C_L$ (\%) & $C_M$ (\%) & Online time (s) & Speedup \\
+\hline
+HDM & 5\,674\,883 & -- & -- & -- & -- & \textit{pending} & -- \\
+\addlinespace[0.35em]
+HPROM & 362 & -- & 0.975 & 0.554 & 6.620 & 24.03 & -- \\
+HPROM--RBF & 8 & 354 & 1.388 & 1.335 & 7.004 & 1.15 & 21.0 \\
+\addlinespace[0.35em]
+Local HPROM ($N_c=4$) & 95--168 & -- & 1.101 & 0.444 & 6.242 & 6.80 & 3.5 \\
+Local HPROM--RBF ($N_c=4$) & 8 & 117--140 & 1.978 & 2.183 & 7.117 & 0.62 & 38.9 \\
+\hline
 \end{tabular}}
+\vspace{0.2em}
 
-\vspace{0.15cm}
-\footnotesize \texttt{True}/\texttt{False} denotes \texttt{IncludeAllLiftDragFaces}. For linear HPROM, $n$ is the full POD rank. For RBF, $n$ and $\bar n$ are the primary and secondary dimensions; local $\bar n$ values are ranges across the four cluster bases. Each speedup is relative to global linear HPROM with \texttt{True}.
+{\tiny Coefficient errors are global relative $L^2$ values over 100 independent validation cases.}
 
-\vspace{0.08cm}
-\footnotesize The RBF \texttt{False} runs omit the postprocessing-only lift/drag faces and their $C_L$, $C_D$, $C_M$ output. The accuracy entries come from the matching \texttt{True} runs. All timing values are means of the maximum-rank \emph{Nonlinear ROM Online} timer over validation cases 000--009.
+{\tiny Speedup is computed with respect to the HPROM online time, so HPROM itself carries no entry. The HDM runtime is pending.}
+
+{\tiny Timings are means over 10 validation cases, measured on Sherlock using one node, 24 MPI ranks, and 24 cores.}
+
+{\tiny For the HDM, $N$ is the number of mesh nodes. For HPROM, $n$ is the full POD rank. For HPROM--RBF, $n$ and $\bar{n}$ are the primary and secondary dimensions; local $\bar{n}$ is the range across the four cluster bases.}
 \end{frame}
 
 \begin{frame}{HGV2 Validation Error Comparison}
 \centering
-\small The plotted global RBF uses all 363 ECSW parameter cases with row stride 4.
-
-\vspace{0.22cm}
-\includegraphics[width=0.91\textwidth,height=0.70\textheight,keepaspectratio]{overall_relative_errors.png}
+\includegraphics[width=0.91\textwidth,height=0.74\textheight,keepaspectratio]{overall_relative_errors.png}
 \end{frame}
 
 \begin{frame}{HGV2 ECSW Offline Cost}
 \centering
-\scriptsize ECSW was run on Sherlock using 20 nodes, 480 MPI ranks, and 480 cores. Times are maximum-rank wall times from the offline logs.
+\scriptsize
+\renewcommand{\arraystretch}{1.20}
+\resizebox{0.86\textwidth}{!}{%
+\begin{tabular}{lrrr}
+\hline
+\textbf{Computational model} & \textbf{Training rows} & \textbf{Sample nodes} & \textbf{ECSW (h)} \\
+\hline
+HPROM & 27\,000 & 5\,089 & 30.04 \\
+HPROM--RBF & 5\,808 & 1\,715 & 0.43 \\
+\addlinespace[0.35em]
+Local HPROM ($N_c=4$) & 27\,000 & 3\,484 & 9.95 \\
+Local HPROM--RBF ($N_c=4$) & 1\,920 & 1\,113 & 0.38 \\
+\hline
+\end{tabular}}
+\vspace{0.3em}
 
-\vspace{0.12cm}
-\renewcommand{\arraystretch}{1.16}
-\setlength{\tabcolsep}{2pt}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{lrrrrrr}
-\toprule
-\textbf{Model} & \textbf{Parameter cases} & \textbf{Rows per case} & \textbf{Row stride} & \textbf{Rows read} & \textbf{Sample nodes} & \textbf{ECSW [h]} \\
-\midrule
-Global linear HPROM & 30 & $30^2$ & 1 & 27,000 & \textbf{5,089} & 30.04 \\
-Local linear HPROM, $N_c=4$ & 30 & $30^2$ & 1 & 27,000 & \textbf{3,484} & 9.95 \\
-Global HPROM--RBF, $n=8$ & 363 & $8^2$ & 4 & 5,808 & \textbf{1,715} & 0.43 \\
-Local HPROM--RBF, $N_c=4$, $n=8$ & 30 & $8^2$ & 1 & 1,920 & \textbf{1,113} & 0.38 \\
-\bottomrule
-\end{tabular}
-}
+{\tiny ECSW was run on Sherlock using 20 nodes, 480 MPI ranks, and 480 cores. Times are maximum-rank wall times.}
 
-\vspace{0.14cm}
-\begin{block}{What the ECSW columns mean}
-\footnotesize Parameter cases $=30$ means a selected subset of the 363 input configurations. For the linear models, $m_k=\min(r_k,30)=30$, hence $30^2$ candidate Jacobian rows per selected case. For RBF, $m_k=n=8$, hence $8^2$ rows. Row stride 4 reads rows $0,4,8,\ldots$ within every one of the 363 global-RBF cases: $363\times8^2/4=5{,}808$ rows. It does not subsample parameter cases or online Newton iterations.
-\end{block}
+{\tiny Sample nodes is the size of the reduced mesh. How the training rows are assembled is detailed in the appendix.}
 \end{frame}
 
 \begin{frame}{HGV2 Three-Dimensional $C_L$ Error Field}
@@ -741,46 +700,64 @@ Local HPROM--RBF, $N_c=4$, $n=8$ & 30 & $8^2$ & 1 & 1,920 & \textbf{1,113} & 0.3
 \begin{frame}{HGV2 Representative Median Pair: $C_L$}
 \centering
 \small $v=3.495$ km/s, altitude $=59.6$ km. This is the median local-RBF pair after ranking the 25 pairs by the combined $C_L$, $C_D$, and $C_M$ relative-error norm.
-\includegraphics[width=0.92\textwidth,height=0.76\textheight,keepaspectratio]{coeff_CL_v3495_alt59600.png}
+\par\vspace{0.06cm}
+\includegraphics[width=0.92\textwidth,height=0.70\textheight,keepaspectratio]{coeff_CL_v3495_alt59600.png}
 \end{frame}
 
 \begin{frame}{HGV2 Representative Median Pair: $C_D$}
 \centering
 \small $v=3.495$ km/s, altitude $=59.6$ km. This is the median local-RBF pair after ranking the 25 pairs by the combined $C_L$, $C_D$, and $C_M$ relative-error norm.
-\includegraphics[width=0.92\textwidth,height=0.76\textheight,keepaspectratio]{coeff_CD_v3495_alt59600.png}
+\par\vspace{0.06cm}
+\includegraphics[width=0.92\textwidth,height=0.70\textheight,keepaspectratio]{coeff_CD_v3495_alt59600.png}
 \end{frame}
 
 \begin{frame}{HGV2 Representative Median Pair: $C_M$}
 \centering
 \small $v=3.495$ km/s, altitude $=59.6$ km. This is the median local-RBF pair after ranking the 25 pairs by the combined $C_L$, $C_D$, and $C_M$ relative-error norm.
-\includegraphics[width=0.92\textwidth,height=0.76\textheight,keepaspectratio]{coeff_CM_v3495_alt59600.png}
+\par\vspace{0.06cm}
+\includegraphics[width=0.92\textwidth,height=0.70\textheight,keepaspectratio]{coeff_CM_v3495_alt59600.png}
 \end{frame}
 
 \begin{frame}{HGV2 Representative Challenging Pair: $C_L$}
 \centering
 \small $v=3.240$ km/s, altitude $=40.2$ km. This pair has the largest combined local-RBF error across $C_L$, $C_D$, and $C_M$.
-\includegraphics[width=0.92\textwidth,height=0.76\textheight,keepaspectratio]{coeff_CL_v3240_alt40200.png}
+\par\vspace{0.06cm}
+\includegraphics[width=0.92\textwidth,height=0.70\textheight,keepaspectratio]{coeff_CL_v3240_alt40200.png}
 \end{frame}
 
 \begin{frame}{HGV2 Representative Challenging Pair: $C_D$}
 \centering
 \small $v=3.240$ km/s, altitude $=40.2$ km. This pair has the largest combined local-RBF error across $C_L$, $C_D$, and $C_M$.
-\includegraphics[width=0.92\textwidth,height=0.76\textheight,keepaspectratio]{coeff_CD_v3240_alt40200.png}
+\par\vspace{0.06cm}
+\includegraphics[width=0.92\textwidth,height=0.70\textheight,keepaspectratio]{coeff_CD_v3240_alt40200.png}
 \end{frame}
 
 \begin{frame}{HGV2 Representative Challenging Pair: $C_M$}
 \centering
 \small $v=3.240$ km/s, altitude $=40.2$ km. This pair has the largest combined local-RBF error across $C_L$, $C_D$, and $C_M$.
-\includegraphics[width=0.92\textwidth,height=0.76\textheight,keepaspectratio]{coeff_CM_v3240_alt40200.png}
+\par\vspace{0.06cm}
+\includegraphics[width=0.92\textwidth,height=0.70\textheight,keepaspectratio]{coeff_CM_v3240_alt40200.png}
 \end{frame}
 
 \begin{frame}{HGV2 Conclusions}
 \small
 \begin{itemize}
-  \item Global and local linear HPROM give the best validation accuracy. Global linear is the best in $C_D$; local linear is the best in $C_L$ and $C_M$.
-  \item The global RBF with 363 ECSW cases and row stride 4 is stable and reduces the global-RBF moment error relative to the 30-case, stride-1 ablation, but it does not surpass the linear models.
-  \item The local RBF is the fastest online model. Its $C_M$ error is comparable to global RBF, but its $C_L$ and $C_D$ errors are larger. The next controlled test should vary one ECSW factor at a time and broaden the RBF kernel/hyperparameter search.
+  \item The four models behave similarly in accuracy: $C_M$ falls within
+        $6.2$--$7.1\%$ for all of them, and $C_D$ and $C_L$ within $1$--$2\%$. The linear
+        models are the most accurate and the RBF models the fastest, so they are offered
+        as alternatives rather than as a ranking.
+  \item HPROM--RBF already supplies the compression: $n=8$ against a full POD rank of
+        $362$. Adding four clusters does not reduce $n$ further, but it accelerates the
+        model twice over --- the reduced mesh shrinks from $1{,}715$ to $1{,}113$ sample
+        nodes, and each RBF evaluation is cheaper because the per-cluster maps are smaller
+        ($\bar{n}$ drops from $354$ to $117$--$140$).
+  \item The offline cost separates the two families by almost two orders of magnitude:
+        $30.04$ h against $0.43$ h for the global models, and $9.95$ h against $0.38$ h
+        for the local ones.
 \end{itemize}
+
+\vspace{0.3em}
+{\footnotesize HQPROM and Local HQPROM are not included in this campaign.}
 \end{frame}
 
 \appendix
@@ -792,7 +769,68 @@ Local HPROM--RBF, $N_c=4$, $n=8$ & 30 & $8^2$ & 1 & 1,920 & \textbf{1,113} & 0.3
 \Large Supplementary results and implementation details
 \end{frame}
 
-\section{HGV2 ECSW Details}
+\section{Theory}
+\BurgersTheoryFrames
+
+\section{Burgers Setup and Solution Comparisons}
+
+\begin{frame}{Appendix: Burgers Paper Campaign Setup}
+\small
+\textbf{Two-dimensional parametric inviscid Burgers problem}
+\[
+\frac{\partial \mathbf U}{\partial t}
++\frac{\partial \mathbf F(\mathbf U)}{\partial x}
++\frac{\partial \mathbf G(\mathbf U)}{\partial y}
+=\mathbf S(x;\boldsymbol\mu),
+\qquad
+\mathbf U=
+\begin{bmatrix}
+u_x\\u_y
+\end{bmatrix}.
+\]
+\[
+\mathbf S(x;\boldsymbol\mu)=
+\begin{bmatrix}
+0.02\exp(\mu_2 x)\\0
+\end{bmatrix},
+\qquad
+u_x(0,y,t;\boldsymbol\mu)=\mu_1.
+\]
+
+\vspace{-0.35em}
+\centering
+\(\mu_1\): inflow value \qquad
+\(\mu_2\): exponential source variation \qquad
+\(\boldsymbol\mu\in[4.25,5.50]\times[0.015,0.030]\)
+\par
+
+\vspace{0.35em}
+\textbf{Test points:}
+\[
+\boldsymbol\mu_1=(4.56,0.019),\quad
+\boldsymbol\mu_2=(4.75,0.020),\quad
+\boldsymbol\mu_3=(5.19,0.026).
+\]
+
+\vspace{-0.25em}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.42\textwidth}
+\textbf{HDM:} $\Omega=[0,100]^2$, $250\times250$ finite-volume cells.
+\end{column}
+\begin{column}{0.58\textwidth}
+\textbf{Methods included:}
+\begin{tabular}{ll}
+Global HPROM & Local HPROM \\
+Global HQPROM & Local HQPROM \\
+Global HPROM--GPR & Local HPROM--GPR
+\end{tabular}
+\end{column}
+\end{columns}
+\end{frame}
+
+\BurgersSolutionFigureFrames
+
+\section{HGV2}
 
 \begin{frame}{Appendix: ECSW Training Data}
 \centering
@@ -856,11 +894,5 @@ Local HPROM--RBF, 4 clusters, $n=8$ & 1,113 & 10,516 & 175,813 & 20,602 & 208,04
 \vspace{0.18cm}
 \footnotesize $N_{\neg L2}$ excludes the postprocessing-only lift-surface nodes.
 \end{frame}
-
-\section{Theory}
-\BurgersTheoryFrames
-
-\section{Burgers Solution Comparisons}
-\BurgersSolutionFigureFrames
 
 \end{document}
