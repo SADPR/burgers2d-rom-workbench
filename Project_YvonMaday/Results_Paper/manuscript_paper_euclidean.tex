@@ -1752,8 +1752,8 @@ The high-dimensional model (HDM) uses a cell-centered finite-volume Godunov
 scheme on a $250\times250$ grid: $N_e=62{,}500$ cells and $N=125{,}000$
 unknowns.  Each cell contributes the two residual rows associated with
 $(u_x,u_y)$, so here $d_e=2$ and
-$N_\xi=2|\widetilde{\mathcal E}_\xi|$.  Backward Euler uses 500 steps of
-size $\Delta t=0.05$.
+$N_\xi=2|\widetilde{\mathcal E}_\xi|$.  The trapezoidal rule (Crank--Nicolson)
+uses 500 steps of size $\Delta t=0.05$.
 Figure~\ref{fig:burgers-problem} illustrates a representative HDM state and
 the two centerline cuts used later to compare the reduced solutions.
 The streamwise component develops a sharp front in the $x$ direction whose
