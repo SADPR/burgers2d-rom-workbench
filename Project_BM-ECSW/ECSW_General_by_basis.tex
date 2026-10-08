@@ -1,0 +1,347 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage[left=1.5cm,right=1.5cm,top=3cm,bottom=3cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage[colorlinks=true,linkcolor=blue]{hyperref}
+
+\setlength{\parindent}{0pt}
+
+\newcommand{\vect}[1]{\underline{\boldsymbol{#1}}}
+\newcommand{\matr}[1]{\underline{\underline{\boldsymbol{#1}}}}
+\definecolor{ReadingNoteBlue}{RGB}{25,65,145}
+\definecolor{ReadingNoteFill}{RGB}{239,245,255}
+
+\newtcolorbox{lecturalarga}[1]{
+  enhanced,breakable,
+  colback=ReadingNoteFill,colframe=ReadingNoteBlue,coltext=ReadingNoteBlue,
+  title={Reading note --- #1},fonttitle=\bfseries,fontupper=\small,
+  boxrule=0.4pt,arc=0pt,left=7pt,right=7pt,top=7pt,bottom=7pt
+}
+
+\newcommand{\lecturanota}[2]{\begin{lecturalarga}{#1}#2\end{lecturalarga}}
+
+
+
+\title{Proposal on ECSW}
+\author{Sebastian Rodriguez}
+\date{September 30, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Here a new variant of the ECSW hyper-reduction method is studied, which consists in computing a ECSW by mode in order to improve the approximation of the method. The key idea consists in the computation of dedicated weights values of each mode vector of the reduced basis while selecting the same reduced mesh. This variant is called here the By-Mode-ECSW or BM-ECSW.
+\end{abstract}
+
+\section{The ECSW method (the nodal formulation)}
+We first present the standard ECSW formulation to establish the necessary background for introducing the proposed approach. Here we studied the Nodal version of the ECSW.
+
+Lets focus here in the approximation of the reduced residual term (is also easily extended for the Jacobian operator):
+\begin{equation}
+\vect{R}_r=\matr{V}^{T}\vect{R}
+\label{eq:reduced-residual}
+\end{equation}
+with $\matr{V}\in\mathbb{R}^{n_e\times m}$ and $\vect{R}\in\mathbb{R}^{n_e}$.
+
+To recall, the classic ECSW approximate the reduced residual as follows:
+\begin{equation}
+\vect{R}_r\approx\sum_{e=1}^{N_e}\matr{V}(\vect{x}_e,:)^{T}\vect{R}(\vect{x}_e)\xi_e
+\quad\text{with}\quad
+\xi_e\geq 0\quad\forall e\in(1,\ldots,n_e)
+\label{eq:classic-ecsw}
+\end{equation}
+
+\subsection{Algorithm}
+In what follows, the residual term $\vect{R}$ for all the snapshots considered ($n_s$) is denoted $\vect{R}\in\mathbb{R}^{n_e\times n_s}$.
+
+Lets define the energy contribution done by each node $e\in[1,\cdots n_e]$ for a given snapshot $j\in[1,\cdots n_s]$:
+\begin{equation}
+\vect{G}_{j,e}=\matr{V}(e,:)^{T}R(e,j)\in\mathbb{R}^{m}
+\label{eq:classic-node-contribution}
+\end{equation}
+and
+\begin{equation}
+\vect{b}_j=\matr{V}^{T}\vect{R}(:,j)\in\mathbb{R}^{m}
+\label{eq:classic-target}
+\end{equation}
+such as we can define:
+\[
+\matr{G}=
+\begin{bmatrix}
+\vect{G}_{11} & \cdots & \vect{G}_{1n_e}\\
+\vdots & \ddots & \vdots\\
+\vect{G}_{n_s1} & \cdots & \vect{G}_{n_sn_e}
+\end{bmatrix}
+\in\mathbb{R}^{mn_s\times n_e},
+\qquad
+\vect{b}=
+\begin{bmatrix}
+\vect{b}_1\\
+\vdots\\
+\vect{b}_{n_s}
+\end{bmatrix}
+\in\mathbb{R}^{mn_s}
+\]
+
+\newpage
+By supposing we have already selected $n-1$ reduced nodes, the selection of the next node $n$ follows:
+\begin{equation}
+\widetilde{E}_n\leftarrow
+\widetilde{E}_{n-1}\cup
+\operatorname{max\_value\_index}(\vect{\mu}_n)
+\label{eq:classic-select}
+\end{equation}
+with $\widetilde{E}_n$ denoting the set of $n$ points selected. Here:
+\begin{equation}
+\vect{\mu}_n\leftarrow\sum_i^m\matr{G}^{T}\vect{b}_n
+\label{eq:classic-score}
+\end{equation}
+
+\lecturanota{Equation (6): proposed correction}{
+The matrix $\matr{G}$ already stacks all $m$ modes, so $\matr{G}^{T}\vect{b}_n$ does not depend on $i$. As written, the sum repeats the same score vector $m$ times and therefore does not change the selected node. The minimal correction is to remove the sum:
+\[
+  \vect{\mu}_n\leftarrow\matr{G}^{T}\vect{b}_n.
+\]
+An explicit mode-wise sum would instead require mode indices on both factors.
+}
+
+with:
+\begin{equation}
+\vect{b}_n=\vect{b}-\matr{G}\vect{\xi}_{n-1}
+\label{eq:classic-remaining}
+\end{equation}
+
+
+\lecturanota{Equation (7): dimensions}{
+As defined above, $\matr{G}$ has $n_e$ columns, whereas $\vect{\xi}_{n-1}$ has $n-1$ entries under the stated convention $\vect{\xi}_n\in\mathbb{R}^n$. Thus $\matr{G}\vect{\xi}_{n-1}$ is not defined without specifying a restriction or zero padding. For weights stored only on selected nodes, write
+\[
+  \vect{b}_n=\vect{b}-\matr{G}(:,\widetilde{E}_{n-1})\vect{\xi}_{n-1}.
+\]
+Equivalently, one may keep the full $\matr{G}$ and pad the weight vector with zeros outside $\widetilde{E}_{n-1}$. The intended residual is the same.
+}
+Once the new node selected, we compute the new group of positive coefficients $\vect{\xi}_n\in\mathbb{R}^{n}$ as follows:
+\begin{equation}
+\vect{\xi}_n=\underset{\{\vect{\xi}_n\}}{\arg\min}
+\left\|\matr{G}\vect{\xi}_n-\vect{b}_n\right\|_2^2
+\quad\text{s.t}\quad\vect{\xi}_n\geq 0
+\label{eq:classic-nnls}
+\end{equation}
+
+\lecturanota{Equation (8): why it appears inconsistent}{
+Equation (8) appears inconsistent as written. The preceding sentence calls $\vect{\xi}_n$ the new group of positive coefficients on all selected nodes, so it denotes the \emph{final weights}. But Equation (7) defines $\vect{b}_n$ after subtracting the previous nodes' contribution. Fitting the final weights against $\vect{b}_n$ therefore includes that previous contribution twice in the mismatch. If the unknown is instead a correction, the update and the constraint on the final weights must be stated. Both consistent formulations are given below.
+
+Let $\matr{G}_n=\matr{G}(:,\widetilde{E}_n)$ and extend the previous weights by zero on the new node: $\bar{\vect{\xi}}_{n-1}=(\vect{\xi}_{n-1},0)$. Equation (7), with the restriction noted above, gives $\vect{b}_n=\vect{b}-\matr{G}_n\bar{\vect{\xi}}_{n-1}$.
+
+\emph{Without $\vect{b}_n$ (final weights):}
+\[
+  \vect{\xi}_n\in\operatorname*{arg\,min}_{\vect{z}\geq0}
+  \left\|\matr{G}_n\vect{z}-\vect{b}\right\|_2^2.
+\]
+\emph{With $\vect{b}_n$ (correction to previous weights):}
+\[
+  \vect{\delta}_n\in\operatorname*{arg\,min}_{\bar{\vect{\xi}}_{n-1}+\vect{\delta}\geq0}
+  \left\|\matr{G}_n\vect{\delta}-\vect{b}_n\right\|_2^2,
+  \qquad \vect{\xi}_n=\bar{\vect{\xi}}_{n-1}+\vect{\delta}_n.
+\]
+The objectives are identical after this change of variables. A correction may have negative entries even though the final weights are nonnegative. \emph{Aero-F implementation.} The solver updates the selected weights through steps $\vect{x}^{k+1}=\vect{x}^{k}+\alpha\vect{d}$. A step may decrease an existing weight; if a proposed weight becomes negative, the solver shortens the step and updates the active set so that the accepted weights remain nonnegative.
+}
+
+
+in where the weights vector $\vect{\xi}_n$ is compute by using a non negative least squares method.
+
+The procedure is repeated until a sufficient number of nodes has been selected to ensure a given reconstruction error.
+
+\section{The Nodal By Mode (BM)-ECSW}
+Here we propose to approximate the reduced residual in the following modified way:
+
+\noindent$\forall i\in[1,\cdots,m],$
+\begin{equation}
+\vect{R}_{r,i}\approx
+\sum_{e=1}^{N_e}\matr{V}(\vect{x}_e,i)^{T}\vect{R}(\vect{x}_e)\xi_{e,i}
+\quad\text{with}\quad
+\xi_{e,i}\geq 0\quad\forall e\in(1,\ldots,n_e)
+\label{eq:bm-ecsw}
+\end{equation}
+Lets notice that the main difference between the BM-ECSW \eqref{eq:bm-ecsw} and the classic ECSW \eqref{eq:classic-ecsw} consist in the different weights considered to compute each of the component of the reduced residual. This means that different weights are used to approximate the work done by each of the modes vectors in the reduced basis $\matr{V}$, however the reduced domain is unique as in the classic ECSW.
+
+\begin{lecturalarga}{Equation (9): from HDM energy to ECSW and BM-ECSW}
+Equation (9) gives each mode its own weight. Can the resulting reduced force still come from one potential energy? Classical ECSW has this property for the conservative structural models studied by Farhat et al. (2015, Section 4.1).
+
+\smallskip\textbf{1. Energy and force in the full structural model.} Let $u$ contain all displacement degrees of freedom. For an element $e$, the Boolean operator $L_e$ extracts the entries of $u$ used by that element. Its internal potential energy is the scalar $\mathcal V_e^{\mathrm{int}}(L_eu)$; the full model adds the energies of all elements:
+\[
+  \mathcal V^{\mathrm{int}}(u)
+  =\sum_{e\in\mathcal E}\mathcal V_e^{\mathrm{int}}(L_eu).
+\]
+A small displacement changes this energy according to its gradient. The physical restoring force is $-\nabla_u\mathcal V^{\mathrm{int}}$ (Farhat et al., Equation (29)). We write $+\nabla_u\mathcal V^{\mathrm{int}}$ when the internal term is moved to the left side of the equation of motion (their Equation (34)). This sign convention will also be used for the reduced internal term below.
+
+\smallskip\textbf{2. Galerkin reduction, before sampling.} Write $u=Vy$, where the columns of $V$ are the reduced modes and $y_i$ is the amplitude of mode $i$. It is useful to name the energy of one element in reduced coordinates:
+\[
+  \Pi_e(y):=\mathcal V_e^{\mathrm{int}}(L_eVy),
+  \qquad
+  \mathcal V_r^{\mathrm{int}}(y)=\sum_{e\in\mathcal E}\Pi_e(y).
+\]
+The $i$th component of the reduced internal term is
+\[
+  q_{r,i}^{\mathrm{int}}(y)
+  =\frac{\partial\mathcal V_r^{\mathrm{int}}}{\partial y_i}
+  =\sum_{e\in\mathcal E}\frac{\partial\Pi_e}{\partial y_i}.
+\]
+This is the chain-rule form of $V^T\nabla_u\mathcal V^{\mathrm{int}}(Vy)$ in Farhat et al., Equation (35). Although $y$ has few components, evaluating this sum still visits all elements.
+
+\smallskip\textbf{3. Why classical ECSW retains a potential.} Let $\widetilde{\mathcal E}$ be the sampled elements. Classical ECSW assigns one fixed scalar $\xi_e$ to each sampled element, and the same scalar multiplies its contribution to \emph{every} mode. Hence we can put the weights directly into one modified potential (Farhat et al., Equation (37)):
+\[
+  \widetilde{\mathcal V}_r^{\mathrm{int}}(y)
+  =\sum_{e\in\widetilde{\mathcal E}}\xi_e\Pi_e(y).
+\]
+Because $\xi_e$ does not depend on $y$, differentiating gives
+\[
+  \widetilde q_{r,i}^{\mathrm{int}}(y)
+  =\sum_{e\in\widetilde{\mathcal E}}\xi_e
+     \frac{\partial\Pi_e}{\partial y_i}
+  =\frac{\partial\widetilde{\mathcal V}_r^{\mathrm{int}}}{\partial y_i}.
+\]
+The sampled force approximates the full reduced force, but it is \emph{exactly} the gradient of this modified potential. That is the structural point: approximation error does not break this gradient identity.
+
+For example, take a constant reduced mass matrix $M_r$ and no external force. The hyper-reduced equation is $M_r\ddot y+\nabla_y\widetilde{\mathcal V}_r^{\mathrm{int}}(y)=0$. Its modified mechanical energy is
+\[
+  \widetilde E
+  =\tfrac12\dot y^T M_r\dot y
+   +\widetilde{\mathcal V}_r^{\mathrm{int}}(y),
+  \qquad
+  \frac{d\widetilde E}{dt}
+  =\dot y^T\!\left(M_r\ddot y+
+    \nabla_y\widetilde{\mathcal V}_r^{\mathrm{int}}\right)=0.
+\]
+The kinetic and potential energy changes cancel because the internal term is the gradient of the same potential used in $\widetilde E$. This is a continuous-time statement for the conservative structural equations. The conserved quantity is the \emph{modified} energy, not necessarily the full HDM energy; a time integrator need not conserve it exactly.
+
+\smallskip\textbf{4. What mode-dependent weights change.} In the analogous structural expression, BM assigns a separate weight $\xi_{e,i}$ to the contribution of element $e$ in mode $i$:
+\[
+  \widetilde q_{r,i}^{\mathrm{BM}}(y)
+  =\sum_{e\in\widetilde{\mathcal E}}\xi_{e,i}
+    \frac{\partial\Pi_e(y)}{\partial y_i}.
+\]
+For two modes and one element, this gives $(\xi_{e,1}\partial_{y_1}\Pi_e,\,\xi_{e,2}\partial_{y_2}\Pi_e)^T$. If the weights are equal, this is $\nabla_y(\xi_e\Pi_e)$. If they differ, that simple construction fails. Another potential might still exist, so we need a test rather than an assumption.
+
+Suppose a smooth scalar function $\Phi(y)$ did generate the entire BM vector: $\widetilde q_{r,i}^{\mathrm{BM}}=\partial_{y_i}\Phi$. Then, for any two modes $i$ and $j$, differentiating once more must give $\partial_{y_j}\widetilde q_{r,i}^{\mathrm{BM}}=\partial_{y_i}\widetilde q_{r,j}^{\mathrm{BM}}$: both sides would be the same mixed second derivative of $\Phi$. With $H_{e,ij}(y):=\partial^2\Pi_e/(\partial y_i\partial y_j)$, their difference is
+\[
+  \frac{\partial\widetilde q_{r,i}^{\mathrm{BM}}}{\partial y_j}
+  -\frac{\partial\widetilde q_{r,j}^{\mathrm{BM}}}{\partial y_i}
+  =\sum_{e\in\widetilde{\mathcal E}}
+    (\xi_{e,i}-\xi_{e,j})H_{e,ij}(y).
+\]
+For a common potential, this difference must vanish throughout the region of interest; vanishing at one snapshot is not enough. Equal weights for each element make every summand zero, but they are not necessary: elements can cancel one another, or $H_{e,ij}$ can vanish when the modes are uncoupled. For example, if two elements have equal $H_{e,12}$ throughout a region and their weights are $(2,1)$ and $(1,2)$, the two terms are $+H_{e,12}$ and $-H_{e,12}$. If those elemental derivatives cease to agree at another state, the cancellation disappears. Positive weights alone do not impose this compatibility condition.
+
+\smallskip\textbf{5. A calculation with a nonnegative elemental potential.} Take one sampled element, two modes, and $s=y_1+y_2$. Let
+\[
+  \Pi_e(y)=\tfrac12s^2\geq0,
+  \qquad
+  \nabla_y\Pi_e=(s,s)^T.
+\]
+With the classical common weight $\xi_e=2$, the modified potential is $\widetilde{\mathcal V}_r^{\mathrm{int}}=s^2$ and its internal term is $(2s,2s)^T$. With BM weights $(\xi_{e,1},\xi_{e,2})=(2,1)$, the term instead becomes $(2s,s)^T$. Its crossed derivatives are $\partial\widetilde q_{r,1}^{\mathrm{BM}}/\partial y_2=2$ and $\partial\widetilde q_{r,2}^{\mathrm{BM}}/\partial y_1=1$. Thus this BM force cannot come from a single position-dependent potential, even in a neighborhood of a state.
+
+We can see the energy consequence without skipping the equation of motion. Choose $M_r=I$, no external force, and use $T=\tfrac12(\dot y_1^2+\dot y_2^2)$. Newton's equation is $\ddot y=-\widetilde q_r$: the internal term on the left is the negative of the physical restoring force. In the classical case, $\ddot y=(-2s,-2s)^T$. If $\widetilde E=T+s^2$, then
+\[
+  \frac{dT}{dt}=-2s(\dot y_1+\dot y_2),
+  \qquad
+  \frac{d(s^2)}{dt}=2s(\dot y_1+\dot y_2),
+  \qquad
+  \frac{d\widetilde E}{dt}=0.
+\]
+In the BM case, $\ddot y=(-2s,-s)^T$. If we test the \emph{same} candidate energy $T+s^2$, we obtain
+\[
+  \frac{d(T+s^2)}{dt}
+  =\underbrace{-2s\dot y_1-s\dot y_2}_{dT/dt}
+   +\underbrace{2s(\dot y_1+\dot y_2)}_{d(s^2)/dt}
+  =s\dot y_2.
+\]
+For a numerical check, take $y=(1,2)$ and $\dot y=(1,2)$, so $s=3$. Classical ECSW gives accelerations $(-6,-6)$, $dT/dt=-18$, and $d(s^2)/dt=+18$. BM gives accelerations $(-6,-3)$, $dT/dt=-12$, and the same $d(s^2)/dt=+18$: the candidate energy changes at rate $+6$. A zero rate at one instant, for example when $\dot y_2=0$, would not establish conservation along a whole trajectory. This example shows loss of the classical structural guarantee; it does not prove that every BM trajectory is unstable or rule out every other invariant.
+
+\smallskip\textbf{Question for discussion.} For the nodal formulation in Equation (9), what exactly does \emph{local preservation} mean? If it refers to a potential energy, what is the corresponding nodal potential and under which conditions do the mode-wise weights retain it? If it refers to another property, such as a flux balance, that property needs its own argument.
+\end{lecturalarga}
+
+
+\subsection{Algorithm}
+Lets define the energy contribution done by each mode $i$ and node $e\in[1,\cdots n_e]$, and for a given snapshot $j\in[1,\cdots n_s]$:
+\begin{equation}
+\vect{G}_{j,e}^{[i]}=\matr{V}(e,i)^{T}R(e,j)\in\mathbb{R}
+\label{eq:bm-node-contribution}
+\end{equation}
+and
+\begin{equation}
+\vect{b}_j^{[i]}=\matr{V}^{T}(:,i)\vect{R}(:,j)\in\mathbb{R}
+\label{eq:bm-target}
+\end{equation}
+such as we can define:
+\[
+\matr{G}^{[i]}=
+\begin{bmatrix}
+\vect{G}_{11}^{[i]} & \cdots & \vect{G}_{1n_e}^{[i]}\\
+\vdots & \ddots & \vdots\\
+\vect{G}_{n_s1}^{[i]} & \cdots & \vect{G}_{n_sn_e}^{[i]}
+\end{bmatrix}
+\in\mathbb{R}^{n_s\times n_e},
+\qquad
+\vect{b}^{[i]}=
+\begin{bmatrix}
+\vect{b}_1^{[i]}\\
+\vdots\\
+\vect{b}_{n_s}^{[i]}
+\end{bmatrix}
+\in\mathbb{R}^{n_s}
+\]
+
+\noindent\textbf{Remark:} Lets notice the difference in size of the $\matr{G}^{[i]}$ operator, drastically reduced compared to that of the classic ECSW formulation.
+
+
+Under this new framework, by supposing we have already selected $n-1$ reduced nodes, the selection of the next node $n$ follows:
+\begin{equation}
+\widetilde{E}_n\leftarrow
+\widetilde{E}_{n-1}\cup
+\operatorname{max\_value\_index}(\vect{\mu}_n)
+\label{eq:bm-select}
+\end{equation}
+where:
+\begin{equation}
+\vect{\mu}_n\leftarrow\sum_i^m\bigl(\matr{G}^{[i]}\bigr)^T\vect{b}_n^{[i]}
+\label{eq:bm-score}
+\end{equation}
+
+\lecturanota{Equation (13): signed mode-wise scores}{
+The sum in Equation (13) is meaningful: $\matr{G}^{[i]}$ and $\vect{b}_n^{[i]}$ change with $i$. The question is whether its \emph{signed} sum ranks nodes consistently with the subsequent nonnegative fit. A negative correlation in one mode reduces the node's score, even though a newly added node could simply receive zero weight in that mode.
+
+For example, let candidate A have mode-wise scores $(10,-9)$ and candidate B have $(2,2)$. Equation (13) scores them as $1$ and $4$, so it selects B. To see the concern, hold the old weights fixed and assume each candidate column has unit norm in each mode. The best nonnegative weight for a new column is then the positive part of its correlation. A can reduce the squared residual by $10^2+0^2=100$, while B can reduce it by $2^2+2^2=8$. Refitting all selected weights can change these numbers, but this simple case shows that a signed sum need not reflect an attainable improvement. Is the signed sum intentional, or should selection estimate the decrease allowed by nonnegative weights?
+}
+
+with:
+\begin{equation}
+\vect{b}_n^{[i]}=\vect{b}^{[i]}-\matr{G}^{[i]}\vect{\xi}_{n-1}^{[i]}
+\label{eq:bm-remaining}
+\end{equation}
+Once the new node selected, we compute the new group of positive coefficients $\vect{\xi}_n^{[i]}\in\mathbb{R}^{n}$, $\forall i\in[1,\cdots,m]$ as follows:
+
+\noindent$\forall i\in[1,\cdots,m],$
+\begin{equation}
+\vect{\xi}_n^{[i]}=
+\underset{\{\vect{\xi}_n^{[i]}\}}{\arg\min}
+\left\|\matr{G}^{[i]}\vect{\xi}_n^{[i]}-\vect{b}_n^{[i]}\right\|_2^2
+\quad\text{s.t}\quad\vect{\xi}_n^{[i]}\geq 0
+\label{eq:bm-nnls}
+\end{equation}
+
+\lecturanota{Equation (15): mode-wise NNLS target}{
+Equation (14) defines $\vect{b}_n^{[i]}$ as the remaining error. If $\vect{\xi}_n^{[i]}$ contains the \emph{final} weights on all selected nodes, the target would be $\vect{b}^{[i]}$:
+\[
+  \vect{\xi}_n^{[i]}\in\operatorname*{arg\,min}_{\vect{z}\geq 0}
+  \left\|\matr{G}^{[i]}(:,\widetilde{E}_n)\vect{z}-\vect{b}^{[i]}\right\|_2^2.
+\]
+If they are increments, the update must be defined and the final weights must remain nonnegative.
+}
+
+
+in where the weights vector $\vect{\xi}_n^{[i]}$ for each mode $i$ is computed by using a non negative least squares method.
+
+The procedure is repeated until a sufficient number of nodes has been selected to ensure a given reconstruction error.
+
+\end{document}
