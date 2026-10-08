@@ -4,6 +4,9 @@
 import os
 
 import numpy as np
+from scipy.optimize import nnls
+from scipy.linalg import solve_triangular
+from threadpoolctl import threadpool_limits
 
 
 def direct_left_singular_vectors(A, relative_tolerance=1e-8):
@@ -38,6 +41,221 @@ def direct_left_singular_vectors(A, relative_tolerance=1e-8):
         k = max(k, 1)
 
     return np.ascontiguousarray(u[:, :k], dtype=np.float64)
+
+
+def greedy_nnls_ecsw_weights(C, tolerance_squared=1e-10, max_cells=None):
+    """Fit C @ 1 by greedy nonnegative least squares.
+
+    Stop when ||Cw - C1||^2 / ||C1||^2 <= tolerance_squared.
+    max_cells is an optional safety cap, not the selection criterion.
+    Returned weights are used as quadrature weights; Gauss-Newton applies
+    their square roots to residual and Jacobian rows.
+    """
+    C = np.ascontiguousarray(C, dtype=np.float64)
+    if C.ndim != 2 or not C.size:
+        raise ValueError("C must be a nonempty two-dimensional matrix.")
+    tolerance_squared = float(tolerance_squared)
+    if not np.isfinite(tolerance_squared) or not 0 <= tolerance_squared < 1:
+        raise ValueError("tolerance_squared must be finite and in [0, 1).")
+    if max_cells is not None and int(max_cells) < 1:
+        raise ValueError("max_cells must be positive when specified.")
+
+    # A nonnegative representation exists with at most rank(C) columns,
+    # because C @ 1 lies in the cone spanned by C's columns.
+    limit = min(C.shape) if max_cells is None else min(int(max_cells), C.shape[1])
+    target = C.sum(axis=1)
+    target_norm_sq = float(target @ target)
+    if not np.isfinite(target_norm_sq) or target_norm_sq == 0:
+        raise ValueError("C @ 1 must be finite and nonzero for relative ECSW fitting.")
+
+    residual = target.copy()
+    selected = []
+    available = np.ones(C.shape[1], dtype=bool)
+    # Keep selected columns and an incremental QR factor R, with A = Q R.
+    # NNLS(R, Q^T b) is the same least-squares problem as NNLS(A, b).
+    active = np.empty((C.shape[0], limit), dtype=np.float64, order="F")
+    R = np.zeros((limit, limit), dtype=np.float64)
+    rhs = np.empty(limit, dtype=np.float64)
+    selected_weights = np.empty(0, dtype=np.float64)
+    error_squared = 1.0
+
+    while len(selected) < limit and error_squared > tolerance_squared:
+        scores = C.T @ residual
+        scores[~available] = -np.inf
+        cell = int(np.argmax(scores))
+        if not np.isfinite(scores[cell]) or scores[cell] <= 0:
+            break
+        available[cell] = False
+        column = C[:, cell]
+        k = len(selected)
+        column_norm_sq = float(column @ column)
+        if k:
+            cross = active[:, :k].T @ column
+            projection = solve_triangular(
+                R[:k, :k].T, cross, lower=True, check_finite=False
+            )
+            orthogonal_norm_sq = column_norm_sq - float(projection @ projection)
+            if orthogonal_norm_sq <= 1e-14 * column_norm_sq:
+                continue
+            R[:k, k] = projection
+        else:
+            orthogonal_norm_sq = column_norm_sq
+        if orthogonal_norm_sq <= 0:
+            continue
+
+        R[k, k] = np.sqrt(orthogonal_norm_sq)
+        active[:, k] = column
+        rhs[k] = float(column @ target)
+        selected.append(cell)
+
+        qtb = solve_triangular(
+            R[:k + 1, :k + 1].T, rhs[:k + 1],
+            lower=True, check_finite=False,
+        )
+        selected_weights, _ = nnls(R[:k + 1, :k + 1], qtb)
+        residual = target - active[:, :k + 1] @ selected_weights
+        error_squared = float((residual @ residual) / target_norm_sq)
+        if len(selected) % 50 == 0 or error_squared <= tolerance_squared:
+            print(
+                f"[ECSW NNLS] selected={len(selected)}, "
+                f"||h||^2/||b||^2={error_squared:.3e}",
+                flush=True,
+            )
+
+    # Confirm the final weights against the original rows rather than the
+    # accumulated QR factor; this also removes roundoff accumulated in R.
+    if selected:
+        selected_weights, _ = nnls(active[:, :len(selected)], target)
+        residual = target - active[:, :len(selected)] @ selected_weights
+        error_squared = float((residual @ residual) / target_norm_sq)
+    weights = np.zeros(C.shape[1], dtype=np.float64)
+    weights[selected] = selected_weights
+    return weights, error_squared
+
+
+
+def greedy_nnls_bm_ecsw_weights(
+    C, num_modes, tolerance_squared=1e-10, max_cells=None,
+    candidate_score="signed_sum",
+):
+    """Fit one nonnegative weight vector per LSPG mode on a shared cell mesh.
+
+    Rows of C are ordered as (snapshot, mode), matching the global LSPG
+    training matrix. signed_sum adds the modal correlations. positive_norm
+    ranks the Euclidean norms of their positive parts: the greatest initial
+    decrease along a nonnegative, unit-length candidate-row direction.
+    After each selection, all selected weights are refitted by modal NNLS
+    against the original targets. Neither score predicts the full refit gain.
+    """
+    if candidate_score not in ("signed_sum", "positive_norm"):
+        raise ValueError("candidate_score must be signed_sum or positive_norm.")
+    C = np.ascontiguousarray(C, dtype=np.float64)
+    num_modes = int(num_modes)
+    if C.ndim != 2 or not C.size or num_modes < 1 or C.shape[0] % num_modes:
+        raise ValueError("C must have a positive multiple of num_modes rows.")
+    tolerance_squared = float(tolerance_squared)
+    if not np.isfinite(tolerance_squared) or not 0 <= tolerance_squared < 1:
+        raise ValueError("tolerance_squared must be finite and in [0, 1).")
+    if max_cells is not None and int(max_cells) < 1:
+        raise ValueError("max_cells must be positive when specified.")
+
+    num_cells = C.shape[1]
+    limit = num_cells if max_cells is None else min(int(max_cells), num_cells)
+    target = np.ascontiguousarray(C.sum(axis=1).reshape(-1, num_modes))
+    target_norm_sq = float(np.sum(target * target))
+    if not np.isfinite(target_norm_sq) or target_norm_sq == 0.0:
+        raise ValueError("C @ 1 must be finite and nonzero for relative fitting.")
+
+    residual = target.copy()
+    selected = []
+    available = np.ones(num_cells, dtype=bool)
+    active_weights = np.zeros((0, num_modes), dtype=np.float64)
+    error_squared = 1.0
+
+    while len(selected) < limit and error_squared > tolerance_squared:
+        if candidate_score == "signed_sum":
+            # C interleaves the modal rows, so this adds their correlations.
+            scores = C.T @ residual.reshape(-1)
+        else:
+            # Compute one correlation per (mode, cell), without copying C.
+            modal_correlations = np.einsum(
+                "sme,sm->me", C.reshape(-1, num_modes, num_cells),
+                residual, optimize=True,
+            )
+            np.maximum(modal_correlations, 0.0, out=modal_correlations)
+            # Squaring the nonnegative norm preserves its candidate ranking.
+            scores = np.einsum("me,me->e", modal_correlations, modal_correlations)
+        scores[~available] = -np.inf
+        cell = int(np.argmax(scores))
+        if not np.isfinite(scores[cell]) or scores[cell] <= 0.0:
+            break
+        selected.append(cell)
+        available[cell] = False
+
+        active_weights = np.empty((len(selected), num_modes), dtype=np.float64)
+        # These are small independent NNLS problems. One BLAS thread per
+        # problem avoids the overhead of spinning up 20 threads 96 times.
+        with threadpool_limits(limits=1, user_api="blas"):
+            for mode in range(num_modes):
+                G_mode = C[mode::num_modes, selected]
+                active_weights[:, mode], _ = nnls(
+                    G_mode, target[:, mode],
+                    maxiter=10 * max(G_mode.shape),
+                )
+                residual[:, mode] = target[:, mode] - G_mode @ active_weights[:, mode]
+        error_squared = float(np.sum(residual * residual) / target_norm_sq)
+        if len(selected) % 50 == 0 or error_squared <= tolerance_squared:
+            print(
+                f"[BM-ECSW NNLS/{candidate_score}] selected={len(selected)}, "
+                f"||h||^2/||b||^2={error_squared:.3e}", flush=True,
+            )
+
+    weights = np.zeros((num_cells, num_modes), dtype=np.float64)
+    weights[selected, :] = active_weights
+    return weights, error_squared
+
+
+def selection_output_tag(
+    method, max_cells=None, tolerance_squared=None,
+    svd_tolerance=1e-8, svd_seed=None, bm_candidate_score="signed_sum",
+):
+    """Give distinct output names to nondefault training configurations."""
+    if method == "ecm":
+        if float(svd_tolerance) == 1e-8 and svd_seed is None:
+            return ""
+        tag = f"_ecm_svd{float(svd_tolerance):.0e}"
+        if svd_seed is not None:
+            tag += f"_seed{int(svd_seed)}"
+        return tag
+    prefix = "bm_ecsw" if method == "bm_ecsw" else "ecsw"
+    tag = f"_{prefix}_tol{float(tolerance_squared):.0e}"
+    if max_cells is not None:
+        tag += f"_max{int(max_cells)}"
+    if method == "bm_ecsw" and bm_candidate_score != "signed_sum":
+        if bm_candidate_score != "positive_norm":
+            raise ValueError("bm_candidate_score must be signed_sum or positive_norm.")
+        tag += f"_score{bm_candidate_score}"
+    return tag
+
+
+def method_output_path(
+    path, method, max_cells=None, tolerance_squared=None,
+    svd_tolerance=1e-8, svd_seed=None, bm_candidate_score="signed_sum",
+):
+    """Preserve historical file names for the default ECM configuration."""
+    tag = selection_output_tag(
+        method, max_cells, tolerance_squared, svd_tolerance, svd_seed,
+        bm_candidate_score,
+    )
+    stem, extension = os.path.splitext(path)
+    return f"{stem}{tag}{extension}"
+
+
+def normalize_selection_method(method):
+    method = str(method).strip().lower()
+    if method not in ("ecm", "ecsw", "bm_ecsw"):
+        raise ValueError("selection_method must be 'ecm', 'ecsw', or 'bm_ecsw'.")
+    return method
 
 
 def generate_augmented_mesh(grid_x, grid_y, sample_inds):

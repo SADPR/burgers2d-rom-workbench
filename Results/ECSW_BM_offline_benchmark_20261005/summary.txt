@@ -1,0 +1,10 @@
+Fresh ECSW/BM-ECSW offline timings: one run per method, 20 native threads.
+Same 96-mode basis, 225 projected state pairs, seed 42 and relative tolerance 1e-5.
+Cached training HDM trajectories and the existing POD basis are used; matrices and weights are rebuilt.
+Times use the production training timer; the following online run and output processing are excluded.
+
+ecsw: 6753.540570 s (112.559010 min), 2492 cells, 5914 augmented, training error 9.794950710e-06
+bm_ecsw: 245.803019 s (4.096717 min), 300 cells, 868 augmented, training error 8.358645060e-06
+
+Classical training time / BM training time: 27.475418.
+Single-run estimates; original models and online benchmark results are preserved.

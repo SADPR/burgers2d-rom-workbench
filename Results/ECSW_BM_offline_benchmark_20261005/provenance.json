@@ -1,0 +1,79 @@
+{
+  "started_local": "2026-10-05T22:34:07.871813-07:00",
+  "cpu_model": "Intel(R) Core(TM) Ultra 7 265",
+  "native_threads": 20,
+  "native_thread_pools": [
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 20,
+      "prefix": "libscipy_openblas",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+      "version": "0.3.34.106.0",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 20,
+      "prefix": "libscipy_openblas",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+      "version": "0.3.31.dev",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 20,
+      "prefix": "libgomp",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+      "version": null
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 20,
+      "prefix": "libgomp",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+      "version": null
+    }
+  ],
+  "repetitions_per_method": 1,
+  "method_order": [
+    "ecsw",
+    "bm_ecsw"
+  ],
+  "basis_size": 96,
+  "training_pairs": 225,
+  "random_seed": 42,
+  "snapshot_percent": 5.0,
+  "time_offset": 1,
+  "relative_training_tolerance": 1e-05,
+  "max_cells": null,
+  "bm_candidate_score": "signed_sum",
+  "measured_field": "run_hprom.main ecsw_time_seconds",
+  "measured_region": "configuration selection and sampling plot, cached HDM loading, projected training-matrix assembly, greedy NNLS fitting",
+  "excluded": "HDM generation, POD construction/loading, final report-fit recomputation, saved-model output, online integration, trajectory error and plots",
+  "fresh_matrix_and_weights": true,
+  "inputs_sha256": {
+    "POD/basis.npy": "abb48a8df8c0b3413995aa353c2fe68438b554853a28e2b9d6d0001f60a686a2",
+    "POD/sigma.npy": "e6dd61239239f7ef1a60018c6e6c3eeead5223a228a364bda9f16511fd045c67",
+    "POD/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "POD/ecsw_weights_lspg_ecsw_tol1e-10_offset1_snap5pct.npy": "c8c370cbcc2ea206082f3ceada2044d27b93af654299f2a0b9bdcc0a8296d951",
+    "POD/ecsw_weights_lspg_bm_ecsw_tol1e-10_offset1_snap5pct.npy": "a33e4e633515d21035975ae3a750b3a29942abcc4f350ecab5added070dd34a5"
+  },
+  "sources_sha256": {
+    "run_hprom.py": "6f77a9838cf54685c28cc6c96e663123eb14d9eb17e0b9ee4cdb10fa20a9f16c",
+    "burgers/ecsw_utils.py": "c6f082eaf6c420b9e88eee0f1b6d4b2bb3a535db9a5c5036025f4dbfca7ca580",
+    "burgers/linear_manifold.py": "02194e62026976975cad636d824021f2b817e833b90bd94cf9ec370e0dd69a50",
+    "burgers/gauss_newton.py": "504605739ccb8692e634c8fbd03fb00df8fe1f490a5176a2b0291a63c66ea248"
+  },
+  "versions": {
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "threadpoolctl": "3.6.0"
+  },
+  "completed_local": "2026-10-06T00:31:10.874195-07:00"
+}

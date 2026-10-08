@@ -27,6 +27,11 @@ from burgers.linear_manifold import compute_ECSW_training_matrix_2D
 from burgers.ecsw_utils import (
     build_ecsw_snapshot_plan,
     save_ecsw_sampling_3d_plot,
+    greedy_nnls_ecsw_weights,
+    greedy_nnls_bm_ecsw_weights,
+    method_output_path,
+    selection_output_tag,
+    normalize_selection_method,
 )
 from burgers.empirical_cubature_method import EmpiricalCubatureMethod
 from burgers.randomized_singular_value_decomposition import (
@@ -92,8 +97,18 @@ def main(
     mu_samples=None,
     ecsw_snapshot_percent=2.0,
     ecsw_random_seed=42,
+    selection_method="ecm",
+    max_cells=None,
+    ecsw_tol_squared=1e-10,
+    ecm_svd_tolerance=1e-8,
+    ecm_svd_seed=None,
     linear_solver="normal_eq",
     normal_eq_reg=1e-12,
+    bm_max_its=20,
+    ecsw_snapshot_count=None,
+    bm_jacobian="exact",
+    bm_min_delta=1e-2,
+    bm_candidate_score="signed_sum",
 ):
     """
     Parameters
@@ -116,7 +131,27 @@ def main(
         training blocks.
     mu_samples : sequence of [mu1, mu2] or None
         Parameter points used to build ECSW weights.
+    ecsw_snapshot_count : int or None
+        Exact total training-pair count. Overrides percentage sampling when set.
     """
+
+    selection_method = normalize_selection_method(selection_method)
+    if bm_candidate_score not in ("signed_sum", "positive_norm"):
+        raise ValueError("bm_candidate_score must be signed_sum or positive_norm.")
+    if selection_method != "bm_ecsw" and bm_candidate_score != "signed_sum":
+        raise ValueError("bm_candidate_score applies only to BM-ECSW selection.")
+    if bm_jacobian not in ("exact", "gauss_newton"):
+        raise ValueError("bm_jacobian must be exact or gauss_newton.")
+    if not np.isfinite(bm_min_delta) or not 0 <= bm_min_delta < 1:
+        raise ValueError("bm_min_delta must be in [0, 1); zero disables plateau stopping.")
+    if int(bm_max_its) < 1:
+        raise ValueError("bm_max_its must be positive.")
+    if max_cells is not None and int(max_cells) < 1:
+        raise ValueError("max_cells must be positive.")
+    if selection_method == "ecm" and max_cells is not None:
+        raise ValueError("max_cells is a safety cap for ECSW or BM-ECSW only.")
+    if not np.isfinite(ecm_svd_tolerance) or not 0 < ecm_svd_tolerance < 1:
+        raise ValueError("ecm_svd_tolerance must be in (0, 1).")
 
     if mu_samples is None:
         mu_samples = get_snapshot_params()
@@ -127,9 +162,15 @@ def main(
     ecsw_snapshot_percent = float(ecsw_snapshot_percent)
     if not np.isfinite(ecsw_snapshot_percent) or ecsw_snapshot_percent <= 0.0:
         raise ValueError("ecsw_snapshot_percent must be a finite value > 0.")
+    if ecsw_snapshot_count is not None:
+        if int(ecsw_snapshot_count) != ecsw_snapshot_count or ecsw_snapshot_count < 1:
+            raise ValueError("ecsw_snapshot_count must be a positive integer.")
+        ecsw_snapshot_count = int(ecsw_snapshot_count)
     ecsw_snapshot_mode = "global_param_time_stratified"
-    ecsw_total_snapshots = None
-    ecsw_total_snapshots_percent = ecsw_snapshot_percent
+    ecsw_total_snapshots = ecsw_snapshot_count
+    ecsw_total_snapshots_percent = (
+        ecsw_snapshot_percent if ecsw_snapshot_count is None else None
+    )
     ecsw_ensure_mu_coverage = True
 
     # ------------------------------------------------------------------
@@ -191,6 +232,32 @@ def main(
                 f"Checked '{basis_path}' and legacy '{legacy_basis_path}'."
             )
 
+    output_tag = selection_output_tag(
+        selection_method, max_cells, ecsw_tol_squared,
+        ecm_svd_tolerance, ecm_svd_seed, bm_candidate_score,
+    )
+    weights_path = method_output_path(
+        weights_path, selection_method, max_cells, ecsw_tol_squared,
+        ecm_svd_tolerance, ecm_svd_seed, bm_candidate_score,
+    )
+    plan_tag = ""
+    if snap_time_offset != 3:
+        plan_tag += f"_offset{snap_time_offset}"
+    if ecsw_snapshot_count is not None:
+        plan_tag += f"_snap{ecsw_snapshot_count}pairs"
+    elif ecsw_snapshot_percent != 2.0:
+        plan_tag += f"_snap{ecsw_snapshot_percent:g}pct"
+    if plan_tag:
+        output_tag += plan_tag
+        stem, extension = os.path.splitext(weights_path)
+        weights_path = f"{stem}{plan_tag}{extension}"
+    run_tag = (
+        f"{output_tag}_iter{bm_max_its}"
+        if selection_method == "bm_ecsw"
+        else output_tag
+    )
+    if selection_method == "bm_ecsw" and bm_jacobian == "gauss_newton":
+        run_tag += "_gauss_newton"
     os.makedirs(pod_dir, exist_ok=True)
 
     basis_full = np.load(basis_path, allow_pickle=False)
@@ -233,8 +300,14 @@ def main(
     print(f"Loaded POD basis from {basis_path}")
     print(f"Loaded singular values from {sigma_path}")
     print(f"Using basis size: {n_keep}")
-    print(f"Reduced linear solver: {linear_solver}")
-    if str(linear_solver).strip().lower() == "normal_eq":
+    online_solver = linear_solver
+    if selection_method == "bm_ecsw":
+        online_solver = (
+            "Newton for mode-weighted stationarity" if bm_jacobian == "exact"
+            else "Gauss-Newton-type BM Jacobian (no residual Hessians)"
+        )
+    print(f"Reduced linear solver: {online_solver}")
+    if selection_method != "bm_ecsw" and str(linear_solver).strip().lower() == "normal_eq":
         print(f"normal_eq_reg: {float(normal_eq_reg):.3e}")
     print(f"Centered basis: {centered_basis} (reference: {ref_source})")
     if energy_captured is not None:
@@ -247,6 +320,10 @@ def main(
     C_shape = None
     elapsed_ecsw = None
     ecsw_residual = None
+    ecsw_residual_squared = None
+    ecm_svd_rank = None
+    ecm_svd_error = None
+    ecm_internal_residual = None
     reduced_mesh_plot_path = None
     ecsw_sampling_3d_plot_path = None
     n_ecsw_elements = None
@@ -272,7 +349,12 @@ def main(
             f"{ecsw_plan['num_candidates_total']} candidate pairs."
         )
         print(f"[ECSW] Selected snapshots per mu: {ecsw_plan['num_selected_per_mu']}")
-        ecsw_sampling_3d_plot_path = os.path.join(results_dir, "hprom_ecsw_sampling_3d.png")
+        sampling_plot_name = (
+            "hprom_ecsw_sampling_3d.png"
+            if selection_method == "ecm" and not output_tag
+            else f"hprom{output_tag}_sampling_3d.png"
+        )
+        ecsw_sampling_3d_plot_path = os.path.join(results_dir, sampling_plot_name)
         save_ecsw_sampling_3d_plot(
             mu_points=mu_samples,
             dt=dt,
@@ -326,41 +408,85 @@ def main(
         C_shape = C.shape
         print(f"Stacked ECSW training matrix C shape: {C_shape}")
 
-        C_ecm = np.ascontiguousarray(C, dtype=np.float64)
-        b = np.ascontiguousarray(C_ecm.sum(axis=1), dtype=np.float64)
+        C_fit = np.ascontiguousarray(C, dtype=np.float64)
+        b = np.ascontiguousarray(C_fit.sum(axis=1), dtype=np.float64)
+        num_cells = C_fit.shape[1]
 
-        # Build reduced basis for ECM from C^T
-        rsvd = RandomizedSingularValueDecomposition()
-        u, _, _, _ = rsvd.Calculate(C_ecm.T, 1e-8)
-
-        selector = EmpiricalCubatureMethod()
-        selector.SetUp(
-            u,
-            InitialCandidatesSet=None,
-            constrain_sum_of_weights=True,
-            constrain_conditions=False,
-        )
-        selector.Run()
-
-        num_cells = (grid_x.size - 1) * (grid_y.size - 1)
-        weights = np.zeros(num_cells, dtype=np.float64)
-        weights[selector.z] = selector.w
+        if selection_method == "ecm":
+            rsvd = RandomizedSingularValueDecomposition(RANDOM_SEED=ecm_svd_seed)
+            u, _, _, ecm_svd_error = rsvd.Calculate(
+                C_fit.T, ecm_svd_tolerance
+            )
+            ecm_svd_rank = u.shape[1]
+            print(
+                f"[ECM] SVD tolerance={ecm_svd_tolerance:.3e}, "
+                f"retained rank={ecm_svd_rank}", flush=True,
+            )
+            selector = EmpiricalCubatureMethod()
+            selector.SetUp(
+                u,
+                InitialCandidatesSet=None,
+                constrain_sum_of_weights=True,
+                constrain_conditions=False,
+            )
+            selector.Run()
+            ecm_internal_residual = float(selector.nerrorACTUAL)
+            weights = np.zeros(num_cells, dtype=np.float64)
+            weights[selector.z] = selector.w
+        elif selection_method == "ecsw":
+            weights, ecsw_error_squared = greedy_nnls_ecsw_weights(
+                C_fit,
+                tolerance_squared=ecsw_tol_squared,
+                max_cells=max_cells,
+            )
+            if ecsw_error_squared > ecsw_tol_squared:
+                print(
+                    "[ECSW] Training stopped before reaching tolerance: "
+                    f"{ecsw_error_squared:.3e} > {ecsw_tol_squared:.3e}."
+                )
+        else:
+            weights, ecsw_error_squared = greedy_nnls_bm_ecsw_weights(
+                C_fit, n_keep,
+                tolerance_squared=ecsw_tol_squared,
+                max_cells=max_cells,
+                candidate_score=bm_candidate_score,
+            )
+            if ecsw_error_squared > ecsw_tol_squared:
+                print(
+                    "[BM-ECSW] Training stopped before reaching tolerance: "
+                    f"{ecsw_error_squared:.3e} > {ecsw_tol_squared:.3e}."
+                )
 
         elapsed_ecsw = time.time() - t0
         denom = np.linalg.norm(b)
         if denom > 0.0:
-            ecsw_residual = float(np.linalg.norm(C_ecm @ weights - b) / denom)
+            if selection_method == "bm_ecsw":
+                support = np.flatnonzero(np.any(weights > 0, axis=1))
+                fitted = np.zeros_like(b)
+                for mode in range(n_keep):
+                    fitted[mode::n_keep] = (
+                        C_fit[mode::n_keep, support] @ weights[support, mode]
+                    )
+            else:
+                fitted = C_fit @ weights
+            ecsw_residual = float(np.linalg.norm(fitted - b) / denom)
+            ecsw_residual_squared = ecsw_residual**2
         else:
             ecsw_residual = np.nan
+            ecsw_residual_squared = np.nan
 
         np.save(weights_path, weights)
         print(f"ECSW weights saved to: {weights_path}")
         print(f"ECSW solve time: {elapsed_ecsw:.3e} seconds")
         print(f"ECSW residual: {ecsw_residual:.3e}")
 
-        reduced_mesh_plot_path = os.path.join(results_dir, "hprom_reduced_mesh.png")
+        reduced_mesh_plot_path = os.path.join(results_dir, f"hprom{output_tag}_reduced_mesh.png")
         plt.figure(figsize=(7, 6))
-        plt.spy(weights.reshape((num_cells_y, num_cells_x)))
+        mesh_mask = (
+            np.any(weights > 0, axis=1)
+            if selection_method == "bm_ecsw" else weights > 0
+        )
+        plt.spy(mesh_mask.reshape((num_cells_y, num_cells_x)))
         plt.xlabel(r"$x$ cell index")
         plt.ylabel(r"$y$ cell index")
         plt.title("HPROM Reduced Mesh (ECSW)")
@@ -378,14 +504,24 @@ def main(
         print(f"Loaded ECSW weights from: {weights_path}")
 
     expected_num_cells = (grid_x.size - 1) * (grid_y.size - 1)
-    if weights.size != expected_num_cells:
+    expected_shape = (
+        (expected_num_cells, n_keep)
+        if selection_method == "bm_ecsw" else (expected_num_cells,)
+    )
+    if weights.shape != expected_shape:
         raise ValueError(
-            f"ECSW weights size mismatch: got {weights.size}, "
-            f"expected {expected_num_cells}."
+            f"Cell weights shape mismatch: got {weights.shape}, "
+            f"expected {expected_shape}."
         )
 
-    n_ecsw_elements = int(np.sum(weights > 0.0))
-    print(f"N_e (nonzero ECSW weights): {n_ecsw_elements}")
+    if not np.all(np.isfinite(weights)) or np.any(weights < 0):
+        raise ValueError("Cell weights must be finite and nonnegative.")
+    n_ecsw_elements = int(np.sum(
+        np.any(weights > 0.0, axis=1)
+        if selection_method == "bm_ecsw" else weights > 0.0
+    ))
+    n_mode_weights = int(np.count_nonzero(weights)) if selection_method == "bm_ecsw" else None
+    print(f"N_e (sampled cells): {n_ecsw_elements}")
 
     # ------------------------------------------------------------------
     # Run HPROM
@@ -403,11 +539,21 @@ def main(
         u_ref=u_ref,
         linear_solver=linear_solver,
         normal_eq_reg=normal_eq_reg,
+        max_its=bm_max_its if selection_method == "bm_ecsw" else 20,
+        bm_jacobian=bm_jacobian,
+        min_delta=bm_min_delta if selection_method == "bm_ecsw" else 1e-2,
     )
     elapsed_hprom = time.time() - t0
-    num_its, jac_time, res_time, ls_time = hprom_stats
+    num_its, jac_time, res_time, ls_time = hprom_stats[:4]
+    nonconverged_steps = hprom_stats[4] if selection_method == "bm_ecsw" else None
+    bm_median_final_ratio = hprom_stats[5] if selection_method == "bm_ecsw" else None
+    bm_max_final_ratio = hprom_stats[6] if selection_method == "bm_ecsw" else None
+    bm_stop_reasons = hprom_stats[7] if selection_method == "bm_ecsw" else None
     print(f"Elapsed HPROM time: {elapsed_hprom:.3e} seconds")
-    print(f"HPROM Gauss-Newton iterations: {num_its}")
+    iteration_name = "Gauss-Newton"
+    if selection_method == "bm_ecsw":
+        iteration_name = "Newton" if bm_jacobian == "exact" else "Gauss-Newton-type"
+    print(f"HPROM {iteration_name} iterations: {num_its}")
     print(f"HPROM timing breakdown (s): jac={jac_time:.3e}, res={res_time:.3e}, ls={ls_time:.3e}")
 
     rom_snaps = u_ref[:, None] + basis_trunc @ rom_red
@@ -433,7 +579,7 @@ def main(
     # ------------------------------------------------------------------
     rom_path = os.path.join(
         results_dir,
-        f"hprom_snaps_mu1_{mu_rom[0]:.2f}_mu2_{mu_rom[1]:.3f}.npy",
+        f"hprom{run_tag}_snaps_mu1_{mu_rom[0]:.2f}_mu2_{mu_rom[1]:.3f}.npy",
     )
     np.save(rom_path, rom_snaps)
     print(f"HPROM snapshots saved to: {rom_path}")
@@ -473,7 +619,7 @@ def main(
 
     fig_path = os.path.join(
         results_dir,
-        f"hprom_mu1_{mu_rom[0]:.2f}_mu2_{mu_rom[1]:.3f}.png",
+        f"hprom{run_tag}_mu1_{mu_rom[0]:.2f}_mu2_{mu_rom[1]:.3f}.png",
     )
     plt.savefig(fig_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
@@ -495,7 +641,7 @@ def main(
     # ------------------------------------------------------------------
     report_path = os.path.join(
         results_dir,
-        f"hprom_summary_mu1_{mu_rom[0]:.2f}_mu2_{mu_rom[1]:.3f}.txt",
+        f"hprom{run_tag}_summary_mu1_{mu_rom[0]:.2f}_mu2_{mu_rom[1]:.3f}.txt",
     )
     write_txt_report(
         report_path,
@@ -515,16 +661,26 @@ def main(
                     ("pod_dir_requested", pod_dir_requested),
                     ("pod_dir_used", pod_dir),
                     ("compute_ecsw", compute_ecsw),
+                    ("selection_method", selection_method),
+                    ("max_cells", max_cells),
+                    ("ecsw_tol_squared", ecsw_tol_squared),
+                    ("ecm_svd_tolerance", ecm_svd_tolerance if selection_method == "ecm" else None),
+                    ("ecm_svd_seed", ecm_svd_seed if selection_method == "ecm" else None),
                     ("num_modes_requested", num_modes),
                     ("snap_time_offset", snap_time_offset),
                     ("ecsw_sampling_policy", ecsw_snapshot_mode),
-                    ("ecsw_snapshot_percent", ecsw_snapshot_percent),
+                    ("ecsw_snapshot_percent", ecsw_total_snapshots_percent),
+                    ("ecsw_snapshot_count", ecsw_total_snapshots),
                     ("ecsw_random_seed", ecsw_random_seed),
                     ("mu_samples", mu_samples),
-                    ("linear_solver", linear_solver),
+                    ("linear_solver", online_solver),
+                    ("bm_max_its", bm_max_its if selection_method == "bm_ecsw" else None),
+                    ("bm_jacobian", bm_jacobian if selection_method == "bm_ecsw" else None),
+                    ("bm_candidate_score", bm_candidate_score if selection_method == "bm_ecsw" else None),
+                    ("bm_plateau_tolerance", bm_min_delta if selection_method == "bm_ecsw" else None),
                     (
                         "normal_eq_reg",
-                        normal_eq_reg if str(linear_solver).strip().lower() == "normal_eq" else None,
+                        normal_eq_reg if selection_method != "bm_ecsw" and str(linear_solver).strip().lower() == "normal_eq" else None,
                     ),
                 ],
             ),
@@ -554,9 +710,15 @@ def main(
                 "ecsw",
                 [
                     ("num_nonzero_weights", n_ecsw_elements),
+                    ("num_nonzero_mode_weights", n_mode_weights),
                     ("weights_sum", float(np.sum(weights))),
                     ("ecsw_time_seconds", elapsed_ecsw),
                     ("ecsw_residual", ecsw_residual),
+                    ("ecsw_residual_squared", ecsw_residual_squared),
+                    ("ecm_svd_rank", ecm_svd_rank),
+                    ("ecm_svd_error", ecm_svd_error),
+                    ("ecm_internal_residual", ecm_internal_residual),
+                    ("ecsw_tolerance_met", ecsw_residual_squared <= ecsw_tol_squared if selection_method in ("ecsw", "bm_ecsw") and ecsw_residual_squared is not None else None),
                     ("training_matrix_shape", C_shape),
                     (
                         "snapshot_candidates_total",
@@ -577,8 +739,17 @@ def main(
                 [
                     ("total_hprom_time_seconds", elapsed_hprom),
                     ("avg_hprom_time_per_step_seconds", elapsed_hprom / num_steps),
-                    ("gn_iterations_total", num_its),
-                    ("avg_gn_iterations_per_step", num_its / num_steps),
+                    ("gn_iterations_total", num_its if selection_method != "bm_ecsw" else None),
+                    ("bm_newton_iterations_total", num_its if selection_method == "bm_ecsw" and bm_jacobian == "exact" else None),
+                    ("bm_gauss_newton_iterations_total", num_its if selection_method == "bm_ecsw" and bm_jacobian == "gauss_newton" else None),
+                    ("bm_nonlinear_iterations_total", num_its if selection_method == "bm_ecsw" else None),
+                    ("bm_projected_tolerance_not_met_steps", nonconverged_steps),
+                    ("bm_median_final_projected_ratio", bm_median_final_ratio),
+                    ("bm_max_final_projected_ratio", bm_max_final_ratio),
+                    ("bm_stop_reasons", bm_stop_reasons),
+                    ("bm_plateau_steps", bm_stop_reasons.get("plateau", 0) if bm_stop_reasons is not None else None),
+                    ("bm_unsuccessful_steps", sum(count for reason, count in bm_stop_reasons.items() if reason not in ("projected_tolerance", "plateau")) if bm_stop_reasons is not None else None),
+                    ("avg_nonlinear_iterations_per_step", num_its / num_steps),
                     ("jacobian_time_seconds", jac_time),
                     ("residual_time_seconds", res_time),
                     ("linear_solve_time_seconds", ls_time),
@@ -642,17 +813,49 @@ if __name__ == "__main__":
         default=3,
         help="ECSW snapshot time offset.",
     )
-    parser.add_argument(
+    sampling_group = parser.add_mutually_exclusive_group()
+    sampling_group.add_argument(
         "--ecsw-snapshot-percent",
         type=float,
         default=2.0,
         help="Percent of candidate ECSW snapshot pairs to select.",
+    )
+    sampling_group.add_argument(
+        "--ecsw-snapshot-count",
+        type=int,
+        default=None,
+        help="Exact total training-pair count, instead of a percentage.",
     )
     parser.add_argument(
         "--ecsw-random-seed",
         type=int,
         default=42,
         help="Random seed for ECSW snapshot selection.",
+    )
+    parser.add_argument(
+        "--selection-method", choices=("ecm", "ecsw", "bm_ecsw"), default="ecm",
+        help="Cell selector: ECM, classical ECSW, or mode-weighted BM-ECSW.",
+    )
+    parser.add_argument(
+        "--bm-candidate-score", choices=("signed_sum", "positive_norm"),
+        default="signed_sum",
+        help="BM cell selection: signed correlation sum or norm of positive modal correlations.",
+    )
+    parser.add_argument(
+        "--max-cells", type=int, default=None,
+        help="Optional safety cap on selected cells; ECSW stops by tolerance.",
+    )
+    parser.add_argument(
+        "--ecsw-tol-squared", type=float, default=1e-10,
+        help="Stop ECSW or BM-ECSW at this global squared relative training error.",
+    )
+    parser.add_argument(
+        "--ecm-svd-tolerance", type=float, default=1e-8,
+        help="Relative SVD truncation tolerance used before ECM selection.",
+    )
+    parser.add_argument(
+        "--ecm-svd-seed", type=int, default=None,
+        help="Optional random seed for the ECM SVD.",
     )
     parser.add_argument(
         "--linear-solver",
@@ -665,6 +868,22 @@ if __name__ == "__main__":
         type=float,
         default=1e-12,
         help="Regularization used when linear_solver=normal_eq.",
+    )
+    parser.add_argument(
+        "--bm-max-its",
+        type=int,
+        default=20,
+        help="Maximum nonlinear iterations per online BM-ECSW time step.",
+    )
+
+    parser.add_argument(
+        "--bm-jacobian", choices=("exact", "gauss_newton"), default="exact",
+        help="BM derivative: exact Newton or omit residual Hessians.",
+    )
+
+    parser.add_argument(
+        "--bm-min-delta", type=float, default=1e-2,
+        help="BM projected-norm plateau tolerance; zero disables this stopping test.",
     )
 
     ecsw_group = parser.add_mutually_exclusive_group()
@@ -694,6 +913,16 @@ if __name__ == "__main__":
         snap_time_offset=args.snap_time_offset,
         ecsw_snapshot_percent=args.ecsw_snapshot_percent,
         ecsw_random_seed=args.ecsw_random_seed,
+        selection_method=args.selection_method,
+        max_cells=args.max_cells,
+        ecsw_tol_squared=args.ecsw_tol_squared,
+        ecm_svd_tolerance=args.ecm_svd_tolerance,
+        ecm_svd_seed=args.ecm_svd_seed,
         linear_solver=args.linear_solver,
         normal_eq_reg=args.normal_eq_reg,
+        bm_max_its=args.bm_max_its,
+        bm_jacobian=args.bm_jacobian,
+        bm_min_delta=args.bm_min_delta,
+        bm_candidate_score=args.bm_candidate_score,
+        ecsw_snapshot_count=args.ecsw_snapshot_count,
     )

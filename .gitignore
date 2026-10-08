@@ -101,3 +101,19 @@ Project_YvonMaday/Results_Paper/euclidean_case2_prom_rank_study/*/
 # Sherlock outputs of the nested HPROM enrichment campaign.
 Project_YvonMaday/Results_Paper/euclidean_hprom_enrichment_*/
 Project_YvonMaday/Results_Paper/euclidean_hprom_enrichment_submit_logs/
+
+# Compact measurements and provenance for ECSW/BM-ECSW experiments.
+!Results/BM_*/**/*.csv
+!Results/BM_*/**/*.json
+!Results/BM_*/**/*.py
+!Results/ECSW_BM_*/**/*.csv
+!Results/ECSW_BM_*/**/*.json
+!Results/FOM_benchmark_20261004/**/*.csv
+!Results/FOM_benchmark_20261004/**/*.json
+
+# LaTeX auxiliary files for the BM-ECSW documents.
+Project_BM-ECSW/*.aux
+Project_BM-ECSW/*.fdb_latexmk
+Project_BM-ECSW/*.fls
+Project_BM-ECSW/*.out
+Project_BM-ECSW/*.synctex.gz

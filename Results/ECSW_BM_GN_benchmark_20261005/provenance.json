@@ -1,0 +1,26 @@
+{
+  "started_utc": "20261005T230614Z",
+  "cpu_model": "Intel(R) Core(TM) Ultra 7 265",
+  "logical_cpus": 20,
+  "requested_native_threads": 20,
+  "repeats": 3,
+  "versions": {
+    "numpy": "2.5.3",
+    "scipy": "1.18.1",
+    "threadpoolctl": "3.6.0"
+  },
+  "input_sha256": {
+    "POD/ecsw_weights_lspg_ecsw_tol1e-10_offset1_snap5pct.npy": "c8c370cbcc2ea206082f3ceada2044d27b93af654299f2a0b9bdcc0a8296d951",
+    "POD/ecsw_weights_lspg_bm_ecsw_tol1e-10_offset1_snap5pct.npy": "a33e4e633515d21035975ae3a750b3a29942abcc4f350ecab5added070dd34a5",
+    "POD/basis.npy": "abb48a8df8c0b3413995aa353c2fe68438b554853a28e2b9d6d0001f60a686a2",
+    "POD/sigma.npy": "e6dd61239239f7ef1a60018c6e6c3eeead5223a228a364bda9f16511fd045c67",
+    "POD/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb"
+  },
+  "method_order": "rotating parameter order; alternating method order in each pair",
+  "warmup_runs": 0,
+  "measured_region": "run_hprom.main total_hprom_time_seconds",
+  "bm_jacobian": "gauss_newton",
+  "bm_plateau_tolerance": 0.01,
+  "completed_utc": "2026-10-05T23:09:56.264753+00:00",
+  "completed_runs": 18
+}

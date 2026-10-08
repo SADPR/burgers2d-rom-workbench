@@ -1,0 +1,20 @@
+Final matched classical ECSW / BM-ECSW LSPG comparison
+2D Burgers: 250 x 250 cells, 96 global POD modes.
+9 training parameters; 225 consecutive-time projected pairs; seed 42.
+Relative training tolerance 1e-5; no prescribed cell-count cap.
+
+Classical ECSW: 2492 positive-weight cells, 5914 augmented cells,
+  training norm error 9.79495071e-6
+BM-ECSW: 300 positive-weight cells, 868 augmented cells,
+  21597 positive modal weights, training norm error 8.35864506e-6
+
+Final online measurements use the Gauss-Newton-type BM update:
+  ECSW_BM_GN_benchmark_20261005/runs.csv
+  ECSW_BM_GN_benchmark_20261005/summary.md
+All 4500 BM time steps meet the projected-equation tolerance.
+The two solvers monitor different nonlinear norms, as recorded in their reports.
+
+Fresh offline measurements:
+  ECSW_BM_offline_benchmark_20261005/runs.csv
+Production FOM reference measurements:
+  FOM_benchmark_20261004/runs.csv

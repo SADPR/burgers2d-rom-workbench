@@ -100,6 +100,71 @@ print(f"MAX relative_error_percent = {mx[2]:.6f}% at ({mx[0]:.2f}, {mx[1]:.3f})"
 PY
 ```
 
+### Classical ECSW for the global linear POD basis
+
+The global linear model constructs a matrix `C` with one column per cell.
+Classical ECSW computes nonnegative weights so that `Cw ≈ C1`. Its greedy
+NNLS selector stops when `||Cw-C1||²/||C1||²` reaches the chosen tolerance.
+The number of selected cells is an output. `--max-cells` is an optional
+safety cap and the report states whether the tolerance was reached.
+
+Aero-F's default relative norm tolerance is `1e-6`. For this comparison,
+we use `1e-5` in relative norm, equivalent to `1e-10` in the squared
+criterion:
+
+```bash
+.venv/bin/python run_hprom.py --selection-method ecsw --ecsw-tol-squared 1e-10 --compute-ecsw
+```
+
+The existing ECM route remains available with `--selection-method ecm`.
+The ECSW and ECM weights use separate files. Online Gauss-Newton applies
+`sqrt(w_e)` to the two residual components and their Jacobian rows.
+
+The retained ECM comparison uses a relative SVD tolerance of `1e-4`:
+
+```bash
+.venv/bin/python run_hprom.py --selection-method ecm --ecm-svd-tolerance 1e-4 --ecm-svd-seed 42 --compute-ecsw --linear-solver lstsq
+```
+
+This rebuilds the training matrix and computes a new SVD before ECM selection.
+The SVD tolerance is distinct from the ECSW target tolerance; the report
+records the SVD rank, the ECM basis residual, and `||Cw-b||/||b||`.
+
+
+### BM-ECSW for the same global LSPG model
+
+The training matrix contains the local contributions to `(JV)^T R`,
+ordered by snapshot and reduced mode. BM-ECSW assigns one nonnegative
+weight per cell and mode. The signed sum of modal correlations selects
+one shared mesh; independent modal NNLS fits determine its weights.
+Selection stops at the prescribed aggregate relative training tolerance.
+The number of selected cells is an output.
+
+Train and run the configuration used in the technical notes:
+
+```bash
+OPENBLAS_NUM_THREADS=20 OMP_NUM_THREADS=20 MKL_NUM_THREADS=20 .venv/bin/python run_hprom.py --selection-method bm_ecsw --ecsw-tol-squared 1e-10 --snap-time-offset 1 --ecsw-snapshot-percent 5 --ecsw-random-seed 42 --bm-jacobian gauss_newton --bm-min-delta 0.01 --bm-max-its 20 --compute-ecsw
+```
+
+Use `--no-compute-ecsw` to reuse the rule. The matched classical and BM
+rules use the same 96-mode basis and 225 training pairs. They select
+2 492 and 300 cells, respectively, at relative training tolerance `1e-5`.
+The final training residuals are in `Results/bm_ecsw_lspg_comparison.txt`.
+
+The online BM equations apply each cell's mode weights directly to its
+projected residual contribution. The `gauss_newton` option builds the
+update from local first derivatives and solves the generally nonsymmetric
+reduced system. Step control and the projected-norm plateau test use the
+recorded production settings. Reports distinguish convergence by tolerance,
+plateau, and failure. BM outputs have separate names from classical outputs.
+
+`--ecsw-snapshot-count` can specify an exact number of training pairs
+instead of `--ecsw-snapshot-percent`. `--bm-candidate-score positive_norm`
+remains an optional selector; the reported final configuration uses
+`signed_sum`. The existing exact-derivative option is available through
+`--bm-jacobian exact`; the command above explicitly selects the first-derivative
+update used in the final benchmark.
+
 ## Local POD workflow
 1. Offline local clustering + local bases:
 ```bash
@@ -148,6 +213,27 @@ python3 LocalQuadratic/stage2_local_qm_projection.py
 python3 run_local_qprom.py
 python3 run_local_hqprom.py
 ```
+
+### Diagnose BM-ECSW training
+
+Compare the existing 90-pair and 225-pair BM rules, alongside classical
+ECSW, on a fresh full-mesh PROM reference:
+
+```bash
+OPENBLAS_NUM_THREADS=20 OMP_NUM_THREADS=20 .venv/bin/python diagnose_bm_ecsw.py --reference-steps 500
+```
+
+This keeps the trained weights unchanged. Every one-step probe starts from
+the same previous PROM state, so equation/Jacobian errors are measured
+before accumulated trajectory differences. The diagnostic also computes
+the local time-step sensitivity and checks it by perturbing the previous
+state and resolving the nonlinear equations. Classical weights use Newton
+only for this diagnostic; their production solver remains Gauss-Newton.
+
+Reports, input hashes and plots are written to
+`Results/BM_ECSW_diagnostics/`. A converged reduced equation alone does not
+establish agreement with the full PROM or energy conservation.
+
 
 ### Local HQPROM sweep launcher
 To sweep multiple `(zeta_qua, alpha_ridge)` candidates without editing files manually:
@@ -429,3 +515,25 @@ If you only remember one sequence, use this:
 3. Run its stage scripts in order (`stage1 -> stage2 -> ...`)
 4. Run its online script (`run_prom_*` and optionally `run_hprom_*`)
 5. Read the generated `.txt` summary in `Results/`
+
+### Repeated ECSW/BM-ECSW online timings
+
+```bash
+OPENBLAS_NUM_THREADS=20 OMP_NUM_THREADS=20 .venv/bin/python benchmark_ecsw_bm.py --repeats 3 --threads 20 --bm-jacobian gauss_newton
+```
+
+The benchmark loads the matched 225-pair rules and runs each method three
+times at each of the three evaluation parameters. Runs execute sequentially
+in fresh processes with 20 native threads. Online time includes sampled
+mesh setup, initial projection, and 500 time steps; training, full-field
+decoding, error assessment, plotting, and output writing are excluded.
+
+Final measurements, reports, and input hashes are stored in
+`Results/ECSW_BM_GN_benchmark_20261005/`. Mean ECSW/BM time ratios are
+15.219, 15.638, and 15.368 for the three parameters. All 4 500 BM time
+steps satisfy the projected tolerance. The two production nonlinear
+stopping quantities differ, as documented in the notes and reports.
+
+`Results/ECSW_BM_offline_benchmark_20261005/` stores fresh offline timings.
+`Results/FOM_benchmark_20261004/` supplies the FOM reference for speedups.
+`Project_BM-ECSW/` contains the technical notes and generated figures/tables.

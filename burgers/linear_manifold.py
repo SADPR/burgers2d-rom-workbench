@@ -19,6 +19,7 @@ from .cluster_utils import select_cluster_reduced
 from .gauss_newton import (
     gauss_newton_LSPG,
     gauss_newton_ECSW_2D,
+    newton_BM_ECSW_2D,
     gauss_newton_LSPG_local,
     gauss_newton_LSPG_local_ecsw,
 )
@@ -327,25 +328,31 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
     min_delta=1e-2,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    bm_jacobian="exact",
 ):
     """
-    Global affine ECSW-LSPG HROM for the 2D inviscid Burgers equation:
+    Global affine ECSW/BM-ECSW LSPG HROM for 2D inviscid Burgers.
 
-        w ≈ u_ref + basis @ y
-
-    If u_ref is None, a zero reference is used.
+    A cell-weight vector uses classical row-weighted least squares.
+    A (cell, mode) weight matrix solves the mode-weighted LSPG equations.
+    bm_jacobian selects their exact or Gauss-Newton-type derivative.
+    The reduced state is w ≈ u_ref + basis @ y.
 
     Returns
     -------
     red_coords : ndarray
         Reduced coordinates of shape (r, num_steps + 1)
     stats : tuple
-        (num_its, jac_time, res_time, ls_time)
+        (num_its, jac_time, res_time, ls_time), with BM stopping
+        diagnostics appended when mode-dependent weights are supplied.
     """
 
     w0 = np.asarray(w0, dtype=np.float64).reshape(-1)
     basis = np.asarray(basis, dtype=np.float64)
-    weights = np.asarray(weights, dtype=np.float64).reshape(-1)
+    weights = np.asarray(weights, dtype=np.float64)
+    by_mode = weights.ndim == 2
+    if weights.ndim not in (1, 2):
+        raise ValueError("Weights must be a vector or a (cell, mode) matrix.")
     u_ref = _prepare_reference(u_ref, w0.size)
 
     _, _, JDxec, JDyec, _ = get_ops(grid_x, grid_y)
@@ -355,7 +362,20 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
     n_full_scalar = w0.size // 2
     nred = basis.shape[1]
 
-    sample_inds = np.where(weights != 0)[0]
+    if by_mode and weights.shape != (n_full_scalar, nred):
+        raise ValueError(
+            f"BM weights have shape {weights.shape}, expected "
+            f"({n_full_scalar}, {nred})."
+        )
+    if not by_mode and weights.shape != (n_full_scalar,):
+        raise ValueError("ECSW weights must have one value per cell.")
+    if not np.all(np.isfinite(weights)) or np.any(weights < 0):
+        raise ValueError("Weights must be finite and nonnegative.")
+    sample_inds = np.flatnonzero(
+        np.any(weights > 0, axis=1) if by_mode else weights > 0
+    )
+    if sample_inds.size == 0:
+        raise ValueError("No cells have positive weights.")
     augmented_sample = generate_augmented_mesh(grid_x, grid_y, sample_inds)
 
     Eye_u = sp.identity(n_full_scalar).tocsr()
@@ -365,7 +385,10 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
     JDxec_ecsw = JDxec[sample_inds, :][:, augmented_sample].tocsr()
     JDyec_ecsw = JDyec[sample_inds, :][:, augmented_sample].tocsr()
 
-    sample_weights = np.hstack((weights[sample_inds], weights[sample_inds])).astype(np.float64)
+    if by_mode:
+        sample_weights = weights[sample_inds, :]
+    else:
+        sample_weights = np.hstack((weights[sample_inds], weights[sample_inds]))
 
     idx = np.concatenate((augmented_sample, n_full_scalar + augmented_sample))
 
@@ -402,8 +425,12 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
     jac_time = 0.0
     res_time = 0.0
     ls_time = 0.0
+    nonconverged_steps = 0
+    bm_final_ratios = []
+    bm_stop_reasons = {}
 
-    print(f"Running global affine ECSW-LSPG ROM of size {nred} for mu1={mu[0]}, mu2={mu[1]}")
+    method_name = "BM-ECSW-LSPG" if by_mode else "ECSW-LSPG"
+    print(f"Running global affine {method_name} ROM of size {nred} for mu1={mu[0]}, mu2={mu[1]}")
 
     for it in range(num_steps):
         print(f" ... Working on timestep {it}")
@@ -426,21 +453,41 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
             )
 
 
-        y, resnorms, times = gauss_newton_ECSW_2D(
-            func=res,
-            jac=jac,
-            basis=basis_ecsw,
-            y0=yp,
-            sample_inds=sample_inds,
-            augmented_sample=augmented_sample,
-            sample_weights=sample_weights,
-            max_its=max_its,
-            relnorm_cutoff=relnorm_cutoff,
-            min_delta=min_delta,
-            u_ref=u_ref_ecsw,
-            linear_solver=linear_solver,
-            normal_eq_reg=normal_eq_reg,
-        )
+        if by_mode:
+            y, resnorms, times, converged, final_ratio, stop_reason = newton_BM_ECSW_2D(
+                func=res,
+                jac=jac,
+                basis=basis_ecsw,
+                y0=yp,
+                sample_weights=sample_weights,
+                JDx=JDxec_ecsw,
+                JDy=JDyec_ecsw,
+                dt=dt,
+                max_its=max_its,
+                relnorm_cutoff=relnorm_cutoff,
+                u_ref=u_ref_ecsw,
+                jacobian_kind=bm_jacobian,
+                min_delta=min_delta,
+            )
+            nonconverged_steps += not converged
+            bm_final_ratios.append(final_ratio)
+            bm_stop_reasons[stop_reason] = bm_stop_reasons.get(stop_reason, 0) + 1
+        else:
+            y, resnorms, times = gauss_newton_ECSW_2D(
+                func=res,
+                jac=jac,
+                basis=basis_ecsw,
+                y0=yp,
+                sample_inds=sample_inds,
+                augmented_sample=augmented_sample,
+                sample_weights=sample_weights,
+                max_its=max_its,
+                relnorm_cutoff=relnorm_cutoff,
+                min_delta=min_delta,
+                u_ref=u_ref_ecsw,
+                linear_solver=linear_solver,
+                normal_eq_reg=normal_eq_reg,
+            )
 
         jac_t, res_t, ls_t = times
         num_its += len(resnorms)
@@ -454,7 +501,15 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
         wp = w_ecsw.copy()
         yp = y.copy()
 
-    return red_coords, (num_its, jac_time, res_time, ls_time)
+    stats = (num_its, jac_time, res_time, ls_time)
+    if by_mode:
+        stats += (
+            nonconverged_steps,
+            float(np.median(bm_final_ratios)),
+            float(np.max(bm_final_ratios)),
+            bm_stop_reasons,
+        )
+    return red_coords, stats
 
 
 def inviscid_burgers_implicit2D_LSPG_local(

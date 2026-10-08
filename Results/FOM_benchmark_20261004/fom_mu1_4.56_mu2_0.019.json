@@ -1,0 +1,53 @@
+{
+  "mu1": 4.56,
+  "mu2": 0.019,
+  "fom_seconds": 323.19456042535603,
+  "num_steps": 500,
+  "full_state_size": 125000,
+  "relative_difference_to_saved_fom": 1.245529150142387e-16,
+  "final_state_min": 6.527869982760604e-63,
+  "final_state_max": 5.254536358521586,
+  "native_thread_pools": [
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 20,
+      "prefix": "libscipy_openblas",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+      "version": "0.3.34.106.0",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 20,
+      "prefix": "libscipy_openblas",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+      "version": "0.3.31.dev",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 20,
+      "prefix": "libgomp",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+      "version": null
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 20,
+      "prefix": "libgomp",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+      "version": null
+    }
+  ],
+  "measured_region": "production inviscid_burgers_implicit2D: operator setup and 500 steps",
+  "excluded": "Python startup, imports, output files, and reference comparison",
+  "max_newton_iterations": 100,
+  "relative_residual_tolerance": 1e-12,
+  "converged_steps": 500
+}

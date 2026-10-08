@@ -314,6 +314,155 @@ def gauss_newton_ECSW_2D(
     return y, resnorms, (jac_time, res_time, ls_time)
 
 
+def assemble_bm_lspg_system_2D(
+    residual, tangent, basis, weights, JDx, JDy, dt, with_derivative=True,
+    jacobian_kind="exact",
+):
+    """Assemble BM equations and an exact or Gauss-Newton-type Jacobian.
+
+    This kernel is shared by the online Newton solve and offline diagnostics.
+    Residual/tangent rows are ordered as (u cells, v cells); basis columns
+    contain the reduced trial modes on the augmented mesh.
+    """
+    if jacobian_kind not in ("exact", "gauss_newton"):
+        raise ValueError("BM jacobian_kind must be exact or gauss_newton.")
+    r, JV = residual, tangent
+    ru, rv = np.split(r, 2)
+    Ju, Jv = np.split(JV, 2)
+    weighted_ru = weights * ru[:, None]
+    weighted_rv = weights * rv[:, None]
+    q = np.sum(weighted_ru * Ju + weighted_rv * Jv, axis=0)
+    if not with_derivative:
+        return q, None
+
+    # Equation i carries weights[:, i], including when differentiating
+    # with respect to coordinate j: K_ij = sum_e xi_ei A_ei A_ej + ...
+    K = (weights * Ju).T @ Ju + (weights * Jv).T @ Jv
+    if jacobian_kind == "gauss_newton":
+        return q, K
+    n_aug = JDx.shape[1]
+    U, V = basis[:n_aug, :], basis[n_aug:, :]
+    # For Burgers' quadratic fluxes this is the exact Hessian correction
+    # to the derivative of (JV)^T W_i R, one row of W for each mode.
+    axu = JDx.T @ weighted_ru
+    byu = JDy.T @ weighted_ru
+    axv = JDx.T @ weighted_rv
+    byv = JDy.T @ weighted_rv
+    K += 0.5 * dt * ((U * axu).T @ U + (V * byv).T @ V)
+    K += 0.25 * dt * (
+        (V * byu).T @ U + (U * byu).T @ V
+        + (V * axv).T @ U + (U * axv).T @ V
+    )
+    return q, K
+
+
+def newton_BM_ECSW_2D(
+    func, jac, basis, y0, sample_weights, JDx, JDy, dt,
+    max_its=20, relnorm_cutoff=1e-5, u_ref=None, jacobian_kind="exact",
+    min_delta=None,
+):
+    """Solve BM equations using exact Newton or a Gauss-Newton-type Jacobian.
+
+    q_i = sum_e xi[e,i] (J V)[e,i] R[e]. The exact derivative includes
+    residual Hessians; jacobian_kind="gauss_newton" omits them entirely.
+    Both use the same projected equations and residual-decrease line search.
+    The approximate matrix is generally nonsymmetric and is solved directly.
+    Optional min_delta stops when the relative change of the projected norm
+    plateaus; this is reported separately from projected-tolerance attainment.
+    """
+    jac_time = 0.0
+    res_time = 0.0
+    ls_time = 0.0
+    basis = np.asarray(basis, dtype=np.float64)
+    y = np.asarray(y0, dtype=np.float64).copy()
+    u_ref = _prepare_u_ref(u_ref, basis.shape[0])
+    weights = np.asarray(sample_weights, dtype=np.float64)
+    n_modes = basis.shape[1]
+    n_sample = weights.shape[0]
+    if weights.shape != (n_sample, n_modes):
+        raise ValueError("BM weights must have shape (sample cells, modes).")
+    if not np.all(np.isfinite(weights)) or np.any(weights < 0):
+        raise ValueError("BM weights must be finite and nonnegative.")
+    if basis.shape[0] != 2 * JDx.shape[1] or JDx.shape != JDy.shape:
+        raise ValueError("BM basis and sampled spatial operators mismatch.")
+    if JDx.shape[0] != n_sample:
+        raise ValueError("BM weights and sampled spatial operators mismatch.")
+
+    def evaluate(coords, with_derivative):
+        nonlocal jac_time, res_time
+        w = u_ref + basis @ coords
+        t0 = time.time()
+        r = func(w)
+        res_time += time.time() - t0
+        t0 = time.time()
+        JV = jac(w) @ basis
+        jac_time += time.time() - t0
+        return assemble_bm_lspg_system_2D(
+            r, JV, basis, weights, JDx, JDy, dt, with_derivative,
+            jacobian_kind=jacobian_kind,
+        )
+
+    q, K = evaluate(y, True)
+    init_norm = _safe_init_norm(np.linalg.norm(q))
+    norms = []
+    converged = False
+    stop_reason = "max_its"
+
+    for it in range(max_its):
+        norm = float(np.linalg.norm(q))
+        norms.append(norm)
+        if norm / init_norm < relnorm_cutoff:
+            converged = True
+            stop_reason = "projected_tolerance"
+            break
+        if min_delta is not None and len(norms) > 1:
+            if _relative_drop(norms[-2], norms[-1]) < min_delta:
+                stop_reason = "plateau"
+                break
+        t0 = time.time()
+        try:
+            step = np.linalg.solve(K, -q)
+        except np.linalg.LinAlgError:
+            step, *_ = np.linalg.lstsq(K, -q, rcond=None)
+        ls_time += time.time() - t0
+        if not np.all(np.isfinite(step)):
+            stop_reason = "nonfinite_step"
+            break
+        accepted = False
+        directions = [step]
+        gradient = K.T @ q
+        gradient_norm = float(np.linalg.norm(gradient))
+        if np.isfinite(gradient_norm) and gradient_norm > 0.0:
+            # -K^T q is the exact merit gradient for Newton and an
+            # estimate for the Gauss-Newton-type approximation. Every
+            # accepted trial must decrease the actual BM equation norm.
+            scale = min(max(float(np.linalg.norm(step)), 1.0), 100.0)
+            directions.append(-scale * gradient / gradient_norm)
+        for direction in directions:
+            alpha = 1.0
+            for _ in range(24):
+                trial_y = y + alpha * direction
+                trial_q, _ = evaluate(trial_y, False)
+                if np.linalg.norm(trial_q) < norm * (1.0 - 1e-12):
+                    y = trial_y
+                    q, K = evaluate(y, True)
+                    accepted = True
+                    break
+                alpha *= 0.5
+            if accepted:
+                break
+        if not accepted:
+            stop_reason = "line_search"
+            break
+
+    final_norm = float(np.linalg.norm(q))
+    final_ratio = final_norm / init_norm
+    converged = converged or final_ratio < relnorm_cutoff
+    if converged:
+        stop_reason = "projected_tolerance"
+    return y, norms, (jac_time, res_time, ls_time), converged, final_ratio, stop_reason
+
+
 def gauss_newton_LSPG_local(
     func,
     jac,

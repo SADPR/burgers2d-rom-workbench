@@ -1,0 +1,92 @@
+[run]
+timestamp: 2026-10-05T16:07:06
+mu1: 4.56000000e+00
+mu2: 1.90000000e-02
+
+[configuration]
+results_dir: /home/sares/burgers2d-rom-workbench/Results/ECSW_BM_GN_benchmark_20261005/bm_ecsw_mu1_4.56_mu2_0.019_repeat1
+pod_dir_requested: /home/sares/burgers2d-rom-workbench/POD
+pod_dir_used: /home/sares/burgers2d-rom-workbench/POD
+compute_ecsw: False
+selection_method: bm_ecsw
+max_cells: N/A
+ecsw_tol_squared: 1.00000000e-10
+ecm_svd_tolerance: N/A
+ecm_svd_seed: N/A
+num_modes_requested: N/A
+snap_time_offset: 1
+ecsw_sampling_policy: global_param_time_stratified
+ecsw_snapshot_percent: 5.00000000e+00
+ecsw_snapshot_count: N/A
+ecsw_random_seed: 42
+mu_samples: [[4.25, 0.015], [4.25, 0.0225], [4.25, 0.03], [4.875, 0.015], [4.875, 0.0225], [4.875, 0.03], [5.5, 0.015], [5.5, 0.0225], [5.5, 0.03]]
+linear_solver: Gauss-Newton-type BM Jacobian (no residual Hessians)
+bm_max_its: 20
+bm_jacobian: gauss_newton
+bm_plateau_tolerance: 1.00000000e-02
+normal_eq_reg: N/A
+
+[discretization]
+dt: 5.00000000e-02
+num_steps: 500
+num_cells_x: 250
+num_cells_y: 250
+full_state_size: 125000
+
+[pod_basis]
+basis_size: 96
+n_available_modes: 96
+energy_captured: 9.99502670e-01
+energy_lost: 4.97330346e-04
+centered_basis_used: True
+reference_source: loaded_file
+u_ref_l2_norm: 8.17426148e+02
+
+[ecsw]
+num_nonzero_weights: 300
+num_nonzero_mode_weights: 21597
+weights_sum: 5.27578349e+06
+ecsw_time_seconds: N/A
+ecsw_residual: N/A
+ecsw_residual_squared: N/A
+ecm_svd_rank: N/A
+ecm_svd_error: N/A
+ecm_internal_residual: N/A
+ecsw_tolerance_met: N/A
+training_matrix_shape: N/A
+snapshot_candidates_total: N/A
+snapshot_selected_total: N/A
+snapshot_selected_per_mu: N/A
+
+[hprom_timing]
+total_hprom_time_seconds: 1.23755765e+00
+avg_hprom_time_per_step_seconds: 2.47511530e-03
+gn_iterations_total: N/A
+bm_newton_iterations_total: N/A
+bm_gauss_newton_iterations_total: 1509
+bm_nonlinear_iterations_total: 1509
+bm_projected_tolerance_not_met_steps: 0
+bm_median_final_projected_ratio: 1.82854261e-06
+bm_max_final_projected_ratio: 9.84803022e-06
+bm_stop_reasons: {'projected_tolerance': 500}
+bm_plateau_steps: 0
+bm_unsuccessful_steps: 0
+avg_nonlinear_iterations_per_step: 3.01800000e+00
+jacobian_time_seconds: 2.20723391e-01
+residual_time_seconds: 1.10457182e-01
+linear_solve_time_seconds: 3.56791019e-02
+hdm_load_or_solve_time_seconds: 7.25946426e-02
+
+[error_metrics]
+relative_l2_error: 1.10189047e-02
+relative_error_percent: 1.10189047e+00
+
+[outputs]
+hprom_snapshots_npy: /home/sares/burgers2d-rom-workbench/Results/ECSW_BM_GN_benchmark_20261005/bm_ecsw_mu1_4.56_mu2_0.019_repeat1/hprom_bm_ecsw_tol1e-10_offset1_snap5pct_iter20_gauss_newton_snaps_mu1_4.56_mu2_0.019.npy
+comparison_plot_png: /home/sares/burgers2d-rom-workbench/Results/ECSW_BM_GN_benchmark_20261005/bm_ecsw_mu1_4.56_mu2_0.019_repeat1/hprom_bm_ecsw_tol1e-10_offset1_snap5pct_iter20_gauss_newton_mu1_4.56_mu2_0.019.png
+basis_npy: /home/sares/burgers2d-rom-workbench/POD/basis.npy
+sigma_npy: /home/sares/burgers2d-rom-workbench/POD/sigma.npy
+u_ref_npy: /home/sares/burgers2d-rom-workbench/POD/u_ref.npy
+ecsw_weights_npy: /home/sares/burgers2d-rom-workbench/POD/ecsw_weights_lspg_bm_ecsw_tol1e-10_offset1_snap5pct.npy
+ecsw_reduced_mesh_png: N/A
+ecsw_sampling_3d_png: N/A

@@ -16,11 +16,12 @@ class RandomizedSingularValueDecomposition():
                     If false, the truncation_tolerance is taken as an absolute error tolerance
         USE_RANDOMIZATION: If false, the standard svd algorith of numpy is followed
     """
-    def __init__(self, COMPUTE_U=True, COMPUTE_V=True, RELATIVE_SVD=True, USE_RANDOMIZATION=True):
+    def __init__(self, COMPUTE_U=True, COMPUTE_V=True, RELATIVE_SVD=True, USE_RANDOMIZATION=True, RANDOM_SEED=None):
         self.COMPUTE_U = COMPUTE_U
         self.COMPUTE_V = COMPUTE_V
         self.RELATIVE_SVD = RELATIVE_SVD
         self.USE_RANDOMIZATION = USE_RANDOMIZATION
+        self.RANDOM_SEED = RANDOM_SEED
 
 
 
@@ -96,9 +97,9 @@ class RandomizedSingularValueDecomposition():
         R_old = 0
         Q = B = np.array([])
 
+        rng = np.random.RandomState(self.RANDOM_SEED)
         while nC>mu:
-            #Omega=np.random.RandomState(seed = 1234).normal(size=(N, int(dR))) # seeded random generator
-            Omega=np.random.RandomState().normal(size=(N, int(dR))) # Draw a N x dR random matrix
+            Omega=rng.normal(size=(N, int(dR))) # Draw a N x dR random matrix
             nOmega = np.sqrt(np.prod(np.shape(C)))
             factorRED = 10
             self.SVD_MaxSize = max(M,N)/factorRED

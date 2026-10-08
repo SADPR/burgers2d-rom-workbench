@@ -1,0 +1,13 @@
+{
+  "started_utc": "2026-10-04T20:14:02.603791+00:00",
+  "completed_utc": "2026-10-04T20:30:20.008847+00:00",
+  "threads": 20,
+  "repeats_per_parameter": 1,
+  "mean_fom_seconds": 324.2595586764316,
+  "input_sha256": {
+    "burgers/core.py": "f5a6da10863ff27fab6eebba6515d7610be0d05153ffd53eedb7c09838d02950",
+    "burgers/gauss_newton.py": "52cce45f81310769ff1f01c4973b3d2bc347c241c1a8328f45ccb9ba8c09689a",
+    "burgers/config.py": "aeeea790ae3f2997e0a0b8320ae96861c22542504ae1dda83816eb83d7da3713"
+  },
+  "measured_region": "production FOM function including setup and time stepping"
+}

@@ -4,7 +4,7 @@
 
 Open **`BM_ECSW_LSPG_notes.pdf`**. Its source is `BM_ECSW_LSPG_notes.tex`. The document presents the general formulation followed by a Burgers numerical example.
 
-The technical notes present the HDM and LSPG formulation, classical and by-mode ECSW, modal NNLS training, the Gauss--Newton-type BM update, and the online solver before the Burgers application and results. Sections 1--3 state the general method using arbitrary residual-block sizes, training configurations, and symbolic tolerances. Burgers data, solver settings, timings, and numerical comparisons are confined to the application and timing appendix. The online algorithms explicitly evaluate the local residual blocks and derivatives, assemble the reduced residual and update matrix, solve for the joint coordinate correction, and update the coordinates. They show full-step iterations with a prescribed relative reduced-residual tolerance. Plateau thresholds, iteration limits, and numerical step controls are recorded only for the Burgers experiment. The LSPG equations follow `ares2026closure.pdf`; the sampling notation follows `chapman2017accelerated.pdf`: matrix `G`, target `b`, candidate weights `xi`, fitted weights `alpha`, and training tolerance `tau`. Generalized coordinates are `q`. Vectors and matrices are bold, with no underlines.
+The technical notes present the HDM and LSPG formulation, classical and by-mode ECSW, modal NNLS training, the Gauss--Newton-type BM update, and the online solver before the Burgers application and results. Sections 1--3 state the general method using arbitrary residual-block sizes, training configurations, and symbolic tolerances. Burgers data, solver settings, timings, and numerical comparisons are confined to the application and timing appendix. The online algorithms explicitly evaluate the local residual blocks and derivatives, assemble the reduced residual and update matrix, solve for the joint coordinate correction, and update the coordinates. They show full-step iterations with a prescribed relative reduced-residual tolerance. Plateau thresholds, iteration limits, and numerical step controls are recorded only for the Burgers experiment. The LSPG equations follow `ares2026closure.pdf`; the sampling notation follows `chapman2017accelerated.pdf`: matrix `G`, target `b`, weights `xi`, and training tolerance `tau`. Generalized coordinates are `q`. Vectors and matrices are bold, with no underlines.
 
 The numerical comparison uses the same 96-mode basis, 225 consecutive projected HDM pairs, seed 42, and relative training tolerance `1e-5` for both methods. Classical ECSW has 2 492 weighted cells; BM-ECSW has 300. The technical notes report only this matched comparison, without an abstract or introduction. BM-ECSW is attributed to Sebastian Rodriguez at the beginning.
 
@@ -70,11 +70,12 @@ The tables and solution slices are regenerated from this benchmark.
 The FOM speedup reference remains the measured production runs in
 `Results/FOM_benchmark_20261004/`.
 
-## Candidate-score derivation and separate experiment
+## Candidate-score derivation
 
-The training section derives Algorithm 3's signed correlation sum from the global quadratic fitting objective and connects it to the classical ECSW selection criterion. It evaluates a common candidate-weight increment across modes; the subsequent modal NNLS fits allow different weights.
-
-A separate comparison with the norm of positive modal correlations is documented under `Results/BM_candidate_positive_norm_20261005/`. Its results are not included in the technical notes. Execution commands, source files, and measurement locations are documented here rather than in a reproducibility appendix.
+The training section derives Algorithm 3's signed correlation sum from the
+global quadratic fitting objective and connects it to the classical ECSW
+selection criterion. It compares a common candidate-weight increment
+across modes; subsequent modal NNLS fits allow different weights.
 
 ## Offline training times
 
