@@ -1,0 +1,143 @@
+{
+  "parameters": [
+    [
+      4.56,
+      0.019
+    ],
+    [
+      4.75,
+      0.02
+    ],
+    [
+      5.19,
+      0.026
+    ]
+  ],
+  "dt": 0.05,
+  "modes": 96,
+  "methods": {
+    "classical_225_offset1": {
+      "path": "POD/ecsw_weights_lspg_ecsw_tol1e-10_offset1_snap5pct.npy",
+      "sha256": "c8c370cbcc2ea206082f3ceada2044d27b93af654299f2a0b9bdcc0a8296d951",
+      "cells": 2492
+    },
+    "bm_90_offset1": {
+      "path": "POD/ecsw_weights_lspg_bm_ecsw_tol1e-10_offset1.npy",
+      "sha256": "67e5b0e291c42ca6ce2875a855afe964403d022c2d5735722cf702804e64a2c6",
+      "cells": 145
+    },
+    "bm_225_offset1": {
+      "path": "POD/ecsw_weights_lspg_bm_ecsw_tol1e-10_offset1_snap5pct.npy",
+      "sha256": "a33e4e633515d21035975ae3a750b3a29942abcc4f350ecab5added070dd34a5",
+      "cells": 300
+    },
+    "classical_90_offset3": {
+      "path": "POD/ecsw_weights_lspg_ecsw_tol1e-10.npy",
+      "sha256": "f00a313074b15faf9ac70d08dbde23b3436665c9460e40a5170d3888c4df3457",
+      "cells": 1590,
+      "training_pairs": 90
+    }
+  },
+  "threads": 1,
+  "sources": {
+    "POD/basis.npy": "abb48a8df8c0b3413995aa353c2fe68438b554853a28e2b9d6d0001f60a686a2",
+    "POD/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "burgers/gauss_newton.py": "62fe23d1370290f755a377f39dab50dc1f0dcbe5d4d13dddff242b33f9f78f77",
+    "burgers/linear_manifold.py": "893ae17adea39ddbc1f4f35873fb5e10b7e038ff7da2891c294c3470ef1fc191",
+    "/home/sares/burgers2d-rom-workbench/diagnose_bm_gradient_structure.py": "a3df1b1a7e81ce1affd981ea2cf29bb53558df3738415c36c5ed4bd0ed13a87e"
+  },
+  "common_states": "Saved full PROM, mu=(4.56,.019), predictor and computed state at steps1,5,20; identical coordinates/history for every rule.",
+  "trajectory_states": "All 500 computed states of every saved production trajectory, with its own previous state held fixed.",
+  "derivative": "Exact derivative of the projected vector, including residual-weighted second derivatives; correction approximation measured separately.",
+  "finite_differences": "Central differences of the directly evaluated projected vector, two columns at the strongest exact crossed mismatch; epsilon=1e-4*max(1,abs(q_k)).",
+  "symmetry_count_threshold": 1e-10,
+  "limitations": "Nonsymmetry excludes a local smooth scalar objective. It does not establish that loss of an objective alone causes trajectory failure.",
+  "trajectories": {
+    "classical_90_offset3_mu1_4.56_mu2_0.019": {
+      "path": "Results/BM_ECSW_stability_classical90_20261009/classical_90_offset3_mu1_4.56_mu2_0.019_coordinates.npy",
+      "sha256": "8ef5c6badeaaabd06218cd6af567aa8b2d4fa7ef84bd8c7965e744ed0793c039"
+    },
+    "classical_225_offset1_mu1_4.56_mu2_0.019": {
+      "path": "Results/BM_ECSW_stability_20261009/classical_225_offset1_mu1_4.56_mu2_0.019_coordinates.npy",
+      "sha256": "194c495db3e9c21adb6a1f9dea34691f8ef22111c08918552acb87614325855a"
+    },
+    "bm_90_offset1_mu1_4.56_mu2_0.019": {
+      "path": "Results/BM_ECSW_stability_20261009/bm_90_offset1_mu1_4.56_mu2_0.019_coordinates.npy",
+      "sha256": "d45e4009c4a78f3bbfe2399db7672f71c2dfad55c33b1bf1b7b394755430cbb6"
+    },
+    "bm_225_offset1_mu1_4.56_mu2_0.019": {
+      "path": "Results/BM_ECSW_stability_20261009/bm_225_offset1_mu1_4.56_mu2_0.019_coordinates.npy",
+      "sha256": "e4c6a1814b3831a57f8d2475e1524f75b16e7f140f2cd7dd74623a12d8e4c7f6"
+    },
+    "classical_90_offset3_mu1_4.75_mu2_0.020": {
+      "path": "Results/BM_ECSW_stability_classical90_20261009/classical_90_offset3_mu1_4.75_mu2_0.020_coordinates.npy",
+      "sha256": "393f1ed9bd150e5a052f6e188794b7b462ffa324739e76265c1910832d7b2095"
+    },
+    "classical_225_offset1_mu1_4.75_mu2_0.020": {
+      "path": "Results/BM_ECSW_stability_20261009/classical_225_offset1_mu1_4.75_mu2_0.020_coordinates.npy",
+      "sha256": "b53fc880b3f81fd4d3f3f8360cd1764fabe5fe5a6f356cb44be26b11f3696602"
+    },
+    "bm_90_offset1_mu1_4.75_mu2_0.020": {
+      "path": "Results/BM_ECSW_stability_20261009/bm_90_offset1_mu1_4.75_mu2_0.020_coordinates.npy",
+      "sha256": "3317cabab70514dc099338b3fe85bd055913d730747d2863a874053c5e6244c1"
+    },
+    "bm_225_offset1_mu1_4.75_mu2_0.020": {
+      "path": "Results/BM_ECSW_stability_20261009/bm_225_offset1_mu1_4.75_mu2_0.020_coordinates.npy",
+      "sha256": "3866046f0e02c3cfbe251055b0f1d096a0239f4020f43b4b670d053c79222850"
+    },
+    "classical_90_offset3_mu1_5.19_mu2_0.026": {
+      "path": "Results/BM_ECSW_stability_classical90_20261009/classical_90_offset3_mu1_5.19_mu2_0.026_coordinates.npy",
+      "sha256": "02a3dd5126d9386328fec7fe50a2dec41d105247b10c797e242742dac0bae88b"
+    },
+    "classical_225_offset1_mu1_5.19_mu2_0.026": {
+      "path": "Results/BM_ECSW_stability_20261009/classical_225_offset1_mu1_5.19_mu2_0.026_coordinates.npy",
+      "sha256": "14c71f686bce236e1f8564433da7e3cc384fe406b990d5a71c58cfff776e29df"
+    },
+    "bm_90_offset1_mu1_5.19_mu2_0.026": {
+      "path": "Results/BM_ECSW_stability_20261009/bm_90_offset1_mu1_5.19_mu2_0.026_coordinates.npy",
+      "sha256": "4e5a8bca6e48febdefe311572a9708c9188b46a9be86da0b09e77a2b795cd6f2"
+    },
+    "bm_225_offset1_mu1_5.19_mu2_0.026": {
+      "path": "Results/BM_ECSW_stability_20261009/bm_225_offset1_mu1_5.19_mu2_0.026_coordinates.npy",
+      "sha256": "0626e90041f6a83fb66a6453a66bd5aed0ba7e9afdee142e57cdc77188e9f8bd"
+    }
+  },
+  "native_threads": [
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 1,
+      "prefix": "libscipy_openblas",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+      "version": "0.3.34.106.0",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 1,
+      "prefix": "libscipy_openblas",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+      "version": "0.3.31.dev",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 1,
+      "prefix": "libgomp",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+      "version": null
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 1,
+      "prefix": "libgomp",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+      "version": null
+    }
+  ]
+}

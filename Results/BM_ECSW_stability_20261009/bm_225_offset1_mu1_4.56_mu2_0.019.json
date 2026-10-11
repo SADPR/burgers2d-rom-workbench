@@ -1,0 +1,23 @@
+{
+  "rule": "bm_225_offset1",
+  "mu": [
+    4.56,
+    0.019
+  ],
+  "steps": 500,
+  "finite": true,
+  "max_error_percent": 3.7954639106362813,
+  "stop_reasons": {
+    "projected_tolerance": 500
+  },
+  "matrix_evaluations": 1509,
+  "indefinite_evaluations": 0,
+  "nonpositive_real_evaluations": 0,
+  "predictor_indefinite_steps": 0,
+  "predictor_sym_ratio_median": 0.04587550678609619,
+  "predictor_condition_median": 13.2066802519257,
+  "all_sym_ratio_min": 0.04442167924729585,
+  "all_sym_ratio_max": 0.046460510390752933,
+  "hdm_file": "Results/param_snaps/mu1_4.56+mu2_0.019.npy",
+  "hdm_sha256": "47e2bb0350d38e6c06566ce1beb0c99cbd6091985e8d48a56ab8440047092b2d"
+}

@@ -98,7 +98,7 @@ def solution_slices(runs):
         paths.append(path if path.is_absolute() else REPO / path)
     trajectories = [np.load(path, mmap_mode='r') for path in paths]
     labels = ['HDM', 'HPROM (ECSW)', 'HPROM (BM-ECSW)']
-    styles = [('black', '-'), ('#245782', '--'), ('#c46b16', ':')]
+    styles = [('black', '-'), ('blue', '--'), ('red', ':')]
     x = .5 * (GRID_X[1:] + GRID_X[:-1])
     y = .5 * (GRID_Y[1:] + GRID_Y[:-1])
     row = int(np.argmin(np.abs(y - 50.2)))
@@ -106,7 +106,7 @@ def solution_slices(runs):
     fig, axes = plt.subplots(1, 3, figsize=(12, 3.8), sharex=True, sharey=True)
     for ax, time, step in zip(axes, (5, 15, 25), (100, 300, 500)):
         for data, label, (color, style) in zip(trajectories, labels, styles):
-            ax.plot(x, data[indices, step], linestyle=style, color=color, label=label, linewidth=1.5)
+            ax.plot(x, data[indices, step], linestyle=style, color=color, label=label, linewidth=2.0, alpha=0.8)
         ax.set(title=f'$t={time}$', xlabel='$x$', xlim=(0, 100))
         ax.grid(alpha=.2)
     axes[0].set_ylabel('$u_x$')

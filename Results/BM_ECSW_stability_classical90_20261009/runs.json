@@ -1,0 +1,71 @@
+[
+  {
+    "rule": "classical_90_offset3",
+    "mu": [
+      4.56,
+      0.019
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 3.7954639106362813,
+    "stop_reasons": {
+      "plateau": 500
+    },
+    "matrix_evaluations": 1000,
+    "indefinite_evaluations": 0,
+    "nonpositive_real_evaluations": 0,
+    "predictor_indefinite_steps": 0,
+    "predictor_sym_ratio_median": 0.6889436364478421,
+    "predictor_condition_median": 1.4514975552604599,
+    "all_sym_ratio_min": 0.6837807349414932,
+    "all_sym_ratio_max": 0.9151648998737916,
+    "hdm_file": "Results/param_snaps/mu1_4.56+mu2_0.019.npy",
+    "hdm_sha256": "47e2bb0350d38e6c06566ce1beb0c99cbd6091985e8d48a56ab8440047092b2d"
+  },
+  {
+    "rule": "classical_90_offset3",
+    "mu": [
+      4.75,
+      0.02
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 3.7954639106362813,
+    "stop_reasons": {
+      "plateau": 500
+    },
+    "matrix_evaluations": 1000,
+    "indefinite_evaluations": 0,
+    "nonpositive_real_evaluations": 0,
+    "predictor_indefinite_steps": 0,
+    "predictor_sym_ratio_median": 0.677926019678811,
+    "predictor_condition_median": 1.4750872085932951,
+    "all_sym_ratio_min": 0.6725785217866728,
+    "all_sym_ratio_max": 0.9151648998737916,
+    "hdm_file": "Results/param_snaps/mu1_4.75+mu2_0.02.npy",
+    "hdm_sha256": "275b9e9bbabfe61110c49107e89116d5e60f14c884086d0edac989e6b1164b0a"
+  },
+  {
+    "rule": "classical_90_offset3",
+    "mu": [
+      5.19,
+      0.026
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 3.7954639106362813,
+    "stop_reasons": {
+      "plateau": 500
+    },
+    "matrix_evaluations": 1000,
+    "indefinite_evaluations": 0,
+    "nonpositive_real_evaluations": 0,
+    "predictor_indefinite_steps": 0,
+    "predictor_sym_ratio_median": 0.6536223476387902,
+    "predictor_condition_median": 1.529935454974156,
+    "all_sym_ratio_min": 0.6474216752553125,
+    "all_sym_ratio_max": 0.9151648998737916,
+    "hdm_file": "Results/param_snaps/mu1_5.19+mu2_0.026.npy",
+    "hdm_sha256": "4d458c806bb807cb0f2642d29dc0293584bb6737917c86e7bca6571625dd90bd"
+  }
+]

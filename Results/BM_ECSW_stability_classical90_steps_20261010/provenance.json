@@ -1,0 +1,40 @@
+{
+  "parameter": [
+    4.56,
+    0.019
+  ],
+  "dt": 0.05,
+  "steps": [
+    1,
+    5,
+    20
+  ],
+  "threads": 1,
+  "modes": 96,
+  "base_results": "Results/BM_ECSW_stability_20261009",
+  "reference_coordinates": {
+    "path": "Results/BM_ECSW_stability_20261009/probe_PROM_coordinates.npy",
+    "sha256": "73a30a59b7c0e88331005947a0b3cf9622ae03303a460e900c36836129996ddc"
+  },
+  "weights": {
+    "classical_90_offset3": {
+      "path": "POD/ecsw_weights_lspg_ecsw_tol1e-10.npy",
+      "sha256": "f00a313074b15faf9ac70d08dbde23b3436665c9460e40a5170d3888c4df3457",
+      "cells": 1590,
+      "training_pairs": 90
+    }
+  },
+  "sources": {
+    "POD/basis.npy": "abb48a8df8c0b3413995aa353c2fe68438b554853a28e2b9d6d0001f60a686a2",
+    "POD/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "burgers/gauss_newton.py": "613f3c22c890b075a76f8334f765a5cc4552bb3457d0b19e698cafd4ab6727b5",
+    "burgers/linear_manifold.py": "22bd66ef973073570d3a65d8b0da5d5c25c3919e94f8ca03d18b6a9cd64ea264",
+    "burgers/core.py": "f5a6da10863ff27fab6eebba6515d7610be0d05153ffd53eedb7c09838d02950",
+    "diagnose_bm_ecsw.py": "581d8f4b9990e1725166ce948d3181242d1731dd84b75f06d559d3159351b72a",
+    "diagnose_bm_stability.py": "3796b2fc0772edc76355b1e83921e4a231af37e24dce4ddbeeb1c9d2943431e9"
+  },
+  "script_sha256": "4b12871f11eb5c7ef2f3e6be799ab8eacbb40c393c78790f1338eddd4090e3b4",
+  "protocol": "Saved PROM previous states, diagnostic exact solves at relative residual <1e-11; correction matrices at shared predictors; exact step-map sensitivity at each solved state.",
+  "control": "Reproduce the existing classical Nc=225 first-step row before adding the new row.",
+  "limits": "No retraining, no trajectory integration, no change to production solvers."
+}

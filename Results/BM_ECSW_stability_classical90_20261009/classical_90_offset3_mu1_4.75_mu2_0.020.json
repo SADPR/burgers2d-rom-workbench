@@ -1,0 +1,23 @@
+{
+  "rule": "classical_90_offset3",
+  "mu": [
+    4.75,
+    0.02
+  ],
+  "steps": 500,
+  "finite": true,
+  "max_error_percent": 3.7954639106362813,
+  "stop_reasons": {
+    "plateau": 500
+  },
+  "matrix_evaluations": 1000,
+  "indefinite_evaluations": 0,
+  "nonpositive_real_evaluations": 0,
+  "predictor_indefinite_steps": 0,
+  "predictor_sym_ratio_median": 0.677926019678811,
+  "predictor_condition_median": 1.4750872085932951,
+  "all_sym_ratio_min": 0.6725785217866728,
+  "all_sym_ratio_max": 0.9151648998737916,
+  "hdm_file": "Results/param_snaps/mu1_4.75+mu2_0.02.npy",
+  "hdm_sha256": "275b9e9bbabfe61110c49107e89116d5e60f14c884086d0edac989e6b1164b0a"
+}

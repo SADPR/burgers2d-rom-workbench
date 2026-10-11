@@ -1,0 +1,14 @@
+{
+  "root_converged": true,
+  "root_ratio": 5.035542374184095e-15,
+  "root_norm": 8.267181195443872e-14,
+  "error_vs_PROM_percent": 9.172434091523689e-06,
+  "amplification": 1.0032319676609296,
+  "spectral_radius": 0.9992863439296413,
+  "sym_min": 0.9968402539690568,
+  "sym_max": 1.0892589999367757,
+  "sym_ratio": 0.9151544802722923,
+  "min_real_eigenvalue": 0.9968402539690578,
+  "asymmetry": 8.433085583137553e-17,
+  "condition": 1.0927116913665376
+}

@@ -1,0 +1,215 @@
+[
+  {
+    "rule": "classical_225_offset1",
+    "mu": [
+      4.56,
+      0.019
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 3.7954639106362813,
+    "stop_reasons": {
+      "plateau": 500
+    },
+    "matrix_evaluations": 1000,
+    "indefinite_evaluations": 0,
+    "nonpositive_real_evaluations": 0,
+    "predictor_indefinite_steps": 0,
+    "predictor_sym_ratio_median": 0.6889492449750176,
+    "predictor_condition_median": 1.4514857374458976,
+    "all_sym_ratio_min": 0.683790335465026,
+    "all_sym_ratio_max": 0.9151544802722917,
+    "hdm_file": "Results/param_snaps/mu1_4.56+mu2_0.019.npy",
+    "hdm_sha256": "47e2bb0350d38e6c06566ce1beb0c99cbd6091985e8d48a56ab8440047092b2d"
+  },
+  {
+    "rule": "bm_90_offset1",
+    "mu": [
+      4.56,
+      0.019
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 18315.869431661362,
+    "stop_reasons": {
+      "projected_tolerance": 5,
+      "plateau": 436,
+      "max_its": 59
+    },
+    "matrix_evaluations": 4285,
+    "indefinite_evaluations": 4285,
+    "nonpositive_real_evaluations": 4285,
+    "predictor_indefinite_steps": 500,
+    "predictor_sym_ratio_median": -0.21510941894851132,
+    "predictor_condition_median": 26166.331383782992,
+    "all_sym_ratio_min": -0.4501737909034508,
+    "all_sym_ratio_max": -0.1036833668018117,
+    "hdm_file": "Results/param_snaps/mu1_4.56+mu2_0.019.npy",
+    "hdm_sha256": "47e2bb0350d38e6c06566ce1beb0c99cbd6091985e8d48a56ab8440047092b2d"
+  },
+  {
+    "rule": "bm_225_offset1",
+    "mu": [
+      4.56,
+      0.019
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 3.7954639106362813,
+    "stop_reasons": {
+      "projected_tolerance": 500
+    },
+    "matrix_evaluations": 1509,
+    "indefinite_evaluations": 0,
+    "nonpositive_real_evaluations": 0,
+    "predictor_indefinite_steps": 0,
+    "predictor_sym_ratio_median": 0.04587550678609619,
+    "predictor_condition_median": 13.2066802519257,
+    "all_sym_ratio_min": 0.04442167924729585,
+    "all_sym_ratio_max": 0.046460510390752933,
+    "hdm_file": "Results/param_snaps/mu1_4.56+mu2_0.019.npy",
+    "hdm_sha256": "47e2bb0350d38e6c06566ce1beb0c99cbd6091985e8d48a56ab8440047092b2d"
+  },
+  {
+    "rule": "classical_225_offset1",
+    "mu": [
+      4.75,
+      0.02
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 3.7954639106362813,
+    "stop_reasons": {
+      "plateau": 500
+    },
+    "matrix_evaluations": 1000,
+    "indefinite_evaluations": 0,
+    "nonpositive_real_evaluations": 0,
+    "predictor_indefinite_steps": 0,
+    "predictor_sym_ratio_median": 0.6779410227409735,
+    "predictor_condition_median": 1.4750545644460704,
+    "all_sym_ratio_min": 0.6725885466825179,
+    "all_sym_ratio_max": 0.9151544802722917,
+    "hdm_file": "Results/param_snaps/mu1_4.75+mu2_0.02.npy",
+    "hdm_sha256": "275b9e9bbabfe61110c49107e89116d5e60f14c884086d0edac989e6b1164b0a"
+  },
+  {
+    "rule": "bm_90_offset1",
+    "mu": [
+      4.75,
+      0.02
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 10842.703309144385,
+    "stop_reasons": {
+      "projected_tolerance": 4,
+      "plateau": 453,
+      "max_its": 43
+    },
+    "matrix_evaluations": 3609,
+    "indefinite_evaluations": 3609,
+    "nonpositive_real_evaluations": 3609,
+    "predictor_indefinite_steps": 500,
+    "predictor_sym_ratio_median": -0.20906548923410823,
+    "predictor_condition_median": 27593.903888847923,
+    "all_sym_ratio_min": -0.4552031564366834,
+    "all_sym_ratio_max": -0.10743711515631534,
+    "hdm_file": "Results/param_snaps/mu1_4.75+mu2_0.02.npy",
+    "hdm_sha256": "275b9e9bbabfe61110c49107e89116d5e60f14c884086d0edac989e6b1164b0a"
+  },
+  {
+    "rule": "bm_225_offset1",
+    "mu": [
+      4.75,
+      0.02
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 3.7954639106362813,
+    "stop_reasons": {
+      "projected_tolerance": 500
+    },
+    "matrix_evaluations": 1511,
+    "indefinite_evaluations": 0,
+    "nonpositive_real_evaluations": 0,
+    "predictor_indefinite_steps": 0,
+    "predictor_sym_ratio_median": 0.045986095556614315,
+    "predictor_condition_median": 13.19078819058462,
+    "all_sym_ratio_min": 0.04442167924729585,
+    "all_sym_ratio_max": 0.0465527961748331,
+    "hdm_file": "Results/param_snaps/mu1_4.75+mu2_0.02.npy",
+    "hdm_sha256": "275b9e9bbabfe61110c49107e89116d5e60f14c884086d0edac989e6b1164b0a"
+  },
+  {
+    "rule": "classical_225_offset1",
+    "mu": [
+      5.19,
+      0.026
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 3.7954639106362813,
+    "stop_reasons": {
+      "plateau": 500
+    },
+    "matrix_evaluations": 1000,
+    "indefinite_evaluations": 0,
+    "nonpositive_real_evaluations": 0,
+    "predictor_indefinite_steps": 0,
+    "predictor_sym_ratio_median": 0.6536350449915485,
+    "predictor_condition_median": 1.529905733380895,
+    "all_sym_ratio_min": 0.647431837709329,
+    "all_sym_ratio_max": 0.9151544802722917,
+    "hdm_file": "Results/param_snaps/mu1_5.19+mu2_0.026.npy",
+    "hdm_sha256": "4d458c806bb807cb0f2642d29dc0293584bb6737917c86e7bca6571625dd90bd"
+  },
+  {
+    "rule": "bm_90_offset1",
+    "mu": [
+      5.19,
+      0.026
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 13350.204059489024,
+    "stop_reasons": {
+      "projected_tolerance": 4,
+      "plateau": 462,
+      "max_its": 34
+    },
+    "matrix_evaluations": 3045,
+    "indefinite_evaluations": 3045,
+    "nonpositive_real_evaluations": 3045,
+    "predictor_indefinite_steps": 500,
+    "predictor_sym_ratio_median": -0.3661615563205875,
+    "predictor_condition_median": 10569.809343358684,
+    "all_sym_ratio_min": -0.454979173699848,
+    "all_sym_ratio_max": -0.0995003757553901,
+    "hdm_file": "Results/param_snaps/mu1_5.19+mu2_0.026.npy",
+    "hdm_sha256": "4d458c806bb807cb0f2642d29dc0293584bb6737917c86e7bca6571625dd90bd"
+  },
+  {
+    "rule": "bm_225_offset1",
+    "mu": [
+      5.19,
+      0.026
+    ],
+    "steps": 500,
+    "finite": true,
+    "max_error_percent": 3.7954639106362813,
+    "stop_reasons": {
+      "projected_tolerance": 500
+    },
+    "matrix_evaluations": 1518,
+    "indefinite_evaluations": 0,
+    "nonpositive_real_evaluations": 0,
+    "predictor_indefinite_steps": 0,
+    "predictor_sym_ratio_median": 0.04639963336681924,
+    "predictor_condition_median": 13.11922723021492,
+    "all_sym_ratio_min": 0.04442167924729585,
+    "all_sym_ratio_max": 0.04755932377387874,
+    "hdm_file": "Results/param_snaps/mu1_5.19+mu2_0.026.npy",
+    "hdm_sha256": "4d458c806bb807cb0f2642d29dc0293584bb6737917c86e7bca6571625dd90bd"
+  }
+]

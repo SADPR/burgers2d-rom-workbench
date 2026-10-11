@@ -1,0 +1,27 @@
+Burgers: common-objective compatibility of saved ECSW and BM rules
+
+Exact Jacobians include the residual-weighted Hessian terms.
+No retraining or new integration. One native thread by default.
+A nonzero K-K^T directly violates the crossed-derivative compatibility condition.
+Asymmetry = ||K-K^T||F/||K||F; counts use threshold1e-10.
+
+Common full-PROM states (first test parameter; steps1,5,20; predictor and computed state):
+HPROM (ECSW), Nc=90: median=9.0128776e-17, range=[8.8812394e-17,9.0245189e-17], nonsymmetric=0/6
+HPROM (ECSW), Nc=225: median=8.6251934e-17, range=[8.4368955e-17,8.8507814e-17], nonsymmetric=0/6
+HPROM (BM-ECSW), Nc=90: median=0.87302974, range=[0.87178234,0.87380037], nonsymmetric=6/6
+HPROM (BM-ECSW), Nc=225: median=0.44703888, range=[0.44561199,0.44807239], nonsymmetric=6/6
+
+Computed online states (all three parameters;500 steps each):
+HPROM (ECSW), Nc=90: median=8.9545737e-17, range=[8.6021171e-17,9.4514085e-17], nonsymmetric=0/1500
+HPROM (ECSW), Nc=225: median=8.7439219e-17, range=[8.3383963e-17,9.2022743e-17], nonsymmetric=0/1500
+HPROM (BM-ECSW), Nc=90: median=1.0985214, range=[0.87173795,1.2863177], nonsymmetric=1500/1500
+HPROM (BM-ECSW), Nc=225: median=0.43368161, range=[0.42636483,0.44778338], nonsymmetric=1500/1500
+
+Maximum finite-difference column error: 5.4986799e-10
+Maximum crossed-difference error / ||K||F: 7.0922225e-11
+
+Reproduce from repository root using a NEW output directory:
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 .venv/bin/python diagnose_bm_gradient_structure.py --threads 1 --output-dir Results/BM_ECSW_gradient_structure_new
+
+Exact-Jacobian nonsymmetry excludes a common smooth objective near tested states.
+It does not prove that nonsymmetry or absence of an objective alone causes instability.

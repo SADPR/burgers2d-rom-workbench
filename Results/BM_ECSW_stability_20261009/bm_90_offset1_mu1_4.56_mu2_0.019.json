@@ -1,0 +1,25 @@
+{
+  "rule": "bm_90_offset1",
+  "mu": [
+    4.56,
+    0.019
+  ],
+  "steps": 500,
+  "finite": true,
+  "max_error_percent": 18315.869431661362,
+  "stop_reasons": {
+    "projected_tolerance": 5,
+    "plateau": 436,
+    "max_its": 59
+  },
+  "matrix_evaluations": 4285,
+  "indefinite_evaluations": 4285,
+  "nonpositive_real_evaluations": 4285,
+  "predictor_indefinite_steps": 500,
+  "predictor_sym_ratio_median": -0.21510941894851132,
+  "predictor_condition_median": 26166.331383782992,
+  "all_sym_ratio_min": -0.4501737909034508,
+  "all_sym_ratio_max": -0.1036833668018117,
+  "hdm_file": "Results/param_snaps/mu1_4.56+mu2_0.019.npy",
+  "hdm_sha256": "47e2bb0350d38e6c06566ce1beb0c99cbd6091985e8d48a56ab8440047092b2d"
+}

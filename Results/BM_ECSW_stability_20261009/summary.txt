@@ -1,0 +1,55 @@
+Burgers BM-ECSW stability diagnostics
+
+No retraining. Saved 90-pair and 225-pair rules.
+12 fresh trajectories: 4 rules, three parameters, 500 steps each.
+96 POD coordinates; dt=0.05; at most 10 native threads.
+Production classical GN / BM GN-type with max20, relative1e-5, plateau0.01.
+Timing is instrumented and is NOT a speed benchmark.
+
+rule | mu | trajectory error (%) | indefinite predictors | stopping counts
+classical_225_offset1 | [4.56, 0.019] | 1.095918728 | 0/500 | {'plateau': 500}
+bm_90_offset1 | [4.56, 0.019] | 4411.532846 | 500/500 | {'projected_tolerance': 5, 'plateau': 436, 'max_its': 59}
+bm_225_offset1 | [4.56, 0.019] | 1.101890475 | 0/500 | {'projected_tolerance': 500}
+classical_225_offset1 | [4.75, 0.02] | 1.001053883 | 0/500 | {'plateau': 500}
+bm_90_offset1 | [4.75, 0.02] | 4083.061927 | 500/500 | {'projected_tolerance': 4, 'plateau': 453, 'max_its': 43}
+bm_225_offset1 | [4.75, 0.02] | 1.006145404 | 0/500 | {'projected_tolerance': 500}
+classical_225_offset1 | [5.19, 0.026] | 0.9927616993 | 0/500 | {'plateau': 500}
+bm_90_offset1 | [5.19, 0.026] | 3631.358093 | 500/500 | {'projected_tolerance': 4, 'plateau': 462, 'max_its': 34}
+bm_225_offset1 | [5.19, 0.026] | 1.006880547 | 0/500 | {'projected_tolerance': 500}
+classical_90_offset3 | [4.56, 0.019] | 1.095918164 | 0/500 | {'plateau': 500}
+classical_90_offset3 | [4.75, 0.02] | 1.001042376 | 0/500 | {'plateau': 500}
+classical_90_offset3 | [5.19, 0.026] | 0.9927421723 | 0/500 | {'plateau': 500}
+
+Common previous-state probes: steps1,5,20 at mu=(4.56,0.019).
+The additional classical 90-pair rule is included in Table 5 online measurements only.
+These locate roots with exact derivatives for diagnostics only.
+All 12 base roots attained relative projected residual <1e-11.
+First-step results: rule | state error vs PROM (%) | ||T||2 | sym ratio | cond2(Jhat)
+PROM | 0.0 | 1.003232169339038 | 0.9151546774925032 | 1.0927114558819409
+classical_225_offset1 | 9.172434092345092e-06 | 1.0032319676609291 | 0.9151544802722908 | 1.092711691366538
+bm_90_offset1 | 30.6263837280779 | 7.045558171829452 | -0.17194347038420513 | 3233.386559985832
+bm_225_offset1 | 0.04785030634694267 | 1.0035953013558419 | 0.04442167924729585 | 13.402946269224325
+
+Derivative validation (central differences, epsilon=1e-3):
+Maximum relative current_derivative_error: 7.794528e-11
+Maximum relative history_derivative_error: 1.085600e-11
+Maximum relative map_derivative_error: 1.612394e-10
+The perturbed re-solves reached relative residuals of order 1e-10.
+They stopped at numerical precision before the requested 1e-11 relative threshold
+(relative to a much smaller initial residual); derivative_checks.csv retains these false flags.
+The resolved central differences agree with the predicted map to <2e-10 relative error.
+
+Interpretation and limits:
+- Training accuracy does not ensure accurate online equations.
+- The 90-pair rule has indefinite symmetric parts AND eigenvalues with negative real parts.
+- This differs from the AERO-F example with positive real eigenvalue parts.
+- Selection, weights, and training coverage change together; no isolated causal attribution.
+- Jhat is a nonlinear correction approximation, not the physical-time perturbation operator.
+- T=-J_n^{-1}B_n uses exact derivatives at a nonsingular implicit root.
+- Local amplification>1 is not by itself a proof of long-time instability.
+- 225 pairs are not a universal threshold or a gradient-structure guarantee.
+
+Reproduce from repository root (use a NEW output directory):
+OPENBLAS_NUM_THREADS=10 OMP_NUM_THREADS=10 MKL_NUM_THREADS=10 NUMEXPR_NUM_THREADS=10 .venv/bin/python diagnose_bm_stability.py --threads 10 --output-dir Results/BM_ECSW_stability_new
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 .venv/bin/python Project_BM-ECSW/generate_stability_results.py --results Results/BM_ECSW_stability_new
+Input hashes, solver-source hashes, and protocol are in provenance.json.

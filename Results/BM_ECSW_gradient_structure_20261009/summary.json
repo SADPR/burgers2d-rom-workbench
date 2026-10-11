@@ -1,0 +1,73 @@
+{
+  "common_states": [
+    {
+      "rule": "classical_90_offset3",
+      "evaluations": 6,
+      "exact_asymmetry_min": 8.881239355165516e-17,
+      "exact_asymmetry_median": 9.012877628073485e-17,
+      "exact_asymmetry_max": 9.024518910853552e-17,
+      "nonsymmetric_evaluations": 0
+    },
+    {
+      "rule": "classical_225_offset1",
+      "evaluations": 6,
+      "exact_asymmetry_min": 8.436895453160393e-17,
+      "exact_asymmetry_median": 8.625193381736618e-17,
+      "exact_asymmetry_max": 8.850781357243135e-17,
+      "nonsymmetric_evaluations": 0
+    },
+    {
+      "rule": "bm_90_offset1",
+      "evaluations": 6,
+      "exact_asymmetry_min": 0.8717823358765268,
+      "exact_asymmetry_median": 0.8730297392493368,
+      "exact_asymmetry_max": 0.8738003689821371,
+      "nonsymmetric_evaluations": 6
+    },
+    {
+      "rule": "bm_225_offset1",
+      "evaluations": 6,
+      "exact_asymmetry_min": 0.4456119872160251,
+      "exact_asymmetry_median": 0.447038875896306,
+      "exact_asymmetry_max": 0.44807239109781505,
+      "nonsymmetric_evaluations": 6
+    }
+  ],
+  "trajectory_states": [
+    {
+      "rule": "classical_90_offset3",
+      "evaluations": 1500,
+      "exact_asymmetry_min": 8.602117051895221e-17,
+      "exact_asymmetry_median": 8.954573730043525e-17,
+      "exact_asymmetry_max": 9.451408450988964e-17,
+      "nonsymmetric_evaluations": 0
+    },
+    {
+      "rule": "classical_225_offset1",
+      "evaluations": 1500,
+      "exact_asymmetry_min": 8.338396320287095e-17,
+      "exact_asymmetry_median": 8.74392191244237e-17,
+      "exact_asymmetry_max": 9.20227426213822e-17,
+      "nonsymmetric_evaluations": 0
+    },
+    {
+      "rule": "bm_90_offset1",
+      "evaluations": 1500,
+      "exact_asymmetry_min": 0.8717379501752416,
+      "exact_asymmetry_median": 1.0985213965976728,
+      "exact_asymmetry_max": 1.2863177238619687,
+      "nonsymmetric_evaluations": 1500
+    },
+    {
+      "rule": "bm_225_offset1",
+      "evaluations": 1500,
+      "exact_asymmetry_min": 0.426364833642708,
+      "exact_asymmetry_median": 0.43368160781309106,
+      "exact_asymmetry_max": 0.44778338398733264,
+      "nonsymmetric_evaluations": 1500
+    }
+  ],
+  "max_finite_difference_column_error": 5.498679919094676e-10,
+  "max_finite_difference_crossed_error_scaled": 7.092222543374934e-11,
+  "derivative_checks": 40
+}

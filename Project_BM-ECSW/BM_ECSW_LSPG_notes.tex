@@ -111,7 +111,7 @@ The last equality follows from the chain rule and the fixed affine approximation
  \end{aligned}
  \label{eq:projected-residual}
 \end{equation}
-These $n$ nonlinear equations express the orthogonality of the discrete HDM residual to the test space spanned by the columns of $\matr{W}$ and determine the generalized coordinates at the new time level.
+These $n$ nonlinear equations express the orthogonality of the discrete HDM residual to the test space spanned by the columns of $\matr{W}$ and provide the first-order stationarity conditions for the minimization problem in Equation~\eqref{eq:lspg-objective}.
 
 The nonlinear least-squares problem in Equation~\eqref{eq:lspg-objective} is solved using a Gauss--Newton iteration~\cite{carlberg2013gnat}. At iteration $k$ within time step $m+1$, let $\matr{W}^{m+1,k}=\matr{W}(\vect{q}^{m+1,k})$. Linearizing the residual with respect to a coordinate increment $\Delta\vect{q}$ around the current iterate gives
 \begin{equation}
@@ -121,16 +121,16 @@ The nonlinear least-squares problem in Equation~\eqref{eq:lspg-objective} is sol
 \end{equation}
 The Gauss--Newton correction minimizes the Euclidean norm of this linearized residual. Its normal equations are
 \begin{equation}
- \left(\matr{W}^{m+1,k}\right)^T\matr{W}^{m+1,k}
-       \Delta\vect{q}^{m+1,k+1}
- =-\left(\matr{W}^{m+1,k}\right)^T
+ \left[\matr{W}^{m+1,k}\right]^T\matr{W}^{m+1,k}
+       \Delta\vect{q}^{m+1,k}
+ =-\left[\matr{W}^{m+1,k}\right]^T
        \vect{r}^{m+1}\!\left(\widetilde{\vect{u}}(\vect{q}^{m+1,k})\right),
  \label{eq:gn}
 \end{equation}
 with all quantities evaluated at the current iterate. Solving this $n\times n$ system gives the coordinate correction used in the update
 \begin{equation}
  \vect{q}^{m+1,k+1}
- =\vect{q}^{m+1,k}+\Delta\vect{q}^{m+1,k+1}.
+ =\vect{q}^{m+1,k}+\Delta\vect{q}^{m+1,k}.
 \end{equation}
 The residual and test basis are then evaluated at the updated state to form the next correction. This procedure is repeated until the projected equations in Equation~\eqref{eq:projected-residual} satisfy the prescribed nonlinear convergence criterion.
 
@@ -151,7 +151,7 @@ This partition is applied to assembled residual rows; element contributions that
  \vect{r}_e(\vect{q})
  =\matr{L}_e\vect{r}^{m+1}(\widetilde{\vect{u}}(\vect{q}))
  =\vect{r}_e^{m+1}\!\left(
-    \matr{L}_{e^+}(\vect{u}_{\mathrm{ref}}+\matr{V}\vect{q})\right)
+    \matr{L}_{e^+}[\vect{u}_{\mathrm{ref}}+\matr{V}\vect{q}]\right)
  \in\mathbb R^{d_e},
  \label{eq:entity-blocks}
 \end{equation}
@@ -232,12 +232,12 @@ The cubature rule in Equation~\eqref{eq:classical} is constructed from $N_c$ tra
 \begin{equation}
  \overline{\vect{u}}
  =\vect{u}_{\mathrm{ref}}+\matr{V}\matr{V}^T
-    (\vect{u}_{\mathrm{HDM}}-\vect{u}_{\mathrm{ref}}).
+    [\vect{u}_{\mathrm{HDM}}-\vect{u}_{\mathrm{ref}}].
  \label{eq:projection}
 \end{equation}
 When the residual depends on history states, the same projection is applied to those snapshots. Evaluating the local residuals and test-basis blocks at each configuration $c=1,\ldots,N_c$ gives the projected entity contributions and their full sum:
 \begin{equation}
- \vect{g}_e^{(c)}=(\matr{W}_e^{(c)})^T\vect{r}_e^{(c)}\in\mathbb R^n,
+ \vect{g}_e^{(c)}=[\matr{W}_e^{(c)}]^T\vect{r}_e^{(c)}\in\mathbb R^n,
  \qquad
  \vect{b}^{(c)}=\sum_{e\in\mathcal E}\vect{g}_e^{(c)}.
  \label{eq:sampled-training-contribution}
@@ -258,7 +258,7 @@ Stacking these contributions over the training configurations produces the matri
  \end{bmatrix}.
  \label{eq:training-matrix}
 \end{equation}
-Here $\matr{G}\in\mathbb R^{nN_c\times N_e}$ and $\vect{b}\in\mathbb R^{nN_c}$. Column $\vect{g}_e$ contains the contributions of one entity across all configurations, and each configuration supplies $n$ rows. In particular, $G_{(c-1)n+i,e}=g_{e,i}^{(c)}$. Since the target is the sum of all entity contributions, these quantities satisfy
+Here $\matr{G}\in\mathbb R^{nN_c\times N_e}$ and $\vect{b}\in\mathbb R^{nN_c}$. Column $\vect{g}_e$ contains the contributions of one entity across all configurations, and each configuration supplies $n$ rows. In particular, $G_{[c-1]n+i,e}=g_{e,i}^{(c)}$. Since the target is the sum of all entity contributions, these quantities satisfy
 \begin{equation}
  \matr{G}\vect{1}=\vect{b},
  \label{eq:training-assembly}
@@ -291,8 +291,8 @@ The NNLS fits determine the weights on the selected entities, while progressive 
 \begin{equation}
  \begin{aligned}
  2F(\vect{\xi})
- &=(\matr{G}\vect{\xi}-\vect{b})^T
-       (\matr{G}\vect{\xi}-\vect{b})\\
+ &=[\matr{G}\vect{\xi}-\vect{b}]^T
+       [\matr{G}\vect{\xi}-\vect{b}]\\
  &=\vect{\xi}^T\matr{G}^T\matr{G}\vect{\xi}
    -\vect{\xi}^T\matr{G}^T\vect{b}
    -\vect{b}^T\matr{G}\vect{\xi}
@@ -314,7 +314,7 @@ This gradient provides the entity-selection criterion used to enlarge the sample
 At sampling iteration $k$, let $\mathcal I^k$ denote the working set of selected column indices and $\mathcal Z^k=\mathcal E\setminus\mathcal I^k$ the entities not yet selected. The weights indexed by $\mathcal Z^k$ remain fixed to zero, and only those indexed by $\mathcal I^k$ are varied in the NNLS refit. With these unselected weights held fixed, the current weight vector is obtained from
 \begin{equation}
  \vect{\xi}^{\,k}\in
- \underset{\vect{\xi}\geq\vect{0}}{\arg\min}\;
+ \underset{\vect{\xi}\geq\vect{0},\;\vect{\xi}_{\mathcal Z^k}=\vect{0}}{\arg\min}\;
  \frac12\|\matr{G}\vect{\xi}-\vect{b}\|_2^2.
  \label{eq:classical-nnls}
 \end{equation}
@@ -327,41 +327,41 @@ Writing $\matr{G}_{\mathcal I^k}$ for the selected columns, this refit can be co
 \end{equation}
 The coefficients of the unselected columns remain zero in the complete $N_e$-entry vector. Selected coefficients can increase, decrease, or become zero after a refit, so the working set can be larger than the positive support of the resulting weights.
 
-To select the next entity, evaluate the fitting residual and its correlations with the columns of $\matr{G}$:
+To select the next entity, evaluate the cubature fitting residual and its correlations with the columns of $\matr{G}$:
 \begin{equation}
- \vect{r}^{\,k}=\vect{b}-\matr{G}\vect{\xi}^{\,k},
+ \vect{h}^{\,k}=\vect{b}-\matr{G}\vect{\xi}^{\,k},
  \qquad
- \vect{\mu}^{\,k}=\matr{G}^T\vect{r}^{\,k},
+ \vect{\mu}^{\,k}=\matr{G}^T\vect{h}^{\,k},
  \qquad
- \mu_e^k=\vect{g}_e^T\vect{r}^{\,k}.
+ \mu_e^k=\vect{g}_e^T\vect{h}^{\,k}.
  \label{eq:classical-score}
 \end{equation}
-In this fitting problem, $\vect{r}^{\,k}$ measures the error in the cubature approximation, and $\vect{\mu}^{\,k}=-\nabla F(\vect{\xi}^{\,k})$. To determine which entity to add, consider increasing one unselected weight while holding all other weights fixed. For $e\in\mathcal Z^k$, the current coefficient is $\xi_e^k=0$, so a nonnegative increment is an admissible direction. Let $\vect{e}_e\in\mathbb R^{N_e}$ have entry one at entity $e$ and zero elsewhere. The candidate vector $\vect{\xi}^{\,k}+t\vect{e}_e$, with $t\geq0$, changes only this coefficient from zero to $t$.
+In this fitting problem, $\vect{h}^{\,k}$ measures the error in the cubature approximation, and $\vect{\mu}^{\,k}=-\nabla F(\vect{\xi}^{\,k})$. To determine which entity to add, consider increasing one unselected weight while holding all other weights fixed. For $e\in\mathcal Z^k$, the current coefficient is $\xi_e^k=0$, so a nonnegative increment is an admissible direction. Let $\vect{e}_e\in\mathbb R^{N_e}$ have entry one at entity $e$ and zero elsewhere. The candidate vector $\vect{\xi}^{\,k}+t\vect{e}_e$, with $t\geq0$, changes only this coefficient from zero to $t$.
 
 Multiplication by $\vect{e}_e$ selects column $e$ of the training matrix, so $\matr{G}\vect{e}_e=\vect{g}_e$. Using the fitting residual defined in Equation~\eqref{eq:classical-score}, the residual associated with the candidate weights becomes
 \[
- \vect{b}-\matr{G}(\vect{\xi}^{\,k}+t\vect{e}_e)
+ \vect{b}-\matr{G}[\vect{\xi}^{\,k}+t\vect{e}_e]
  =\vect{b}-\matr{G}\vect{\xi}^{\,k}-t\vect{g}_e
- =\vect{r}^{\,k}-t\vect{g}_e.
+ =\vect{h}^{\,k}-t\vect{g}_e.
 \]
 Substitution into the objective and expansion of its squared norm give
 \begin{equation}
  \begin{aligned}
  F(\vect{\xi}^{\,k}+t\vect{e}_e)
- &=\frac12\|\vect{r}^{\,k}-t\vect{g}_e\|_2^2\\
- &=\frac12(\vect{r}^{\,k}-t\vect{g}_e)^T
-             (\vect{r}^{\,k}-t\vect{g}_e)\\
- &=\frac12\|\vect{r}^{\,k}\|_2^2
-   -\frac{t}{2}\bigl[(\vect{r}^{\,k})^T\vect{g}_e
-                    +\vect{g}_e^T\vect{r}^{\,k}\bigr]
+ &=\frac12\|\vect{h}^{\,k}-t\vect{g}_e\|_2^2\\
+ &=\frac12[\vect{h}^{\,k}-t\vect{g}_e]^T
+             [\vect{h}^{\,k}-t\vect{g}_e]\\
+ &=\frac12\|\vect{h}^{\,k}\|_2^2
+   -\frac{t}{2}\bigl[[\vect{h}^{\,k}]^T\vect{g}_e
+                    +\vect{g}_e^T\vect{h}^{\,k}\bigr]
    +\frac{t^2}{2}\|\vect{g}_e\|_2^2\\
  &=F(\vect{\xi}^{\,k})-t\mu_e^k+\frac{t^2}{2}\|\vect{g}_e\|_2^2.
  \end{aligned}
  \label{eq:classical-score-expansion}
 \end{equation}
-Here the two mixed products are equal scalars, $\frac12\|\vect{r}^{\,k}\|_2^2=F(\vect{\xi}^{\,k})$, and $\vect{g}_e^T\vect{r}^{\,k}=\mu_e^k$. These identities give the last line of Equation~\eqref{eq:classical-score-expansion}.
+Here the two mixed products are equal scalars, $\frac12\|\vect{h}^{\,k}\|_2^2=F(\vect{\xi}^{\,k})$, and $\vect{g}_e^T\vect{h}^{\,k}=\mu_e^k$. These identities give the last line of Equation~\eqref{eq:classical-score-expansion}.
 
-During this candidate comparison, $\vect{\xi}^{\,k}$, $\vect{r}^{\,k}$, $\vect{g}_e$, and $\mu_e^k$ are fixed; only $t$ varies. Differentiating the constant, linear, and quadratic terms therefore gives
+During this candidate comparison, $\vect{\xi}^{\,k}$, $\vect{h}^{\,k}$, $\vect{g}_e$, and $\mu_e^k$ are fixed; only $t$ varies. Differentiating the constant, linear, and quadratic terms therefore gives
 \[
  \frac{d}{dt}F(\vect{\xi}^{\,k}+t\vect{e}_e)
  =-\mu_e^k+t\|\vect{g}_e\|_2^2.
@@ -400,10 +400,10 @@ Algorithm~\ref{alg:classical-training} summarizes the procedure, starting from a
   \State $k\gets0$
   \State $\mathcal I^0\gets\varnothing$; $\mathcal Z^0\gets\mathcal E$
   \State $\vect{\xi}^{\,0}\gets\vect{0}$
-  \State $\vect{r}^{\,0}\gets\vect{b}$
-  \While{$\|\vect{r}^{\,k}\|_2>\tau\|\vect{b}\|_2$}
-   \State $\vect{\mu}^{\,k}\gets\matr{G}^T\vect{r}^{\,k}$
-   \State $e^k\gets\arg\max_{e\in\mathcal Z^k}\mu_e^k$
+  \State $\vect{h}^{\,0}\gets\vect{b}$
+  \While{$\|\vect{h}^{\,k}\|_2>\tau\|\vect{b}\|_2$}
+   \State Compute the correlations: $\vect{\mu}^{\,k}\gets\matr{G}^T\vect{h}^{\,k}$
+   \State Select the most correlated entity: $e^k\gets\arg\max_{e\in\mathcal Z^k}\mu_e^k$
    \State Add the candidate: $\mathcal I^{k+1}\gets\mathcal I^k\cup\{e^k\}$
    \State Update the unselected set: $\mathcal Z^{k+1}\gets\mathcal E\setminus\mathcal I^{k+1}$
    \State Refit the weights of all selected entities by NNLS:
@@ -411,8 +411,8 @@ Algorithm~\ref{alg:classical-training} summarizes the procedure, starting from a
       \vect{\xi}^{\,k+1}_{\mathcal I^{k+1}}\in
       \underset{\vect{z}\geq\vect{0}}{\arg\min}
       \frac12\|\matr{G}_{\mathcal I^{k+1}}\vect{z}-\vect{b}\|_2^2$
-   \State Keep every unselected entity weight at zero: $\vect{\xi}^{\,k+1}_{\mathcal Z^{k+1}}\gets\vect{0}$
-   \State Recompute the full fitting residual: $\vect{r}^{\,k+1}\gets\vect{b}-\matr{G}\vect{\xi}^{\,k+1}$
+   \State Set unselected weights to zero: $\vect{\xi}^{\,k+1}_{\mathcal Z^{k+1}}\gets\vect{0}$
+   \State Recompute the full fitting residual: $\vect{h}^{\,k+1}\gets\vect{b}-\matr{G}\vect{\xi}^{\,k+1}$
    \State $k\gets k+1$
   \EndWhile
   \State $\widetilde{\mathcal E}\gets\{e\in\mathcal E:\xi_e^{\,k}>0\}$
@@ -446,8 +446,8 @@ The coordinates can consequently be computed using the Gauss--Newton constructio
 \end{equation}
 whose normal equations are
 \begin{equation}
- \left(\sum_{e\in\widetilde{\mathcal E}}
-             \xi_e\matr{W}_e^T\matr{W}_e\right)\Delta\vect{q}
+ \left[\sum_{e\in\widetilde{\mathcal E}}
+             \xi_e\matr{W}_e^T\matr{W}_e\right]\Delta\vect{q}
  =-\sum_{e\in\widetilde{\mathcal E}}
              \xi_e\matr{W}_e^T\vect{r}_e.
  \label{eq:classical-gn}
@@ -470,7 +470,7 @@ This criterion monitors the gradient of the sampled objective, whose local HDM r
  \small
  \begin{algorithmic}[1]
   \setlength{\itemsep}{2pt}
-  \Require Restricted basis $\matr{V}^+$, reference state $\vect{u}_{\mathrm{ref}}^+$, selected mesh $\widetilde{\mathcal E}$, weights $\{\xi_e\}_{e\in\widetilde{\mathcal E}}$, initial coordinates $\vect{q}^{(0)}$, and tolerance $\varepsilon_{\mathrm{NL}}\in(0,1)$
+  \Require Current time level $t^{m+1}$, prescribed parameters $\vect{\mu}$, known approximate history states on $\widetilde{\mathcal E}^{+}$, restricted basis $\matr{V}^+$, reference state $\vect{u}_{\mathrm{ref}}^+$, selected mesh $\widetilde{\mathcal E}$, weights $\{\xi_e\}_{e\in\widetilde{\mathcal E}}$, initial coordinates $\vect{q}^{(0)}$, and tolerance $\varepsilon_{\mathrm{NL}}\in(0,1)$
   \Ensure Solution coordinates $\vect{q}^{m+1}$ at the current time step
   \State $k\gets0$
   \Loop
@@ -480,7 +480,7 @@ This criterion monitors the gradient of the sampled objective, whose local HDM r
     \State $\matr{W}_e^{(k)}\gets\displaystyle\frac{\partial\vect{r}_e}{\partial\vect{q}}(\vect{q}^{(k)})$
    \EndFor
    \State $\widetilde{\vect{r}}_n^{\mathrm{ECSW},(k)}\gets
-      \sum_{e\in\widetilde{\mathcal E}}\xi_e(\matr{W}_e^{(k)})^T\vect{r}_e^{(k)}$
+      \sum_{e\in\widetilde{\mathcal E}}\xi_e[\matr{W}_e^{(k)}]^T\vect{r}_e^{(k)}$
    \If{$k=0$}
     \State $\rho_0\gets\|\widetilde{\vect{r}}_n^{\mathrm{ECSW},(0)}\|_2$
    \EndIf
@@ -488,7 +488,7 @@ This criterion monitors the gradient of the sampled objective, whose local HDM r
     \State \Return $\vect{q}^{m+1}\gets\vect{q}^{(k)}$
    \EndIf
    \State $\widehat{\matr{J}}_n^{\mathrm{ECSW},(k)}\gets
-      \sum_{e\in\widetilde{\mathcal E}}\xi_e(\matr{W}_e^{(k)})^T\matr{W}_e^{(k)}$
+      \sum_{e\in\widetilde{\mathcal E}}\xi_e[\matr{W}_e^{(k)}]^T\matr{W}_e^{(k)}$
    \State Solve the reduced linear system for $\Delta\vect{q}^{(k)}$:
    \Statex \hspace{\algorithmicindent}$\displaystyle
       \widehat{\matr{J}}_n^{\mathrm{ECSW},(k)}\Delta\vect{q}^{(k)}
@@ -574,9 +574,9 @@ Expanding each modal term gives
  \begin{aligned}
  F_{\mathrm{BM}}(\matr{\Xi})
  =\frac12\sum_i\Big[&
-  (\vect{\xi}^{[i]})^T(\matr{G}^{[i]})^T
+  [\vect{\xi}^{[i]}]^T[\matr{G}^{[i]}]^T
      \matr{G}^{[i]}\vect{\xi}^{[i]}\\
-  &-2(\vect{\xi}^{[i]})^T(\matr{G}^{[i]})^T\vect{b}^{[i]}
+  &-2[\vect{\xi}^{[i]}]^T[\matr{G}^{[i]}]^T\vect{b}^{[i]}
    +\|\vect{b}^{[i]}\|_2^2\Big].
  \end{aligned}
  \label{eq:bm-quadratic-expansion}
@@ -584,8 +584,8 @@ Expanding each modal term gives
 Because the modal matrices collect disjoint rows of the classical training matrix, their quadratic and linear terms satisfy
 \begin{equation}
  \begin{aligned}
- \matr{G}^T\matr{G}&=\sum_{i=1}^n(\matr{G}^{[i]})^T\matr{G}^{[i]},\\
- \matr{G}^T\vect{b}&=\sum_{i=1}^n(\matr{G}^{[i]})^T\vect{b}^{[i]},
+ \matr{G}^T\matr{G}&=\sum_{i=1}^n[\matr{G}^{[i]}]^T\matr{G}^{[i]},\\
+ \matr{G}^T\vect{b}&=\sum_{i=1}^n[\matr{G}^{[i]}]^T\vect{b}^{[i]},
  \qquad
  \|\vect{b}\|_2^2=\sum_{i=1}^n\|\vect{b}^{[i]}\|_2^2.
  \end{aligned}
@@ -596,25 +596,25 @@ Substituting a common weight vector $\vect{\xi}^{[i]}=\vect{\xi}$ into Equation~
 At sampling iteration $k$, all modes use the same working set $\mathcal I^k$, and $\mathcal Z^k=\mathcal E\setminus\mathcal I^k$ contains the entities not yet selected. The weights indexed by $\mathcal Z^k$ remain fixed to zero. With these entries held fixed, the selected weights are obtained from the modal NNLS problems
 \begin{equation}
  \vect{\xi}^{[i],k}\in
- \underset{\vect{\xi}\geq\vect{0}}{\arg\min}\;
+ \underset{\vect{\xi}\geq\vect{0},\;\vect{\xi}_{\mathcal Z^k}=\vect{0}}{\arg\min}\;
  \frac12\|\matr{G}^{[i]}\vect{\xi}-\vect{b}^{[i]}\|_2^2,
  \qquad i=1,\ldots,n.
  \label{eq:bm-nnls}
 \end{equation}
-Each fitted vector has $N_e$ entries, but its selected coefficients can be computed using the smaller matrix $\matr{G}^{[i]}_{\mathcal I^k}$. Once the shared working set is prescribed, these $n$ fits are independent. Their residuals and column correlations are
+Each fitted vector has $N_e$ entries, but its selected coefficients can be computed using the smaller matrix $\matr{G}^{[i]}_{\mathcal I^k}$. Once the shared working set is prescribed, these $n$ fits are independent. Their cubature fitting residuals and column correlations are
 \begin{equation}
- \vect{r}^{[i],k}
+ \vect{h}^{[i],k}
  =\vect{b}^{[i]}-\matr{G}^{[i]}\vect{\xi}^{[i],k},
  \qquad
  \vect{\mu}^{[i],k}
- =(\matr{G}^{[i]})^T\vect{r}^{[i],k}.
+ =[\matr{G}^{[i]}]^T\vect{h}^{[i],k}.
  \label{eq:modal-fitting-residual}
 \end{equation}
 Differentiating the aggregate objective with respect to the weights of mode $i$ involves only its modal term, since the other terms do not depend on $\vect{\xi}^{[i]}$. At the current iterate, this gives
 \[
  \left.\nabla_{\vect{\xi}^{[i]}}F_{\mathrm{BM}}\right|_{\matr{\Xi}^k}
- =(\matr{G}^{[i]})^T
-       (\matr{G}^{[i]}\vect{\xi}^{[i],k}-\vect{b}^{[i]})
+ =[\matr{G}^{[i]}]^T
+       [\matr{G}^{[i]}\vect{\xi}^{[i],k}-\vect{b}^{[i]}]
  =-\vect{\mu}^{[i],k}.
 \]
 Thus each modal correlation vector is the negative gradient with respect to that mode's weights. To select one entity for the shared mesh, these correlations are combined into
@@ -622,7 +622,7 @@ Thus each modal correlation vector is the negative gradient with respect to that
  \vect{\mu}^{\,k}=\sum_{i=1}^n\vect{\mu}^{[i],k},
  \qquad
  \mu_e^k=\sum_{i=1}^n
-             (\vect{g}_e^{[i]})^T\vect{r}^{[i],k}.
+             [\vect{g}_e^{[i]}]^T\vect{h}^{[i],k}.
  \label{eq:score}
 \end{equation}
 
@@ -641,10 +641,10 @@ Multiplication by $\vect{e}_e$ selects column $e$ of each modal training matrix,
 \[
  \begin{aligned}
  \vect{b}^{[i]}-\matr{G}^{[i]}
-               (\vect{\xi}^{[i],k}+t\vect{e}_e)
+               [\vect{\xi}^{[i],k}+t\vect{e}_e]
  &=\vect{b}^{[i]}-\matr{G}^{[i]}\vect{\xi}^{[i],k}
       -t\vect{g}_e^{[i]}\\
- &=\vect{r}^{[i],k}-t\vect{g}_e^{[i]}.
+ &=\vect{h}^{[i],k}-t\vect{g}_e^{[i]}.
  \end{aligned}
 \]
 Substituting these residuals into the aggregate objective and expanding the squared norms yield
@@ -652,14 +652,14 @@ Substituting these residuals into the aggregate objective and expanding the squa
  \begin{aligned}
  F_{\mathrm{BM}}(\matr{\Xi}(t))
  &=\frac12\sum_i
-        \|\vect{r}^{[i],k}-t\vect{g}_e^{[i]}\|_2^2\\
+        \|\vect{h}^{[i],k}-t\vect{g}_e^{[i]}\|_2^2\\
  &=\frac12\sum_i
-        (\vect{r}^{[i],k}-t\vect{g}_e^{[i]})^T
-        (\vect{r}^{[i],k}-t\vect{g}_e^{[i]})\\
- &=\frac12\sum_i\|\vect{r}^{[i],k}\|_2^2
+        [\vect{h}^{[i],k}-t\vect{g}_e^{[i]}]^T
+        [\vect{h}^{[i],k}-t\vect{g}_e^{[i]}]\\
+ &=\frac12\sum_i\|\vect{h}^{[i],k}\|_2^2
     -\frac{t}{2}\sum_i
-       \bigl[(\vect{r}^{[i],k})^T\vect{g}_e^{[i]}
-             +(\vect{g}_e^{[i]})^T\vect{r}^{[i],k}\bigr]\\
+       \bigl[[\vect{h}^{[i],k}]^T\vect{g}_e^{[i]}
+             +[\vect{g}_e^{[i]}]^T\vect{h}^{[i],k}\bigr]\\
  &\quad+\frac{t^2}{2}\sum_i\|\vect{g}_e^{[i]}\|_2^2\\
  &=F_{\mathrm{BM}}(\matr{\Xi}^k)
      -t\mu_e^k+\frac{t^2}{2}\sum_i\|\vect{g}_e^{[i]}\|_2^2.
@@ -694,15 +694,15 @@ The signed modal correlations can cancel in their sum. As in classical ECSW, ran
 When $\vect{\xi}^{[i],k}=\vect{\xi}^{\,k}$ for all $i$, the modal residuals are the corresponding row blocks of the classical fitting residual. The score then recovers the classical correlation in Equation~\eqref{eq:classical-score}:
 \[
  \mu_e^k
- =\sum_{i=1}^n(\vect{g}_e^{[i]})^T\vect{r}^{[i],k}
- =\vect{g}_e^T\vect{r}^{\,k}.
+ =\sum_{i=1}^n[\vect{g}_e^{[i]}]^T\vect{h}^{[i],k}
+ =\vect{g}_e^T\vect{h}^{\,k}.
 \]
 This condition holds at zero initialization, so both sampling procedures begin with identical candidate scores.
 
 After each candidate is added, all selected weights are refitted independently for each mode against the original targets $\vect{b}^{[i]}$. The resulting modal residuals can lead to different entity selections from the classical procedure in subsequent iterations. Selection and refitting continue until the aggregate relative error satisfies
 \begin{equation}
  \eta^2=
- \frac{\sum_i\|\vect{r}^{[i],k}\|_2^2}
+ \frac{\sum_i\|\vect{h}^{[i],k}\|_2^2}
       {\sum_i\|\vect{b}^{[i]}\|_2^2}
  \leq\tau^2.
  \label{eq:training-tolerance}
@@ -717,10 +717,10 @@ Algorithm~\ref{alg:training} summarizes this procedure. The final modal iterates
   \Require $\matr{G}^{[i]}=[\vect{g}_e^{[i]}]$, $\vect{b}^{[i]}$ with $\sum_i\|\vect{b}^{[i]}\|_2^2>0$, tolerance $\tau\in(0,1)$
   \Ensure Modal weights $\vect{\xi}^{[i]}\geq\vect{0}$ and reduced mesh $\widetilde{\mathcal E}$
   \State $k\gets0$; $\mathcal I^0\gets\varnothing$; $\mathcal Z^0\gets\mathcal E$
-  \State $\vect{\xi}^{[i],0}\gets\vect{0}$; $\vect{r}^{[i],0}\gets\vect{b}^{[i]}$ for every $i$
-  \While{$\sum_i\|\vect{r}^{[i],k}\|_2^2>\tau^2\sum_i\|\vect{b}^{[i]}\|_2^2$}
-   \State $\displaystyle\vect{\mu}^{\,k}\gets\sum_{i=1}^n(\matr{G}^{[i]})^T\vect{r}^{[i],k}$
-   \State $e^k\gets\arg\max_{e\in\mathcal Z^k}\mu_e^k$
+  \State $\vect{\xi}^{[i],0}\gets\vect{0}$; $\vect{h}^{[i],0}\gets\vect{b}^{[i]}$ for every $i$
+  \While{$\sum_i\|\vect{h}^{[i],k}\|_2^2>\tau^2\sum_i\|\vect{b}^{[i]}\|_2^2$}
+   \State Sum the modal correlations: $\displaystyle\vect{\mu}^{\,k}\gets\sum_{i=1}^n[\matr{G}^{[i]}]^T\vect{h}^{[i],k}$
+   \State Select the most correlated entity: $e^k\gets\arg\max_{e\in\mathcal Z^k}\mu_e^k$
    \State Add the candidate: $\mathcal I^{k+1}\gets\mathcal I^k\cup\{e^k\}$
    \State Update the unselected set: $\mathcal Z^{k+1}\gets\mathcal E\setminus\mathcal I^{k+1}$
    \For{$i=1,\ldots,n$}
@@ -729,12 +729,12 @@ Algorithm~\ref{alg:training} summarizes this procedure. The final modal iterates
        \vect{\xi}^{[i],k+1}_{\mathcal I^{k+1}}\in
        \underset{\vect{z}\geq\vect{0}}{\arg\min}
        \frac12\|\matr{G}^{[i]}_{\mathcal I^{k+1}}\vect{z}-\vect{b}^{[i]}\|_2^2$
-    \State Keep the unselected weights of this mode at zero: $\vect{\xi}^{[i],k+1}_{\mathcal Z^{k+1}}\gets\vect{0}$
-    \State $\vect{r}^{[i],k+1}\gets\vect{b}^{[i]}-\matr{G}^{[i]}\vect{\xi}^{[i],k+1}$
+    \State Set unselected weights to zero: $\vect{\xi}^{[i],k+1}_{\mathcal Z^{k+1}}\gets\vect{0}$
+    \State Recompute the fitting residual: $\vect{h}^{[i],k+1}\gets\vect{b}^{[i]}-\matr{G}^{[i]}\vect{\xi}^{[i],k+1}$
    \EndFor
    \State $k\gets k+1$
   \EndWhile
-  \State $\widetilde{\mathcal E}\gets\{e\in\mathcal E:\exists i,\ \xi_{e,i}^{\,k}>0\}$
+  \State $\displaystyle\widetilde{\mathcal E}\gets\bigcup_{i=1}^n\{e\in\mathcal E:\xi_{e,i}^{\,k}>0\}$
   \State \Return $\{\vect{\xi}^{[i],k}\}_{i=1}^n$ and $\widetilde{\mathcal E}$
  \end{algorithmic}
 \end{algorithm}
@@ -772,11 +772,11 @@ The test-basis blocks are evaluated at $\vect{q}$ and held fixed while computing
  \widehat r_{n,i}^{\mathrm{BM}}(\Delta\vect{q})
  &=\sum_{e\in\widetilde{\mathcal E}}\xi_{e,i}
       \matr{W}_e(:,i)^T
-       \bigl(\vect{r}_e+\matr{W}_e\Delta\vect{q}\bigr)\\
+       \bigl[\vect{r}_e+\matr{W}_e\Delta\vect{q}\bigr]\\
  &=\widetilde r_{n,i}^{\mathrm{BM}}(\vect{q})
    +\sum_{j=1}^n
-       \left(\sum_{e\in\widetilde{\mathcal E}}\xi_{e,i}
-           \matr{W}_e(:,i)^T\matr{W}_e(:,j)\right)\Delta q_j.
+       \left[\sum_{e\in\widetilde{\mathcal E}}\xi_{e,i}
+           \matr{W}_e(:,i)^T\matr{W}_e(:,j)\right]\Delta q_j.
  \end{aligned}
  \label{eq:bm-linearized-projection}
 \end{equation}
@@ -787,7 +787,7 @@ Here $\matr{W}_e(:,i)$ is the derivative of the local residual with respect to $
  &=\sum_{e\in\widetilde{\mathcal E}}
        \matr{D}_e\matr{W}_e^T\matr{W}_e
        \in\mathbb R^{n\times n},\\
- \bigl(\widehat J_n^{\mathrm{BM}}\bigr)_{ij}
+ \bigl[\widehat J_n^{\mathrm{BM}}\bigr]_{ij}
  &=\sum_{e\in\widetilde{\mathcal E}}\xi_{e,i}
        \sum_{\ell=1}^{d_e}W_{e,\ell,i}W_{e,\ell,j}.
  \end{aligned}
@@ -796,11 +796,11 @@ Here $\matr{W}_e(:,i)$ is the derivative of the local residual with respect to $
 The index $\ell$ runs over the local HDM residual entries, while $i$ and $j$ identify the reduced equation and coordinate. Setting the projected linearized equations to zero then gives the Gauss--Newton-type correction at iteration $k$ of time step $m+1$:
 \begin{equation}
  \widehat{\matr{J}}_n^{\mathrm{BM}}(\vect{q}^{m+1,k})
-       \Delta\vect{q}^{m+1,k+1}
+       \Delta\vect{q}^{m+1,k}
  =-\widetilde{\vect{r}}_n^{\mathrm{BM}}(\vect{q}^{m+1,k}).
  \label{eq:bm-gn}
 \end{equation}
-Both sides reuse the selected local residual and test-basis blocks evaluated at the current reduced state. This $n\times n$ system computes all coordinate increments together, since each reduced equation generally depends on every coordinate. Its assembly requires only the local residuals and their first derivatives.
+Both sides reuse the selected local residual and test-basis blocks evaluated at the current reduced state. This $n\times n$ system computes all coordinate increments together, since each reduced equation generally depends on every coordinate. Holding the test-basis blocks fixed omits the residual-weighted second-derivative terms of the exact BM Jacobian, so the correction requires only local residuals and their first derivatives.
 
 The placement of $\matr{D}_e$ in Equation~\eqref{eq:bm-update-matrix} identifies the change from classical ECSW: row $i$ uses $\xi_{e,i}$, whereas row $j$ uses $\xi_{e,j}$. The entries $(i,j)$ and $(j,i)$ need not agree, even though each local product $\matr{W}_e^T\matr{W}_e$ is symmetric. The BM update matrix can therefore be nonsymmetric. When $\xi_{e,i}=\xi_e$ for every mode, $\matr{D}_e=\xi_e\matr{I}_n$, all $\Phi_i$ reduce to the common sampled objective, and Equation~\eqref{eq:bm-gn} recovers the classical Gauss--Newton system in Equation~\eqref{eq:classical-gn}. This restriction still permits different weights between entities.
 
@@ -819,7 +819,7 @@ This test has the same form as the classical criterion in Equation~\eqref{eq:cla
  \small
  \begin{algorithmic}[1]
   \setlength{\itemsep}{2pt}
-  \Require Restricted basis $\matr{V}^+$, reference state $\vect{u}_{\mathrm{ref}}^+$, selected mesh $\widetilde{\mathcal E}$, modal weight matrices $\{\matr{D}_e\}_{e\in\widetilde{\mathcal E}}$, initial coordinates $\vect{q}^{(0)}$, and tolerance $\varepsilon_{\mathrm{NL}}\in(0,1)$
+  \Require Current time level $t^{m+1}$, prescribed parameters $\vect{\mu}$, known approximate history states on $\widetilde{\mathcal E}^{+}$, restricted basis $\matr{V}^+$, reference state $\vect{u}_{\mathrm{ref}}^+$, selected mesh $\widetilde{\mathcal E}$, modal weight matrices $\{\matr{D}_e\}_{e\in\widetilde{\mathcal E}}$, initial coordinates $\vect{q}^{(0)}$, and tolerance $\varepsilon_{\mathrm{NL}}\in(0,1)$
   \Ensure Solution coordinates $\vect{q}^{m+1}$ at the current time step
   \State $k\gets0$
   \Loop
@@ -829,7 +829,7 @@ This test has the same form as the classical criterion in Equation~\eqref{eq:cla
     \State $\matr{W}_e^{(k)}\gets\displaystyle\frac{\partial\vect{r}_e}{\partial\vect{q}}(\vect{q}^{(k)})$
    \EndFor
    \State $\widetilde{\vect{r}}_n^{\mathrm{BM},(k)}\gets
-      \sum_{e\in\widetilde{\mathcal E}}\matr{D}_e(\matr{W}_e^{(k)})^T\vect{r}_e^{(k)}$
+      \sum_{e\in\widetilde{\mathcal E}}\matr{D}_e[\matr{W}_e^{(k)}]^T\vect{r}_e^{(k)}$
    \If{$k=0$}
     \State $\rho_0\gets\|\widetilde{\vect{r}}_n^{\mathrm{BM},(0)}\|_2$
    \EndIf
@@ -837,7 +837,7 @@ This test has the same form as the classical criterion in Equation~\eqref{eq:cla
     \State \Return $\vect{q}^{m+1}\gets\vect{q}^{(k)}$
    \EndIf
    \State $\widehat{\matr{J}}_n^{\mathrm{BM},(k)}\gets
-      \sum_{e\in\widetilde{\mathcal E}}\matr{D}_e(\matr{W}_e^{(k)})^T\matr{W}_e^{(k)}$
+      \sum_{e\in\widetilde{\mathcal E}}\matr{D}_e[\matr{W}_e^{(k)}]^T\matr{W}_e^{(k)}$
    \State Solve the reduced linear system for $\Delta\vect{q}^{(k)}$:
    \Statex \hspace{\algorithmicindent}$\displaystyle
       \widehat{\matr{J}}_n^{\mathrm{BM},(k)}\Delta\vect{q}^{(k)}
@@ -869,7 +869,7 @@ where $u_x$ and $u_y$ are the velocity components, and the flux vectors and sour
  \vect{G}(\vect{u})=\begin{pmatrix}u_xu_y/2\\u_y^2/2\end{pmatrix},\qquad
  \vect{S}(x;\vect{\mu})=\begin{pmatrix}0.02\exp(\mu_2x)\\0\end{pmatrix}.
 \end{equation}
-The problem is posed on the square domain $\Omega=[0,100]^2$, with parameters $\vect{\mu}=(\mu_1,\mu_2)$ in $\mathcal D=[4.25,5.50]\times[0.015,0.030]$. The parameter $\mu_1$ prescribes the left-boundary inflow, while $\mu_2$ controls the spatial variation of the source term. The initial velocities are $u_x=u_y=1$; the bottom boundary has zero incoming flux, and outflow conditions are used at the top and right boundaries.
+The problem is posed on the square domain $\Omega=[0,100]^2$, with parameters $\vect{\mu}=(\mu_1,\mu_2)$ in $\mathcal D=[4.25,5.50]\times[0.015,0.030]$. The parameter $\mu_1$ specifies the left inflow state $(\mu_1,0)^T$, while $\mu_2$ controls the spatial variation of the source term. The initial velocities are $u_x=u_y=1$; the bottom boundary has zero incoming flux, and outflow conditions are used at the top and right boundaries.
 
 For spatial discretization, the domain is partitioned into a uniform $250\times250$ mesh and a cell-centered finite-volume method with first-order upwind fluxes is applied. The resulting HDM has $N_e=62\,500$ cells and $N=125\,000$ state entries, with two velocity unknowns per cell. Its semi-discrete equations are integrated using the implicit trapezoidal rule with $\Delta t=0.05$, giving 500 steps over the interval $[0,T_f]$, where $T_f=25$. Figure~\ref{fig:burgers} illustrates the HDM solution and its centerline profiles at an intermediate time.
 
@@ -886,24 +886,24 @@ The common affine trial space is constructed from HDM solution trajectories comp
 \begin{equation}
  \{4.25,4.875,5.50\}\times\{0.015,0.0225,0.030\}.
 \end{equation}
-Each trajectory contributes 501 states, including its initial state, yielding $N_s=4\,509$ solution snapshots. Their mean defines the reference state $\vect{u}_{\mathrm{ref}}$. Applying the POD construction of Section~\ref{sec:prom} to the centered snapshots gives a ROB with $n=96$ modes, accounting for $99.950267\%$ of the sum of squared singular values. This ROB and reference state are used by both HPROMs.
+Each trajectory contributes 501 states, including its initial state, yielding $N_s=4\,509$ solution snapshots. Their mean defines the reference state $\vect{u}_{\mathrm{ref}}$. Applying the POD construction of Section~\ref{sec:prom} to the centered snapshots gives a ROB with $n=96$ modes, accounting for $99.95\%$ of the sum of squared singular values. This ROB and reference state are used by both HPROMs.
 
 To train the cubature rules, $N_c=225$ state pairs are selected, with 25 pairs distributed over the simulation interval at each training parameter. Each pair contains states at consecutive time levels, as required by the implicit time discretization. Both states are projected onto the affine trial space using Equation~\eqref{eq:projection}, and the associated local residuals and test-basis blocks provide the projected entity contributions used in the fits.
 
-Stacking these contributions as in Equation~\eqref{eq:training-matrix} gives the classical training matrix with $21\,600$ rows and $62\,500$ columns. For BM-ECSW, the same entries are rearranged into 96 modal matrices of size $225\times62\,500$, following Equation~\eqref{eq:modal-matrix}. Both sampling procedures use the relative training tolerance $\tau=10^{-5}$. Their mesh sizes are determined by the selection and NNLS refitting needed to attain this tolerance, with no prescribed limit on the number of cells.
+Stacking these contributions as in Equation~\eqref{eq:training-matrix} gives the classical training matrix with $21\,600$ rows and $62\,500$ columns. For BM-ECSW, the same entries are rearranged into 96 modal matrices of size $225\times62\,500$, following Equation~\eqref{eq:modal-matrix}. Classical ECSW and BM-ECSW are trained using Algorithms~\ref{alg:classical-training} and~\ref{alg:training}, respectively, with relative tolerance $\tau=10^{-5}$. Their sampled-mesh sizes are determined by attaining this tolerance.
 
 Table~\ref{tab:rules} reports the resulting reduced dimension $n$, sampled-mesh size $n_e$, augmented-mesh size $n_e^+$, relative fitting error $\eta$, and estimated offline training time. The timings are obtained from one fresh run per method on 20 CPU threads and include assembly of the training matrix, mesh sampling, and weight fitting. The common costs of generating HDM trajectories and constructing the POD basis are excluded.
 
 \begin{table}[H]
  \centering\small
- \caption{Reduced-mesh sizes and estimated offline training times for the 2D parametric inviscid Burgers problem. Both rules use the same ROB, 225 state pairs, and relative training tolerance $\tau=10^{-5}$. Times correspond to one fresh training run per method on 20 CPU threads. The augmented size $n_e^+$ includes stencil support.}
+ \caption{Reduced-mesh sizes, relative fitting errors, and estimated offline training times for the 2D parametric inviscid Burgers problem.}
  \label{tab:rules}
  \input{tables/paper_cubature.tex}
 \end{table}
 
-Both rules attain the prescribed training tolerance. BM-ECSW selects 300 weighted cells, compared with $2\,492$ for classical ECSW, reducing the sampled-mesh size by a factor of $8.31$. The corresponding augmented meshes contain 868 and $5\,914$ cells. Because each cell carries two velocity unknowns, HPROM (BM-ECSW) reconstructs $1\,736$ state entries and evaluates 600 residual entries during time stepping, while HPROM (ECSW) reconstructs $11\,828$ state entries and evaluates $4\,984$ residual entries. The two models retain the same 96 generalized coordinates, so this reduction occurs in the local evaluations used to assemble their reduced equations.
+Both rules attain the prescribed training tolerance. BM-ECSW reduces the sampled-mesh size by a factor of $8.31$ and also produces a smaller augmented mesh. The smaller meshes reduce the number of local residual and test-basis blocks evaluated at each online iteration. The measured offline training time is lower for BM-ECSW by a factor of \OfflineTrainingRatio{}.
 
-The smaller BM mesh is accompanied by a larger set of scalar weights: $21\,597$ positive modal coefficients, compared with $2\,492$ weights for the classical rule. These coefficients multiply projected contributions formed from the evaluated local residual and test-basis blocks. Thus the number of stored and applied weights increases, while the number of cells required for the local evaluations decreases. Figure~\ref{fig:meshes} shows the sampled meshes together with the additional cells required by their residual stencils.
+The smaller BM mesh is accompanied by a larger set of scalar weights: $21\,597$ positive modal coefficients, compared with $2\,492$ weights for the classical rule. Figure~\ref{fig:meshes} shows the sampled meshes together with the additional cells required by their residual stencils.
 
 \begin{figure}[H]
  \centering
@@ -912,25 +912,24 @@ The smaller BM mesh is accompanied by a larger set of scalar weights: $21\,597$ 
  \label{fig:meshes}
 \end{figure}
 
-The BM training procedure also has a lower measured offline cost in this comparison. Classical ECSW requires \ECSWOfflineMinutes{} minutes, whereas BM-ECSW requires \BMOfflineMinutes{} minutes, a reduction by a factor of \OfflineTrainingRatio{}.
-
 \subsection{Accuracy and online performance}
+\label{sec:burgers-online-performance}
 
 The resulting HPROMs are evaluated at $\vect{\mu}=(4.56,0.019)$, $(4.75,0.020)$, and $(5.19,0.026)$. These parameter points lie inside $\mathcal D$ and are absent from the nine-point training grid. The HDM supplies the reference solution and serves as the full-order model (FOM) for the timing comparisons.
 
-For these computations, both HPROMs use the previous reduced state as the initial guess at each time step and allow at most 20 nonlinear iterations. HPROM (ECSW) monitors the weighted sampled HDM residual norm, while HPROM (BM-ECSW) monitors the norm of its projected equations. Each solve uses a relative norm tolerance of $10^{-5}$ and a relative change threshold of $10^{-2}$ to detect a plateau. The classical solve applies full coordinate corrections; BM uses step control based on the decrease of its projected residual. These settings govern the online nonlinear solves and are separate from the cubature training tolerance.
+HPROM (ECSW) and HPROM (BM-ECSW) use corrections computed from the reduced systems in Algorithms~\ref{alg:classical-online} and~\ref{alg:online}, respectively. For these computations, both HPROMs use the previous reduced state as the initial guess at each time step and allow at most 20 nonlinear iterations. HPROM (ECSW) monitors the weighted sampled HDM residual norm, while HPROM (BM-ECSW) monitors the norm of its projected equations. Each solve uses a relative norm tolerance of $10^{-5}$ and a relative change threshold of $10^{-2}$ to detect a plateau. The classical solve applies full coordinate corrections; BM uses step control based on the decrease of its projected residual. These settings govern the online nonlinear solves and are separate from the cubature training tolerance.
 
 Accuracy is measured over the complete solution trajectory using the global Euclidean relative error~\cite{ares2026closure}
 \begin{equation}
  \mathbb{RE}_{2,\vect{u}}(\vect{\mu})
- =\left(\frac{\sum_{m=0}^{N_t}
+ =\left[\frac{\sum_{m=0}^{N_t}
               \|\vect{u}_{\mathrm{HDM}}^m(\vect{\mu})
                 -\widetilde{\vect{u}}_{\mathrm{HPROM}}^m(\vect{\mu})\|_2^2}
              {\sum_{m=0}^{N_t}\|\vect{u}_{\mathrm{HDM}}^m(\vect{\mu})\|_2^2}
-        \right)^{1/2},\qquad N_t=500.
+        \right]^{1/2},\qquad N_t=500.
  \label{eq:error}
 \end{equation}
-This measure includes both velocity components at all 501 states and is reported in percent. It accounts for the combined effects of the trial-space approximation, hyperreduction, and online solution procedure, whereas $\eta$ measures the offline fit of the projected training contributions. For the comparison over all queried parameters, the maximum trajectory error is defined as
+This measure includes both velocity components over the complete trajectory and is reported in percent. The maximum error over the three queried parameters is defined as
 \begin{equation}
  \mathbb{RE}_{2,\vect{u}}^{\max}
  =\max_{\vect{\mu}\in\mathcal D_{\mathrm{test}}}
@@ -940,17 +939,17 @@ This measure includes both velocity components at all 501 states and is reported
  \label{eq:max-error}
 \end{equation}
 
-All computations are performed in double-precision arithmetic on an Intel Core Ultra 7 265 processor with 20 CPU threads. Each HPROM is run three times at each test parameter, and one FOM run per parameter supplies the reference time. The runs are executed sequentially, and the FOM nonlinear solver uses a relative residual tolerance of $10^{-12}$. Online times include solver setup and all 500 time steps; offline training, error assessment, and postprocessing are excluded. The mean HPROM time at each parameter is computed from its three repetitions, and the corresponding speedup factor is the FOM time divided by this mean. Wall-clock times in the main tables are reported in minutes.
+All computations are performed in double-precision arithmetic on an Intel Core Ultra 7 265 processor with 20 CPU threads. Each HPROM is run three times at each test parameter, and one FOM run per parameter supplies the reference time. The runs are executed sequentially, and the FOM nonlinear solver uses a relative residual tolerance of $10^{-12}$. Online times include solver setup and all 500 time steps; offline training, error assessment, and postprocessing are excluded. The HPROM time at each parameter is the mean of its three repetitions. For the overall comparison, each HPROM time is averaged over nine runs and the FOM time over three runs. Each speedup factor is the corresponding FOM time divided by the mean HPROM time. Wall-clock times are reported in minutes.
 
 \begin{table}[H]
  \centering\footnotesize
  \setlength{\tabcolsep}{3pt}
- \caption{Online performance comparison (accuracy and speedups relative to the FOM) for the 2D parametric inviscid Burgers problem at three unsampled parameter points. FOM: one run per parameter; HPROMs: mean of three runs, all on 20 CPU threads.}
+ \caption{Online trajectory errors, wall-clock times, and speedup factors relative to the FOM at the three unsampled parameter points.}
  \label{tab:performance}
  \input{tables/paper_performance.tex}
 \end{table}
 
-As shown in Table~\ref{tab:performance}, both HPROMs yield global errors close to $1\%$ at the three unsampled parameter points. Their maximum errors are \ECSWMaxGlobalError{}\% for HPROM (ECSW) and \BMMaxGlobalError{}\% for HPROM (BM-ECSW), and the largest error increase for the BM model relative to the classical model at an individual parameter is \BMLargestErrorIncrease{} percentage points. Every BM trajectory completes all 500 steps with the projected-equation tolerance satisfied within the iteration budget. Using the smaller BM mesh therefore retains comparable trajectory accuracy for this set of queried parameters.
+As shown in Table~\ref{tab:performance}, both HPROMs yield global errors close to $1\%$ at the three unsampled parameter points. The largest increase in trajectory error for HPROM (BM-ECSW) relative to HPROM (ECSW) at an individual parameter is \BMLargestErrorIncrease{} percentage points. Every BM trajectory completes all 500 steps with the projected-equation tolerance satisfied within the iteration budget. Using the smaller BM mesh therefore retains comparable trajectory accuracy for this set of queried parameters.
 
 Figure~\ref{fig:slices} compares horizontal centerline profiles at $\vect{\mu}=(4.56,0.019)$. Both HPROMs track the moving shock and closely follow the HDM profiles at the displayed times, with small oscillations near the discontinuity. These profiles illustrate the similar solution accuracy obtained with the two sampled meshes.
 
@@ -961,67 +960,214 @@ Figure~\ref{fig:slices} compares horizontal centerline profiles at $\vect{\mu}=(
  \label{fig:slices}
 \end{figure}
 
-To summarize the online cost over the three parameters, the HPROM times are averaged over all nine runs, and the FOM time is averaged over its three runs. Table~\ref{tab:summary} reports these mean times, the maximum errors in Equation~\eqref{eq:max-error}, and the speedup factors obtained by dividing the mean FOM time by the respective mean HPROM time.
+The overall performance is summarized in Table~\ref{tab:summary}, using the maximum trajectory errors defined in Equation~\eqref{eq:max-error}.
 
 \begin{table}[H]
  \centering\footnotesize
  \setlength{\tabcolsep}{4pt}
- \caption{Online performance summary for the 2D parametric inviscid Burgers problem: maximum global error, mean wall-clock time, and speedup relative to the FOM over the three unsampled parameter points.}
+ \caption{Maximum trajectory errors, mean online times, and speedup factors relative to the FOM.}
  \label{tab:summary}
  \input{tables/paper_summary.tex}
 \end{table}
 
-The speedup factors based on the mean online times are \ECSWFOMSpeedup{} for HPROM (ECSW) and \BMFOMSpeedup{} for HPROM (BM-ECSW), relative to the FOM. Figure~\ref{fig:timings} shows the individual HPROM measurements and their spread around the means; the individual times and sample standard deviations are reported in Appendix~\ref{sec:repeated-measurements}.
+The overall speedup factors relative to the FOM are \ECSWFOMSpeedup{} for HPROM (ECSW) and \BMFOMSpeedup{} for HPROM (BM-ECSW). Individual HPROM times and sample standard deviations are reported in Appendix~\ref{sec:repeated-measurements}.
 
-\begin{figure}[H]
- \centering
- \includegraphics[width=0.88\linewidth]{figures/online_timings.pdf}
- \caption{Online times over three repetitions. Bars represent means, black points represent individual runs, and error bars represent sample standard deviations.}
- \label{fig:timings}
-\end{figure}
-
-The lower online cost of HPROM (BM-ECSW) is consistent with its smaller sampled and augmented meshes, which reduce the number of local residual and test-basis blocks evaluated during the nonlinear iterations. Both models use corrections assembled from linearized local residuals, but the measured solvers differ in their monitored norm and step control. The reported speedups therefore compare the complete online procedures at the stated accuracy. The single FOM run at each parameter supplies a reference time without estimating FOM timing variability.
+The lower online cost of HPROM (BM-ECSW) is consistent with its smaller sampled and augmented meshes, which reduce the number of local residual and test-basis blocks evaluated during the nonlinear iterations. Both models use corrections assembled from linearized local residuals, but the measured solvers differ in their monitored norm and step control. The reported speedups therefore compare the complete online procedures at the stated accuracy.
 
 \section{Current assessment}
 
 BM-ECSW uses a shared reduced mesh and separate nonnegative modal fits against the full projected training targets. Its online Gauss--Newton-type update is assembled from local residuals and test-basis blocks on that mesh. The generalized coordinates are computed together.
 
-For the two-dimensional parametric inviscid Burgers problem, the same 96-mode ROB, 225 training pairs, and $10^{-5}$ contribution-fit tolerance produce reduced meshes of 2\,492 cells for classical ECSW and 300 cells for BM. At three unsampled parameter points, the global errors remain close to $1\%$. The measured mean-time speedup factors relative to the FOM are \ECSWFOMSpeedup{} for HPROM (ECSW) and \BMFOMSpeedup{} for HPROM (BM-ECSW).
+For the two-dimensional parametric inviscid Burgers problem, the same 96-mode ROB, 225 training pairs, and $10^{-5}$ contribution-fit tolerance produce reduced meshes of 2\,492 cells for classical ECSW and 300 cells for BM-ECSW. At three unsampled parameter points, the global errors remain close to $1\%$. The measured mean-time speedup factors relative to the FOM are \ECSWFOMSpeedup{} for HPROM (ECSW) and \BMFOMSpeedup{} for HPROM (BM-ECSW). BM-ECSW also reduces the measured offline training time by a factor of \OfflineTrainingRatio{}.
 
-Mode-dependent weights enlarge the set of cubature fits available on a selected mesh. They also remove the automatic interpretation of the projected equations as derivatives of one sampled LSPG objective. The present results establish trajectory accuracy and online cost for the stated Burgers configuration. Training coverage and behavior outside the sampled parameter range remain to be assessed.
+Mode-dependent weights enlarge the set of cubature fits available on a selected mesh. Their effect on gradient structure follows from the general compatibility condition in Appendix~\ref{sec:appendix-gradient-structure}. For LSPG, the BM projected equations need not be derivatives of one common sampled residual objective (Appendix~\ref{sec:appendix-common-objective}). The online correction matrix can also be nonsymmetric and have a quadratic form that takes negative values (Appendix~\ref{sec:appendix-correction-symmetry}). In conservative structural dynamics, the inherited mechanical Lagrangian form and the associated energy-conservation construction are likewise not guaranteed (Appendix~\ref{sec:appendix-mechanical-energy}). The projected-residual training tolerance does not impose these structural conditions. The exact-Jacobian checks in Appendix~\ref{sec:appendix-symmetric-part-burgers} confirm loss of a common objective in both Burgers BM rules, including the accurate rule with $N_c=225$.
+
+The present results establish trajectory accuracy and computational cost for the stated Burgers configuration. Appendix~\ref{sec:appendix-symmetric-part-burgers} examines the earlier 90-pair rule and shows why a small training error alone does not ensure accurate online equations. Behavior outside the sampled parameter range and stability in structural applications remain to be assessed.
 
 \appendix
 \clearpage
 \section{Common objectives, symmetry, and energy under modal weighting}
 \label{sec:modal-structure}
 
-Using different weights for the reduced components of one entity can change the gradient structure preserved by classical ECSW. The selected mesh and weights are fixed throughout this appendix, and the residuals and element potentials are assumed to be twice continuously differentiable.
+Modal weights can reduce the sampled mesh, but the weighted vector need not remain the gradient of one common scalar function. In LSPG, the question is whether the weighted projected residual remains the gradient of one common scalar least-squares objective; in conservative structural dynamics, whether the weighted internal-force vector remains the gradient of one common scalar potential energy. The general condition is derived first, then applied to these two settings and the corresponding correction and stiffness matrices. Analytical examples establish possible losses of structure and stability; AERO-F and Burgers computations examine the behavior of trained rules.
 
-\subsection{A common sampled least-squares objective}
+\subsection{Preserving the gradient of one common scalar function}
+\label{sec:appendix-gradient-structure}
+
+Consider twice continuously differentiable local scalar functions $\phi_e(\vect{q})$, with $\vect{q}\in\mathbb R^n$. The question is whether each assembled vector is the gradient of one common scalar function of all the coordinates. In the weighted constructions, the sampled set and weights remain fixed.
+
+The unweighted vector is
+\begin{equation}
+ \vect{F}
+ =\sum_{e\in\mathcal E}\nabla_{\vect{q}}\phi_e.
+ \label{eq:appendix-general-gradient}
+\end{equation}
+If one common twice continuously differentiable scalar function $\Phi$ satisfies $\vect{F}=\nabla_{\vect{q}}\Phi$, then $F_i=\partial\Phi/\partial q_i$. Differentiating component $i$ with respect to $q_j$ and component $j$ with respect to $q_i$ must therefore give the same mixed second derivative:
+\begin{equation}
+ \frac{\partial F_i}{\partial q_j}
+ -\frac{\partial F_j}{\partial q_i}
+ =\frac{\partial^2\Phi}{\partial q_j\partial q_i}
+ -\frac{\partial^2\Phi}{\partial q_i\partial q_j}
+ =0,
+ \qquad i,j=1,\ldots,n.
+ \label{eq:appendix-common-potential-test}
+\end{equation}
+This is a necessary compatibility condition for any vector to be the gradient of one common smooth scalar function. For the vector in Equation~\eqref{eq:appendix-general-gradient}, $F_i=\sum_{e\in\mathcal E}\partial \phi_e/\partial q_i$. Differentiating its components gives
+\[
+ \frac{\partial F_i}{\partial q_j}
+ =\sum_{e\in\mathcal E}\frac{\partial^2\phi_e}{\partial q_j\partial q_i},
+ \qquad
+ \frac{\partial F_j}{\partial q_i}
+ =\sum_{e\in\mathcal E}\frac{\partial^2\phi_e}{\partial q_i\partial q_j}.
+\]
+Their difference is therefore
+\[
+ \frac{\partial F_i}{\partial q_j}
+ -\frac{\partial F_j}{\partial q_i}
+ =\sum_{e\in\mathcal E}
+   \underbrace{\left[
+    \frac{\partial^2\phi_e}{\partial q_j\partial q_i}
+    -\frac{\partial^2\phi_e}{\partial q_i\partial q_j}
+   \right]}_{=\,0}
+ =0.
+\]
+Each local pair agrees because $\phi_e$ is twice continuously differentiable. Thus $\vect{F}$ satisfies Equation~\eqref{eq:appendix-common-potential-test}. For this vector, a common scalar function can be identified explicitly. Defining this function and differentiating gives
+\[
+ \begin{aligned}
+ \Phi(\vect{q})
+ &=\sum_{e\in\mathcal E}\phi_e(\vect{q}),\\
+ \nabla_{\vect{q}}\Phi
+ &=\nabla_{\vect{q}}\left[\sum_{e\in\mathcal E}\phi_e\right]
+ =\sum_{e\in\mathcal E}\nabla_{\vect{q}}\phi_e
+ =\vect{F}.
+ \end{aligned}
+\]
+
+On a fixed sampled set $\widetilde{\mathcal E}\subseteq\mathcal E$, fixed scalar weights, as in classical ECSW, give the vector
+\[
+ \vect{F}_{\mathrm{ECSW}}(\vect{q})
+ =\sum_{e\in\widetilde{\mathcal E}}\xi_e\nabla_{\vect{q}}\phi_e.
+\]
+Different entities can have different weights, while each $\xi_e$ multiplies every partial derivative of $\phi_e$. To apply the same test in Equation~\eqref{eq:appendix-common-potential-test}, write component $i$ as
+\[
+ F_{\mathrm{ECSW},i}
+ =\sum_{e\in\widetilde{\mathcal E}}\xi_e\frac{\partial \phi_e}{\partial q_i}.
+\]
+The weights are fixed, so differentiating the two components gives
+\[
+ \begin{aligned}
+ \frac{\partial F_{\mathrm{ECSW},i}}{\partial q_j}
+ &=\sum_{e\in\widetilde{\mathcal E}}\xi_e
+       \frac{\partial^2\phi_e}{\partial q_j\partial q_i},\\
+ \frac{\partial F_{\mathrm{ECSW},j}}{\partial q_i}
+ &=\sum_{e\in\widetilde{\mathcal E}}\xi_e
+       \frac{\partial^2\phi_e}{\partial q_i\partial q_j}.
+ \end{aligned}
+\]
+Subtracting yields
+\[
+ \frac{\partial F_{\mathrm{ECSW},i}}{\partial q_j}
+ -\frac{\partial F_{\mathrm{ECSW},j}}{\partial q_i}
+ =\sum_{e\in\widetilde{\mathcal E}}\xi_e
+   \underbrace{\left[
+    \frac{\partial^2\phi_e}{\partial q_j\partial q_i}
+    -\frac{\partial^2\phi_e}{\partial q_i\partial q_j}
+   \right]}_{=\,0}
+ =0.
+\]
+The two local mixed derivatives agree and share the same scalar weight $\xi_e$. Every entity therefore contributes zero, so $\vect{F}_{\mathrm{ECSW}}$ satisfies Equation~\eqref{eq:appendix-common-potential-test}. The common scalar function can now be identified and its gradient verified:
+\begin{equation}
+ \begin{aligned}
+ \Phi_{\mathrm{ECSW}}(\vect{q})
+ &=\sum_{e\in\widetilde{\mathcal E}}\xi_e \phi_e(\vect{q}),\\
+ \nabla_{\vect{q}}\Phi_{\mathrm{ECSW}}
+ &=\nabla_{\vect{q}}\left[\sum_{e\in\widetilde{\mathcal E}}\xi_e \phi_e\right]
+ =\sum_{e\in\widetilde{\mathcal E}}\xi_e\nabla_{\vect{q}}\phi_e
+ =\vect{F}_{\mathrm{ECSW}}.
+ \end{aligned}
+ \label{eq:appendix-scalar-weighted-gradient}
+\end{equation}
+
+Component-dependent weighting, as in BM-ECSW, instead constructs
+\begin{equation}
+ \vect{F}_{\mathrm{BM}}(\vect{q})
+ =\sum_{e\in\widetilde{\mathcal E}}\matr{D}_e\nabla_{\vect{q}}\phi_e,
+ \qquad
+ \matr{D}_e=\operatorname{diag}(\xi_{e,1},\ldots,\xi_{e,n}).
+ \label{eq:appendix-general-bm-vector}
+\end{equation}
+The matrices are fixed, but different partial derivatives of one function can receive different weights. Component $i$ is
+\begin{equation}
+ F_{\mathrm{BM},i}
+ =\sum_{e\in\widetilde{\mathcal E}}\xi_{e,i}
+       \frac{\partial \phi_e}{\partial q_i}.
+ \label{eq:appendix-general-bm-component}
+\end{equation}
+If a common scalar function $\Phi_{\mathrm{BM}}$ exists such that $\vect{F}_{\mathrm{BM}}=\nabla_{\vect{q}}\Phi_{\mathrm{BM}}$, this vector must satisfy the compatibility condition in Equation~\eqref{eq:appendix-common-potential-test}. To check this condition, differentiate its components:
+\begin{equation}
+ \begin{aligned}
+ \frac{\partial F_{\mathrm{BM},i}}{\partial q_j}
+ &=\sum_{e\in\widetilde{\mathcal E}}\xi_{e,i}
+       \frac{\partial^2\phi_e}{\partial q_j\partial q_i},\\
+ \frac{\partial F_{\mathrm{BM},j}}{\partial q_i}
+ &=\sum_{e\in\widetilde{\mathcal E}}\xi_{e,j}
+       \frac{\partial^2\phi_e}{\partial q_i\partial q_j}.
+ \end{aligned}
+ \label{eq:appendix-bm-cross-derivatives}
+\end{equation}
+The local mixed derivatives agree, but the weights multiplying them can differ. Subtracting yields
+\begin{equation}
+ \frac{\partial F_{\mathrm{BM},i}}{\partial q_j}
+ -\frac{\partial F_{\mathrm{BM},j}}{\partial q_i}
+ =\underbrace{
+   \sum_{e\in\widetilde{\mathcal E}}[\xi_{e,i}-\xi_{e,j}]
+       \frac{\partial^2\phi_e}{\partial q_i\partial q_j}
+   }_{\text{not necessarily zero}}.
+ \label{eq:appendix-modal-compatibility}
+\end{equation}
+For a common $\Phi_{\mathrm{BM}}$ to generate the BM vector, this sum must vanish for every pair $i,j$. A nonzero sum at a point excludes every such smooth function locally. If all these sums vanish throughout an open simply connected domain, such a function exists there. Equal component weights, $\xi_{e,i}=\xi_{e,j}=\xi_e$, make every term zero. Unequal weights can also satisfy the condition if local mixed derivatives vanish or contributions cancel.
+
+\textbf{One fixed scalar weight per entity preserves the gradient of one common scalar function; separate weights for its reduced components do not guarantee this property.}
+
+\textbf{In LSPG, loss of gradient structure removes the common least-squares interpretation and the classical descent argument based on that objective (Section~\ref{sec:appendix-common-objective}).}
+
+\textbf{In structural dynamics, loss of gradient structure excludes the common potential required for the inherited Lagrangian and energy-conservation construction with the same reduced kinetic energy (Section~\ref{sec:appendix-mechanical-energy}).}
+
+In practice, the LSPG iteration may stall or oscillate, require more damping or iterations, or fail to reach the nonlinear tolerance. In structural dynamics, modal weighting can produce growing displacements despite a stable classical response (Section~\ref{sec:appendix-structural-stability-example}); conservation of the inherited mechanical energy is no longer guaranteed. These are possible outcomes, and the structural losses alone do not establish the cause of a particular failure.
+
+\subsection{LSPG objectives, online corrections, and matrix properties}
 \label{sec:appendix-common-objective}
-
-\textit{Motivation:} LSPG obtains its projected equations by differentiating a scalar residual objective. We examine whether approximating those equations with classical ECSW and BM-ECSW preserves their interpretation as stationarity conditions of one scalar measure of error. The sampled entities and weights remain fixed throughout.
-
-\subsubsection{LSPG stationarity equations}
 \label{sec:appendix-lspg-foundations}
 
-LSPG determines the reduced coordinates by minimizing the squared norm of the assembled HDM residual evaluated at the reconstructed state. The blocks $\vect{r}_e$ partition the residual rows, so the objective is the sum of their local scalar contributions $\phi_e$:
-\begin{equation}
- \Phi(\vect{q})
- =\frac12\|\vect{r}(\vect{q})\|_2^2
- =\sum_{e\in\mathcal E}
-   \underbrace{\frac12\vect{r}_e^T\vect{r}_e}_{\displaystyle\phi_e(\vect{q})}.
- \label{eq:appendix-objective-partition}
-\end{equation}
-To obtain the stationarity equations, differentiate each local contribution with respect to $\vect{q}$. With $\matr{W}_e=\partial\vect{r}_e/\partial\vect{q}$, the product rule gives
+The general construction of Section~\ref{sec:appendix-gradient-structure} is applied to LSPG by defining the local scalar functions as
+\[
+ \phi_e(\vect{q})
+ =\frac12\|\vect{r}_e(\vect{q})\|_2^2
+ =\frac12\vect{r}_e^T\vect{r}_e.
+\]
+The blocks $\vect{r}_e$ partition the rows of the assembled HDM residual evaluated at the reconstructed state. With $\matr{W}_e=\partial\vect{r}_e/\partial\vect{q}$, differentiating each local function gives
 \begin{equation}
  \nabla_{\vect{q}}\phi_e
  =\frac12\left[\matr{W}_e^T\vect{r}_e
-                   +(\vect{r}_e^T\matr{W}_e)^T\right]
+                   +[\vect{r}_e^T\matr{W}_e]^T\right]
  =\matr{W}_e^T\vect{r}_e.
  \label{eq:appendix-local-objective}
 \end{equation}
-The two terms in brackets are equal and cancel the factor $1/2$. Summing these local gradients gives the gradient of the complete objective:
+The two terms in brackets are equal and cancel the factor $1/2$. Assembling these local gradients gives
+\[
+ \vect{F}
+ =\sum_{e\in\mathcal E}\nabla_{\vect{q}}\phi_e
+ =\sum_{e\in\mathcal E}\matr{W}_e^T\vect{r}_e
+ =\vect{r}_n.
+\]
+With these local functions, the vector $\vect{F}$ of Section~\ref{sec:appendix-gradient-structure} is the full LSPG projected residual defined in Equation~\eqref{eq:projected-residual}. The mixed derivatives of each $\phi_e$ agree, so this vector satisfies the compatibility condition in Equation~\eqref{eq:appendix-common-potential-test}. Its common scalar function is the LSPG objective in Equation~\eqref{eq:lspg-objective}:
+\begin{equation}
+ \Phi(\vect{q})
+ =\sum_{e\in\mathcal E}\phi_e(\vect{q})
+ =\frac12\|\vect{r}(\vect{q})\|_2^2.
+ \label{eq:appendix-objective-partition}
+\end{equation}
+Differentiating verifies that its gradient reproduces the complete projected vector:
 \begin{equation}
  \nabla_{\vect{q}}\Phi
  =\sum_{e\in\mathcal E}\nabla_{\vect{q}}\phi_e
@@ -1029,25 +1175,26 @@ The two terms in brackets are equal and cancel the factor $1/2$. Summing these l
  =\vect{r}_n.
  \label{eq:appendix-full-gradient}
 \end{equation}
-This calculation produces the projected residual $\vect{r}_n$: setting it to zero imposes stationarity of $\Phi$. Stationarity is a necessary condition for an unconstrained minimum, and alone does not establish a minimum.
+Setting $\vect{r}_n=\vect{0}$ therefore imposes stationarity of this one scalar function.
 
-\subsubsection{Classical ECSW}
+\paragraph{Classical ECSW.}
 \label{sec:appendix-classical-objective}
 
-Classical ECSW approximates these stationarity equations by replacing the full sum with a weighted sum over the sampled entities:
+Classical ECSW approximates $\vect{r}_n$ using a sampled set and one fixed positive weight $\xi_e$ per entity. With the local functions defined above, the scalar-weighted construction of Section~\ref{sec:appendix-gradient-structure} gives
 \begin{equation}
- \widetilde{\vect{r}}_n^{\mathrm{ECSW}}
+ \vect{F}_{\mathrm{ECSW}}
+ =\widetilde{\vect{r}}_n^{\mathrm{ECSW}}
  =\sum_{e\in\widetilde{\mathcal E}}\xi_e\matr{W}_e^T\vect{r}_e.
  \label{eq:appendix-classical-projected-vector}
 \end{equation}
-To check whether this approximation is still a gradient, consider the corresponding weighted least-squares objective:
+Weights may differ between entities, but each fixed $\xi_e$ multiplies all reduced components of one entity. The same weight therefore multiplies both local mixed derivatives, so their difference vanishes in the test of Equation~\eqref{eq:appendix-common-potential-test}. For these squared-residual functions, Equation~\eqref{eq:appendix-scalar-weighted-gradient} identifies the common sampled least-squares objective
 \begin{equation}
  \Phi_{\mathrm{ECSW}}(\vect{q})
  =\frac12\sum_{e\in\widetilde{\mathcal E}}\xi_e\|\vect{r}_e(\vect{q})\|_2^2
  =\sum_{e\in\widetilde{\mathcal E}}\xi_e\phi_e.
  \label{eq:appendix-classical-objective}
 \end{equation}
-The weights are fixed scalars, so differentiation gives
+With the weights fixed, differentiation gives
 \begin{equation}
  \nabla_{\vect{q}}\Phi_{\mathrm{ECSW}}
  =\sum_{e\in\widetilde{\mathcal E}}\xi_e\nabla_{\vect{q}}\phi_e
@@ -1055,30 +1202,19 @@ The weights are fixed scalars, so differentiation gives
  =\widetilde{\vect{r}}_n^{\mathrm{ECSW}}.
  \label{eq:appendix-classical-gradient}
 \end{equation}
-Thus the approximation preserves the gradient relation. Solving $\widetilde{\vect{r}}_n^{\mathrm{ECSW}}=\vect{0}$ imposes stationarity of $\Phi_{\mathrm{ECSW}}$. This sampled objective generally differs from $\Phi$, but all reduced equations are derivatives of this same scalar function. Different entities can have different weights; each entity's weight is shared by every component of its contribution.
+Thus $\widetilde{\vect{r}}_n^{\mathrm{ECSW}}=\vect{0}$ imposes stationarity of one common sampled least-squares objective. This objective generally differs from the full LSPG objective $\Phi$.
 
-\subsubsection{BM-ECSW}
+\paragraph{BM-ECSW.}
 \label{sec:appendix-bm-objective}
 
-BM-ECSW instead assigns a separate weight to each reduced component:
+BM-ECSW assigns separate weights to the reduced components of each entity's contribution. With these local functions, the component-weighted construction of Section~\ref{sec:appendix-gradient-structure} gives
 \begin{equation}
- \widetilde{\vect{r}}_n^{\mathrm{BM}}
- =\sum_{e\in\widetilde{\mathcal E}}\matr{D}_e\matr{W}_e^T\vect{r}_e,
- \qquad\matr{D}_e=\operatorname{diag}(\xi_{e,1},\ldots,\xi_{e,n}).
+ \vect{F}_{\mathrm{BM}}
+ =\widetilde{\vect{r}}_n^{\mathrm{BM}}
+ =\sum_{e\in\widetilde{\mathcal E}}\matr{D}_e\matr{W}_e^T\vect{r}_e.
  \label{eq:appendix-bm-projected-vector}
 \end{equation}
-We ask the same question: is this vector the gradient of a common scalar objective? If a smooth function $\Phi_{\mathrm{BM}}$ generates it, its components are $\widetilde r_{n,i}^{\mathrm{BM}}=\partial\Phi_{\mathrm{BM}}/\partial q_i$. Continuity of the second derivatives then requires
-\begin{equation}
- \frac{\partial\widetilde r_{n,i}^{\mathrm{BM}}}{\partial q_j}
- =\frac{\partial^2\Phi_{\mathrm{BM}}}{\partial q_j\partial q_i}
- =\frac{\partial^2\Phi_{\mathrm{BM}}}{\partial q_i\partial q_j}
- =\frac{\partial\widetilde r_{n,j}^{\mathrm{BM}}}{\partial q_i},
- \qquad i,j=1,\ldots,n.
- \label{eq:appendix-common-potential-test}
-\end{equation}
-This condition tests the BM vector directly, without selecting a candidate objective. Unequal crossed derivatives at a point exclude every smooth scalar function whose gradient could equal that vector in a neighborhood of the point.
-
-Component $i$ of the BM vector can be written as
+Using Equation~\eqref{eq:appendix-local-objective}, component $i$ is
 \begin{equation}
  \widetilde r_{n,i}^{\mathrm{BM}}
  =\sum_{e\in\widetilde{\mathcal E}}\xi_{e,i}
@@ -1087,30 +1223,29 @@ Component $i$ of the BM vector can be written as
                          \frac{\partial\phi_e}{\partial q_i}.
  \label{eq:appendix-bm-weighted-gradients}
 \end{equation}
-The second equality uses component $i$ of the local gradient identity in Equation~\eqref{eq:appendix-local-objective}.
-The fixed weights remain outside the derivatives. Differentiating components $i$ and $j$ gives
-\begin{equation}
+For a common scalar objective $\Phi_{\mathrm{BM}}$ to satisfy $\nabla_{\vect{q}}\Phi_{\mathrm{BM}}=\vect{F}_{\mathrm{BM}}$, the two mixed derivatives must agree, as required by Equation~\eqref{eq:appendix-common-potential-test}. With the weights fixed, differentiating Equation~\eqref{eq:appendix-bm-weighted-gradients} gives
+\[
  \begin{aligned}
  \frac{\partial\widetilde r_{n,i}^{\mathrm{BM}}}{\partial q_j}
  &=\sum_{e\in\widetilde{\mathcal E}}\xi_{e,i}
-                  \frac{\partial^2\phi_e}{\partial q_j\partial q_i},\\
+       \frac{\partial^2\phi_e}{\partial q_j\partial q_i},\\
  \frac{\partial\widetilde r_{n,j}^{\mathrm{BM}}}{\partial q_i}
  &=\sum_{e\in\widetilde{\mathcal E}}\xi_{e,j}
-                  \frac{\partial^2\phi_e}{\partial q_i\partial q_j}.
+       \frac{\partial^2\phi_e}{\partial q_i\partial q_j}.
  \end{aligned}
- \label{eq:appendix-bm-cross-derivatives}
-\end{equation}
-The local mixed derivatives agree, but the weights multiplying them can differ. Subtracting yields
-\begin{equation}
+\]
+The local mixed derivatives agree, but their weights can differ. Subtracting yields
+\[
  \frac{\partial\widetilde r_{n,i}^{\mathrm{BM}}}{\partial q_j}
  -\frac{\partial\widetilde r_{n,j}^{\mathrm{BM}}}{\partial q_i}
- =\sum_{e\in\widetilde{\mathcal E}}(\xi_{e,i}-\xi_{e,j})
-                  \frac{\partial^2\phi_e}{\partial q_i\partial q_j}.
- \label{eq:appendix-modal-compatibility}
-\end{equation}
-Classical ECSW makes each term zero because $\xi_{e,i}=\xi_{e,j}=\xi_e$. BM-ECSW does not enforce this equality. Different weights can still give a zero sum through zero local mixed derivatives or cancellation, but positivity alone does not ensure it. If the sum is nonzero, the BM vector cannot be the gradient of a common scalar objective near that point. The following example demonstrates this loss of gradient structure.
+ =\underbrace{
+   \sum_{e\in\widetilde{\mathcal E}}[\xi_{e,i}-\xi_{e,j}]
+       \frac{\partial^2\phi_e}{\partial q_i\partial q_j}
+   }_{\text{not necessarily zero}}.
+\]
+This is Equation~\eqref{eq:appendix-modal-compatibility} applied to the BM-ECSW projected vector $\widetilde{\vect{r}}_n^{\mathrm{BM}}$. A nonzero difference at a point excludes a common smooth objective $\Phi_{\mathrm{BM}}$ locally. BM therefore does not guarantee a common objective, although its online problem remains $\widetilde{\vect{r}}_n^{\mathrm{BM}}(\vect{q})=\vect{0}$.
 
-\subsubsection{Numerical example}
+\subsubsection{Numerical example of the mixed-derivative test}
 \label{sec:appendix-lspg-numerical-example}
 
 Consider three scalar residual blocks depending on two reduced coordinates:
@@ -1126,7 +1261,7 @@ Each residual block is scalar, so its test-basis row is
  \matr{W}_2=(0,1),\qquad
  \matr{W}_3=(1,2q_2).
 \]
-We construct both projected vectors from these same residuals and test-basis rows, then check whether each vector is a gradient. Both rules use all three entities; only the weight of entity 3 in the second equation changes. In $\matr{\Xi}$, rows identify entities and columns identify reduced equations.
+The two rules use the same residual blocks, test-basis rows, and three entities. Only the weight assigned to entity 3 in the second reduced equation changes. Equation~\eqref{eq:appendix-common-potential-test} gives the necessary mixed-derivative condition for each assembled vector to be the gradient of one common scalar objective. Rows of $\matr{\Xi}$ identify entities, and columns identify reduced equations.
 
 \begin{subequations}
  \label{eq:appendix-example-weights}
@@ -1141,7 +1276,7 @@ We construct both projected vectors from these same residuals and test-basis row
     \vect{\xi}=\begin{pmatrix}2\\3\\2\end{pmatrix}.
    \end{gathered}
   \end{equation}
- \end{minipage}\hfill
+ \end{minipage}\hfill\vrule width 0.4pt\hfill%
  \begin{minipage}[t]{0.48\linewidth}
   \vspace{0pt}\raggedright
   \textbf{BM-ECSW}\par\smallskip
@@ -1160,23 +1295,21 @@ We construct both projected vectors from these same residuals and test-basis row
  \noindent
  \begin{minipage}[t]{0.48\linewidth}
   \vspace{0pt}\small\raggedright
-  The classical rule defines the projected vector
+  The classical ECSW approximation is
   \begin{equation}
    \widetilde{\vect{r}}_n^{\mathrm{ECSW}}
    =\sum_{e=1}^{3}\xi_e\matr{W}_e^T r_e.
   \end{equation}
- \end{minipage}\hfill
+ \end{minipage}\hfill\vrule width 0.4pt\hfill%
  \begin{minipage}[t]{0.48\linewidth}
   \vspace{0pt}\small\raggedright
-  The BM rule defines the projected vector
+  The BM-ECSW approximation is
   \begin{equation}
    \widetilde{\vect{r}}_n^{\mathrm{BM}}
    =\sum_{e=1}^{3}\matr{D}_e\matr{W}_e^T r_e.
   \end{equation}
  \end{minipage}
 \end{subequations}
-
-Using the residuals and test-basis rows above gives the projected components for both rules.
 
 \begin{subequations}
  \label{eq:appendix-example-bm}
@@ -1194,7 +1327,7 @@ Using the residuals and test-basis rows above gives the projected components for
      &=3q_2+4q_2r_3.
    \end{aligned}
   \end{equation}
- \end{minipage}\hfill
+ \end{minipage}\hfill\vrule width 0.4pt\hfill%
  \begin{minipage}[t]{0.48\linewidth}
   \vspace{0pt}\small\raggedright
   Assembling the weighted contributions gives
@@ -1211,7 +1344,7 @@ Using the residuals and test-basis rows above gives the projected components for
  \end{minipage}
 \end{subequations}
 
-We now differentiate the first component with respect to $q_2$ and the second with respect to $q_1$, as required by Equation~\eqref{eq:appendix-common-potential-test}.
+To apply the compatibility test to these assembled vectors, differentiate the first component with respect to $q_2$ and the second with respect to $q_1$:
 
 \begin{subequations}
  \label{eq:appendix-example-cross-partials}
@@ -1227,7 +1360,7 @@ We now differentiate the first component with respect to $q_2$ and the second wi
      &=4q_2\frac{\partial r_3}{\partial q_1}=4q_2.
    \end{aligned}
   \end{equation}
- \end{minipage}\hfill
+ \end{minipage}\hfill\vrule width 0.4pt\hfill%
  \begin{minipage}[t]{0.48\linewidth}
   \vspace{0pt}\small\raggedright
   The mixed derivatives are
@@ -1246,123 +1379,400 @@ We now differentiate the first component with respect to $q_2$ and the second wi
 \noindent
 \begin{minipage}[t]{0.48\linewidth}
  \vspace{0pt}\small\raggedright
- The crossed derivatives agree for all $\vect{q}$. The common scalar objective is
+ The mixed derivatives agree for all $\vect{q}$. The common scalar objective is
  \[
   \Phi_{\mathrm{ECSW}}
-  =\frac12\left(2q_1^2+3q_2^2+2r_3^2\right).
+  =\frac12\left[2q_1^2+3q_2^2+2r_3^2\right].
  \]
  Its gradient reproduces both classical components in Equation~\eqref{eq:appendix-example-bm}.
-\end{minipage}\hfill
+\end{minipage}\hfill\vrule width 0.4pt\hfill%
 \begin{minipage}[t]{0.48\linewidth}
  \vspace{0pt}\small\raggedright
- The crossed derivatives differ by $2q_2$, violating Equation~\eqref{eq:appendix-common-potential-test} whenever $q_2\ne0$. Entities 1 and 2 contribute zero to this difference; entity 3 contributes $2q_2$. Hence no smooth scalar function has this BM vector as its gradient near such a point.
+ The mixed derivatives differ by $2q_2$, violating Equation~\eqref{eq:appendix-common-potential-test} whenever $q_2\ne0$. Entities 1 and 2 contribute zero to this difference; entity 3 contributes $2q_2$. Hence no smooth scalar function has this BM vector as its gradient near such a point.
 \end{minipage}
 
-Both rules select every entity with positive weights. Changing the weight of entity 3 in the second BM component from 1 to 2 recovers the classical vector and its common objective.
+The common classical objective supplies the least-squares model for its online correction. The BM correction is formed from the weighted projected equations, without assuming a common objective.
 
-The example establishes what modal weighting can change. BM still approximates the full projected residual $\vect{r}_n=\nabla_{\vect{q}}\Phi$, and its online problem remains $\widetilde{\vect{r}}_n^{\mathrm{BM}}=\vect{0}$. However, the approximation need not itself be a gradient. When the difference in Equation~\eqref{eq:appendix-modal-compatibility} is nonzero, its equations cannot be interpreted directly as the stationarity conditions of one common sampled least-squares objective.
-
-This conclusion does not imply that the BM equations have no solution or that the online iteration must fail. It identifies the gradient structure that is no longer guaranteed, so the classical objective-based descent argument cannot be assumed for BM. Section~\ref{sec:appendix-update-structure} examines this consequence for the online correction. Preserving a common gradient would require the equality in Equation~\eqref{eq:appendix-common-potential-test} throughout the coordinate domain; the projected-residual training tolerance does not impose that condition.
-
-\subsection{Symmetry and the online correction}
+\subsubsection{Online correction: from Gauss--Newton to a Gauss--Newton-type update}
 \label{sec:appendix-update-structure}
 
-The classical Gauss--Newton matrix is a sum of weighted Gram matrices,
+At the current iterate, both methods hold the test-basis blocks fixed while computing the increment and approximate each local residual by
+$\vect{r}_e(\vect{q}+\Delta\vect{q})\approx\vect{r}_e+\matr{W}_e\Delta\vect{q}$.
+For classical ECSW, the Gauss--Newton increment minimizes the quadratic model obtained by substituting these linearized residuals into the sampled objective:
 \begin{equation}
- \widehat{\matr{J}}_n^{\mathrm{ECSW}}
- =\sum_{e\in\widetilde{\mathcal E}}\xi_e\matr{W}_e^T\matr{W}_e,
- \qquad
+ \underset{\Delta\vect{q}\in\mathbb R^n}{\min}\;
+ \frac12\sum_{e\in\widetilde{\mathcal E}}\xi_e
+    \|\vect{r}_e+\matr{W}_e\Delta\vect{q}\|_2^2.
+ \label{eq:appendix-classical-increment-objective}
+\end{equation}
+Differentiating with respect to the increment gives its normal equations, the Gauss--Newton system in Equation~\eqref{eq:classical-gn}. For nonnegative weights, this quadratic model is convex, so any solution of its normal equations minimizes it over the complete increment vector.
+
+For BM, applying the modal weights to the projected linearized contributions and setting their sum to zero gives:
+\begin{equation}
+ \sum_{e\in\widetilde{\mathcal E}}\matr{D}_e\matr{W}_e^T
+       [\vect{r}_e+\matr{W}_e\Delta\vect{q}]=\vect{0}.
+ \label{eq:appendix-bm-linearized-equations}
+\end{equation}
+Expanding gives the correction system
+\begin{equation}
+ \left[\sum_{e\in\widetilde{\mathcal E}}
+          \matr{D}_e\matr{W}_e^T\matr{W}_e\right]\Delta\vect{q}
+ =-\sum_{e\in\widetilde{\mathcal E}}
+          \matr{D}_e\matr{W}_e^T\vect{r}_e.
+ \label{eq:appendix-bm-correction-system}
+\end{equation}
+This is the update in Equation~\eqref{eq:bm-gn}. It uses a Gauss--Newton-type approximation to the Jacobian of the BM projected vector: terms involving local residuals multiplied by their second derivatives are omitted. The increment therefore requires only local residuals and their first derivatives.
+
+Both methods compute one coupled increment. \textbf{The classical Gauss--Newton correction minimizes one common quadratic error; the BM correction solves weighted linearized equations without that guarantee.}
+
+\subsubsection{Symmetry and quadratic form}
+\label{sec:appendix-correction-symmetry}
+\label{sec:appendix-correction-properties}
+\label{sec:appendix-symmetric-part-growth}
+
+Section~\ref{sec:appendix-gradient-structure} tests whether the assembled vector is the gradient of one common scalar function using its exact Jacobian. The online corrections use approximate Jacobians. Their symmetry and quadratic forms are examined here:
+\begin{equation}
+ \begin{aligned}
+  \widehat{\matr{J}}_n^{\mathrm{ECSW}}
+   &=\sum_{e\in\widetilde{\mathcal E}}\xi_e
+       \matr{W}_e^T\matr{W}_e,\\
+  \widehat{\matr{J}}_n^{\mathrm{BM}}
+   &=\sum_{e\in\widetilde{\mathcal E}}\matr{D}_e
+       \matr{W}_e^T\matr{W}_e.
+ \end{aligned}
+ \label{eq:appendix-correction-matrices}
+\end{equation}
+Each local product $\matr{W}_e^T\matr{W}_e$ is symmetric. The classical scalar weights preserve that symmetry:
+\[
+ \bigl[\widehat{\matr{J}}_n^{\mathrm{ECSW}}\bigr]^T
+ =\sum_{e\in\widetilde{\mathcal E}}\xi_e
+       \bigl[\matr{W}_e^T\matr{W}_e\bigr]^T
+ =\widehat{\matr{J}}_n^{\mathrm{ECSW}}.
+\]
+Moreover, nonnegative weights give, for any $\vect{z}\in\mathbb R^n$,
+\begin{equation}
  \vect{z}^T\widehat{\matr{J}}_n^{\mathrm{ECSW}}\vect{z}
- =\sum_{e\in\widetilde{\mathcal E}}\xi_e\|\matr{W}_e\vect{z}\|_2^2\geq0.
- \label{eq:appendix-classical-gram}
+ =\sum_{e\in\widetilde{\mathcal E}}\xi_e
+       [\matr{W}_e\vect{z}]^T[\matr{W}_e\vect{z}]
+ =\sum_{e\in\widetilde{\mathcal E}}\xi_e
+       \|\matr{W}_e\vect{z}\|_2^2\geq0.
+ \label{eq:appendix-classical-correction-psd}
 \end{equation}
-It is symmetric positive semidefinite, and positive definite if the blocks with positive weights have no common nonzero null direction. Under this rank condition, the correction in Equation~\eqref{eq:classical-gn} is a descent direction for $\Phi_{\mathrm{ECSW}}$ at a nonstationary point:
-\begin{equation}
- \nabla\Phi_{\mathrm{ECSW}}^T\Delta\vect{q}
- =-\bigl(\widetilde{\vect{r}}_n^{\mathrm{ECSW}}\bigr)^T
-       \bigl(\widehat{\matr{J}}_n^{\mathrm{ECSW}}\bigr)^{-1}
-         \widetilde{\vect{r}}_n^{\mathrm{ECSW}}<0.
- \label{eq:appendix-classical-descent}
-\end{equation}
-Thus a sufficiently small positive step decreases the sampled objective; a full step need not do so.
+The classical correction matrix is therefore symmetric positive semidefinite~\cite{grimberg2021mesh}.
 
-In BM-ECSW, different rows of each local Gram matrix carry different weights. Subtracting its transposed entries gives
+The BM matrix instead multiplies row $i$ of each local product by $\xi_{e,i}$. The difference between its crossed entries is the first-derivative approximation of Equation~\eqref{eq:appendix-modal-compatibility}: the local mixed derivative is replaced by $\matr{W}_e(:,i)^T\matr{W}_e(:,j)$, giving
 \begin{equation}
- \bigl(\widehat J_n^{\mathrm{BM}}\bigr)_{ij}
- -\bigl(\widehat J_n^{\mathrm{BM}}\bigr)_{ji}
+ \bigl[\widehat J_n^{\mathrm{BM}}\bigr]_{ij}
+ -\bigl[\widehat J_n^{\mathrm{BM}}\bigr]_{ji}
+ =\sum_{e\in\widetilde{\mathcal E}}[\xi_{e,i}-\xi_{e,j}]
+       \matr{W}_e(:,i)^T\matr{W}_e(:,j).
+ \label{eq:appendix-bm-correction-asymmetry}
+\end{equation}
+The local inner product is unchanged when $i$ and $j$ are interchanged, but the weights can differ. The matrix can consequently be nonsymmetric. Its quadratic form is
+\begin{equation}
+ \vect{z}^T\widehat{\matr{J}}_n^{\mathrm{BM}}\vect{z}
  =\sum_{e\in\widetilde{\mathcal E}}
-       (\xi_{e,i}-\xi_{e,j})\matr{W}_e(:,i)^T\matr{W}_e(:,j).
- \label{eq:appendix-bm-matrix-asymmetry}
+       [\matr{W}_e\matr{D}_e\vect{z}]^T[\matr{W}_e\vect{z}].
+ \label{eq:appendix-bm-correction-quadratic-form}
 \end{equation}
-\textbf{Positive modal weights do not guarantee symmetry or the classical descent property.} The latter also requires the projected vector to be the gradient of the objective whose decrease is being considered.
+Unlike the classical squared norms, these dot products can be negative. \textbf{Nonnegative modal weights do not guarantee a symmetric correction matrix or a nonnegative quadratic form.} Each local product $\matr{W}_e^T\matr{W}_e$ remains symmetric positive semidefinite, and setting $\matr{D}_e=\xi_e\matr{I}_n$ recovers the classical matrix and both guarantees.
 
-The vanishing of the difference in Equation~\eqref{eq:appendix-modal-compatibility} tests the gradient structure of the nonlinear projected vector. Equation~\eqref{eq:appendix-bm-matrix-asymmetry} concerns the online update matrix, obtained by holding $\matr{W}_e$ fixed when linearizing the local residuals. These matrices coincide for affine residuals; otherwise, differentiating the projected vector also differentiates $\matr{W}_e$. Both online algorithms in the main text use only residuals and their first derivatives.
-
-Loss of symmetry does not by itself imply a different correction or failure of the solve. For example, if $\matr{D}_e=\xi_e\matr{D}$ for a common positive diagonal matrix $\matr{D}$, then
+The quadratic form $\vect{z}^T\widehat{\matr{J}}_n\vect{z}$ is a scalar and therefore equals its transpose:
+\[
+ \vect{z}^T\widehat{\matr{J}}_n\vect{z}
+ =\bigl[\vect{z}^T\widehat{\matr{J}}_n\vect{z}\bigr]^T
+ =\vect{z}^T\widehat{\matr{J}}_n^T\vect{z}.
+\]
+Averaging these equal expressions leaves their value unchanged:
 \begin{equation}
- \widetilde{\vect{r}}_n^{\mathrm{BM}}
- =\matr{D}\widetilde{\vect{r}}_n^{\mathrm{ECSW}},
+ \begin{aligned}
+ \vect{z}^T\widehat{\matr{J}}_n\vect{z}
+ &=\frac12\bigl[\vect{z}^T\widehat{\matr{J}}_n\vect{z}
+                 +\vect{z}^T\widehat{\matr{J}}_n^T\vect{z}\bigr]\\
+ &=\vect{z}^T\operatorname{sym}(\widehat{\matr{J}}_n)\vect{z},
  \qquad
- \widehat{\matr{J}}_n^{\mathrm{BM}}
- =\matr{D}\widehat{\matr{J}}_n^{\mathrm{ECSW}}.
- \label{eq:appendix-shared-row-scaling}
+ \operatorname{sym}(\widehat{\matr{J}}_n)
+ =\frac12\bigl[\widehat{\matr{J}}_n+\widehat{\matr{J}}_n^T\bigr].
+ \end{aligned}
+ \label{eq:appendix-symmetric-part}
 \end{equation}
-Multiplying by $\matr{D}^{-1}$ recovers the classical equations and correction system. Their roots and corrections are therefore identical, although the BM matrix may be nonsymmetric. Independent modal fitting does not impose this factorization.
+The original matrix and its symmetric part therefore give the same quadratic form for every $\vect{z}$. Its sign can be determined from the symmetric part. The classical matrix equals its symmetric part, and Equation~\eqref{eq:appendix-classical-correction-psd} establishes that its quadratic form is nonnegative. For either matrix, if $\vect{v}$ is an eigenvector of its symmetric part with eigenvalue $\lambda$, then
+\[
+ \vect{v}^T\widehat{\matr{J}}_n\vect{v}
+ =\vect{v}^T\operatorname{sym}(\widehat{\matr{J}}_n)\vect{v}
+ =\lambda\|\vect{v}\|_2^2.
+\]
+Thus a negative eigenvalue of the BM symmetric part identifies a direction with a negative quadratic form.
 
-\subsection{Potential energy in conservative structural dynamics}
+\subsubsection{A matrix example with positive eigenvalues}
+\label{sec:appendix-symmetric-part-example}
+
+In the auxiliary linear model $\dot{\vect{z}}=-\widehat{\matr{J}}_n\vect{z}$, the matrix is held fixed and $\vect{z}$ represents a deviation from zero. Its size is measured by $\|\vect{z}\|_2$. Along a solution, differentiating the squared norm and substituting the model equation gives
+\begin{equation}
+ \begin{aligned}
+ \frac{d}{dt}\,\frac12\|\vect{z}\|_2^2
+ &=\vect{z}^T\dot{\vect{z}}\\
+ &=-\vect{z}^T\widehat{\matr{J}}_n\vect{z}
+  =-\vect{z}^T\operatorname{sym}(\widehat{\matr{J}}_n)\vect{z}.
+ \end{aligned}
+ \label{eq:appendix-perturbation-norm}
+\end{equation}
+The minus sign in Equation~\eqref{eq:appendix-perturbation-norm} gives two consequences:
+\begin{itemize}
+ \item A positive quadratic form makes the perturbation norm decrease.
+ \item A negative quadratic form makes the perturbation norm initially increase.
+\end{itemize}
+A positive definite symmetric part gives a decreasing norm for every nonzero perturbation. An indefinite symmetric part permits initial growth, even when every eigenvalue of the full matrix has a positive real part. The HPROM trajectories are examined in Section~\ref{sec:appendix-symmetric-part}.
+
+Consider three scalar residual blocks with fixed test-basis rows
+\[
+ \matr{W}_1=(1,0),\qquad
+ \matr{W}_2=(0,1),\qquad
+ \matr{W}_3=(1,1).
+\]
+Both rules use all three entities. The BM rule assigns entity 3 a zero weight in the second reduced equation, which nonnegativity permits.
+
+\begin{subequations}
+ \label{eq:appendix-symmetric-example-matrices}
+ \noindent
+ \begin{minipage}[t]{0.48\linewidth}
+  \vspace{0pt}\raggedright
+  \textbf{Classical ECSW}\par\smallskip
+  \small
+  The entity weights $\vect{\xi}=(1,1,4)^T$ give
+  \begin{equation}
+   \widehat{\matr{J}}_n^{\mathrm{ECSW}}
+   =\sum_{e=1}^{3}\xi_e\matr{W}_e^T\matr{W}_e
+   =\begin{pmatrix}5&4\\4&5\end{pmatrix}.
+  \end{equation}
+ \end{minipage}\hfill\vrule width 0.4pt\hfill%
+ \begin{minipage}[t]{0.48\linewidth}
+  \vspace{0pt}\raggedright
+  \textbf{BM-ECSW}\par\smallskip
+  \small
+  The modal weights $\matr{\Xi}=\begin{pmatrix}1&1\\1&1\\8&0\end{pmatrix}$ give
+  \begin{equation}
+   \widehat{\matr{J}}_n^{\mathrm{BM}}
+   =\sum_{e=1}^{3}\matr{D}_e\matr{W}_e^T\matr{W}_e
+   =\begin{pmatrix}9&8\\0&1\end{pmatrix}.
+  \end{equation}
+ \end{minipage}
+\end{subequations}
+
+\noindent
+\begin{minipage}[t]{0.48\linewidth}
+ \vspace{0pt}\small\raggedright
+ The matrix is symmetric, with eigenvalues 1 and 9, so it is positive definite. For $\vect{z}=(1,-2)^T$,
+ \[
+  \vect{z}^T\widehat{\matr{J}}_n^{\mathrm{ECSW}}\vect{z}=9,
+ \]
+ and Equation~\eqref{eq:appendix-perturbation-norm} gives an initial decrease of $\|\vect{z}\|_2$.
+\end{minipage}\hfill\vrule width 0.4pt\hfill%
+\begin{minipage}[t]{0.48\linewidth}
+ \vspace{0pt}\small\raggedright
+ The matrix is triangular, with eigenvalues 9 and 1. Its symmetric part,
+ \[
+  \operatorname{sym}(\widehat{\matr{J}}_n^{\mathrm{BM}})
+  =\begin{pmatrix}9&4\\4&1\end{pmatrix},
+ \]
+ has determinant $-7$ and eigenvalues $5\pm4\sqrt2$. For $\vect{z}=(1,-2)^T$, $\vect{z}^T\widehat{\matr{J}}_n^{\mathrm{BM}}\vect{z}=-3$, and $\|\vect{z}\|_2$ initially grows.
+\end{minipage}
+
+\medskip
+Both matrices have eigenvalues 1 and 9, so every perturbation eventually decays in this fixed linear model. The classical model decreases every perturbation's norm from the start. \textbf{The matrix example demonstrates temporary perturbation growth in a stable auxiliary model.}
+
+The structural example in Section~\ref{sec:appendix-structural-stability-example} demonstrates a distinct possibility: a negative stiffness eigenvalue and an unstable mode despite positive weights.
+
+\subsection{Lagrangian structure and stability under modal weighting}
 \label{sec:appendix-mechanical-energy}
+\label{sec:appendix-lagrangian-compatibility}
 
-In conservative structural dynamics, the internal force derives from a mechanical potential~\cite{farhat2015structure}. With a constant symmetric positive definite mass matrix $\matr{M}$ and no external loading, the HDM satisfies
+The energy-conservation analysis of ECSW by Farhat et al.~\cite{farhat2015structure} motivates applying Section~\ref{sec:appendix-gradient-structure} to conservative structural dynamics, with element potential energies as the local scalar functions. Their gradients generate the internal vector, and retaining one common potential is required to preserve the mechanical Lagrangian form with the same reduced kinetic energy. For a structural HDM with a constant symmetric positive definite mass matrix $\matr{M}$ and no external loading, the equations of motion are
 \begin{equation}
  \matr{M}\ddot{\vect{u}}+\nabla_{\vect{u}}\mathcal V^{\mathrm{int}}(\vect{u})
  =\vect{0},
  \qquad
  \mathcal V^{\mathrm{int}}(\vect{u})
- =\sum_{e\in\mathcal E}\mathcal V_e^{\mathrm{int}}(\matr{L}_e\vect{u}),
+ =\sum_{e\in\mathcal E}\mathcal V_e^{\mathrm{int}}(\matr{L}_e\vect{u}).
  \label{eq:appendix-hdm-potential}
 \end{equation}
-where $\matr{L}_e$ extracts the displacement entries of element $e$. The restoring force is $-\nabla_{\vect{u}}\mathcal V^{\mathrm{int}}$. Under $\vect{u}=\matr{V}\vect{q}$, define $\matr{M}_r=\matr{V}^T\matr{M}\matr{V}$ and
+Here $\matr{L}_e$ extracts the displacement entries of element $e$, and the element potentials are twice continuously differentiable. The restoring force is $-\nabla_{\vect{u}}\mathcal V^{\mathrm{int}}$.
+
+Substituting $\vect{u}=\matr{V}\vect{q}$ with the fixed basis $\matr{V}$ and premultiplying by $\matr{V}^T$ gives the Galerkin structural model. Its reduced mass matrix and the local scalar functions of Section~\ref{sec:appendix-gradient-structure} are
 \[
- \mathcal V_{e,r}^{\mathrm{int}}(\vect{q})
+ \matr{M}_r=\matr{V}^T\matr{M}\matr{V},
+ \qquad
+ \phi_e(\vect{q})
+ =\mathcal V_{e,r}^{\mathrm{int}}(\vect{q})
  =\mathcal V_e^{\mathrm{int}}(\matr{L}_e\matr{V}\vect{q}).
 \]
-Classical ECSW weights these element potentials to obtain the sampled potential and its equations of motion:
+With these local functions, the vector $\vect{F}$ of Section~\ref{sec:appendix-gradient-structure} is the reduced internal vector:
+\[
+ \vect{F}
+ =\sum_{e\in\mathcal E}\nabla_{\vect{q}}\phi_e
+ =\sum_{e\in\mathcal E}\nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}}.
+\]
+The mixed derivatives of each potential agree, so this vector satisfies Equation~\eqref{eq:appendix-common-potential-test}. Its common scalar function is the total reduced potential energy:
+\[
+ \Phi(\vect{q})
+ =\sum_{e\in\mathcal E}\phi_e(\vect{q})
+ =\sum_{e\in\mathcal E}\mathcal V_{e,r}^{\mathrm{int}}(\vect{q}),
+ \qquad
+ \nabla_{\vect{q}}\Phi=\vect{F}.
+\]
+The reduced kinetic energy and mechanical Lagrangian are then
 \begin{equation}
- \widetilde{\mathcal V}_r^{\mathrm{int}}
+ \mathcal T_r(\dot{\vect{q}})
+ =\frac12\dot{\vect{q}}^T\matr{M}_r\dot{\vect{q}},
+ \qquad
+ \mathcal L_r(\vect{q},\dot{\vect{q}})
+ =\mathcal T_r(\dot{\vect{q}})
+   -\sum_{e\in\mathcal E}\mathcal V_{e,r}^{\mathrm{int}}(\vect{q}).
+ \label{eq:appendix-reduced-lagrangian}
+\end{equation}
+Here $\mathcal L_r=\mathcal T_r-\Phi$. Hamilton's principle requires the time integral of this Lagrangian to be stationary under variations with fixed endpoints. Its Euler--Lagrange equations recover the Galerkin equations of motion, $\matr{M}_r\ddot{\vect{q}}+\vect{F}=\vect{0}$:
+\begin{equation}
+ \frac{d}{dt}\left[\frac{\partial\mathcal L_r}{\partial\dot{\vect{q}}}\right]
+ -\frac{\partial\mathcal L_r}{\partial\vect{q}}
+ =\matr{M}_r\ddot{\vect{q}}
+  +\sum_{e\in\mathcal E}\nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}}
+ =\vect{0}.
+ \label{eq:appendix-galerkin-structural-motion}
+\end{equation}
+
+Classical ECSW uses the scalar-weighted vector of Section~\ref{sec:appendix-gradient-structure}:
+\[
+ \vect{F}_{\mathrm{ECSW}}
+ =\sum_{e\in\widetilde{\mathcal E}}\xi_e\nabla_{\vect{q}}\phi_e
+ =\sum_{e\in\widetilde{\mathcal E}}\xi_e\nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}}.
+\]
+The fixed scalar weights preserve compatibility. Equation~\eqref{eq:appendix-scalar-weighted-gradient} therefore identifies one common sampled potential and the associated mechanical Lagrangian, with the same kinetic energy:
+\begin{equation}
+ \Phi_{\mathrm{ECSW}}
+ =\widetilde{\mathcal V}_r^{\mathrm{int}}
  =\sum_{e\in\widetilde{\mathcal E}}\xi_e\mathcal V_{e,r}^{\mathrm{int}},
  \qquad
- \matr{M}_r\ddot{\vect{q}}
-   +\nabla_{\vect{q}}\widetilde{\mathcal V}_r^{\mathrm{int}}=\vect{0}.
+ \widetilde{\mathcal L}_r^{\mathrm{ECSW}}
+ =\mathcal T_r-\widetilde{\mathcal V}_r^{\mathrm{int}}.
  \label{eq:appendix-ecsw-potential}
 \end{equation}
-Consequently, the sampled system has the mechanical energy
+The gradient identity is $\nabla_{\vect{q}}\Phi_{\mathrm{ECSW}}=\vect{F}_{\mathrm{ECSW}}$. Since the mass matrix and weights are fixed, differentiating the Lagrangian gives
+\[
+ \frac{\partial\widetilde{\mathcal L}_r^{\mathrm{ECSW}}}
+      {\partial\dot{\vect{q}}}=\matr{M}_r\dot{\vect{q}},
+ \qquad
+ \frac{\partial\widetilde{\mathcal L}_r^{\mathrm{ECSW}}}
+      {\partial\vect{q}}
+ =-\sum_{e\in\widetilde{\mathcal E}}\xi_e
+      \nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}}.
+\]
+Substitution into the Euler--Lagrange equations yields
+\begin{equation}
+ \frac{d}{dt}\left[
+    \frac{\partial\widetilde{\mathcal L}_r^{\mathrm{ECSW}}}
+         {\partial\dot{\vect{q}}}\right]
+ -\frac{\partial\widetilde{\mathcal L}_r^{\mathrm{ECSW}}}{\partial\vect{q}}
+ =\matr{M}_r\ddot{\vect{q}}
+  +\sum_{e\in\widetilde{\mathcal E}}\xi_e
+      \nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}}
+ =\vect{0}.
+ \label{eq:appendix-ecsw-euler-lagrange}
+\end{equation}
+These are exactly the classical ECSW equations of motion. Thus sampling changes the potential while preserving the mechanical Lagrangian form. The associated energy is defined from the Lagrangian in Equation~\eqref{eq:appendix-ecsw-potential}. Substituting its velocity derivative, $\partial\widetilde{\mathcal L}_r^{\mathrm{ECSW}}/\partial\dot{\vect{q}}=\matr{M}_r\dot{\vect{q}}$, gives
 \begin{equation}
  \begin{aligned}
  \widetilde{\mathcal H}_r
- &=\frac12\dot{\vect{q}}^T\matr{M}_r\dot{\vect{q}}
-       +\widetilde{\mathcal V}_r^{\mathrm{int}},\\
+ &=\dot{\vect{q}}^T
+    \frac{\partial\widetilde{\mathcal L}_r^{\mathrm{ECSW}}}
+         {\partial\dot{\vect{q}}}
+   -\widetilde{\mathcal L}_r^{\mathrm{ECSW}}\\
+ &=\dot{\vect{q}}^T\matr{M}_r\dot{\vect{q}}
+   -\left[\frac12\dot{\vect{q}}^T\matr{M}_r\dot{\vect{q}}
+                -\widetilde{\mathcal V}_r^{\mathrm{int}}\right]\\
+ &=\mathcal T_r+\widetilde{\mathcal V}_r^{\mathrm{int}},\\
  \frac{d\widetilde{\mathcal H}_r}{dt}
  &=\dot{\vect{q}}^T
-      \left(\matr{M}_r\ddot{\vect{q}}
-               +\nabla_{\vect{q}}\widetilde{\mathcal V}_r^{\mathrm{int}}\right)
+      \left[\matr{M}_r\ddot{\vect{q}}
+               +\nabla_{\vect{q}}\widetilde{\mathcal V}_r^{\mathrm{int}}\right]
  =0.
  \end{aligned}
  \label{eq:appendix-ecsw-energy-balance}
 \end{equation}
-The sampled mechanical energy is therefore conserved in continuous time; conservation after time discretization depends on the integrator. \textbf{This mechanical potential is distinct from the LSPG least-squares objective.}
+The final equality follows from the equations of motion in Equation~\eqref{eq:appendix-ecsw-euler-lagrange}. This energy is conserved in continuous time; conservation after time discretization depends on the integrator.
 
-Modal weighting replaces the internal term by
+BM-ECSW uses the component-weighted vector of Section~\ref{sec:appendix-gradient-structure} as its internal vector:
 \begin{equation}
- \widetilde{\vect{f}}_r^{\mathrm{int},\mathrm{BM}}
+ \begin{aligned}
+ \vect{F}_{\mathrm{BM}}
+ &=\sum_{e\in\widetilde{\mathcal E}}\matr{D}_e\nabla_{\vect{q}}\phi_e
+  =\sum_{e\in\widetilde{\mathcal E}}\matr{D}_e\nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}},\\
+ \matr{M}_r\ddot{\vect{q}}+\vect{F}_{\mathrm{BM}}
+ &=\vect{0}.
+ \end{aligned}
+ \label{eq:appendix-bm-weighted-motion}
+\end{equation}
+The question from Section~\ref{sec:appendix-gradient-structure} is now whether a common scalar function $\Phi_{\mathrm{BM}}$ exists with $\nabla_{\vect{q}}\Phi_{\mathrm{BM}}=\vect{F}_{\mathrm{BM}}$. Such a function would be the potential $\Phi_{\mathrm{BM}}=\widetilde{\mathcal V}_r^{\mathrm{int},\mathrm{BM}}$ in the mechanical Lagrangian with the same kinetic energy:
+\begin{equation}
+ \widetilde{\mathcal L}_r^{\mathrm{BM}}(\vect{q},\dot{\vect{q}})
+ =\mathcal T_r(\dot{\vect{q}})
+  -\widetilde{\mathcal V}_r^{\mathrm{int},\mathrm{BM}}(\vect{q}).
+ \label{eq:appendix-bm-candidate-lagrangian}
+\end{equation}
+Its Euler--Lagrange equations reproduce Equation~\eqref{eq:appendix-bm-weighted-motion} if and only if the potential satisfies
+\begin{equation}
+ \nabla_{\vect{q}}\widetilde{\mathcal V}_r^{\mathrm{int},\mathrm{BM}}
  =\sum_{e\in\widetilde{\mathcal E}}
-       \matr{D}_e\nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}},
+       \matr{D}_e\nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}}
+ =\vect{F}_{\mathrm{BM}},
  \qquad
- \matr{M}_r\ddot{\vect{q}}+\widetilde{\vect{f}}_r^{\mathrm{int},\mathrm{BM}}=\vect{0}.
+ \matr{M}_r\ddot{\vect{q}}
+ +\nabla_{\vect{q}}\widetilde{\mathcal V}_r^{\mathrm{int},\mathrm{BM}}
+ =\vect{0}.
  \label{eq:appendix-bm-structural-motion}
 \end{equation}
-A potential generating this internal term requires the right-hand side of Equation~\eqref{eq:appendix-modal-compatibility} to vanish, with $\phi_e$ replaced by $\mathcal V_{e,r}^{\mathrm{int}}$. If that condition fails, the energy construction in Equation~\eqref{eq:appendix-ecsw-energy-balance} no longer applies with the original reduced kinetic energy. This issue also arises in Galerkin structural models.
+The first equality is a condition on the unknown potential. For any smooth candidate potential, the associated energy is
+\[
+ \widetilde{\mathcal H}_r^{\mathrm{BM}}
+ =\mathcal T_r+\widetilde{\mathcal V}_r^{\mathrm{int},\mathrm{BM}}.
+\]
+Differentiating along a solution of Equation~\eqref{eq:appendix-bm-weighted-motion} gives
+\begin{equation}
+ \begin{aligned}
+ \frac{d\widetilde{\mathcal H}_r^{\mathrm{BM}}}{dt}
+ &=\dot{\vect{q}}^T
+   \left[\matr{M}_r\ddot{\vect{q}}
+         +\nabla_{\vect{q}}\widetilde{\mathcal V}_r^{\mathrm{int},\mathrm{BM}}\right]\\
+ &=\dot{\vect{q}}^T
+   \left[\nabla_{\vect{q}}\widetilde{\mathcal V}_r^{\mathrm{int},\mathrm{BM}}
+         -\sum_{e\in\widetilde{\mathcal E}}
+             \matr{D}_e\nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}}\right].
+ \end{aligned}
+ \label{eq:appendix-bm-mechanical-energy-derivative}
+\end{equation}
+For this derivative to vanish for arbitrary positions and velocities, the vector in brackets must vanish. Thus preservation of the inherited Lagrangian form and this energy-conservation construction require the same gradient identity.
 
-The effect on stiffness follows by defining $\matr{K}_{e,r}=\nabla_{\vect{q}}^2\mathcal V_{e,r}^{\mathrm{int}}$:
+Applying Equation~\eqref{eq:appendix-modal-compatibility} to $\vect{F}_{\mathrm{BM}}$, with $\phi_e=\mathcal V_{e,r}^{\mathrm{int}}$, gives the condition for this internal vector to derive from one common potential $\Phi_{\mathrm{BM}}$:
+\begin{equation}
+ \begin{aligned}
+ &\frac{\partial}{\partial q_j}
+  \left[\sum_{e\in\widetilde{\mathcal E}}\xi_{e,i}
+        \frac{\partial\mathcal V_{e,r}^{\mathrm{int}}}{\partial q_i}\right]
+ -\frac{\partial}{\partial q_i}
+  \left[\sum_{e\in\widetilde{\mathcal E}}\xi_{e,j}
+        \frac{\partial\mathcal V_{e,r}^{\mathrm{int}}}{\partial q_j}\right]\\
+ &\qquad
+ =\sum_{e\in\widetilde{\mathcal E}}[\xi_{e,i}-\xi_{e,j}]
+    \frac{\partial^2\mathcal V_{e,r}^{\mathrm{int}}}
+         {\partial q_i\,\partial q_j}
+ =0,\qquad i,j=1,\ldots,n.
+ \end{aligned}
+ \label{eq:appendix-bm-mechanical-compatibility}
+\end{equation}
+The identity must hold throughout the coordinate domain; agreement at training states alone does not establish it elsewhere.
+
+\textbf{A nonzero mixed-derivative difference rules out a common potential locally and the associated mechanical Lagrangian and energy-conservation construction with the same reduced kinetic energy.} Another variational formulation with a kinetic energy different from $\mathcal T_r$ is not excluded.
+
+The same mixed derivatives determine the tangent stiffness. Defining $\matr{K}_{e,r}=\nabla_{\vect{q}}^2\mathcal V_{e,r}^{\mathrm{int}}$ and differentiating the two internal terms gives
 \begin{equation}
  \matr{K}_r^{\mathrm{ECSW}}
  =\sum_{e\in\widetilde{\mathcal E}}\xi_e\matr{K}_{e,r},
@@ -1371,22 +1781,191 @@ The effect on stiffness follows by defining $\matr{K}_{e,r}=\nabla_{\vect{q}}^2\
  =\sum_{e\in\widetilde{\mathcal E}}\matr{D}_e\matr{K}_{e,r}.
  \label{eq:appendix-structural-stiffness}
 \end{equation}
-Classical ECSW preserves symmetry of the element Hessians. If these Hessians are positive semidefinite, positive weights preserve that property; positive definiteness further requires that the selected Hessians have no common nonzero null direction. An SPD assembled HDM operator alone does not establish these conditions.
-
-Even when these conditions hold, positive modal weights can change the stability of the structural system. Consider two reduced element potentials,
+Consequently,
 \begin{equation}
- \mathcal V_{1,r}^{\mathrm{int}}=\frac12(q_1+q_2)^2,
+ [\matr{K}_r^{\mathrm{BM}}]_{ij}
+ -[\matr{K}_r^{\mathrm{BM}}]_{ji}
+ =\sum_{e\in\widetilde{\mathcal E}}[\xi_{e,i}-\xi_{e,j}]
+   \frac{\partial^2\mathcal V_{e,r}^{\mathrm{int}}}
+        {\partial q_i\,\partial q_j}.
+ \label{eq:appendix-bm-structural-stiffness-asymmetry}
+\end{equation}
+The same nonzero difference therefore excludes the required potential and makes the BM tangent stiffness nonsymmetric. Symmetry alone does not establish stability; the following example first examines the potential condition, then the resulting motion.
+
+\subsubsection{Two-element example: potential compatibility}
+\label{sec:appendix-structural-potential-example}
+Consider two reduced element potentials,
+\begin{equation}
+ \mathcal V_{1,r}^{\mathrm{int}}=\frac12[q_1+q_2]^2,
  \qquad
- \mathcal V_{2,r}^{\mathrm{int}}=\frac12(q_1+2q_2)^2,
+ \mathcal V_{2,r}^{\mathrm{int}}=\frac12[q_1+2q_2]^2.
  \label{eq:appendix-two-element-potentials}
 \end{equation}
-with positive semidefinite Hessians
+Differentiating gives their local internal contributions:
+\begin{equation}
+ \nabla_{\vect{q}}\mathcal V_{1,r}^{\mathrm{int}}
+ =\begin{pmatrix}q_1+q_2\\q_1+q_2\end{pmatrix},
+ \qquad
+ \nabla_{\vect{q}}\mathcal V_{2,r}^{\mathrm{int}}
+ =\begin{pmatrix}q_1+2q_2\\2[q_1+2q_2]\end{pmatrix}.
+ \label{eq:appendix-structural-element-gradients}
+\end{equation}
+
+Both rules select both elements with positive weights. Their weighted internal vectors are compared using the compatibility test in Equation~\eqref{eq:appendix-bm-mechanical-compatibility}.
+
+\begin{subequations}
+ \label{eq:appendix-structural-example-weights}
+ \noindent
+ \begin{minipage}[t]{0.48\linewidth}
+  \vspace{0pt}\raggedright
+  \textbf{Classical ECSW}\par\smallskip
+  \small
+  One scalar weight per element gives the sampled potential
+  \begin{equation}
+   \begin{gathered}
+    \xi_1=\xi_2=1,\\
+    \widetilde{\mathcal V}_r^{\mathrm{int}}
+    =\mathcal V_{1,r}^{\mathrm{int}}+\mathcal V_{2,r}^{\mathrm{int}}.
+   \end{gathered}
+   \label{eq:appendix-structural-classical-potential}
+  \end{equation}
+ \end{minipage}\hfill\vrule width 0.4pt\hfill%
+ \begin{minipage}[t]{0.48\linewidth}
+  \vspace{0pt}\raggedright
+  \textbf{BM-ECSW}\par\smallskip
+  \small
+  The diagonal matrices specify the weights for each reduced component:
+  \begin{equation}
+   \begin{gathered}
+    \matr{D}_1=\operatorname{diag}(1,4),\\
+    \matr{D}_2=\matr{I}_2.
+   \end{gathered}
+   \label{eq:appendix-structural-bm-weights}
+  \end{equation}
+ \end{minipage}
+\end{subequations}
+
+\begin{subequations}
+ \label{eq:appendix-structural-weighted-vectors}
+ \noindent
+ \begin{minipage}[t]{0.48\linewidth}
+  \vspace{0pt}\small\raggedright
+  Assembling the weighted local gradients gives
+  \begin{equation}
+   \begin{aligned}
+    \nabla_{\vect{q}}\widetilde{\mathcal V}_r^{\mathrm{int}}
+    &=\sum_{e=1}^{2}\xi_e\nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}}\\
+    &=\begin{pmatrix}q_1+q_2\\q_1+q_2\end{pmatrix}
+     +\begin{pmatrix}q_1+2q_2\\2[q_1+2q_2]\end{pmatrix}\\
+    &=\begin{pmatrix}2q_1+3q_2\\3q_1+5q_2\end{pmatrix}.
+   \end{aligned}
+   \label{eq:appendix-structural-classical-force}
+  \end{equation}
+ \end{minipage}\hfill\vrule width 0.4pt\hfill%
+ \begin{minipage}[t]{0.48\linewidth}
+  \vspace{0pt}\small\raggedright
+  Assembling the weighted local gradients gives
+  \begin{equation}
+   \begin{aligned}
+    &\sum_{e=1}^{2}\matr{D}_e\nabla_{\vect{q}}\mathcal V_{e,r}^{\mathrm{int}}\\
+    &\quad=\begin{pmatrix}q_1+q_2\\4[q_1+q_2]\end{pmatrix}
+     +\begin{pmatrix}q_1+2q_2\\2[q_1+2q_2]\end{pmatrix}\\
+    &\quad=\begin{pmatrix}2q_1+3q_2\\6q_1+8q_2\end{pmatrix}.
+   \end{aligned}
+   \label{eq:appendix-structural-bm-assembly}
+  \end{equation}
+ \end{minipage}
+\end{subequations}
+
+Differentiating the first component with respect to $q_2$ and the second with respect to $q_1$ gives:
+
+\begin{subequations}
+ \label{eq:appendix-structural-cross-derivatives}
+ \noindent
+ \begin{minipage}[t]{0.48\linewidth}
+  \vspace{0pt}\small\raggedright
+  The crossed derivatives agree:
+  \begin{equation}
+   \begin{aligned}
+    \frac{\partial^2\widetilde{\mathcal V}_r^{\mathrm{int}}}
+         {\partial q_2\,\partial q_1}
+    &=\frac{\partial[2q_1+3q_2]}{\partial q_2}=3,\\
+    \frac{\partial^2\widetilde{\mathcal V}_r^{\mathrm{int}}}
+         {\partial q_1\,\partial q_2}
+    &=\frac{\partial[3q_1+5q_2]}{\partial q_1}=3.
+   \end{aligned}
+   \label{eq:appendix-structural-classical-cross-derivatives}
+  \end{equation}
+ \end{minipage}\hfill\vrule width 0.4pt\hfill%
+ \begin{minipage}[t]{0.48\linewidth}
+  \vspace{0pt}\small\raggedright
+  The crossed derivatives differ:
+  \begin{equation}
+   \begin{aligned}
+    \frac{\partial[2q_1+3q_2]}{\partial q_2}&=3,\\
+    \frac{\partial[6q_1+8q_2]}{\partial q_1}&=6.
+   \end{aligned}
+   \label{eq:appendix-structural-bm-cross-derivatives}
+  \end{equation}
+ \end{minipage}
+\end{subequations}
+
+Equation~\eqref{eq:appendix-bm-mechanical-compatibility} gives these differences directly from the element contributions:
+
+\begin{subequations}
+ \label{eq:appendix-structural-compatibility-comparison}
+ \noindent
+ \begin{minipage}[t]{0.48\linewidth}
+  \vspace{0pt}\small\raggedright
+  Each element shares its weight between the two components:
+  \begin{equation}
+   \begin{aligned}
+    &\sum_{e=1}^{2}[\xi_e-\xi_e]
+      \frac{\partial^2\mathcal V_{e,r}^{\mathrm{int}}}
+           {\partial q_1\,\partial q_2}\\
+    &\quad=[1-1]\cdot1+[1-1]\cdot2\\
+    &\quad=0.
+   \end{aligned}
+   \label{eq:appendix-structural-classical-compatibility}
+  \end{equation}
+ \end{minipage}\hfill\vrule width 0.4pt\hfill%
+ \begin{minipage}[t]{0.48\linewidth}
+  \vspace{0pt}\small\raggedright
+  Element 1 has different weights in the two components:
+  \begin{equation}
+   \begin{aligned}
+    &\sum_{e=1}^{2}[\xi_{e,1}-\xi_{e,2}]
+      \frac{\partial^2\mathcal V_{e,r}^{\mathrm{int}}}
+           {\partial q_1\,\partial q_2}\\
+    &\quad=[1-4]\cdot1+[1-1]\cdot2\\
+    &\quad=-3.
+   \end{aligned}
+   \label{eq:appendix-structural-example-compatibility}
+  \end{equation}
+ \end{minipage}
+\end{subequations}
+
+\noindent
+\begin{minipage}[t]{0.48\linewidth}
+ \vspace{0pt}\small\raggedright
+ The sampled potential generates both components of the classical internal vector. It defines the Lagrangian in Equation~\eqref{eq:appendix-ecsw-potential}, and the conserved-energy construction in Equation~\eqref{eq:appendix-ecsw-energy-balance} applies.
+\end{minipage}\hfill\vrule width 0.4pt\hfill%
+\begin{minipage}[t]{0.48\linewidth}
+ \vspace{0pt}\small\raggedright
+ Element 1 contributes $-3$ and element 2 contributes zero, so the differences do not cancel. No smooth scalar potential can generate this BM internal vector. A Lagrangian of the form in Equation~\eqref{eq:appendix-bm-candidate-lagrangian} therefore does not exist, and the original kinetic energy plus a potential depending only on $\vect{q}$ cannot be conserved for all motions.
+\end{minipage}
+
+\subsubsection{Stiffness and stability of the two-element example}
+\label{sec:appendix-structural-stability-example}
+
+To examine stability, differentiate the internal contributions once
+more. The element Hessians are positive semidefinite:
 \[
  \matr{K}_{1,r}=\begin{pmatrix}1&1\\1&1\end{pmatrix},
  \qquad
  \matr{K}_{2,r}=\begin{pmatrix}1&2\\2&4\end{pmatrix}.
 \]
-Classical weights $\xi_1=\xi_2=1$ give an SPD stiffness, whereas BM weights $\matr{D}_1=\operatorname{diag}(1,4)$ and $\matr{D}_2=\matr{I}_2$ give
+Their classical and BM weighted sums give
 \begin{equation}
  \matr{K}_r^{\mathrm{ECSW}}
  =\begin{pmatrix}2&3\\3&5\end{pmatrix},
@@ -1395,10 +1974,129 @@ Classical weights $\xi_1=\xi_2=1$ give an SPD stiffness, whereas BM weights $\ma
  =\begin{pmatrix}2&3\\6&8\end{pmatrix}.
  \label{eq:appendix-negative-eigenvalue-example}
 \end{equation}
-The BM stiffness has determinant $-2$ and a negative eigenvalue $\lambda_-=5-3\sqrt3$. With $\matr{M}_r=\matr{I}_2$, motion along the associated eigenvector satisfies $\ddot a+\lambda_-a=0$ and admits exponential growth proportional to $\exp(\sqrt{-\lambda_-}\,t)$.
+These stiffness matrices are exact Jacobians of the internal vectors, whereas Section~\ref{sec:appendix-correction-symmetry} examines approximate correction matrices. Their off-diagonal entries are the mixed derivatives computed above. The classical stiffness is positive definite because, for every nonzero $\vect{z}=(z_1,z_2)^T$,
+\[
+ \vect{z}^T\matr{K}_r^{\mathrm{ECSW}}\vect{z}
+ =[z_1+z_2]^2+[z_1+2z_2]^2>0;
+\]
+both squares vanish only when $\vect{z}=\vect{0}$.
 
-Both elements remain selected and every weight is positive: \textbf{positivity alone does not preserve stability in this structural example}. Training accuracy may exclude these particular weights, but does not explicitly impose potential compatibility or stiffness symmetry. The growing mode follows from the structural equation of motion; nonsymmetry alone does not establish failure of a BM LSPG online solve.
+The BM stiffness has determinant $2\cdot8-3\cdot6=-2$ and a negative
+eigenvalue $\lambda_-=5-3\sqrt3$. With $\matr{M}_r=\matr{I}_2$, motion
+along the associated eigenvector satisfies $\ddot a+\lambda_-a=0$ and
+admits exponential growth proportional to $\exp(\sqrt{-\lambda_-}\,t)$.
 
+\textbf{The structural counterexample shows that positive modal weights can introduce an unstable mode into a stable classical model.} A training fit may exclude these particular weights, but nonnegativity alone does not. Whether a flow HPROM exhibits a similar deterioration must be examined through its own online equations and trajectories.
+
+\subsection{Computational evidence: gradient structure and online behavior}
+\label{sec:appendix-symmetric-part}
+
+The computations examine three questions: whether the projected vector retains a common scalar objective (Section~\ref{sec:appendix-gradient-structure}), how the correction matrix behaves (Section~\ref{sec:appendix-correction-symmetry}), and whether the online trajectory remains accurate. The Burgers tests address all three; AERO-F provides further evidence of online failure. These flow computations do not test the mechanical conservation properties of Section~\ref{sec:appendix-mechanical-energy}.
+
+\subsubsection{Burgers: gradient structure and online behavior}
+\label{sec:appendix-symmetric-part-burgers}
+
+The classical and BM rules use the same 96-mode ROB, with $N_c=90$ or $225$. Their trajectories use the online settings of Section~\ref{sec:burgers-online-performance}.
+
+The common-objective test uses the exact Jacobian $\matr{J}_n=\partial\widetilde{\vect{r}}_n/\partial\vect{q}$, with the previous state held fixed. If the projected vector derives from one common scalar objective, its exact Jacobian must be symmetric by Equation~\eqref{eq:appendix-common-potential-test}. For example, at the first-step predictor with $\vect{\mu}=(4.56,0.019)$, two crossed entries of the exact Jacobian for BM with $N_c=225$ are
+
+\begin{equation}
+ [\matr{J}_n]_{12}
+ =\frac{\partial\widetilde r_{n,1}^{\mathrm{BM}}}{\partial q_2}
+ = -0.766,
+ \qquad
+ [\matr{J}_n]_{21}
+ =\frac{\partial\widetilde r_{n,2}^{\mathrm{BM}}}{\partial q_1}
+ = +0.124.
+ \label{eq:burgers-exact-crossed-derivatives}
+\end{equation}
+
+This unequal pair already shows that the Jacobian is nonsymmetric at this initial guess. Table~\ref{tab:burgers-gradient-structure} applies the same test to all crossed entries together, at the computed states of each HPROM for the three test parameter points of Section~\ref{sec:burgers-online-performance}. With 500 time steps per parameter, this gives $3\times500=1\,500$ exact-Jacobian evaluations per HPROM. The reported ratio $\|\matr{J}_n-\matr{J}_n^T\|_F/\|\matr{J}_n\|_F$ is zero when all crossed entries agree and positive when any pair differs.
+
+\begin{table}[H]
+ \centering\small
+ \setlength{\tabcolsep}{4pt}
+ \caption{Burgers: exact-Jacobian gradient test. Ratios are median relative asymmetries; nonsymmetric counts exclude roundoff.}
+ \label{tab:burgers-gradient-structure}
+ \input{tables/burgers_gradient_structure.tex}
+\end{table}
+
+Classical ECSW is symmetric to roundoff, whereas both BM rules are nonsymmetric at every evaluated configuration. The unequal derivatives above exclude a common smooth objective locally for the accurate $N_c=225$ rule. Loss of gradient structure therefore does not, by itself, distinguish the successful rule from the unsuccessful one.
+
+The correction matrices require the separate check of Section~\ref{sec:appendix-correction-symmetry}. Table~\ref{tab:burgers-stability} reports the median ratio $\lambda_{\min}/\lambda_{\max}$ for $\operatorname{sym}(\widehat{\matr{J}}_n)$, evaluated at the first nonlinear iterate of each of the $1\,500$ time steps. Here $\lambda_{\max}>0$, so positive and negative ratios indicate positive definiteness and indefiniteness, respectively; the indefinite count records occurrences of negative directions. The maximum trajectory error is taken over the three parameters using Equation~\eqref{eq:error}, and is distinct from the training-fit error.
+
+\begin{table}[H]
+ \centering\footnotesize
+ \setlength{\tabcolsep}{4pt}
+ \caption{Burgers: sampled meshes, correction-matrix diagnostics, and maximum trajectory errors.}
+ \label{tab:burgers-stability}
+ \input{tables/burgers_stability.tex}
+\end{table}
+
+The classical rules remain accurate at both values of $N_c$. BM with $N_c=225$ reaches comparable accuracy on a much smaller mesh; BM with $N_c=90$ fails despite a training error of $1.28\times10^{-15}$. The latter attains the online tolerance at only 13 of $1\,500$ steps, compared with every step for the $N_c=225$ rule. Figure~\ref{fig:burgers-bm-stability} shows the accompanying trajectory error and symmetric-part diagnostics.
+
+\begin{figure}[H]
+ \centering
+ \includegraphics[width=\linewidth]{figures/burgers_bm_stability.pdf}
+ \caption{Burgers at $\vect{\mu}=(4.56,0.019)$: (a) instantaneous relative state error against the HDM; (b) symmetric-part eigenvalue ratio at the first nonlinear iterate. The classical ECSW curves nearly overlap.}
+ \label{fig:burgers-bm-stability}
+\end{figure}
+
+\paragraph{Accuracy of individual steps.}
+This test checks whether BM can produce an inaccurate next state even when its equations are solved accurately. A reference PROM without hyperreduction is computed for 20 time steps at $\vect{\mu}=(4.56,0.019)$, using the same 96-mode ROB and evaluating the residual over the full mesh.
+
+At steps 1, 5, and 20, the PROM, both classical rules, and both BM rules receive the same previous state $\vect{q}^m$ from this reference trajectory. Each model then computes its next state $\vect{q}^{m+1}$ by solving its own projected equations to a relative residual below $10^{-11}$. Comparing these states measures the error introduced in one step, before it accumulates along a trajectory.
+
+At the first step, Table~\ref{tab:burgers-step-sensitivity} shows that BM with $N_c=90$ differs from the PROM by $30.63\%$, whereas the $N_c=225$ rule differs by $0.048\%$ and classical ECSW nearly reproduces the PROM state. Thus BM can satisfy its equations accurately and still produce an inaccurate state. Failure of the nonlinear solver alone cannot explain the unsuccessful trajectory.
+
+\begin{table}[H]
+ \centering\small
+ \setlength{\tabcolsep}{4pt}
+ \caption{Burgers first-step accuracy at $\vect{\mu}=(4.56,0.019)$. State errors are against the PROM. The symmetric-part ratio and condition number $\kappa_2$ refer to the correction matrix at the shared initial guess.}
+ \label{tab:burgers-step-sensitivity}
+ \input{tables/burgers_step_sensitivity.tex}
+\end{table}
+
+\subsubsection{AERO-F: divergence and limits of matrix diagnostics}
+\label{sec:appendix-symmetric-part-aerof}
+
+The AERO-F example considers two-dimensional unsteady laminar flow past a circular cylinder. The compressible Navier--Stokes equations are discretized by a finite-volume method at a freestream Mach number of $0.2$. Linear LSPG models use POD bases constructed from HDM solution snapshots, with classical ECSW or BM-ECSW for hyperreduction.
+
+The cylinder computations connect to Section~\ref{sec:appendix-symmetric-part-example}: a BM HPROM can diverge while every correction-matrix eigenvalue retains a positive real part. Unlike the failed Burgers rule, whose correction matrices also have eigenvalues with negative real parts, this case shows why positive real parts alone do not establish reliable online behavior.
+
+Table~\ref{tab:appendix-symmetric-part} compares three BM rules, all evaluated at $\mathrm{Re}=100$. The nonparametric model is trained at this Reynolds number, with $n=35$ and 376 training snapshots. The Reynolds-parametric model uses a common basis with $n=96$, constructed from HDM trajectories at seven Reynolds numbers between 70 and 180; its sampling rules use 385 training snapshots. All rules attain their training tolerance. The symmetric-part ratio is the median over the online corrections, including repeated-step corrections, with the same sign interpretation as in Table~\ref{tab:burgers-stability}.
+
+\begin{table}[H]
+ \centering\small
+ \setlength{\tabcolsep}{5pt}
+ \caption{AERO-F at $\mathrm{Re}=100$: BM correction matrices and online outcomes. Counts include repeated-step corrections: 226 matrices over 215 steps for the diverging run.}
+ \label{tab:appendix-symmetric-part}
+ \begin{tabular}{@{}lrrrrrrl@{}}
+  \toprule
+  Model & $n$ & $\tau$ & $n_e$
+   & $\dfrac{\|\widehat{\matr{J}}_n^{\mathrm{BM}}-[\widehat{\matr{J}}_n^{\mathrm{BM}}]^T\|_F}{\|\widehat{\matr{J}}_n^{\mathrm{BM}}\|_F}$
+   & $\dfrac{\lambda_{\min}}{\lambda_{\max}}$ & Indefinite & Online solution\\
+  \midrule
+  Nonparametric & 35 & $10^{-2}$ & 64 & 0.44 & $+6.9\times10^{-2}$ & $0$ of $1\,500$ & stable\\
+  Parametric & 96 & $10^{-2}$ & 159 & 0.50 & $-1.9\times10^{-2}$ & 210 of 226 & diverges at $t=21$\\
+  Parametric & 96 & $10^{-3}$ & 308 & 0.33 & $+1.6\times10^{-1}$ & $0$ of $1\,500$ & stable\\
+  \bottomrule
+ \end{tabular}
+\end{table}
+
+For the 159-node rule, the symmetric part is indefinite from the first step. The lift departs from the HDM near $t=12$, the coordinate norm grows to about 40 times that of the stable HPROMs, and the run stops at $t=21$ with negative pressures. Figure~\ref{fig:appendix-bm-divergence} compares this trajectory with the accurate 308-node BM rule and the classical rule on 837 sampled nodes.
+
+\begin{figure}[H]
+ \centering
+ \includegraphics[width=0.72\linewidth]{figures/aerof_bm_divergence.pdf}
+ \caption{AERO-F at $\mathrm{Re}=100$ with $n=96$: (a) lift coefficient; (b) coordinate norm, with the HDM projected onto the ROB; (c) symmetric-part eigenvalue ratio at each BM correction. A cross marks failure.}
+ \label{fig:appendix-bm-divergence}
+\end{figure}
+
+The sign of the symmetric part is not a complete stability criterion. A 174-node BM rule at $\tau=10^{-2}$ diverges at $t=41.5$, although its symmetric part is positive definite from $t=25$ until collapse. Classical rules restricted to 159 and 174 nodes also diverge, at $t=56$ and $80$: a sufficiently small classical mesh can fail as well.
+
+\paragraph{Conclusion.}
+The successful Burgers BM rule substantially reduces the sampled mesh while retaining the observed trajectory accuracy. Both successful and unsuccessful BM rules lack a common objective at the evaluated configurations, and neither an accurate training fit nor favorable individual matrix diagnostics establish reliable online behavior. The computations establish losses of gradient structure and observed online failures, but do not isolate which loss causes each failure.
 
 \clearpage
 \section{Individual online measurements}

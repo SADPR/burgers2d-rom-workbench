@@ -1,0 +1,85 @@
+{
+  "parameters": [
+    [
+      4.56,
+      0.019
+    ],
+    [
+      4.75,
+      0.02
+    ],
+    [
+      5.19,
+      0.026
+    ]
+  ],
+  "dt": 0.05,
+  "steps": 500,
+  "modes": 96,
+  "threads": [
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 10,
+      "prefix": "libscipy_openblas",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+      "version": "0.3.34.106.0",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 10,
+      "prefix": "libscipy_openblas",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+      "version": "0.3.31.dev",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 10,
+      "prefix": "libgomp",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+      "version": null
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 10,
+      "prefix": "libgomp",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+      "version": null
+    }
+  ],
+  "weights": {
+    "classical_225_offset1": {
+      "path": "POD/ecsw_weights_lspg_ecsw_tol1e-10_offset1_snap5pct.npy",
+      "sha256": "c8c370cbcc2ea206082f3ceada2044d27b93af654299f2a0b9bdcc0a8296d951",
+      "cells": 2492
+    },
+    "bm_90_offset1": {
+      "path": "POD/ecsw_weights_lspg_bm_ecsw_tol1e-10_offset1.npy",
+      "sha256": "67e5b0e291c42ca6ce2875a855afe964403d022c2d5735722cf702804e64a2c6",
+      "cells": 145
+    },
+    "bm_225_offset1": {
+      "path": "POD/ecsw_weights_lspg_bm_ecsw_tol1e-10_offset1_snap5pct.npy",
+      "sha256": "a33e4e633515d21035975ae3a750b3a29942abcc4f350ecab5added070dd34a5",
+      "cells": 300
+    }
+  },
+  "sources": {
+    "POD/basis.npy": "abb48a8df8c0b3413995aa353c2fe68438b554853a28e2b9d6d0001f60a686a2",
+    "POD/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "burgers/gauss_newton.py": "62fe23d1370290f755a377f39dab50dc1f0dcbe5d4d13dddff242b33f9f78f77",
+    "burgers/linear_manifold.py": "893ae17adea39ddbc1f4f35873fb5e10b7e038ff7da2891c294c3470ef1fc191",
+    "/home/sares/burgers2d-rom-workbench/diagnose_bm_stability.py": "3796b2fc0772edc76355b1e83921e4a231af37e24dce4ddbeeb1c9d2943431e9"
+  },
+  "online": "Existing classical GN and BM GN-type; max20; relative1e-5; plateau.01; no retraining.",
+  "matrix_sampling": "BM: every derivative evaluation, including stopping iterates. Classical: each solved correction. Predictor is first of each step.",
+  "probes": "Tightly converged implicit-equation roots with common previous PROM states at steps1,5,20. Exact derivatives ONLY for diagnosing time-step maps.",
+  "limits": "Training count also changes selected cells/weights. Amplification>1 is local sensitivity, not by itself an asymptotic instability proof."
+}

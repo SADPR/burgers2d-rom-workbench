@@ -1,0 +1,6 @@
+{
+  "stage": "complete",
+  "common_evaluations": 24,
+  "trajectory_evaluations": 6000,
+  "finite_difference_checks": 40
+}
