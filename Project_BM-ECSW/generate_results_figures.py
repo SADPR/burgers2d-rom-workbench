@@ -182,13 +182,13 @@ def data_tables(runs, rules):
     fom_times = {(float(row['mu1']), float(row['mu2'])): float(row['fom_seconds'])
                  for row in fom_rows}
     if set(fom_times) != set(POINTS):
-        raise ValueError('All three fresh FOM runs must finish before generating speedups.')
+        raise ValueError('All three fresh HDM runs must finish before generating speedups.')
     cubature_table(rules)
 
     performance = [r'\begin{tabular}{@{}lrrrrrrr@{}}', r'\toprule',
         r'Parameter & \multicolumn{2}{c}{Global Euclidean error (\%)} & \multicolumn{3}{c}{Wall-clock time (min)} & \multicolumn{2}{c}{Speedup factor}\\',
         r'\cmidrule(lr){2-3}\cmidrule(lr){4-6}\cmidrule(lr){7-8}',
-        r'$(\mu_1,\mu_2)$ & \shortstack{HPROM\\(ECSW)} & \shortstack{HPROM\\(BM-ECSW)} & FOM & \shortstack{HPROM\\(ECSW)} & \shortstack{HPROM\\(BM-ECSW)} & \shortstack{HPROM\\(ECSW)} & \shortstack{HPROM\\(BM-ECSW)}\\', r'\midrule']
+        r'$(\mu_1,\mu_2)$ & \shortstack{HPROM\\(ECSW)} & \shortstack{HPROM\\(BM-ECSW)} & HDM & \shortstack{HPROM\\(ECSW)} & \shortstack{HPROM\\(BM-ECSW)} & \shortstack{HPROM\\(ECSW)} & \shortstack{HPROM\\(BM-ECSW)}\\', r'\midrule']
     timing_rows = []
     means_by_method = {method: [] for method, _, _ in RULES}
     errors_by_method = {method: [] for method, _, _ in RULES}
@@ -206,21 +206,21 @@ def data_tables(runs, rules):
                                f'{latex_number(values.mean(), 3)} & {latex_number(values.std(ddof=1), 3)}' + r'\\')
         timing_rows.append(r'\addlinespace')
         t_fom = fom_times[a, b]
-        performance.append(f'$({a:.2f},{b:.3f})$ & {latex_number(errors["ecsw"], 4)} & {latex_number(errors["bm_ecsw"], 4)} & '
-                           f'{latex_number(t_fom/60, 3)} & {latex_number(means["ecsw"]/60, 5)} & {latex_number(means["bm_ecsw"]/60, 5)} & '
+        performance.append(f'$({a:.2f},{b:.3f})$ & {latex_number(errors["ecsw"], 3)} & {latex_number(errors["bm_ecsw"], 3)} & '
+                           f'{latex_number(t_fom/60, 3)} & {latex_number(means["ecsw"]/60, 3)} & {latex_number(means["bm_ecsw"]/60, 3)} & '
                            f'{latex_number(t_fom/means["ecsw"], 2)} & {latex_number(t_fom/means["bm_ecsw"], 2)}' + r'\\')
     performance += [r'\bottomrule', r'\end{tabular}']
     (TABLES/'paper_performance.tex').write_text('\n'.join(performance)+'\n')
     mean_times = {method: float(np.mean(values)) for method, values in means_by_method.items()}
     t_fom_mean = float(np.mean(list(fom_times.values())))
-    rows = [f'FOM & {latex_number(125000)} & {latex_number(62500)} & '
+    rows = [f'HDM & {latex_number(125000)} & {latex_number(62500)} & '
             f'{latex_number(62500)} & -- & {latex_number(t_fom_mean/60, 3)} & --' + r'\\']
     for method, _, cells, augmented, _, _ in rules:
         rows.append(f'{model_names[method]} & 96 & {latex_number(cells.size)} & {latex_number(augmented.size)} & '
-                    f'{latex_number(max(errors_by_method[method]), 4)} & {latex_number(mean_times[method]/60, 5)} & '
+                    f'{latex_number(max(errors_by_method[method]), 3)} & {latex_number(mean_times[method]/60, 3)} & '
                     f'{latex_number(t_fom_mean/mean_times[method], 2)}' + r'\\')
     write_table('paper_summary.tex', 'lrrrrrr',
-                r'Computational model & \shortstack{$n$\\($N$ for FOM)} & \shortstack{$n_e$\\($N_e$ for FOM)} & $n_e^+$ & $\mathbb{RE}_{2,\vect{u}}^{\max}$ (\%) & \shortstack{Wall-clock time\\(min)} & \shortstack{Speedup\\factor}', rows)
+                r'Computational model & \shortstack{$n$\\($N$ for HDM)} & \shortstack{$n_e$\\($N_e$ for HDM)} & $n_e^+$ & $\mathbb{RE}_{2,\vect{u}}^{\max}$ (\%) & \shortstack{Wall-clock time\\(min)} & \shortstack{Speedup\\factor}', rows)
     write_table('timings.tex', 'llrrrrr',
                 'Parameter & Computational model & Run 1 & Run 2 & Run 3 & Mean & SD', timing_rows)
     rows = [f'$({a:.2f},{b:.3f})$ & {latex_number(fom_times[a,b], 3)} & {latex_number(fom_times[a,b]/60, 3)}' + r'\\'
@@ -236,9 +236,9 @@ def data_tables(runs, rules):
         rf'\newcommand{{\ECSWMaxSeconds}}{{{latex_number(max(means_by_method["ecsw"]), 2)}}}',
         rf'\newcommand{{\BMMinSeconds}}{{{latex_number(min(means_by_method["bm_ecsw"]), 2)}}}',
         rf'\newcommand{{\BMMaxSeconds}}{{{latex_number(max(means_by_method["bm_ecsw"]), 2)}}}',
-        rf'\newcommand{{\ECSWMaxGlobalError}}{{{latex_number(max(errors_by_method["ecsw"]), 4)}}}',
-        rf'\newcommand{{\BMMaxGlobalError}}{{{latex_number(max(errors_by_method["bm_ecsw"]), 4)}}}',
-        rf'\newcommand{{\BMLargestErrorIncrease}}{{{latex_number(max(b-a for a,b in zip(errors_by_method["ecsw"], errors_by_method["bm_ecsw"])), 4)}}}',
+        rf'\newcommand{{\ECSWMaxGlobalError}}{{{latex_number(max(errors_by_method["ecsw"]), 3)}}}',
+        rf'\newcommand{{\BMMaxGlobalError}}{{{latex_number(max(errors_by_method["bm_ecsw"]), 3)}}}',
+        rf'\newcommand{{\BMLargestErrorIncrease}}{{{latex_number(max(b-a for a,b in zip(errors_by_method["ecsw"], errors_by_method["bm_ecsw"])), 3)}}}',
         rf'\newcommand{{\BMMinIterationsTotal}}{{{latex_number(min(int(row["iterations"]) for row in bm_rows))}}}',
         rf'\newcommand{{\BMMaxIterationsTotal}}{{{latex_number(max(int(row["iterations"]) for row in bm_rows))}}}',
         rf'\newcommand{{\BMConvergedSteps}}{{{latex_number(sum(500-int(row["nonconverged_steps"]) for row in bm_rows))}}}',

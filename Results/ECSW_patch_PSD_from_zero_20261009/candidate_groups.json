@@ -1,0 +1,12 @@
+{
+  "mesh_shape": [
+    250,
+    250
+  ],
+  "patch_shape": [
+    2,
+    2
+  ],
+  "candidates": 15625,
+  "definition": "all disjoint 2x2 blocks of the original mesh"
+}

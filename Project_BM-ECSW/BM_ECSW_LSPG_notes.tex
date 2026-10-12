@@ -756,7 +756,7 @@ These equations approximate the full LSPG projected equations using the cubature
  =\frac{\partial\Phi_i}{\partial q_i}.
  \label{eq:bm-modal-objective}
 \end{equation}
-This identity follows from $\matr{W}_e=\partial\vect{r}_e/\partial\vect{q}$ with the weights held fixed. In classical ECSW, all $\Phi_i$ coincide with the sampled objective in Equation~\eqref{eq:sampled-objective}. For independently trained modal weights, these functions can differ, and the indicated partial derivatives need not form the gradient of one common weighted least-squares objective. Appendix~\ref{sec:modal-structure} develops this distinction and its implications for symmetry and conservative structural dynamics. The online iteration is therefore constructed directly from the weighted projected equations.
+This identity follows from $\matr{W}_e=\partial\vect{r}_e/\partial\vect{q}$ with the weights held fixed. In classical ECSW, all $\Phi_i$ coincide with the sampled objective in Equation~\eqref{eq:sampled-objective}. For independently trained modal weights, these functions can differ, and the indicated partial derivatives are not guaranteed to form the gradient of one common weighted least-squares objective. Appendix~\ref{sec:modal-structure} develops this distinction and its implications for symmetry and conservative structural dynamics. The online iteration is therefore constructed directly from the weighted projected equations.
 
 At the current iterate $\vect{q}$, evaluate the selected local residuals and test-basis blocks using the state restricted to the augmented mesh. As in the classical Gauss--Newton construction, approximate each local residual in terms of a coordinate increment $\Delta\vect{q}$ by
 \begin{equation}
@@ -802,7 +802,7 @@ The index $\ell$ runs over the local HDM residual entries, while $i$ and $j$ ide
 \end{equation}
 Both sides reuse the selected local residual and test-basis blocks evaluated at the current reduced state. This $n\times n$ system computes all coordinate increments together, since each reduced equation generally depends on every coordinate. Holding the test-basis blocks fixed omits the residual-weighted second-derivative terms of the exact BM Jacobian, so the correction requires only local residuals and their first derivatives.
 
-The placement of $\matr{D}_e$ in Equation~\eqref{eq:bm-update-matrix} identifies the change from classical ECSW: row $i$ uses $\xi_{e,i}$, whereas row $j$ uses $\xi_{e,j}$. The entries $(i,j)$ and $(j,i)$ need not agree, even though each local product $\matr{W}_e^T\matr{W}_e$ is symmetric. The BM update matrix can therefore be nonsymmetric. When $\xi_{e,i}=\xi_e$ for every mode, $\matr{D}_e=\xi_e\matr{I}_n$, all $\Phi_i$ reduce to the common sampled objective, and Equation~\eqref{eq:bm-gn} recovers the classical Gauss--Newton system in Equation~\eqref{eq:classical-gn}. This restriction still permits different weights between entities.
+The placement of $\matr{D}_e$ in Equation~\eqref{eq:bm-update-matrix} identifies the change from classical ECSW: row $i$ uses $\xi_{e,i}$, whereas row $j$ uses $\xi_{e,j}$. The entries $(i,j)$ and $(j,i)$ can differ, even though each local product $\matr{W}_e^T\matr{W}_e$ is symmetric. The BM update matrix can therefore be nonsymmetric. When $\xi_{e,i}=\xi_e$ for every mode, $\matr{D}_e=\xi_e\matr{I}_n$, all $\Phi_i$ reduce to the common sampled objective, and Equation~\eqref{eq:bm-gn} recovers the classical Gauss--Newton system in Equation~\eqref{eq:classical-gn}. This restriction still permits different weights between entities.
 
 After solving for the correction, the generalized coordinates are updated, the state is reconstructed on the augmented mesh using Equation~\eqref{eq:augmented-affine}, and the selected residual and test-basis blocks are evaluated again. At a fixed time level, let $\vect{q}^{(0)}$ denote the initial guess and $k$ the nonlinear iteration index. The iteration continues until the BM projected equations satisfy the relative criterion
 \begin{equation}
@@ -915,7 +915,7 @@ The smaller BM mesh is accompanied by a larger set of scalar weights: $21\,597$ 
 \subsection{Accuracy and online performance}
 \label{sec:burgers-online-performance}
 
-The resulting HPROMs are evaluated at $\vect{\mu}=(4.56,0.019)$, $(4.75,0.020)$, and $(5.19,0.026)$. These parameter points lie inside $\mathcal D$ and are absent from the nine-point training grid. The HDM supplies the reference solution and serves as the full-order model (FOM) for the timing comparisons.
+The resulting HPROMs are evaluated at $\vect{\mu}=(4.56,0.019)$, $(4.75,0.020)$, and $(5.19,0.026)$. These parameter points lie inside $\mathcal D$ and are absent from the nine-point training grid. The HDM supplies the reference solution and the timing baseline.
 
 HPROM (ECSW) and HPROM (BM-ECSW) use corrections computed from the reduced systems in Algorithms~\ref{alg:classical-online} and~\ref{alg:online}, respectively. For these computations, both HPROMs use the previous reduced state as the initial guess at each time step and allow at most 20 nonlinear iterations. HPROM (ECSW) monitors the weighted sampled HDM residual norm, while HPROM (BM-ECSW) monitors the norm of its projected equations. Each solve uses a relative norm tolerance of $10^{-5}$ and a relative change threshold of $10^{-2}$ to detect a plateau. The classical solve applies full coordinate corrections; BM uses step control based on the decrease of its projected residual. These settings govern the online nonlinear solves and are separate from the cubature training tolerance.
 
@@ -939,12 +939,12 @@ This measure includes both velocity components over the complete trajectory and 
  \label{eq:max-error}
 \end{equation}
 
-All computations are performed in double-precision arithmetic on an Intel Core Ultra 7 265 processor with 20 CPU threads. Each HPROM is run three times at each test parameter, and one FOM run per parameter supplies the reference time. The runs are executed sequentially, and the FOM nonlinear solver uses a relative residual tolerance of $10^{-12}$. Online times include solver setup and all 500 time steps; offline training, error assessment, and postprocessing are excluded. The HPROM time at each parameter is the mean of its three repetitions. For the overall comparison, each HPROM time is averaged over nine runs and the FOM time over three runs. Each speedup factor is the corresponding FOM time divided by the mean HPROM time. Wall-clock times are reported in minutes.
+All computations are performed in double-precision arithmetic on an Intel Core Ultra 7 265 processor with 20 CPU threads. Each HPROM is run three times at each test parameter, and one HDM run per parameter supplies the reference time. The runs are executed sequentially, and the HDM nonlinear solver uses a relative residual tolerance of $10^{-12}$. Online times include solver setup and all 500 time steps; offline training, error assessment, and postprocessing are excluded. The HPROM time at each parameter is the mean of its three repetitions. For the overall comparison, each HPROM time is averaged over nine runs and the HDM time over three runs. Each speedup factor is the corresponding HDM time divided by the mean HPROM time. Wall-clock times are reported in minutes.
 
 \begin{table}[H]
  \centering\footnotesize
  \setlength{\tabcolsep}{3pt}
- \caption{Online trajectory errors, wall-clock times, and speedup factors relative to the FOM at the three unsampled parameter points.}
+ \caption{Online trajectory errors, wall-clock times, and speedup factors relative to the HDM at the three unsampled parameter points.}
  \label{tab:performance}
  \input{tables/paper_performance.tex}
 \end{table}
@@ -965,12 +965,12 @@ The overall performance is summarized in Table~\ref{tab:summary}, using the maxi
 \begin{table}[H]
  \centering\footnotesize
  \setlength{\tabcolsep}{4pt}
- \caption{Maximum trajectory errors, mean online times, and speedup factors relative to the FOM.}
+ \caption{Maximum trajectory errors, mean online times, and speedup factors relative to the HDM.}
  \label{tab:summary}
  \input{tables/paper_summary.tex}
 \end{table}
 
-The overall speedup factors relative to the FOM are \ECSWFOMSpeedup{} for HPROM (ECSW) and \BMFOMSpeedup{} for HPROM (BM-ECSW). Individual HPROM times and sample standard deviations are reported in Appendix~\ref{sec:repeated-measurements}.
+The overall speedup factors relative to the HDM are \ECSWFOMSpeedup{} for HPROM (ECSW) and \BMFOMSpeedup{} for HPROM (BM-ECSW). Individual HPROM times and sample standard deviations are reported in Appendix~\ref{sec:repeated-measurements}.
 
 The lower online cost of HPROM (BM-ECSW) is consistent with its smaller sampled and augmented meshes, which reduce the number of local residual and test-basis blocks evaluated during the nonlinear iterations. Both models use corrections assembled from linearized local residuals, but the measured solvers differ in their monitored norm and step control. The reported speedups therefore compare the complete online procedures at the stated accuracy.
 
@@ -978,9 +978,9 @@ The lower online cost of HPROM (BM-ECSW) is consistent with its smaller sampled 
 
 BM-ECSW uses a shared reduced mesh and separate nonnegative modal fits against the full projected training targets. Its online Gauss--Newton-type update is assembled from local residuals and test-basis blocks on that mesh. The generalized coordinates are computed together.
 
-For the two-dimensional parametric inviscid Burgers problem, the same 96-mode ROB, 225 training pairs, and $10^{-5}$ contribution-fit tolerance produce reduced meshes of 2\,492 cells for classical ECSW and 300 cells for BM-ECSW. At three unsampled parameter points, the global errors remain close to $1\%$. The measured mean-time speedup factors relative to the FOM are \ECSWFOMSpeedup{} for HPROM (ECSW) and \BMFOMSpeedup{} for HPROM (BM-ECSW). BM-ECSW also reduces the measured offline training time by a factor of \OfflineTrainingRatio{}.
+For the two-dimensional parametric inviscid Burgers problem, the same 96-mode ROB, 225 training pairs, and $10^{-5}$ contribution-fit tolerance produce reduced meshes of 2\,492 cells for classical ECSW and 300 cells for BM-ECSW. At three unsampled parameter points, the global errors remain close to $1\%$. The measured mean-time speedup factors relative to the HDM are \ECSWFOMSpeedup{} for HPROM (ECSW) and \BMFOMSpeedup{} for HPROM (BM-ECSW). BM-ECSW also reduces the measured offline training time by a factor of \OfflineTrainingRatio{}.
 
-Mode-dependent weights enlarge the set of cubature fits available on a selected mesh. Their effect on gradient structure follows from the general compatibility condition in Appendix~\ref{sec:appendix-gradient-structure}. For LSPG, the BM projected equations need not be derivatives of one common sampled residual objective (Appendix~\ref{sec:appendix-common-objective}). The online correction matrix can also be nonsymmetric and have a quadratic form that takes negative values (Appendix~\ref{sec:appendix-correction-symmetry}). In conservative structural dynamics, the inherited mechanical Lagrangian form and the associated energy-conservation construction are likewise not guaranteed (Appendix~\ref{sec:appendix-mechanical-energy}). The projected-residual training tolerance does not impose these structural conditions. The exact-Jacobian checks in Appendix~\ref{sec:appendix-symmetric-part-burgers} confirm loss of a common objective in both Burgers BM rules, including the accurate rule with $N_c=225$.
+Mode-dependent weights enlarge the set of cubature fits available on a selected mesh. Their effect on gradient structure follows from the general compatibility condition in Appendix~\ref{sec:appendix-gradient-structure}. For LSPG, the BM projected equations are not guaranteed to be derivatives of one common sampled residual objective (Appendix~\ref{sec:appendix-common-objective}). The online correction matrix can also be nonsymmetric and have a quadratic form that takes negative values (Appendix~\ref{sec:appendix-correction-symmetry}). In conservative structural dynamics, the inherited mechanical Lagrangian form and the associated energy-conservation construction are likewise not guaranteed (Appendix~\ref{sec:appendix-mechanical-energy}). The projected-residual training tolerance does not impose these structural conditions. The exact-Jacobian checks in Appendix~\ref{sec:appendix-symmetric-part-burgers} confirm loss of a common objective in both Burgers BM rules, including the accurate rule with $N_c=225$.
 
 The present results establish trajectory accuracy and computational cost for the stated Burgers configuration. Appendix~\ref{sec:appendix-symmetric-part-burgers} examines the earlier 90-pair rule and shows why a small training error alone does not ensure accurate online equations. Behavior outside the sampled parameter range and stability in structural applications remain to be assessed.
 
@@ -989,7 +989,7 @@ The present results establish trajectory accuracy and computational cost for the
 \section{Common objectives, symmetry, and energy under modal weighting}
 \label{sec:modal-structure}
 
-Modal weights can reduce the sampled mesh, but the weighted vector need not remain the gradient of one common scalar function. In LSPG, the question is whether the weighted projected residual remains the gradient of one common scalar least-squares objective; in conservative structural dynamics, whether the weighted internal-force vector remains the gradient of one common scalar potential energy. The general condition is derived first, then applied to these two settings and the corresponding correction and stiffness matrices. Analytical examples establish possible losses of structure and stability; AERO-F and Burgers computations examine the behavior of trained rules.
+Modal weights can reduce the sampled mesh, but they do not guarantee that the weighted vector remains the gradient of one common scalar function. In LSPG, the question is whether the weighted projected residual remains the gradient of one common scalar least-squares objective; in conservative structural dynamics, whether the weighted internal-force vector remains the gradient of one common scalar potential energy. The general condition is derived first, then applied to these two settings and the corresponding correction and stiffness matrices. Analytical examples establish possible losses of structure and stability; AERO-F and Burgers computations examine the behavior of trained rules.
 
 \subsection{Preserving the gradient of one common scalar function}
 \label{sec:appendix-gradient-structure}
@@ -2114,7 +2114,7 @@ Table~\ref{tab:timings} reports the individual online times in seconds. SD is th
 
 \begin{table}[H]
  \centering\small
- \caption{Fresh production FOM integration times: one run at each queried parameter, 20 CPU threads, and 500 time steps. The last row is the arithmetic mean over the three parameters.}
+ \caption{Fresh production HDM integration times: one run at each queried parameter, 20 CPU threads, and 500 time steps. The last row is the arithmetic mean over the three parameters.}
  \label{tab:fom-timings}
  \input{tables/fom_timings.tex}
 \end{table}

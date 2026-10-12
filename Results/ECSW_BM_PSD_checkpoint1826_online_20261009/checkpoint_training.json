@@ -1,0 +1,52 @@
+{
+  "source_checkpoint": "/home/sares/burgers2d-rom-workbench/Results/ECSW_BM_PSD_full_20261008/checkpoint.npz",
+  "source_checkpoint_sha256": "bf66c6b80482ee5f93f3c4ba3cb9fec1cd13397065b461406cf48865d54c2add",
+  "selected_cells": 1826,
+  "cells": 1826,
+  "free_coefficients": 5478,
+  "augmented_cells": 4486,
+  "relative_training_error": 3.823157811549831e-05,
+  "requested_tolerance": 1e-05,
+  "tolerance_met": false,
+  "min_eigenvalue": 3.7463212897578104e-05,
+  "metric_factorization_roundoff": 1.7053025658242404e-13,
+  "checkpoint_export": "physical matrices reconstructed from saved cone coordinates; no refit",
+  "restoration_thread_pools": [
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 1,
+      "prefix": "libscipy_openblas",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+      "version": "0.3.34.106.0",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "user_api": "blas",
+      "internal_api": "openblas",
+      "num_threads": 1,
+      "prefix": "libscipy_openblas",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+      "version": "0.3.31.dev",
+      "threading_layer": "pthreads",
+      "architecture": "Haswell"
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 1,
+      "prefix": "libgomp",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+      "version": null
+    },
+    {
+      "user_api": "openmp",
+      "internal_api": "openmp",
+      "num_threads": 1,
+      "prefix": "libgomp",
+      "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+      "version": null
+    }
+  ]
+}

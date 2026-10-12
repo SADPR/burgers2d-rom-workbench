@@ -1,0 +1,500 @@
+[
+  {
+    "method": "psd_metric",
+    "mu1": 4.56,
+    "mu2": 0.019,
+    "cells": 1826,
+    "augmented_cells": 4486,
+    "online_seconds": 14.106979444622993,
+    "error_percent": 1.095889518135537,
+    "max_snapshot_error_percent": 3.7954639106362813,
+    "iterations": 1500,
+    "jacobian_seconds": 0.09162044525146484,
+    "residual_seconds": 0.14977693557739258,
+    "linear_solve_seconds": 12.716388702392578,
+    "native_thread_pools": [
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+        "version": "0.3.34.106.0",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+        "version": "0.3.31.dev",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+        "version": null
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+        "version": null
+      }
+    ],
+    "completed_steps_logged": 500,
+    "max_logged_iteration_index": 2
+  },
+  {
+    "method": "ecsw",
+    "mu1": 4.56,
+    "mu2": 0.019,
+    "cells": 2492,
+    "augmented_cells": 5914,
+    "online_seconds": 15.891576431691647,
+    "error_percent": 1.0959187279389062,
+    "max_snapshot_error_percent": 3.7954639106362813,
+    "iterations": 1500,
+    "jacobian_seconds": 0.12346839904785156,
+    "residual_seconds": 0.1919558048248291,
+    "linear_solve_seconds": 14.514333486557007,
+    "native_thread_pools": [
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+        "version": "0.3.34.106.0",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+        "version": "0.3.31.dev",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+        "version": null
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+        "version": null
+      }
+    ],
+    "completed_steps_logged": 500,
+    "max_logged_iteration_index": 2
+  },
+  {
+    "method": "bm_ecsw",
+    "mu1": 4.56,
+    "mu2": 0.019,
+    "cells": 300,
+    "augmented_cells": 868,
+    "online_seconds": 1.1652906481176615,
+    "error_percent": 1.1018904749354104,
+    "max_snapshot_error_percent": 3.7954639106362813,
+    "iterations": 1509,
+    "jacobian_seconds": 0.2287600040435791,
+    "residual_seconds": 0.12808656692504883,
+    "linear_solve_seconds": 0.04513907432556152,
+    "native_thread_pools": [
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+        "version": "0.3.34.106.0",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+        "version": "0.3.31.dev",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+        "version": null
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+        "version": null
+      }
+    ],
+    "projected_tolerance_not_met_steps": 0,
+    "stop_reasons": {
+      "projected_tolerance": 500
+    },
+    "completed_steps_logged": 500,
+    "max_logged_iteration_index": null
+  },
+  {
+    "method": "ecsw",
+    "mu1": 4.75,
+    "mu2": 0.02,
+    "cells": 2492,
+    "augmented_cells": 5914,
+    "online_seconds": 15.934228686615825,
+    "error_percent": 1.0010538831431801,
+    "max_snapshot_error_percent": 3.7954639106362813,
+    "iterations": 1500,
+    "jacobian_seconds": 0.1243739128112793,
+    "residual_seconds": 0.19317030906677246,
+    "linear_solve_seconds": 14.540442705154419,
+    "native_thread_pools": [
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+        "version": "0.3.34.106.0",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+        "version": "0.3.31.dev",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+        "version": null
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+        "version": null
+      }
+    ],
+    "completed_steps_logged": 500,
+    "max_logged_iteration_index": 2
+  },
+  {
+    "method": "bm_ecsw",
+    "mu1": 4.75,
+    "mu2": 0.02,
+    "cells": 300,
+    "augmented_cells": 868,
+    "online_seconds": 1.2208892833441496,
+    "error_percent": 1.0061454042950053,
+    "max_snapshot_error_percent": 3.7954639106362813,
+    "iterations": 1511,
+    "jacobian_seconds": 0.21411561965942383,
+    "residual_seconds": 0.10869717597961426,
+    "linear_solve_seconds": 0.035138607025146484,
+    "native_thread_pools": [
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+        "version": "0.3.34.106.0",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+        "version": "0.3.31.dev",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+        "version": null
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+        "version": null
+      }
+    ],
+    "projected_tolerance_not_met_steps": 0,
+    "stop_reasons": {
+      "projected_tolerance": 500
+    },
+    "completed_steps_logged": 500,
+    "max_logged_iteration_index": null
+  },
+  {
+    "method": "psd_metric",
+    "mu1": 4.75,
+    "mu2": 0.02,
+    "cells": 1826,
+    "augmented_cells": 4486,
+    "online_seconds": 15.292503610253334,
+    "error_percent": 1.001032681049706,
+    "max_snapshot_error_percent": 3.7954639106362813,
+    "iterations": 1500,
+    "jacobian_seconds": 0.09642529487609863,
+    "residual_seconds": 0.1599888801574707,
+    "linear_solve_seconds": 13.812319040298462,
+    "native_thread_pools": [
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+        "version": "0.3.34.106.0",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+        "version": "0.3.31.dev",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+        "version": null
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+        "version": null
+      }
+    ],
+    "completed_steps_logged": 500,
+    "max_logged_iteration_index": 2
+  },
+  {
+    "method": "bm_ecsw",
+    "mu1": 5.19,
+    "mu2": 0.026,
+    "cells": 300,
+    "augmented_cells": 868,
+    "online_seconds": 1.1884281765669584,
+    "error_percent": 1.0068805465814452,
+    "max_snapshot_error_percent": 3.7954639106362813,
+    "iterations": 1518,
+    "jacobian_seconds": 0.2152097225189209,
+    "residual_seconds": 0.11000967025756836,
+    "linear_solve_seconds": 0.03576374053955078,
+    "native_thread_pools": [
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+        "version": "0.3.34.106.0",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+        "version": "0.3.31.dev",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+        "version": null
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+        "version": null
+      }
+    ],
+    "projected_tolerance_not_met_steps": 0,
+    "stop_reasons": {
+      "projected_tolerance": 500
+    },
+    "completed_steps_logged": 500,
+    "max_logged_iteration_index": null
+  },
+  {
+    "method": "psd_metric",
+    "mu1": 5.19,
+    "mu2": 0.026,
+    "cells": 1826,
+    "augmented_cells": 4486,
+    "online_seconds": 15.308309439569712,
+    "error_percent": 0.9927377180624496,
+    "max_snapshot_error_percent": 3.7954639106362813,
+    "iterations": 1500,
+    "jacobian_seconds": 0.0943613052368164,
+    "residual_seconds": 0.15578269958496094,
+    "linear_solve_seconds": 13.857391595840454,
+    "native_thread_pools": [
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+        "version": "0.3.34.106.0",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+        "version": "0.3.31.dev",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+        "version": null
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+        "version": null
+      }
+    ],
+    "completed_steps_logged": 500,
+    "max_logged_iteration_index": 2
+  },
+  {
+    "method": "ecsw",
+    "mu1": 5.19,
+    "mu2": 0.026,
+    "cells": 2492,
+    "augmented_cells": 5914,
+    "online_seconds": 16.13811581209302,
+    "error_percent": 0.9927616992772422,
+    "max_snapshot_error_percent": 3.7954639106362813,
+    "iterations": 1500,
+    "jacobian_seconds": 0.1270432472229004,
+    "residual_seconds": 0.19921255111694336,
+    "linear_solve_seconds": 14.728483200073242,
+    "native_thread_pools": [
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+        "version": "0.3.34.106.0",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 10,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+        "version": "0.3.31.dev",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+        "version": null
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 10,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+        "version": null
+      }
+    ],
+    "completed_steps_logged": 500,
+    "max_logged_iteration_index": 2
+  }
+]

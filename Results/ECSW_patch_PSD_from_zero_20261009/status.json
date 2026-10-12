@@ -1,0 +1,12 @@
+{
+  "stage": "training_incomplete",
+  "tolerance_met": false,
+  "cells": 188,
+  "groups": 47,
+  "relative_training_error": 0.5262341981051089,
+  "tolerance": 1e-05,
+  "stop_reason": "time budget reached; optimality not certified; further selection not performed",
+  "online_comparison_run": false,
+  "full_reduced_rank": true,
+  "summary": "/home/sares/burgers2d-rom-workbench/Results/ECSW_patch_PSD_from_zero_20261009/summary.md"
+}

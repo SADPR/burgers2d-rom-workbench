@@ -51,7 +51,7 @@ def write_step_table(out, document, additional_results=()):
         r = candidates[0]
         condition = f"{float(r['condition']):,.2f}".replace(',', r'\,')
         error = float(r['error_vs_PROM_percent'])
-        error_text = '0' if error == 0 else f'{error:.4f}'
+        error_text = '0' if error == 0 else f'{error:.3f}'
         if 0 < error < .001:
             mantissa, exponent = f'{error:.2e}'.split('e')
             error_text = rf'${mantissa}\times10^{{{int(exponent)}}}$'

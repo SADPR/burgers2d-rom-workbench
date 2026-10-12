@@ -1,0 +1,2 @@
+# Optional dependency for the full-PSD residual-metric training experiment.
+clarabel==0.11.1

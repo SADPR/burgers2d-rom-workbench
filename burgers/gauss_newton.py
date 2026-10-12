@@ -10,6 +10,7 @@ from scipy.linalg import lstsq as scipy_lstsq, solve_triangular
 import torch
 
 from .quadratic_manifold_utils import u_qm, J_qm
+from .residual_metric import residual_metric_factors, apply_residual_metric
 
 
 def _prepare_u_ref(u_ref, size):
@@ -251,6 +252,7 @@ def gauss_newton_ECSW_2D(
     u_ref=None,
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
+    residual_transform=None,
 ):
     jac_time = 0.0
     res_time = 0.0
@@ -262,18 +264,32 @@ def gauss_newton_ECSW_2D(
     y = np.asarray(y0, dtype=np.float64).copy()
     u_ref = _prepare_u_ref(u_ref, basis.shape[0])
 
-    weights = np.asarray(sample_weights, dtype=np.float64).reshape(-1)
-    sqrt_w = _sqrt_ecm_weights(weights)
+    weights = np.asarray(sample_weights, dtype=np.float64)
+    if residual_transform is not None:
+        if weights.ndim != 1 or not np.all(weights == 1.):
+            raise ValueError("A residual transform requires unit sampled cell weights.")
+        expected_rows = residual_transform.input_rows
+        weight_rows = residual_transform.apply
+    elif weights.ndim == 3:
+        factors = residual_metric_factors(weights)
+        expected_rows = 2 * weights.shape[0]
+        def weight_rows(values):
+            return apply_residual_metric(factors, values)
+    else:
+        sqrt_w = _sqrt_ecm_weights(weights.reshape(-1))
+        expected_rows = sqrt_w.size
+        def weight_rows(values):
+            return sqrt_w * values if values.ndim == 1 else sqrt_w[:, None] * values
 
     w = u_ref + basis @ y
 
     r = func(w)
-    if r.shape[0] != weights.shape[0]:
+    if r.shape[0] != expected_rows:
         raise ValueError(
-            f"sample_weights and residual size mismatch: {weights.shape[0]} vs {r.shape[0]}"
+            f"sample_weights and residual size mismatch: {expected_rows} vs {r.shape[0]}"
         )
 
-    init_norm = _safe_init_norm(np.linalg.norm(sqrt_w * r))
+    init_norm = _safe_init_norm(np.linalg.norm(weight_rows(r)))
     resnorms = []
 
     for it in range(max_its):
@@ -282,7 +298,7 @@ def gauss_newton_ECSW_2D(
             r = func(w)
             res_time += time.time() - t0
 
-        resnorm = np.linalg.norm(sqrt_w * r)
+        resnorm = np.linalg.norm(weight_rows(r))
         resnorms.append(resnorm)
 
         if resnorm / init_norm < relnorm_cutoff:
@@ -297,8 +313,8 @@ def gauss_newton_ECSW_2D(
 
         t0 = time.time()
         JV = J @ basis
-        JVw = sqrt_w[:, None] * JV
-        rw = sqrt_w * r
+        JVw = weight_rows(JV)
+        rw = weight_rows(r)
         dy = _solve_reduced_update(
             JVw,
             rw,

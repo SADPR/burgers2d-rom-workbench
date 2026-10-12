@@ -117,3 +117,31 @@ Project_BM-ECSW/*.fdb_latexmk
 Project_BM-ECSW/*.fls
 Project_BM-ECSW/*.out
 Project_BM-ECSW/*.synctex.gz
+
+# Beamer navigation and table-of-contents build files.
+Project_BM-ECSW/*.nav
+Project_BM-ECSW/*.snm
+Project_BM-ECSW/*.toc
+
+# Compact reports for the grouped residual-matrix proposal.
+!Results/ECSW_patch_PSD_*/**/*.csv
+!Results/ECSW_patch_PSD_*/**/*.json
+
+# Small fitted metrics retained with this experimental checkpoint.
+!Results/ECSW_BM_PSD_full_20261008/checkpoint.npz
+!Results/ECSW_BM_PSD_checkpoint1826_online_20261009/residual_metric_weights.npy
+!Results/ECSW_patch_PSD_from_zero_20261009/patch_metric.npz
+
+# Matplotlib caches are local generated files, including within report folders.
+Results/**/mplcache/
+
+# Superseded PSD trial and optimization folders remain local.
+Results/ECSW_BM_PSD_full_20261008_batch5_failed_550/
+Results/ECSW_BM_PSD_full_20261008_failed_refit/
+Results/ECSW_BM_PSD_full_20261008_interrupted_1410/
+Results/ECSW_BM_PSD_full_20261008_per_cell_refit_330/
+Results/ECSW_BM_PSD_metric_20261008/
+Results/ECSW_BM_PSD_optimization_20261008/
+Results/ECSW_patch_PSD_from_zero_20261009_gram_diagnostic_88cells/
+Results/ECSW_patch_PSD_from_zero_20261009_initial_diagnostic/
+Results/ECSW_patch_PSD_from_zero_20261009_refit_diagnostic_16cells/

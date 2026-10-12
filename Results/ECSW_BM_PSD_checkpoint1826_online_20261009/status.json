@@ -1,0 +1,7 @@
+{
+  "stage": "complete",
+  "completed_runs": 9,
+  "summary": "/home/sares/burgers2d-rom-workbench/Results/ECSW_BM_PSD_checkpoint1826_online_20261009/summary.md",
+  "training_tolerance_met": false,
+  "checkpoint_cells": 1826
+}

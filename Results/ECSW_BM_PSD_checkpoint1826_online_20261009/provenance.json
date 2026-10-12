@@ -1,0 +1,87 @@
+{
+  "started_utc": "2026-10-09T16:30:27.598247+00:00",
+  "input_sha256": {
+    "POD/basis.npy": "abb48a8df8c0b3413995aa353c2fe68438b554853a28e2b9d6d0001f60a686a2",
+    "POD/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "POD/ecsw_weights_lspg_ecsw_tol1e-10_offset1_snap5pct.npy": "c8c370cbcc2ea206082f3ceada2044d27b93af654299f2a0b9bdcc0a8296d951",
+    "POD/ecsw_weights_lspg_bm_ecsw_tol1e-10_offset1_snap5pct.npy": "a33e4e633515d21035975ae3a750b3a29942abcc4f350ecab5added070dd34a5"
+  },
+  "training_checkpoint": {
+    "source_checkpoint": "/home/sares/burgers2d-rom-workbench/Results/ECSW_BM_PSD_full_20261008/checkpoint.npz",
+    "source_checkpoint_sha256": "bf66c6b80482ee5f93f3c4ba3cb9fec1cd13397065b461406cf48865d54c2add",
+    "selected_cells": 1826,
+    "cells": 1826,
+    "free_coefficients": 5478,
+    "augmented_cells": 4486,
+    "relative_training_error": 3.823157811549831e-05,
+    "requested_tolerance": 1e-05,
+    "tolerance_met": false,
+    "min_eigenvalue": 3.7463212897578104e-05,
+    "metric_factorization_roundoff": 1.7053025658242404e-13,
+    "checkpoint_export": "physical matrices reconstructed from saved cone coordinates; no refit",
+    "restoration_thread_pools": [
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 1,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-f48b354e.so",
+        "version": "0.3.34.106.0",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "blas",
+        "internal_api": "openblas",
+        "num_threads": 1,
+        "prefix": "libscipy_openblas",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+        "version": "0.3.31.dev",
+        "threading_layer": "pthreads",
+        "architecture": "Haswell"
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 1,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/scikit_learn.libs/libgomp-e985bcbb.so.1.0.0",
+        "version": null
+      },
+      {
+        "user_api": "openmp",
+        "internal_api": "openmp",
+        "num_threads": 1,
+        "prefix": "libgomp",
+        "filepath": "/home/sares/burgers2d-rom-workbench/.venv/lib/python3.12/site-packages/torch/lib/libgomp.so.1",
+        "version": null
+      }
+    ]
+  },
+  "online_threads": 10,
+  "parameters": [
+    [
+      4.56,
+      0.019
+    ],
+    [
+      4.75,
+      0.02
+    ],
+    [
+      5.19,
+      0.026
+    ]
+  ],
+  "protocol": "one fresh-process online run per method and parameter, executed sequentially",
+  "online_settings": {
+    "modes": 96,
+    "time_steps": 500,
+    "dt": 0.05,
+    "max_iterations": 20,
+    "relative_nonlinear_tolerance": 1e-05,
+    "plateau_threshold": 0.01,
+    "linear_solver": "lstsq"
+  },
+  "timing_limit": "single runs while AERO-F may be running; indicative timings"
+}

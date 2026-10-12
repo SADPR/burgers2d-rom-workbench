@@ -1,0 +1,43 @@
+{
+  "stage": "failed",
+  "exit_code": 1,
+  "last_progress": {
+    "stage": "selection",
+    "threads": 10,
+    "tolerance": 1e-05,
+    "iteration": 1826,
+    "cells": 1826,
+    "free_coefficients": 5478,
+    "relative_training_error": 3.823157811547874e-05,
+    "selection_seconds": 20860.5326609239,
+    "conic_refit_seconds": 17318.304263866008,
+    "joint_refits": 1826,
+    "last_refit": {
+      "status": "AlmostSolved",
+      "iterations": 27,
+      "solve_seconds": 27.297099223,
+      "primal_residual": 1.0199739546168587e-13,
+      "dual_residual": 3.438523735473388e-11,
+      "duality_gap": 2.423805808585024e-13,
+      "direct_solver": "faer",
+      "solver_threads": 10,
+      "psd_projection_roundoff": 0.0,
+      "projected_gradient_norm": 7.152833123642592e-09,
+      "attempts": [
+        {
+          "status": "AlmostSolved",
+          "iterations": 27,
+          "solve_seconds": 27.297099223,
+          "primal_residual": 1.0199739546168587e-13,
+          "dual_residual": 3.438523735473388e-11,
+          "duality_gap": 2.423805808585024e-13,
+          "direct_solver": "faer",
+          "solver_threads": 10,
+          "psd_projection_roundoff": 0.0
+        }
+      ],
+      "retry_count": 0
+    }
+  },
+  "log": "/home/sares/burgers2d-rom-workbench/Results/ECSW_BM_PSD_full_20261008/training.log"
+}

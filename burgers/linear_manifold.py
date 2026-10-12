@@ -14,6 +14,7 @@ from .core import (
 )
 
 from .ecsw_utils import generate_augmented_mesh
+from .residual_metric import residual_metric_factors
 from .cluster_utils import select_cluster_reduced
 
 from .gauss_newton import (
@@ -329,12 +330,16 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
     linear_solver="lstsq",
     normal_eq_reg=1e-12,
     bm_jacobian="exact",
+    residual_transform=None,
 ):
     """
     Global affine ECSW/BM-ECSW LSPG HROM for 2D inviscid Burgers.
 
     A cell-weight vector uses classical row-weighted least squares.
     A (cell, mode) weight matrix solves the mode-weighted LSPG equations.
+    A (cell, 2, 2) PSD array weights the two residual components jointly.
+    residual_transform optionally applies a fixed PSD patch factor; its
+    selected cell weights must be one. Both residual and tangent use it.
     bm_jacobian selects their exact or Gauss-Newton-type derivative.
     The reduced state is w ≈ u_ref + basis @ y.
 
@@ -351,8 +356,9 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
     basis = np.asarray(basis, dtype=np.float64)
     weights = np.asarray(weights, dtype=np.float64)
     by_mode = weights.ndim == 2
-    if weights.ndim not in (1, 2):
-        raise ValueError("Weights must be a vector or a (cell, mode) matrix.")
+    residual_metric = weights.ndim == 3
+    if weights.ndim not in (1, 2, 3):
+        raise ValueError("Expected scalar, modal, or 2x2 residual-metric weights.")
     u_ref = _prepare_reference(u_ref, w0.size)
 
     _, _, JDxec, JDyec, _ = get_ops(grid_x, grid_y)
@@ -367,15 +373,26 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
             f"BM weights have shape {weights.shape}, expected "
             f"({n_full_scalar}, {nred})."
         )
-    if not by_mode and weights.shape != (n_full_scalar,):
+    if not by_mode and not residual_metric and weights.shape != (n_full_scalar,):
         raise ValueError("ECSW weights must have one value per cell.")
-    if not np.all(np.isfinite(weights)) or np.any(weights < 0):
-        raise ValueError("Weights must be finite and nonnegative.")
-    sample_inds = np.flatnonzero(
-        np.any(weights > 0, axis=1) if by_mode else weights > 0
-    )
+    if residual_metric:
+        if weights.shape != (n_full_scalar, 2, 2):
+            raise ValueError("Residual metric weights must have shape (cells, 2, 2).")
+        residual_metric_factors(weights)
+        sample_inds = np.flatnonzero(np.trace(weights, axis1=1, axis2=2) > 0)
+    else:
+        if not np.all(np.isfinite(weights)) or np.any(weights < 0):
+            raise ValueError("Weights must be finite and nonnegative.")
+        sample_inds = np.flatnonzero(
+            np.any(weights > 0, axis=1) if by_mode else weights > 0
+        )
     if sample_inds.size == 0:
         raise ValueError("No cells have positive weights.")
+    if residual_transform is not None:
+        if by_mode or residual_metric or not np.all(weights[sample_inds] == 1.):
+            raise ValueError("A patch transform requires scalar unit cell weights.")
+        if not np.array_equal(sample_inds, residual_transform.selected_cells):
+            raise ValueError("Patch transform and sampled mesh disagree.")
     augmented_sample = generate_augmented_mesh(grid_x, grid_y, sample_inds)
 
     Eye_u = sp.identity(n_full_scalar).tocsr()
@@ -385,8 +402,8 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
     JDxec_ecsw = JDxec[sample_inds, :][:, augmented_sample].tocsr()
     JDyec_ecsw = JDyec[sample_inds, :][:, augmented_sample].tocsr()
 
-    if by_mode:
-        sample_weights = weights[sample_inds, :]
+    if by_mode or residual_metric:
+        sample_weights = weights[sample_inds]
     else:
         sample_weights = np.hstack((weights[sample_inds], weights[sample_inds]))
 
@@ -429,7 +446,9 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
     bm_final_ratios = []
     bm_stop_reasons = {}
 
-    method_name = "BM-ECSW-LSPG" if by_mode else "ECSW-LSPG"
+    method_name = "BM-ECSW-LSPG" if by_mode else ("PSD-metric-LSPG" if residual_metric else "ECSW-LSPG")
+    if residual_transform is not None:
+        method_name = "PSD-patch-LSPG"
     print(f"Running global affine {method_name} ROM of size {nred} for mu1={mu[0]}, mu2={mu[1]}")
 
     for it in range(num_steps):
@@ -487,6 +506,7 @@ def inviscid_burgers_implicit2D_LSPG_ecsw(
                 u_ref=u_ref_ecsw,
                 linear_solver=linear_solver,
                 normal_eq_reg=normal_eq_reg,
+                residual_transform=residual_transform,
             )
 
         jac_t, res_t, ls_t = times

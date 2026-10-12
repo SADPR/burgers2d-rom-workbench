@@ -1,0 +1,20 @@
+{
+  "started_utc": "20261009T220142Z",
+  "threads": 10,
+  "tolerance": 1e-05,
+  "selection_time_budget_seconds": 1800.0,
+  "initialization": "from zero; existing cubature supports and weights are not read during training",
+  "candidates": "all original-mesh disjoint 2x2 cell patches",
+  "refit": "adaptive-rank PSD factors; original-row error and convex KKT checks",
+  "sources": {
+    "POD/basis.npy": "abb48a8df8c0b3413995aa353c2fe68438b554853a28e2b9d6d0001f60a686a2",
+    "POD/u_ref.npy": "cbe620b28b2ac44d0d1b9492cbc62b1826a0d8ffa3bc4ff29f47e548f7a229bb",
+    "burgers/patch_metric.py": "1c27c6dc9e0f3504c2c4d6947a8a2fba46aa4d1f3c54050c92c4da5db19efefa",
+    "burgers/linear_manifold.py": "22bd66ef973073570d3a65d8b0da5d5c25c3919e94f8ca03d18b6a9cd64ea264",
+    "burgers/gauss_newton.py": "613f3c22c890b075a76f8334f765a5cc4552bb3457d0b19e698cafd4ab6727b5",
+    "run_patch_metric_experiment.py": "01e0a85f54faa7a4043774df5ecda4ff5854d714b03482a704b5beb455a93fd1",
+    "burgers/config.py": "aeeea790ae3f2997e0a0b8320ae96861c22542504ae1dda83816eb83d7da3713",
+    "burgers/core.py": "f5a6da10863ff27fab6eebba6515d7610be0d05153ffd53eedb7c09838d02950",
+    "burgers/ecsw_utils.py": "c6f082eaf6c420b9e88eee0f1b6d4b2bb3a535db9a5c5036025f4dbfca7ca580"
+  }
+}

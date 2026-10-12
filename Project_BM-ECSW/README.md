@@ -8,7 +8,19 @@ The technical notes present the HDM and LSPG formulation, classical and by-mode 
 
 The numerical comparison uses the same 96-mode basis, 225 consecutive projected HDM pairs, seed 42, and relative training tolerance `1e-5` for both methods. Classical ECSW has 2 492 weighted cells; BM-ECSW has 300. The main results use this matched comparison; Appendix A.4 additionally examines the earlier rules and their online behavior. The notes have no abstract or introduction. BM-ECSW is attributed to Sebastian Rodriguez at the beginning.
 
-Appendix A first derives the general gradient-preservation condition (A.1), then applies it to LSPG objectives and online correction matrices (A.2) and to mechanical potentials, Lagrangian structure, and stability (A.3). A.4 presents the AERO-F and Burgers computational evidence, distinguishing exact-Jacobian tests, correction-matrix diagnostics, and observed online behavior.
+Appendix A first derives the general gradient-preservation condition (A.1), then applies it to LSPG objectives and online correction matrices (A.2) and to mechanical potentials, Lagrangian structure, and stability (A.3). A.4 presents the Burgers and AERO-F computational evidence, distinguishing exact-Jacobian tests, correction-matrix diagnostics, and observed online behavior.
+
+## Presentation checkpoint
+
+`BM_ECSW_slides.tex` and `BM_ECSW_slides.pdf` contain the 19-slide presentation
+**By-mode “ECSW”**, with linked backup derivations, algorithms and diagnostics.
+The conclusions link to two experimental alternatives: individual residual
+matrices `A_e` and grouped residual matrices `A_P`. Both proposal slides begin
+with their assembled projected vector before identifying its scalar objective.
+
+`generate_cylinder_slide_figure.py` regenerates the slide's cylinder coordinate-norm
+figure from saved AERO-F trajectories. Its `--sim-dir` option points to the
+AERO-F simulations directory; the committed figure is sufficient to compile the deck.
 
 ## Original proposal and reading notes
 
@@ -20,6 +32,7 @@ From this directory:
 
 ```bash
 latexmk -pdf -interaction=nonstopmode -halt-on-error BM_ECSW_LSPG_notes.tex
+latexmk -pdf -interaction=nonstopmode -halt-on-error BM_ECSW_slides.tex
 latexmk -pdf -interaction=nonstopmode -halt-on-error ECSW_General_by_basis.tex
 ```
 
@@ -45,11 +58,11 @@ The HPROM benchmark directory also stores individual reports, input hashes, and 
 
 The Burgers description reflects the implemented conservative flux differences and trapezoidal time-discrete residual. The published closure paper provides notation and benchmark context; its reduced dimension, training configuration, and reported timings are not substituted for those of this experiment.
 
-## FOM speedup reference
+## HDM speedup reference
 
-`benchmark_fom.py` executes the production FOM solver once per queried parameter, using 20 native numerical-library threads. It measures operator setup and all 500 time steps directly; it does not call the snapshot cache loader. Fresh-process reports and timings are stored in `Results/FOM_benchmark_20261004/`. Comparisons with the saved FOM trajectories occur after timing. Existing snapshots are not overwritten.
+`benchmark_fom.py` executes the production HDM solver once per queried parameter, using 20 native numerical-library threads. It measures operator setup and all 500 time steps directly; it does not call the snapshot cache loader. Fresh-process reports and timings are stored in `Results/FOM_benchmark_20261004/`. Comparisons with the saved HDM trajectories occur after timing. Existing snapshots are not overwritten.
 
-All speedup factors in the technical notes use the fresh FOM times as their reference. Per-parameter speedup is the FOM time divided by the mean of three HPROM runs. The overall speedup is the mean FOM time over the three parameters divided by the corresponding overall mean HPROM time. Main tables use minutes, maximum global Euclidean errors, and mesh sizes `n_e` and `n_e^+`; individual HPROM and FOM timings are retained in the appendix. The FOM uses its production `1e-12` residual tolerance, while the HPROM criteria are documented in the notes.
+All speedup factors in the technical notes use the fresh HDM times as their reference. Per-parameter speedup is the HDM time divided by the mean of three HPROM runs. The overall speedup is the mean HDM time over the three parameters divided by the corresponding overall mean HPROM time. Main tables use minutes, maximum global Euclidean errors, and mesh sizes `n_e` and `n_e^+`; individual HPROM and HDM timings are retained in the appendix. The HDM uses its production `1e-12` residual tolerance, while the HPROM criteria are documented in the notes.
 
 ## BM online solution
 
@@ -69,7 +82,7 @@ Reproduce the matched classical/BM benchmark from the repository root:
 The measurements included in the PDF are in
 [`Results/ECSW_BM_GN_benchmark_20261005/summary.md`](../Results/ECSW_BM_GN_benchmark_20261005/summary.md).
 The tables and solution slices are regenerated from this benchmark.
-The FOM speedup reference remains the measured production runs in
+The HDM speedup reference remains the measured production runs in
 `Results/FOM_benchmark_20261004/`.
 
 ## Candidate-score derivation
@@ -146,3 +159,31 @@ Reproduce the diagnostic with a new output directory:
 ```bash
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 .venv/bin/python diagnose_bm_gradient_structure.py --threads 1 --output-dir Results/BM_ECSW_gradient_structure_new
 ```
+
+## Experimental residual-matrix proposals
+
+- [Individual matrices](residual_metric_experiment.md): `burgers/residual_metric.py`
+  and `run_residual_metric_experiment.py` implement full PSD matrix refits and the
+  corresponding LSPG residual transformation. The optional conic solver is pinned
+  in `requirements-residual-metric.txt` at the repository root.
+- [Grouped matrices](patch_metric_experiment.md): `burgers/patch_metric.py` and
+  `run_patch_metric_experiment.py` implement independent group selection, adaptive
+  PSD factors, and shared residual/test-basis transformations.
+- Existing analytical checks are retained in `tests/test_residual_metric.py` and
+  `tests/test_patch_metric.py`.
+
+Three compact experiment records accompany this checkpoint:
+
+- `Results/ECSW_BM_PSD_full_20261008/`: the saved 1,826-cell full-PSD refit,
+  with relative training error `3.823157812e-5`; the prescribed `1e-5` tolerance
+  was not attained.
+- `Results/ECSW_BM_PSD_checkpoint1826_online_20261009/`: exported metric weights,
+  provenance, and the completed online comparison of that incomplete fit.
+- `Results/ECSW_patch_PSD_from_zero_20261009/`: the latest grouped checkpoint,
+  with 188 cells in 47 groups and relative training error `0.5262341981`;
+  training is incomplete and no production online comparison was run.
+
+The fitted weights/checkpoints and compact CSV/JSON reports are versioned.
+Training arrays, trajectories, logs, and exact run-source snapshots remain local.
+Superseded trial folders are ignored. These experimental records do not establish
+competitive mesh reduction or training cost for the new proposals.
